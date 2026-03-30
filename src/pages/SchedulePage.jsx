@@ -1,0 +1,152 @@
+import { useState } from 'react';
+import { useApp } from '../context/AppContext';
+import { Plus, Check, X } from 'lucide-react';
+
+export default function SchedulePage() {
+  const { currentUser, getSchedule, getClients, getClient, addScheduleItem, updateScheduleItem } = useApp();
+  const isTrainer = currentUser.role === 'trainer';
+  const clients = isTrainer ? getClients(currentUser.id) : [];
+
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
+
+  // Get next 7 days
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return d.toISOString().split('T')[0];
+  });
+
+  const schedule = getSchedule(
+    isTrainer ? { trainerId: currentUser.id, date: selectedDate } : { clientId: currentUser.id, date: selectedDate }
+  );
+
+  const allSchedule = getSchedule(
+    isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id }
+  );
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    addScheduleItem({ ...form, trainerId: currentUser.id });
+    setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
+    setShowAdd(false);
+  };
+
+  const formatDay = (dateStr) => {
+    const d = new Date(dateStr);
+    return { day: d.toLocaleDateString('en', { weekday: 'short' }), date: d.getDate() };
+  };
+
+  const getSessionCount = (date) => allSchedule.filter(s => s.date === date).length;
+
+  return (
+    <div>
+      <div className="page-header flex-between">
+        <div>
+          <h1 className="page-title">Schedule</h1>
+          <p className="page-subtitle">Manage your appointments</p>
+        </div>
+        {isTrainer && <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={18} /> Book Session</button>}
+      </div>
+
+      {/* Date selector */}
+      <div className="flex gap-8 mb-16" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+        {dates.map(date => {
+          const { day, date: num } = formatDay(date);
+          const count = getSessionCount(date);
+          return (
+            <button
+              key={date}
+              className={`card ${selectedDate === date ? '' : ''}`}
+              onClick={() => setSelectedDate(date)}
+              style={{
+                minWidth: 70, textAlign: 'center', cursor: 'pointer', padding: '12px 16px',
+                borderColor: selectedDate === date ? 'var(--primary)' : 'var(--border)',
+                background: selectedDate === date ? 'var(--bg-hover)' : 'var(--bg-card)',
+              }}
+            >
+              <div className="text-sm text-muted">{day}</div>
+              <div className="fw-bold" style={{ fontSize: '1.2rem' }}>{num}</div>
+              {count > 0 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', margin: '4px auto 0' }} />}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Schedule list */}
+      <div className="card">
+        <h3 className="card-title mb-16">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+        {schedule.length === 0 ? (
+          <div className="empty-state"><p className="empty-state-text">No sessions scheduled</p></div>
+        ) : (
+          schedule.sort((a, b) => a.time.localeCompare(b.time)).map(s => {
+            const client = getClient(s.clientId);
+            return (
+              <div key={s.id} className="schedule-item">
+                <div className="schedule-time">{s.time}</div>
+                <div className="schedule-info">
+                  <div className="schedule-client">{isTrainer ? client?.name : s.type}</div>
+                  <div className="schedule-type">{s.type} - {s.duration}min</div>
+                </div>
+                <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
+                {isTrainer && s.status === 'pending' && (
+                  <div className="flex gap-8">
+                    <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'confirmed' })} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
+                    <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {showAdd && (
+        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Book Session</h3>
+            <form onSubmit={handleAdd}>
+              <div className="form-group">
+                <label className="form-label">Client</label>
+                <select className="form-select" required value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
+                  <option value="">Select client</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Date</label>
+                  <input className="form-input" type="date" required value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Time</label>
+                  <input className="form-input" type="time" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Duration (min)</label>
+                  <select className="form-select" value={form.duration} onChange={e => setForm({ ...form, duration: Number(e.target.value) })}>
+                    <option value={30}>30 min</option>
+                    <option value={45}>45 min</option>
+                    <option value={60}>60 min</option>
+                    <option value={90}>90 min</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Type</label>
+                  <input className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Book</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
