@@ -1,11 +1,11 @@
 import { useApp } from '../context/AppContext';
 import { Dumbbell, Calendar, TrendingDown, TrendingUp, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { exerciseLibrary } from '../data/exercises';
 import NotesSection from '../components/NotesSection';
 
 export default function ClientDashboard() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises } = useApp();
+  const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
   const stats = getBodyStats(currentUser.id);

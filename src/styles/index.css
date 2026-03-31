@@ -731,6 +731,28 @@ tr:hover { background: var(--bg-card-hover); }
 .exercise-name { font-weight: 700; margin-bottom: 8px; font-size: 0.95rem; }
 .exercise-meta { display: flex; gap: 6px; margin-bottom: 10px; }
 .exercise-desc { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.5; }
+.exercise-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.exercise-trainer-actions { display: flex; gap: 2px; margin-left: auto; }
+.btn-video {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 71, 111, 0.08);
+  color: var(--danger);
+  border: 1px solid rgba(239, 71, 111, 0.15);
+  border-radius: var(--radius-full);
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  transition: all 0.2s var(--ease);
+}
+.btn-video:hover {
+  background: rgba(239, 71, 111, 0.15);
+  transform: translateY(-1px);
+}
 
 /* ===== WORKOUT PLAN ===== */
 .plan-exercise {

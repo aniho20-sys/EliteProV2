@@ -1,12 +1,13 @@
 import { useApp } from '../context/AppContext';
-import { exerciseLibrary } from '../data/exercises';
+import { Play } from 'lucide-react';
 
 export default function MyWorkoutsPage() {
-  const { currentUser, getWorkoutPlans } = useApp();
+  const { currentUser, getWorkoutPlans, getExercises } = useApp();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
+  const exercises = getExercises();
 
-  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
-  const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
+  const getExerciseName = (id) => exercises.find(e => e.id === id)?.name || id;
+  const getExercise = (id) => exercises.find(e => e.id === id);
 
   return (
     <div>
@@ -45,6 +46,11 @@ export default function MyWorkoutsPage() {
                   </div>
                   {exercise?.description && <p className="text-sm text-muted mt-8">{exercise.description}</p>}
                   {ex.notes && <p className="text-sm mt-8" style={{ color: 'var(--warning)', fontStyle: 'italic' }}>{ex.notes}</p>}
+                  {exercise?.videoUrl && (
+                    <a href={exercise.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mt-8">
+                      <Play size={14} /> Watch Demo
+                    </a>
+                  )}
                 </div>
               );
             })}

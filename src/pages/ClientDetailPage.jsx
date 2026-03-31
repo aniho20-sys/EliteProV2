@@ -1,13 +1,13 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { exerciseLibrary } from '../data/exercises';
 import { ArrowLeft, Plus } from 'lucide-react';
 import NotesSection from '../components/NotesSection';
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
-  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs } = useApp();
+  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, getExercises } = useApp();
+  const exerciseLibrary = getExercises();
   const client = getClient(clientId);
   const stats = getBodyStats(clientId);
   const plans = getWorkoutPlans({ clientId });

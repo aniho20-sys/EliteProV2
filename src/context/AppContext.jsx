@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { sampleTrainer, sampleClients, sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs, sampleSchedule, sampleMessages } from '../data/sampleData';
+import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 
 const AppContext = createContext();
 
@@ -23,6 +24,7 @@ function getInitialData() {
     workoutLogs: sampleWorkoutLogs,
     schedule: sampleSchedule,
     messages: sampleMessages,
+    exercises: defaultExercises,
   };
 }
 
@@ -151,6 +153,28 @@ export function AppProvider({ children }) {
     }));
   };
 
+  const getExercises = () => data.exercises || defaultExercises;
+
+  const addExercise = (exercise) => {
+    const newEx = { ...exercise, id: `ex-${Date.now()}` };
+    setData(prev => ({ ...prev, exercises: [...(prev.exercises || defaultExercises), newEx] }));
+    return newEx;
+  };
+
+  const updateExercise = (exerciseId, updates) => {
+    setData(prev => ({
+      ...prev,
+      exercises: (prev.exercises || defaultExercises).map(e => e.id === exerciseId ? { ...e, ...updates } : e),
+    }));
+  };
+
+  const deleteExercise = (exerciseId) => {
+    setData(prev => ({
+      ...prev,
+      exercises: (prev.exercises || defaultExercises).filter(e => e.id !== exerciseId),
+    }));
+  };
+
   const resetData = () => {
     localStorage.removeItem(STORAGE_KEY);
     setData(getInitialData());
@@ -165,6 +189,7 @@ export function AppProvider({ children }) {
     getWorkoutLogs, addWorkoutLog,
     getSchedule, addScheduleItem, updateScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
+    getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
     resetData, data,
   };
 

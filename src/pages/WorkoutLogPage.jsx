@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { exerciseLibrary } from '../data/exercises';
 import { Plus } from 'lucide-react';
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises } = useApp();
+  const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
   const [showLog, setShowLog] = useState(false);

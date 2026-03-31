@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { exerciseLibrary, muscleGroups } from '../data/exercises';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Play } from 'lucide-react';
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises } = useApp();
+  const exerciseLibrary = getExercises();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
@@ -41,6 +41,7 @@ export default function WorkoutPlansPage() {
   };
 
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
   const filteredExercises = exerciseLibrary.filter(e =>
     e.name.toLowerCase().includes(exFilter.toLowerCase()) || e.muscle.toLowerCase().includes(exFilter.toLowerCase())
@@ -73,14 +74,22 @@ export default function WorkoutPlansPage() {
                   {isTrainer && <button className="btn-icon" onClick={() => deleteWorkoutPlan(p.id)}><Trash2 size={16} /></button>}
                 </div>
               </div>
-              {p.exercises.map((ex, i) => (
+              {p.exercises.map((ex, i) => {
+                const exData = getExercise(ex.exerciseId);
+                return (
                 <div key={i} className="plan-exercise">
                   <span className="plan-exercise-name">{getExerciseName(ex.exerciseId)}</span>
                   <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
                   <span className="plan-exercise-detail">Rest: {ex.rest}s</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
+                  {exData?.videoUrl && (
+                    <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
+                      <Play size={14} />
+                    </a>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         })
