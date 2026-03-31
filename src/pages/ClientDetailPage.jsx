@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { exerciseLibrary } from '../data/exercises';
 import { ArrowLeft, Plus } from 'lucide-react';
+import NotesSection from '../components/NotesSection';
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
@@ -43,7 +44,7 @@ export default function ClientDetailPage() {
       </div>
 
       <div className="tabs">
-        {['overview', 'body stats', 'workout plans', 'workout logs'].map(t => (
+        {['overview', 'body stats', 'workout plans', 'workout logs', 'notes'].map(t => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -199,6 +200,12 @@ export default function ClientDetailPage() {
               );
             })
           )}
+        </div>
+      )}
+
+      {tab === 'notes' && (
+        <div className="card">
+          <NotesSection clientId={clientId} />
         </div>
       )}
     </div>

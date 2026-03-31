@@ -8,7 +8,6 @@ import ClientsPage from './pages/ClientsPage';
 import ClientDetailPage from './pages/ClientDetailPage';
 import WorkoutPlansPage from './pages/WorkoutPlansPage';
 import SchedulePage from './pages/SchedulePage';
-import MessagesPage from './pages/MessagesPage';
 import ExerciseLibraryPage from './pages/ExerciseLibraryPage';
 import WorkoutLogPage from './pages/WorkoutLogPage';
 import ProgressPage from './pages/ProgressPage';
@@ -31,7 +30,6 @@ function AppRoutes() {
           {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
           <Route path="/plans" element={<WorkoutPlansPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/messages" element={<MessagesPage />} />
           <Route path="/exercises" element={<ExerciseLibraryPage />} />
           {!isTrainer && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
           {!isTrainer && <Route path="/log" element={<WorkoutLogPage />} />}

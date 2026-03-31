@@ -2,6 +2,7 @@ import { useApp } from '../context/AppContext';
 import { Dumbbell, Calendar, TrendingDown, TrendingUp, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { exerciseLibrary } from '../data/exercises';
+import NotesSection from '../components/NotesSection';
 
 export default function ClientDashboard() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule } = useApp();
@@ -139,6 +140,13 @@ export default function ClientDashboard() {
             })}
           </div>
         )}
+
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Coach Notes</h3>
+          </div>
+          <NotesSection clientId={currentUser.id} />
+        </div>
       </div>
     </div>
   );
