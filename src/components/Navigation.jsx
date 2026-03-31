@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  MessageSquare, BookOpen, LogOut, Settings
+  MessageSquare, BookOpen, LogOut, TrendingUp
 } from 'lucide-react';
 
 const trainerLinks = [
@@ -18,7 +18,7 @@ const clientLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/my-workouts', icon: Dumbbell, label: 'My Workouts' },
   { to: '/log', icon: ClipboardList, label: 'Workout Log' },
-  { to: '/progress', icon: Settings, label: 'My Progress' },
+  { to: '/progress', icon: TrendingUp, label: 'My Progress' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
   { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
@@ -40,17 +40,22 @@ export default function Navigation() {
         <nav className="sidebar-nav">
           {links.map(link => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-              <link.icon size={20} />
+              <link.icon size={19} strokeWidth={2} />
               {link.label}
               {link.label === 'Messages' && unread > 0 && <span className="badge">{unread}</span>}
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-user">
-          <div className="sidebar-user-name">{currentUser?.name}</div>
-          <div className="sidebar-user-role">{currentUser?.role}</div>
-          <button className="btn btn-outline btn-sm mt-8" onClick={handleLogout} style={{ width: '100%' }}>
-            <LogOut size={14} /> Logout
+          <div className="sidebar-user-info">
+            <div className="sidebar-user-avatar">{currentUser?.name?.[0]}</div>
+            <div>
+              <div className="sidebar-user-name">{currentUser?.name}</div>
+              <div className="sidebar-user-role">{currentUser?.role}</div>
+            </div>
+          </div>
+          <button className="btn btn-outline btn-sm" onClick={handleLogout} style={{ width: '100%' }}>
+            <LogOut size={14} /> Log Out
           </button>
         </div>
       </aside>
@@ -60,7 +65,7 @@ export default function Navigation() {
         <div className="bottom-nav-inner">
           {links.slice(0, 5).map(link => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `bottom-nav-link ${isActive ? 'active' : ''}`}>
-              <link.icon size={20} />
+              <link.icon size={20} strokeWidth={2} />
               {link.label.split(' ')[0]}
               {link.label === 'Messages' && unread > 0 && <span className="badge">{unread}</span>}
             </NavLink>
