@@ -11,6 +11,9 @@ export default function SchedulePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
 
+  // For client: find their trainer
+  const trainerId = isTrainer ? currentUser.id : currentUser.trainerId;
+
   // Get next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -28,7 +31,11 @@ export default function SchedulePage() {
 
   const handleAdd = (e) => {
     e.preventDefault();
-    addScheduleItem({ ...form, trainerId: currentUser.id });
+    addScheduleItem({
+      ...form,
+      trainerId,
+      clientId: isTrainer ? form.clientId : currentUser.id,
+    });
     setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
     setShowAdd(false);
   };
@@ -47,7 +54,7 @@ export default function SchedulePage() {
           <h1 className="page-title">Schedule</h1>
           <p className="page-subtitle">Manage your appointments</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={18} /> Book Session</button>}
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={18} /> Book Session</button>
       </div>
 
       {/* Date selector */}
@@ -107,13 +114,20 @@ export default function SchedulePage() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Book Session</h3>
             <form onSubmit={handleAdd}>
-              <div className="form-group">
-                <label className="form-label">Client</label>
-                <select className="form-select" required value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
-                  <option value="">Select client</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+              {isTrainer ? (
+                <div className="form-group">
+                  <label className="form-label">Client</label>
+                  <select className="form-select" required value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
+                    <option value="">Select client</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">Coach</label>
+                  <input className="form-input" disabled value={getClient(trainerId)?.name || 'Your Coach'} />
+                </div>
+              )}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Date</label>
