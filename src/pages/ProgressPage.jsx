@@ -28,7 +28,7 @@ export default function ProgressPage() {
 
   return (
     <div>
-      <div className="page-header flex-between">
+      <div className="page-header progress-header">
         <div>
           <h1 className="page-title">My Progress</h1>
           <p className="page-subtitle">{stats.length} measurements recorded</p>
@@ -36,23 +36,26 @@ export default function ProgressPage() {
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={18} /> Add Measurement</button>
       </div>
 
-      {/* Current stats */}
+      {/* Current stats - left aligned */}
       {latestStat && (
-        <div className="grid-3 mb-16">
-          {metrics.map(key => {
-            const change = firstStat && stats.length > 1 ? (latestStat[key] - firstStat[key]).toFixed(1) : null;
-            return (
-              <div key={key} className="card stat-card">
-                <div className="stat-value">{latestStat[key]}{units[key]}</div>
-                <div className="stat-label">{labels[key]}</div>
-                {change !== null && (
-                  <div className={`stat-change ${parseFloat(change) > 0 ? 'positive' : 'negative'}`}>
-                    {parseFloat(change) > 0 ? '+' : ''}{change}{units[key]} overall
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="card mb-16">
+          <h3 className="card-title mb-16">Current Stats</h3>
+          <div className="body-stats-grid">
+            {metrics.map(key => {
+              const change = firstStat && stats.length > 1 ? (latestStat[key] - firstStat[key]).toFixed(1) : null;
+              return (
+                <div key={key} className="body-stat-row">
+                  <span className="body-stat-label">{labels[key]}</span>
+                  <span className="body-stat-value">{latestStat[key]}{units[key]}</span>
+                  {change !== null && (
+                    <span className={`body-stat-change ${parseFloat(change) > 0 ? 'positive' : 'negative'}`}>
+                      {parseFloat(change) > 0 ? '+' : ''}{change}{units[key]}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -85,23 +88,42 @@ export default function ProgressPage() {
         </div>
       )}
 
-      {/* History table */}
+      {/* History - table on desktop, cards on mobile */}
       {stats.length > 0 ? (
-        <div className="card table-wrapper">
+        <div className="card">
           <h3 className="card-title mb-16">Measurement History</h3>
-          <table>
-            <thead>
-              <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Arms</th><th>Legs</th></tr>
-            </thead>
-            <tbody>
-              {[...stats].reverse().map((s, i) => (
-                <tr key={i}>
-                  <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
-                  <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Desktop table */}
+          <div className="table-wrapper history-table-desktop">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Arms</th><th>Legs</th></tr>
+              </thead>
+              <tbody>
+                {[...stats].reverse().map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
+                    <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile cards */}
+          <div className="history-cards-mobile">
+            {[...stats].reverse().map((s, i) => (
+              <div key={i} className="history-card">
+                <div className="history-card-date">{s.date}</div>
+                <div className="body-stats-grid">
+                  <div className="body-stat-item"><span className="body-stat-label">Weight</span><span className="body-stat-value">{s.weight}kg</span></div>
+                  <div className="body-stat-item"><span className="body-stat-label">Body Fat</span><span className="body-stat-value">{s.bodyFat}%</span></div>
+                  <div className="body-stat-item"><span className="body-stat-label">Chest</span><span className="body-stat-value">{s.chest}cm</span></div>
+                  <div className="body-stat-item"><span className="body-stat-label">Waist</span><span className="body-stat-value">{s.waist}cm</span></div>
+                  <div className="body-stat-item"><span className="body-stat-label">Arms</span><span className="body-stat-value">{s.arms}cm</span></div>
+                  <div className="body-stat-item"><span className="body-stat-label">Legs</span><span className="body-stat-value">{s.legs}cm</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="card empty-state">

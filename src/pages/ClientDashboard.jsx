@@ -104,7 +104,7 @@ export default function ClientDashboard() {
               <h3 className="card-title">Body Stats</h3>
               <Link to="/progress" className="btn btn-outline btn-sm">Details</Link>
             </div>
-            <div className="grid-3">
+            <div className="body-stats-grid">
               {[
                 { label: 'Weight', value: `${latestStat.weight}kg` },
                 { label: 'Body Fat', value: `${latestStat.bodyFat}%` },
@@ -113,9 +113,9 @@ export default function ClientDashboard() {
                 { label: 'Arms', value: `${latestStat.arms}cm` },
                 { label: 'Legs', value: `${latestStat.legs}cm` },
               ].map(s => (
-                <div key={s.label} className="text-center">
-                  <div className="fw-bold">{s.value}</div>
-                  <div className="text-sm text-muted">{s.label}</div>
+                <div key={s.label} className="body-stat-item">
+                  <span className="body-stat-label">{s.label}</span>
+                  <span className="body-stat-value">{s.value}</span>
                 </div>
               ))}
             </div>

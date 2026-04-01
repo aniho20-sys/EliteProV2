@@ -550,6 +550,88 @@ tr:hover { background: var(--bg-card-hover); }
 }
 
 /* ===== PAGE HEADER ===== */
+/* ===== BODY STATS (left-aligned) ===== */
+.body-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.body-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: var(--radius-xs);
+}
+.body-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-radius: var(--radius-xs);
+}
+.body-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.body-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.body-stat-change {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: auto;
+}
+.body-stat-change.positive { color: var(--success); }
+.body-stat-change.negative { color: var(--danger); }
+
+/* Progress page header */
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .progress-header .btn { width: 100%; justify-content: center; }
+}
+
+/* History: table on desktop, cards on mobile */
+.history-table-desktop { display: block; }
+.history-cards-mobile { display: none; }
+.history-card {
+  padding: 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+.history-card-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+@media (max-width: 640px) {
+  .history-table-desktop { display: none; }
+  .history-cards-mobile { display: block; }
+  .body-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ===== DATE SELECTOR MONTH ===== */
+.date-selector-month {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
 .page-header { margin-bottom: 28px; }
 .page-title {
   font-size: 1.6rem;

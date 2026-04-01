@@ -14,12 +14,15 @@ export default function SchedulePage() {
   // For client: find their trainer
   const trainerId = isTrainer ? currentUser.id : currentUser.trainerId;
 
-  // Get next 7 days
-  const dates = Array.from({ length: 7 }, (_, i) => {
+  // Get next 14 days
+  const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
     return d.toISOString().split('T')[0];
   });
+
+  // Month label for date selector
+  const selectedMonth = new Date(selectedDate).toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
   const schedule = getSchedule(
     isTrainer ? { trainerId: currentUser.id, date: selectedDate } : { clientId: currentUser.id, date: selectedDate }
@@ -58,6 +61,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Date selector */}
+      <div className="date-selector-month">{selectedMonth}</div>
       <div className="date-selector mb-16">
         {dates.map(date => {
           const { day, date: num } = formatDay(date);
@@ -85,7 +89,10 @@ export default function SchedulePage() {
       <div className="card">
         <h3 className="card-title mb-16">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
         {schedule.length === 0 ? (
-          <div className="empty-state"><p className="empty-state-text">No sessions scheduled</p></div>
+          <div className="empty-state">
+            <p className="empty-state-text">No sessions on this day</p>
+            <button className="btn btn-outline btn-sm mt-8" onClick={() => setShowAdd(true)}>Book a session</button>
+          </div>
         ) : (
           schedule.sort((a, b) => a.time.localeCompare(b.time)).map(s => {
             const client = getClient(s.clientId);
@@ -105,6 +112,9 @@ export default function SchedulePage() {
                       <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'confirmed' })} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
                       <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
                     </div>
+                  )}
+                  {!isTrainer && s.status === 'pending' && (
+                    <button className="btn btn-sm btn-outline" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
                   )}
                 </div>
               </div>
