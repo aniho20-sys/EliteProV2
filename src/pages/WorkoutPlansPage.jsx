@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 export default function WorkoutPlansPage() {
@@ -14,6 +14,7 @@ export default function WorkoutPlansPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', clientId: '', day: 'Monday', exercises: [] });
   const [exFilter, setExFilter] = useState('');
+  const [dragIdx, setDragIdx] = useState(null);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -26,6 +27,15 @@ export default function WorkoutPlansPage() {
 
   const removeExercise = (index) => {
     setForm(prev => ({ ...prev, exercises: prev.exercises.filter((_, i) => i !== index) }));
+  };
+
+  const reorderExercise = (fromIdx, toIdx) => {
+    setForm(prev => {
+      const exs = [...prev.exercises];
+      const [moved] = exs.splice(fromIdx, 1);
+      exs.splice(toIdx, 0, moved);
+      return { ...prev, exercises: exs };
+    });
   };
 
   const updateExercise = (index, field, value) => {
@@ -157,7 +167,15 @@ export default function WorkoutPlansPage() {
                 <div className="mb-16">
                   <label className="form-label">Exercises ({form.exercises.length})</label>
                   {form.exercises.map((ex, i) => (
-                    <div key={i} className="plan-exercise">
+                    <div
+                      key={i}
+                      className={`plan-exercise plan-exercise-drag ${dragIdx === i ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={() => setDragIdx(i)}
+                      onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) reorderExercise(dragIdx, i); setDragIdx(i); }}
+                      onDragEnd={() => setDragIdx(null)}
+                    >
+                      <GripVertical size={14} className="drag-handle" />
                       <span className="plan-exercise-name">{getExerciseName(ex.exerciseId)}</span>
                       <input className="form-input log-set-input" type="number" value={ex.sets} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
                       <span className="text-sm text-muted">x</span>

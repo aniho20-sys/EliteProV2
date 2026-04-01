@@ -997,6 +997,9 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-exercise:hover { background: var(--bg-elevated); }
 .plan-exercise-name { flex: 1; font-size: 0.9rem; font-weight: 600; min-width: 0; }
 .plan-exercise-detail { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
+.plan-exercise-drag { cursor: grab; }
+.plan-exercise-drag.dragging { opacity: 0.4; border-style: dashed; }
+.drag-handle { color: var(--text-muted); flex-shrink: 0; cursor: grab; }
 @media (max-width: 640px) {
   .plan-header .btn { width: 100%; justify-content: center; }
   .plan-exercise { gap: 8px; padding: 10px 12px; }
@@ -1166,6 +1169,50 @@ tr:hover { background: var(--bg-card-hover); }
 @media (max-width: 640px) {
   .toast-container { top: auto; bottom: 80px; right: 12px; left: 12px; }
   .toast { max-width: 100%; }
+}
+
+/* ===== ONBOARDING ===== */
+.onboarding-card {
+  border-left: 3px solid var(--primary);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(67, 97, 238, 0.03) 100%);
+}
+.onboarding-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  transition: all 0.2s var(--ease);
+}
+.onboarding-step:hover {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+  transform: translateX(4px);
+}
+.onboarding-num {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 /* ===== SELECTION ===== */

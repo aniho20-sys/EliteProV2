@@ -20,6 +20,27 @@ export default function TrainerDashboard() {
         <p className="page-subtitle">Here&apos;s your overview for today</p>
       </div>
 
+      {clients.length === 0 && (
+        <div className="card onboarding-card mb-16">
+          <h3 className="card-title">Get Started</h3>
+          <p className="text-sm text-secondary mt-8">Set up your training platform in 3 steps:</p>
+          <div className="onboarding-steps">
+            <Link to="/clients" className="onboarding-step">
+              <span className="onboarding-num">1</span>
+              <span>Add your first client</span>
+            </Link>
+            <Link to="/plans" className="onboarding-step">
+              <span className="onboarding-num">2</span>
+              <span>Create a workout plan</span>
+            </Link>
+            <Link to="/schedule" className="onboarding-step">
+              <span className="onboarding-num">3</span>
+              <span>Book a session</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="grid-4 mb-16">
         <div className="card stat-card">
           <Users size={24} style={{ color: 'var(--primary-light)', marginBottom: 8 }} />
