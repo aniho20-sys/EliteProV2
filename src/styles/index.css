@@ -801,6 +801,23 @@ tr:hover { background: var(--bg-card-hover); }
 }
 
 /* ===== WORKOUT PLAN ===== */
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plan-card-info { min-width: 0; }
+.plan-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .plan-exercise {
   display: flex;
   align-items: center;
@@ -811,10 +828,16 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 6px;
   border: 1px solid var(--border);
   transition: background 0.15s var(--ease);
+  flex-wrap: wrap;
 }
 .plan-exercise:hover { background: var(--bg-elevated); }
-.plan-exercise-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
-.plan-exercise-detail { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
+.plan-exercise-name { flex: 1; font-size: 0.9rem; font-weight: 600; min-width: 0; }
+.plan-exercise-detail { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
+@media (max-width: 640px) {
+  .plan-header .btn { width: 100%; justify-content: center; }
+  .plan-exercise { gap: 8px; padding: 10px 12px; }
+  .plan-exercise-name { flex-basis: 100%; }
+}
 
 /* ===== WORKOUT LOG ===== */
 .log-top-bar {

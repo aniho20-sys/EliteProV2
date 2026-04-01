@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play } from 'lucide-react';
+import { Plus, Trash2, Play, Copy } from 'lucide-react';
 
 export default function WorkoutPlansPage() {
   const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises } = useApp();
@@ -43,18 +43,28 @@ export default function WorkoutPlansPage() {
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
+  const duplicatePlan = (plan) => {
+    setForm({
+      name: `${plan.name} (Copy)`,
+      clientId: '',
+      day: plan.day,
+      exercises: plan.exercises.map(ex => ({ ...ex })),
+    });
+    setShowCreate(true);
+  };
+
   const filteredExercises = exerciseLibrary.filter(e =>
     e.name.toLowerCase().includes(exFilter.toLowerCase()) || e.muscle.toLowerCase().includes(exFilter.toLowerCase())
   );
 
   return (
     <div>
-      <div className="page-header flex-between">
+      <div className="page-header plan-header">
         <div>
           <h1 className="page-title">Workout Plans</h1>
           <p className="page-subtitle">{plans.length} plans</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={18} /> Create Plan</button>}
+        {isTrainer && <button className="btn btn-primary" onClick={() => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
       </div>
 
       {plans.length === 0 ? (
@@ -64,14 +74,19 @@ export default function WorkoutPlansPage() {
           const client = clients.find(c => c.id === p.clientId);
           return (
             <div key={p.id} className="card mb-16">
-              <div className="card-header">
-                <div>
+              <div className="plan-card-header">
+                <div className="plan-card-info">
                   <h3 className="card-title">{p.name}</h3>
                   {client && <span className="text-sm text-muted">{client.name}</span>}
                 </div>
-                <div className="flex gap-8">
+                <div className="plan-card-actions">
                   <span className="tag tag-primary">{p.day}</span>
-                  {isTrainer && <button className="btn-icon" onClick={() => deleteWorkoutPlan(p.id)}><Trash2 size={16} /></button>}
+                  {isTrainer && (
+                    <>
+                      <button className="btn-icon" title="Duplicate" onClick={() => duplicatePlan(p)}><Copy size={16} /></button>
+                      <button className="btn-icon" onClick={() => deleteWorkoutPlan(p.id)} title="Delete" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
+                    </>
+                  )}
                 </div>
               </div>
               {p.exercises.map((ex, i) => {
