@@ -132,19 +132,19 @@ export default function SchedulePage() {
                   <input className="form-input" disabled value={getClient(trainerId)?.name || 'Your Coach'} />
                 </div>
               )}
-              <div className="form-row">
-                <div className="form-group">
+              <div className="book-form-row">
+                <div className="form-group book-form-date">
                   <label className="form-label">Date</label>
                   <input className="form-input" type="date" required value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
                 </div>
-                <div className="form-group">
+                <div className="form-group book-form-time">
                   <label className="form-label">Time</label>
                   <input className="form-input" type="time" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Duration (min)</label>
+              <div className="book-form-row">
+                <div className="form-group book-form-duration">
+                  <label className="form-label">Duration</label>
                   <select className="form-select" value={form.duration} onChange={e => setForm({ ...form, duration: Number(e.target.value) })}>
                     <option value={30}>30 min</option>
                     <option value={45}>45 min</option>
@@ -152,7 +152,7 @@ export default function SchedulePage() {
                     <option value={90}>90 min</option>
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="form-group book-form-type">
                   <label className="form-label">Type</label>
                   <input className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
                 </div>

@@ -671,6 +671,16 @@ tr:hover { background: var(--bg-card-hover); }
 .schedule-info { flex: 1; min-width: 0; }
 .schedule-client { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .schedule-type { color: var(--text-secondary); font-size: 0.8rem; }
+/* Book session form */
+.book-form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 0;
+}
+.book-form-date { flex: 3; }
+.book-form-time { flex: 2; }
+.book-form-duration { flex: 2; }
+.book-form-type { flex: 3; }
 @media (max-width: 640px) {
   .schedule-header .btn { width: 100%; justify-content: center; }
   .schedule-item {
@@ -681,6 +691,7 @@ tr:hover { background: var(--bg-card-hover); }
   .schedule-item-top { width: 100%; }
   .schedule-item-bottom { width: 100%; justify-content: space-between; }
   .date-selector .card { min-width: 62px; padding: 10px 12px; }
+  .book-form-row { flex-direction: column; gap: 0; }
 }
 
 /* ===== MESSAGES ===== */
