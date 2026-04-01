@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { ToastProvider } from './context/ToastContext';
 import Navigation from './components/Navigation';
 import LoginPage from './pages/LoginPage';
 import TrainerDashboard from './pages/TrainerDashboard';
@@ -45,7 +46,9 @@ export default function App() {
   return (
     <HashRouter>
       <AppProvider>
-        <AppRoutes />
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
       </AppProvider>
     </HashRouter>
   );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus, Trophy, Play } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises, getPersonalRecords } = useApp();
@@ -8,6 +9,7 @@ export default function WorkoutLogPage() {
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
   const prs = getPersonalRecords(currentUser.id);
+  const toast = useToast();
   const [showLog, setShowLog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -82,6 +84,7 @@ export default function WorkoutLogPage() {
       notes,
     });
     setShowLog(false);
+    toast('Workout saved');
   };
 
   // Count total PRs

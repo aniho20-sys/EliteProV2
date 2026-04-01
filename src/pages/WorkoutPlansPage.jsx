@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus, Trash2, Play, Copy } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function WorkoutPlansPage() {
   const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises } = useApp();
   const exerciseLibrary = getExercises();
+  const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
@@ -38,6 +40,7 @@ export default function WorkoutPlansPage() {
     addWorkoutPlan({ ...form, trainerId: currentUser.id, sets: undefined });
     setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
     setShowCreate(false);
+    toast('Workout plan created');
   };
 
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
@@ -84,7 +87,7 @@ export default function WorkoutPlansPage() {
                   {isTrainer && (
                     <>
                       <button className="btn-icon" title="Duplicate" onClick={() => duplicatePlan(p)}><Copy size={16} /></button>
-                      <button className="btn-icon" onClick={() => deleteWorkoutPlan(p.id)} title="Delete" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
+                      <button className="btn-icon" onClick={() => { deleteWorkoutPlan(p.id); toast('Plan deleted', 'error'); }} title="Delete" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
                     </>
                   )}
                 </div>

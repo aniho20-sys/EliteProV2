@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, Search } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function ClientsPage() {
   const { currentUser, getClients, addClient, getBodyStats } = useApp();
   const navigate = useNavigate();
+  const toast = useToast();
   const clients = getClients(currentUser.id);
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -18,6 +20,7 @@ export default function ClientsPage() {
     addClient({ ...form, trainerId: currentUser.id, age: Number(form.age), height: Number(form.height) });
     setForm({ name: '', email: '', password: '', age: '', height: '', goals: '', notes: '' });
     setShowAdd(false);
+    toast('Client added successfully');
   };
 
   return (

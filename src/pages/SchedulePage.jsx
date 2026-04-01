@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function SchedulePage() {
   const { currentUser, getSchedule, getClients, getClient, addScheduleItem, updateScheduleItem } = useApp();
+  const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
 
@@ -41,6 +43,7 @@ export default function SchedulePage() {
     });
     setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
     setShowAdd(false);
+    toast('Session booked');
   };
 
   const formatDay = (dateStr) => {
@@ -109,12 +112,12 @@ export default function SchedulePage() {
                   <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
                   {isTrainer && s.status === 'pending' && (
                     <div className="flex gap-8">
-                      <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'confirmed' })} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                      <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                      <button className="btn-icon" onClick={() => { updateScheduleItem(s.id, { status: 'confirmed' }); toast('Session confirmed'); }} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
+                      <button className="btn-icon" onClick={() => { updateScheduleItem(s.id, { status: 'cancelled' }); toast('Session cancelled', 'error'); }} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
                     </div>
                   )}
                   {!isTrainer && s.status === 'pending' && (
-                    <button className="btn btn-sm btn-outline" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { updateScheduleItem(s.id, { status: 'cancelled' }); toast('Session cancelled', 'error'); }} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
                   )}
                 </div>
               </div>

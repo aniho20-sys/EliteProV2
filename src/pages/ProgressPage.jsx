@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function ProgressPage() {
   const { currentUser, getBodyStats, addBodyStat } = useApp();
   const stats = getBodyStats(currentUser.id);
+  const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', arms: '', legs: '' });
 
@@ -20,6 +22,7 @@ export default function ProgressPage() {
     });
     setForm({ weight: '', bodyFat: '', chest: '', waist: '', arms: '', legs: '' });
     setShowAdd(false);
+    toast('Measurement saved');
   };
 
   const metrics = ['weight', 'bodyFat', 'chest', 'waist', 'arms', 'legs'];

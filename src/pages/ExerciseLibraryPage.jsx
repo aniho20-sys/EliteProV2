@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function ExerciseLibraryPage() {
   const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
+  const toast = useToast();
   const isTrainer = currentUser?.role === 'trainer';
   const exercises = getExercises();
 
@@ -37,14 +39,16 @@ export default function ExerciseLibraryPage() {
     e.preventDefault();
     if (editingEx) {
       updateExercise(editingEx.id, form);
+      toast('Exercise updated');
     } else {
       addExercise(form);
+      toast('Exercise added');
     }
     setShowModal(false);
   };
 
   const handleDelete = (id) => {
-    if (confirm('Delete this exercise?')) deleteExercise(id);
+    if (confirm('Delete this exercise?')) { deleteExercise(id); toast('Exercise deleted', 'error'); }
   };
 
   return (
