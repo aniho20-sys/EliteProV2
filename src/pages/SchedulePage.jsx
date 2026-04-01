@@ -49,7 +49,7 @@ export default function SchedulePage() {
 
   return (
     <div>
-      <div className="page-header flex-between">
+      <div className="page-header schedule-header">
         <div>
           <h1 className="page-title">Schedule</h1>
           <p className="page-subtitle">Manage your appointments</p>
@@ -58,7 +58,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Date selector */}
-      <div className="flex gap-8 mb-16" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+      <div className="date-selector mb-16">
         {dates.map(date => {
           const { day, date: num } = formatDay(date);
           const count = getSessionCount(date);
@@ -91,18 +91,22 @@ export default function SchedulePage() {
             const client = getClient(s.clientId);
             return (
               <div key={s.id} className="schedule-item">
-                <div className="schedule-time">{s.time}</div>
-                <div className="schedule-info">
-                  <div className="schedule-client">{isTrainer ? client?.name : s.type}</div>
-                  <div className="schedule-type">{s.type} - {s.duration}min</div>
-                </div>
-                <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
-                {isTrainer && s.status === 'pending' && (
-                  <div className="flex gap-8">
-                    <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'confirmed' })} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                    <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                <div className="schedule-item-top">
+                  <div className="schedule-time">{s.time}</div>
+                  <div className="schedule-info">
+                    <div className="schedule-client">{isTrainer ? client?.name : s.type}</div>
+                    <div className="schedule-type">{s.type} - {s.duration}min</div>
                   </div>
-                )}
+                </div>
+                <div className="schedule-item-bottom">
+                  <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
+                  {isTrainer && s.status === 'pending' && (
+                    <div className="flex gap-8">
+                      <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'confirmed' })} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
+                      <button className="btn-icon" onClick={() => updateScheduleItem(s.id, { status: 'cancelled' })} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })
