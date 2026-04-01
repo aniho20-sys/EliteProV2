@@ -120,6 +120,77 @@ body {
   background-clip: text;
 }
 
+/* Sidebar search */
+.sidebar-search { padding: 12px 12px 0; position: relative; }
+.global-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+.global-search-icon { color: var(--text-muted); flex-shrink: 0; }
+.global-search-input {
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+}
+.global-search-input::placeholder { color: var(--text-muted); }
+.global-search-clear {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+.global-search-results {
+  position: absolute;
+  top: 100%;
+  left: 12px;
+  right: 12px;
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 300;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.global-search-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.global-search-item:hover { background: var(--bg-card-hover); }
+.global-search-type {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  background: var(--primary-glow);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+.global-search-info { flex: 1; min-width: 0; }
+.global-search-label { font-size: 0.85rem; font-weight: 600; display: block; }
+.global-search-sub { font-size: 0.75rem; color: var(--text-muted); }
+.global-search-empty { padding: 16px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+.global-search-backdrop { position: fixed; inset: 0; z-index: 250; }
+
 .sidebar-nav { flex: 1; padding: 12px 12px; }
 
 .sidebar-link {

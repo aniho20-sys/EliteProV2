@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
   BookOpen, LogOut, TrendingUp
 } from 'lucide-react';
+import GlobalSearch from './GlobalSearch';
 
 const trainerLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -34,6 +35,9 @@ export default function Navigation() {
       {/* Desktop Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-logo">Elite<span>Pro</span></div>
+        <div className="sidebar-search">
+          <GlobalSearch />
+        </div>
         <nav className="sidebar-nav">
           {links.map(link => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
