@@ -153,6 +153,22 @@ export function AppProvider({ children }) {
     }));
   };
 
+  const getPersonalRecords = (clientId) => {
+    const logs = (data.workoutLogs || []).filter(l => l.clientId === clientId);
+    const prs = {};
+    logs.forEach(log => {
+      (log.entries || []).forEach(entry => {
+        const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
+        if (maxWeight > 0) {
+          if (!prs[entry.exerciseId] || maxWeight > prs[entry.exerciseId].weight) {
+            prs[entry.exerciseId] = { weight: maxWeight, date: log.date };
+          }
+        }
+      });
+    });
+    return prs;
+  };
+
   const getExercises = () => data.exercises || defaultExercises;
 
   const addExercise = (exercise) => {
@@ -189,6 +205,7 @@ export function AppProvider({ children }) {
     getWorkoutLogs, addWorkoutLog,
     getSchedule, addScheduleItem, updateScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
+    getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
     resetData, data,
   };

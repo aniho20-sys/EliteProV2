@@ -1,11 +1,13 @@
 import { useApp } from '../context/AppContext';
-import { Dumbbell, Calendar, TrendingDown, TrendingUp, Activity } from 'lucide-react';
+import { Dumbbell, Calendar, TrendingDown, TrendingUp, Activity, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 
 export default function ClientDashboard() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords } = useApp();
   const exerciseLibrary = getExercises();
+  const prs = getPersonalRecords(currentUser.id);
+  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
   const stats = getBodyStats(currentUser.id);
@@ -138,6 +140,26 @@ export default function ClientDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {Object.keys(prs).length > 0 && (
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
+                <Trophy size={18} style={{ color: '#f59e0b' }} /> Personal Records
+              </h3>
+              <span className="tag tag-warning">{Object.keys(prs).length} PRs</span>
+            </div>
+            <div className="pr-grid">
+              {Object.entries(prs).slice(0, 6).map(([exId, pr]) => (
+                <div key={exId} className="pr-item">
+                  <div className="pr-exercise">{getExerciseName(exId)}</div>
+                  <div className="pr-weight">{pr.weight}kg</div>
+                  <div className="pr-date">{pr.date}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus } from 'lucide-react';
+import { Plus, Trophy, Play } from 'lucide-react';
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises, getPersonalRecords } = useApp();
   const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
+  const prs = getPersonalRecords(currentUser.id);
   const [showLog, setShowLog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -14,6 +15,7 @@ export default function WorkoutLogPage() {
   const [notes, setNotes] = useState('');
 
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
   const startLog = (plan) => {
     setSelectedPlan(plan);
@@ -35,6 +37,27 @@ export default function WorkoutLogPage() {
     ));
   };
 
+  // Check if current entry has a new PR for this exercise
+  const isNewPR = (entry) => {
+    const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
+    const currentPR = prs[entry.exerciseId]?.weight || 0;
+    return maxWeight > 0 && maxWeight > currentPR;
+  };
+
+  // Check if a specific log entry had a PR at time of logging
+  const wasPRAtTime = (log, entry) => {
+    const logDate = log.date;
+    const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
+    if (maxWeight <= 0) return false;
+    // Check all other logs before this date for same exercise
+    const priorMax = logs
+      .filter(l => l.id !== log.id && l.date <= logDate)
+      .flatMap(l => l.entries.filter(e => e.exerciseId === entry.exerciseId))
+      .flatMap(e => e.sets.map(s => Number(s.weight) || 0))
+      .reduce((max, w) => Math.max(max, w), 0);
+    return maxWeight > priorMax;
+  };
+
   const handleSave = () => {
     const logEntries = entries.map(e => ({
       exerciseId: e.exerciseId,
@@ -53,6 +76,9 @@ export default function WorkoutLogPage() {
     setShowLog(false);
   };
 
+  // Count total PRs
+  const prCount = Object.keys(prs).length;
+
   return (
     <div>
       <div className="page-header">
@@ -62,6 +88,27 @@ export default function WorkoutLogPage() {
 
       {!showLog ? (
         <>
+          {/* PR Summary */}
+          {prCount > 0 && (
+            <div className="card mb-16 pr-summary-card">
+              <div className="card-header">
+                <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
+                  <Trophy size={20} style={{ color: '#f59e0b' }} /> Personal Records
+                </h3>
+                <span className="tag tag-warning">{prCount} PRs</span>
+              </div>
+              <div className="pr-grid">
+                {Object.entries(prs).map(([exId, pr]) => (
+                  <div key={exId} className="pr-item">
+                    <div className="pr-exercise">{getExerciseName(exId)}</div>
+                    <div className="pr-weight">{pr.weight}kg</div>
+                    <div className="pr-date">{pr.date}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Quick start */}
           {plans.length > 0 && (
             <div className="card mb-16">
@@ -96,14 +143,22 @@ export default function WorkoutLogPage() {
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
                     </div>
                   </div>
-                  {l.entries.map((entry, i) => (
-                    <div key={i} className="plan-exercise">
-                      <span className="plan-exercise-name">{getExerciseName(entry.exerciseId)}</span>
+                  {l.entries.map((entry, i) => {
+                    const hadPR = wasPRAtTime(l, entry);
+                    const exercise = getExercise(entry.exerciseId);
+                    return (
+                    <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''}`}>
+                      <span className="plan-exercise-name">
+                        {hadPR && <Trophy size={14} style={{ color: '#f59e0b', marginRight: 6, verticalAlign: -2 }} />}
+                        {getExerciseName(entry.exerciseId)}
+                      </span>
                       <span className="plan-exercise-detail">
                         {entry.sets.map((s, j) => `${s.weight}kg x ${s.reps}`).join(' | ')}
                       </span>
+                      {hadPR && <span className="tag tag-warning" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>PR</span>}
                     </div>
-                  ))}
+                    );
+                  })}
                   {l.notes && <p className="text-sm text-muted mt-8">{l.notes}</p>}
                 </div>
               );
@@ -122,13 +177,34 @@ export default function WorkoutLogPage() {
 
           {entries.map((entry, exIdx) => {
             const planEx = selectedPlan.exercises[exIdx];
+            const currentPR = prs[entry.exerciseId];
+            const exercise = getExercise(entry.exerciseId);
+            const gotNewPR = isNewPR(entry);
             return (
-              <div key={exIdx} className="card mb-16">
+              <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
                 <div className="card-header">
-                  <h3 className="card-title">{getExerciseName(entry.exerciseId)}</h3>
-                  <span className="text-sm text-muted">{planEx.sets} x {planEx.reps} | Rest: {planEx.rest}s</span>
+                  <div>
+                    <h3 className="card-title">
+                      {gotNewPR && <Trophy size={16} style={{ color: '#f59e0b', marginRight: 6, verticalAlign: -2 }} />}
+                      {getExerciseName(entry.exerciseId)}
+                    </h3>
+                    {currentPR && (
+                      <span className="text-sm" style={{ color: 'var(--warning)' }}>
+                        PR: {currentPR.weight}kg
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span className="text-sm text-muted">{planEx.sets} x {planEx.reps} | Rest: {planEx.rest}s</span>
+                    {gotNewPR && <div className="tag tag-warning mt-8" style={{ fontSize: '0.65rem' }}>NEW PR!</div>}
+                  </div>
                 </div>
                 {planEx.notes && <p className="text-sm text-muted mb-16" style={{ fontStyle: 'italic' }}>{planEx.notes}</p>}
+                {exercise?.videoUrl && (
+                  <a href={exercise.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
+                    <Play size={14} /> Watch Demo
+                  </a>
+                )}
                 {entry.sets.map((set, setIdx) => (
                   <div key={setIdx} className="log-set-row">
                     <span className="log-set-num">Set {setIdx + 1}</span>
