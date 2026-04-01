@@ -18,11 +18,13 @@ export default function LoginPage() {
     e.preventDefault();
     const result = login(email, password);
     if (!result.success) setError(result.error);
+    else setError('');
   };
 
   const handleDemoLogin = (account) => {
     setEmail(account.email);
     setPassword(account.password);
+    setError('');
     login(account.email, account.password);
   };
 

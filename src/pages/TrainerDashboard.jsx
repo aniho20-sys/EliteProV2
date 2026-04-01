@@ -1,10 +1,11 @@
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, MessageSquare, TrendingUp } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function TrainerDashboard() {
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages } = useApp();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans } = useApp();
   const clients = getClients(currentUser.id);
+  const totalPlans = getWorkoutPlans({ trainerId: currentUser.id }).length;
   const today = new Date().toISOString().split('T')[0];
   const todaySchedule = getSchedule({ trainerId: currentUser.id, date: today });
   const unread = getUnreadCount(currentUser.id);
@@ -31,14 +32,14 @@ export default function TrainerDashboard() {
           <div className="stat-label">Sessions Today</div>
         </div>
         <div className="card stat-card">
-          <MessageSquare size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
+          <TrendingUp size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
           <div className="stat-value">{unread}</div>
           <div className="stat-label">Unread Messages</div>
         </div>
         <div className="card stat-card">
-          <TrendingUp size={24} style={{ color: 'var(--danger)', marginBottom: 8 }} />
-          <div className="stat-value">{clients.length > 0 ? Math.round((clients.length / clients.length) * 100) : 0}%</div>
-          <div className="stat-label">Retention Rate</div>
+          <Dumbbell size={24} style={{ color: 'var(--danger)', marginBottom: 8 }} />
+          <div className="stat-value">{totalPlans}</div>
+          <div className="stat-label">Workout Plans</div>
         </div>
       </div>
 
@@ -70,7 +71,6 @@ export default function TrainerDashboard() {
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Unread Messages</h3>
-            <Link to="/messages" className="btn btn-outline btn-sm">View All</Link>
           </div>
           {recentMessages.length === 0 ? (
             <div className="empty-state"><p className="empty-state-text">All caught up!</p></div>
@@ -78,7 +78,7 @@ export default function TrainerDashboard() {
             recentMessages.map(m => {
               const sender = clients.find(c => c.id === m.from);
               return (
-                <div key={m.id} className="contact-item">
+                <div key={m.id} className="contact-item" onClick={() => sender && (window.location.hash = `/clients/${sender.id}`)}>
                   <div className="contact-avatar">{sender?.name?.[0] || '?'}</div>
                   <div className="contact-info">
                     <div className="contact-name">{sender?.name || 'Unknown'}</div>

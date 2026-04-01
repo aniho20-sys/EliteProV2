@@ -57,12 +57,12 @@ export default function ProgressPage() {
       )}
 
       {/* Progress bars */}
-      {stats.length > 1 && (
+      {stats.length > 1 && firstStat && latestStat && (
         <div className="card mb-16">
           <h3 className="card-title mb-16">Progress Overview</h3>
           {metrics.map(key => {
-            const first = firstStat[key];
-            const last = latestStat[key];
+            const first = firstStat[key] || 0;
+            const last = latestStat[key] || 0;
             const change = last - first;
             const pct = Math.min(100, Math.max(5, (last / (first * 1.3)) * 100));
             return (

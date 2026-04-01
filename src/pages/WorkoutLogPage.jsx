@@ -60,8 +60,8 @@ export default function WorkoutLogPage() {
     // Check all other logs before this date for same exercise
     const priorMax = logs
       .filter(l => l.id !== log.id && l.date <= logDate)
-      .flatMap(l => l.entries.filter(e => e.exerciseId === entry.exerciseId))
-      .flatMap(e => e.sets.map(s => Number(s.weight) || 0))
+      .flatMap(l => (l.entries || []).filter(e => e.exerciseId === entry.exerciseId))
+      .flatMap(e => (e.sets || []).map(s => Number(s.weight) || 0))
       .reduce((max, w) => Math.max(max, w), 0);
     return maxWeight > priorMax;
   };
