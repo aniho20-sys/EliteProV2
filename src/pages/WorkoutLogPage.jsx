@@ -19,10 +19,18 @@ export default function WorkoutLogPage() {
 
   const startLog = (plan) => {
     setSelectedPlan(plan);
-    setEntries(plan.exercises.map(ex => ({
-      exerciseId: ex.exerciseId,
-      sets: Array.from({ length: ex.sets }, () => ({ weight: '', reps: '' })),
-    })));
+    // Find the most recent log for this plan
+    const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
+    setEntries(plan.exercises.map(ex => {
+      const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
+      return {
+        exerciseId: ex.exerciseId,
+        sets: Array.from({ length: ex.sets }, (_, i) => {
+          const prev = lastEntry?.sets?.[i];
+          return prev ? { weight: String(prev.weight), reps: String(prev.reps) } : { weight: '', reps: '' };
+        }),
+      };
+    }));
     setRpe(7);
     setNotes('');
     setShowLog(true);
@@ -167,9 +175,9 @@ export default function WorkoutLogPage() {
         </>
       ) : (
         <div>
-          <div className="flex-between mb-16">
-            <h2>{selectedPlan.name}</h2>
-            <div className="flex gap-8">
+          <div className="log-top-bar mb-16">
+            <h2 className="page-title">{selectedPlan.name}</h2>
+            <div className="log-top-actions">
               <button className="btn btn-outline" onClick={() => setShowLog(false)}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave}>Save Workout</button>
             </div>
@@ -180,24 +188,28 @@ export default function WorkoutLogPage() {
             const currentPR = prs[entry.exerciseId];
             const exercise = getExercise(entry.exerciseId);
             const gotNewPR = isNewPR(entry);
+            const lastLog = [...logs].reverse().find(l => l.planId === selectedPlan.id);
+            const lastEntry = lastLog?.entries?.find(e => e.exerciseId === entry.exerciseId);
             return (
               <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
-                <div className="card-header">
-                  <div>
+                <div className="log-card-header">
+                  <div className="log-card-title">
                     <h3 className="card-title">
                       {gotNewPR && <Trophy size={16} style={{ color: '#f59e0b', marginRight: 6, verticalAlign: -2 }} />}
                       {getExerciseName(entry.exerciseId)}
                     </h3>
-                    {currentPR && (
-                      <span className="text-sm" style={{ color: 'var(--warning)' }}>
-                        PR: {currentPR.weight}kg
-                      </span>
-                    )}
+                    <div className="log-card-tags">
+                      {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
+                      <span className="text-sm text-muted">{planEx.sets} x {planEx.reps} | Rest: {planEx.rest}s</span>
+                      {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span className="text-sm text-muted">{planEx.sets} x {planEx.reps} | Rest: {planEx.rest}s</span>
-                    {gotNewPR && <div className="tag tag-warning mt-8" style={{ fontSize: '0.65rem' }}>NEW PR!</div>}
-                  </div>
+                  {lastEntry && (
+                    <div className="last-session-hint">
+                      <span className="last-session-label">Last session</span>
+                      <span className="last-session-data">{lastEntry.sets.map(s => `${s.weight}kg x ${s.reps}`).join(' | ')}</span>
+                    </div>
+                  )}
                 </div>
                 {planEx.notes && <p className="text-sm text-muted mb-16" style={{ fontStyle: 'italic' }}>{planEx.notes}</p>}
                 {exercise?.videoUrl && (

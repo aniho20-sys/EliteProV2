@@ -817,6 +817,51 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-exercise-detail { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
 
 /* ===== WORKOUT LOG ===== */
+.log-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.log-top-actions { display: flex; gap: 8px; }
+.log-card-header { margin-bottom: 16px; }
+.log-card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.log-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.last-session-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: var(--radius-xs);
+  border: 1px dashed var(--border);
+}
+.last-session-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.last-session-data {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
 .log-set-row {
   display: flex;
   align-items: center;
@@ -830,6 +875,16 @@ tr:hover { background: var(--bg-card-hover); }
   font-weight: 600;
 }
 .log-set-input { width: 80px; padding: 8px 10px; text-align: center; }
+@media (max-width: 640px) {
+  .log-top-bar { flex-direction: column; align-items: stretch; }
+  .log-top-actions { justify-content: stretch; }
+  .log-top-actions .btn { flex: 1; justify-content: center; }
+  .log-card-title { flex-direction: column; }
+  .log-set-input { width: 65px; padding: 8px 6px; font-size: 0.85rem; }
+  .log-set-num { min-width: 38px; font-size: 0.75rem; }
+  .last-session-hint { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .last-session-data { font-size: 0.75rem; }
+}
 
 /* ===== EMPTY STATE ===== */
 .empty-state {
