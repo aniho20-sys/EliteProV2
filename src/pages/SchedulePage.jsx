@@ -72,17 +72,12 @@ export default function SchedulePage() {
           return (
             <button
               key={date}
-              className={`card ${selectedDate === date ? '' : ''}`}
+              className={`date-btn ${selectedDate === date ? 'date-btn-active' : ''}`}
               onClick={() => setSelectedDate(date)}
-              style={{
-                minWidth: 70, textAlign: 'center', cursor: 'pointer', padding: '12px 16px',
-                borderColor: selectedDate === date ? 'var(--primary)' : 'var(--border)',
-                background: selectedDate === date ? 'var(--bg-hover)' : 'var(--bg-card)',
-              }}
             >
-              <div className="text-sm text-muted">{day}</div>
-              <div className="fw-bold" style={{ fontSize: '1.2rem' }}>{num}</div>
-              {count > 0 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', margin: '4px auto 0' }} />}
+              <div className="date-btn-day">{day}</div>
+              <div className="date-btn-num">{num}</div>
+              {count > 0 && <div className="date-btn-dot" />}
             </button>
           );
         })}

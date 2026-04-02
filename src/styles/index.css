@@ -826,15 +826,37 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .date-selector {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
   scroll-snap-type: x mandatory;
 }
-.date-selector .card {
+.date-btn {
   scroll-snap-align: start;
   flex-shrink: 0;
+  min-width: 52px;
+  text-align: center;
+  cursor: pointer;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  transition: all 0.2s var(--ease);
+}
+.date-btn:hover { border-color: var(--primary-light); }
+.date-btn-active {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+.date-btn-day { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+.date-btn-num { font-size: 1.05rem; font-weight: 700; margin-top: 2px; }
+.date-btn-active .date-btn-num { color: var(--primary); }
+.date-btn-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 3px auto 0;
 }
 .schedule-item {
   display: flex;
@@ -892,7 +914,8 @@ tr:hover { background: var(--bg-card-hover); }
   }
   .schedule-item-top { width: 100%; }
   .schedule-item-bottom { width: 100%; justify-content: space-between; }
-  .date-selector .card { min-width: 62px; padding: 10px 12px; }
+  .date-btn { min-width: 46px; padding: 8px 6px; }
+  .date-btn-num { font-size: 0.95rem; }
   .book-form-row { flex-direction: column; gap: 0; }
 }
 
