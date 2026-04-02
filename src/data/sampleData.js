@@ -125,7 +125,7 @@ export const sampleWorkoutLogs = [
     id: 'log-1',
     clientId: 'client-1',
     planId: 'plan-1',
-    date: '2026-03-24',
+    date: '2026-03-30',
     completed: true,
     entries: [
       { exerciseId: 'bench-press', sets: [{ weight: 70, reps: 10 }, { weight: 75, reps: 9 }, { weight: 75, reps: 8 }, { weight: 70, reps: 10 }] },
@@ -139,7 +139,7 @@ export const sampleWorkoutLogs = [
     id: 'log-2',
     clientId: 'client-1',
     planId: 'plan-2',
-    date: '2026-03-26',
+    date: '2026-04-01',
     completed: true,
     entries: [
       { exerciseId: 'squat', sets: [{ weight: 100, reps: 8 }, { weight: 105, reps: 7 }, { weight: 105, reps: 6 }, { weight: 100, reps: 8 }] },
@@ -151,16 +151,16 @@ export const sampleWorkoutLogs = [
 ];
 
 export const sampleSchedule = [
-  { id: 'sched-1', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-03-30', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
-  { id: 'sched-2', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-03-30', time: '10:30', duration: 60, type: 'PT Session', status: 'confirmed' },
-  { id: 'sched-3', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-03-30', time: '14:00', duration: 90, type: 'Competition Prep', status: 'pending' },
-  { id: 'sched-4', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-01', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
-  { id: 'sched-5', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-01', time: '10:30', duration: 60, type: 'PT Session', status: 'pending' },
+  { id: 'sched-1', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-03', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
+  { id: 'sched-2', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-03', time: '10:30', duration: 60, type: 'PT Session', status: 'confirmed' },
+  { id: 'sched-3', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-04-04', time: '14:00', duration: 90, type: 'Competition Prep', status: 'pending' },
+  { id: 'sched-4', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-07', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
+  { id: 'sched-5', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-07', time: '10:30', duration: 60, type: 'PT Session', status: 'pending' },
 ];
 
 export const sampleMessages = [
-  { id: 'msg-1', from: 'client-1', to: 'trainer-1', text: 'Coach, 我今日膊頭有少少痛，聽日仲做唔做 overhead press?', timestamp: '2026-03-29T18:30:00', read: true },
-  { id: 'msg-2', from: 'trainer-1', to: 'client-1', text: '如果痛嘅話就唔好做住，我會改成 lateral raise 同 face pull 代替。記住做完 warmup 先開始。', timestamp: '2026-03-29T18:45:00', read: true },
-  { id: 'msg-3', from: 'client-2', to: 'trainer-1', text: 'Hi Coach! 今個禮拜飲食跟得好好，已經連續兩星期無食宵夜 💪', timestamp: '2026-03-29T20:00:00', read: false },
-  { id: 'msg-4', from: 'client-3', to: 'trainer-1', text: '教練，比賽日期確認咗係5月15號，可以開始 peak 嗎？', timestamp: '2026-03-30T08:00:00', read: false },
+  { id: 'msg-1', from: 'client-1', to: 'trainer-1', text: 'Coach, 我今日膊頭有少少痛，聽日仲做唔做 overhead press?', timestamp: '2026-04-01T18:30:00', read: true },
+  { id: 'msg-2', from: 'trainer-1', to: 'client-1', text: '如果痛嘅話就唔好做住，我會改成 lateral raise 同 face pull 代替。記住做完 warmup 先開始。', timestamp: '2026-04-01T18:45:00', read: true },
+  { id: 'msg-3', from: 'client-2', to: 'trainer-1', text: 'Hi Coach! 今個禮拜飲食跟得好好，已經連續兩星期無食宵夜 💪', timestamp: '2026-04-01T20:00:00', read: false },
+  { id: 'msg-4', from: 'client-3', to: 'trainer-1', text: '教練，比賽日期確認咗係5月15號，可以開始 peak 嗎？', timestamp: '2026-04-02T08:00:00', read: false },
 ];
