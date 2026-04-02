@@ -28,13 +28,32 @@ function getInitialData() {
   };
 }
 
+const SESSION_KEY = 'elitepro_session';
+
 export function AppProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
   const [data, setData] = useState(getInitialData);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const savedId = localStorage.getItem(SESSION_KEY);
+      if (savedId) {
+        const initialData = getInitialData();
+        return initialData.users.find(u => u.id === savedId) || null;
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(SESSION_KEY, currentUser.id);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+    }
+  }, [currentUser]);
 
   const login = (email, password) => {
     const user = data.users.find(u => u.email === email && u.password === password);
