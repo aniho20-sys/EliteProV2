@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Send } from 'lucide-react';
+import { Send, ArrowLeft } from 'lucide-react';
 
 export default function MessagesPage() {
   const { currentUser, getMessages, sendMessage, getClients, getClient, markMessagesRead, data } = useApp();
@@ -14,7 +14,6 @@ export default function MessagesPage() {
   if (isTrainer) {
     contacts = getClients(currentUser.id);
   } else {
-    // Client sees their trainer
     const trainer = data.users.find(u => u.id === currentUser.trainerId);
     contacts = trainer ? [trainer] : [];
   }
@@ -58,10 +57,10 @@ export default function MessagesPage() {
         <h1 className="page-title">Messages</h1>
       </div>
 
-      <div className="card" style={{ display: 'flex', height: 'calc(100vh - 180px)', minHeight: 400, padding: 0, overflow: 'hidden' }}>
+      <div className="msg-container card">
         {/* Contact list */}
-        <div style={{ width: 280, borderRight: '1px solid var(--border)', overflowY: 'auto', flexShrink: 0 }}>
-          <div style={{ padding: '16px 16px 8px', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+        <div className={`msg-sidebar ${selectedContact ? 'msg-sidebar-hidden' : ''}`}>
+          <div className="msg-sidebar-title">
             {isTrainer ? 'Clients' : 'Coach'}
           </div>
           {contacts.map(c => {
@@ -72,7 +71,6 @@ export default function MessagesPage() {
                 key={c.id}
                 className={`contact-item ${selectedContact === c.id ? 'active' : ''}`}
                 onClick={() => setSelectedContact(c.id)}
-                style={{ margin: '0 8px' }}
               >
                 <div className="contact-avatar">{c.name[0]}</div>
                 <div className="contact-info">
@@ -86,32 +84,36 @@ export default function MessagesPage() {
         </div>
 
         {/* Chat area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className={`msg-chat ${selectedContact ? 'msg-chat-active' : ''}`}>
           {selectedContact ? (
             <>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700 }}>
-                {selectedContactUser?.name}
+              <div className="msg-chat-header">
+                <button className="msg-back-btn" onClick={() => setSelectedContact(null)}>
+                  <ArrowLeft size={20} />
+                </button>
+                <div className="contact-avatar contact-avatar-sm">{selectedContactUser?.name?.[0]}</div>
+                <span className="msg-chat-name">{selectedContactUser?.name}</span>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="msg-chat-body">
                 {contactMessages.map(m => (
                   <div key={m.id}>
                     <div className={`chat-bubble ${m.from === currentUser.id ? 'sent' : 'received'}`}>
                       {m.text}
                     </div>
-                    <div className={`chat-time ${m.from === currentUser.id ? 'text-center' : ''}`} style={{ textAlign: m.from === currentUser.id ? 'right' : 'left' }}>
+                    <div className="chat-time" style={{ textAlign: m.from === currentUser.id ? 'right' : 'left' }}>
                       {new Date(m.timestamp).toLocaleString('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 ))}
                 <div ref={chatEndRef} />
               </div>
-              <form onSubmit={handleSend} className="chat-input-row" style={{ padding: '12px 16px' }}>
+              <form onSubmit={handleSend} className="msg-chat-input">
                 <input className="form-input" value={text} onChange={e => setText(e.target.value)} placeholder="Type a message..." />
                 <button type="submit" className="btn btn-primary"><Send size={18} /></button>
               </form>
             </>
           ) : (
-            <div className="empty-state" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="msg-empty">
               <p className="empty-state-text">Select a contact to start chatting</p>
             </div>
           )}
