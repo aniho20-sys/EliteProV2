@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Search, X } from 'lucide-react';
 
-export default function GlobalSearch() {
+export default function GlobalSearch({ onSelect }) {
   const { currentUser, getClients, getExercises, getWorkoutPlans } = useApp();
   const navigate = useNavigate();
   const isTrainer = currentUser?.role === 'trainer';
@@ -36,6 +36,7 @@ export default function GlobalSearch() {
     result.action();
     setQuery('');
     setOpen(false);
+    onSelect?.();
   };
 
   useEffect(() => {

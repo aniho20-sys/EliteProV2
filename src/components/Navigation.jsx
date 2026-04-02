@@ -2,9 +2,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp
+  BookOpen, LogOut, TrendingUp, Search
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
+import { useState } from 'react';
 
 const trainerLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -27,6 +28,7 @@ export default function Navigation() {
   const { currentUser, logout } = useApp();
   const navigate = useNavigate();
   const links = currentUser?.role === 'trainer' ? trainerLinks : clientLinks;
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -59,6 +61,26 @@ export default function Navigation() {
           </button>
         </div>
       </aside>
+
+      {/* Mobile Top Header */}
+      <header className="mobile-header">
+        <div className="mobile-header-inner">
+          <span className="mobile-header-logo">Elite<span>Pro</span></span>
+          <div className="mobile-header-actions">
+            <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
+              <Search size={20} />
+            </button>
+            <button className="btn-icon" onClick={handleLogout}>
+              <LogOut size={20} />
+            </button>
+          </div>
+        </div>
+        {mobileSearchOpen && (
+          <div className="mobile-search-wrapper">
+            <GlobalSearch onSelect={() => setMobileSearchOpen(false)} />
+          </div>
+        )}
+      </header>
 
       {/* Mobile Bottom Nav */}
       <nav className="bottom-nav">
