@@ -464,6 +464,14 @@ body {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 .form-input::placeholder { color: var(--text-muted); }
+.form-input[type="date"],
+.form-input[type="time"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  min-height: 44px;
+  max-width: 100%;
+}
 .form-textarea { min-height: 80px; resize: vertical; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
@@ -851,6 +859,13 @@ tr:hover { background: var(--bg-card-hover); }
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   transition: all 0.2s var(--ease);
+  /* Prevent native button styling (red arrows on some mobile browsers) */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  color: inherit;
+  line-height: 1.2;
 }
 .date-btn:hover { border-color: var(--primary-light); }
 .date-btn-active {
@@ -909,10 +924,10 @@ tr:hover { background: var(--bg-card-hover); }
   gap: 12px;
   margin-bottom: 0;
 }
-.book-form-date { flex: 3; }
-.book-form-time { flex: 2; }
-.book-form-duration { flex: 2; }
-.book-form-type { flex: 3; }
+.book-form-date { flex: 1; }
+.book-form-time { flex: 1; }
+.book-form-duration { flex: 1; }
+.book-form-type { flex: 1; }
 @media (max-width: 640px) {
   .schedule-header .btn { align-self: flex-start; }
   .schedule-item {
