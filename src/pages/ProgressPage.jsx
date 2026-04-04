@@ -3,6 +3,61 @@ import { useApp } from '../context/AppContext';
 import { Plus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
+function TrendChart({ stats, metricKey, label, unit, color }) {
+  if (stats.length < 2) return null;
+  const values = stats.map(s => s[metricKey]);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const w = 280, h = 100, padX = 8, padY = 12;
+  const chartW = w - padX * 2;
+  const chartH = h - padY * 2;
+
+  const points = values.map((v, i) => ({
+    x: padX + (i / (values.length - 1)) * chartW,
+    y: padY + chartH - ((v - min) / range) * chartH,
+  }));
+
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const area = `${line} L${points[points.length - 1].x},${h - padY} L${points[0].x},${h - padY} Z`;
+
+  const first = values[0];
+  const last = values[values.length - 1];
+  const change = last - first;
+
+  return (
+    <div className="trend-chart-card">
+      <div className="trend-chart-header">
+        <span className="trend-chart-label">{label}</span>
+        <span className="trend-chart-value">
+          {last}{unit}
+          <span className={`trend-chart-change ${change >= 0 ? 'positive' : 'negative'}`}>
+            {change >= 0 ? '+' : ''}{change.toFixed(1)}
+          </span>
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="trend-chart-svg">
+        <defs>
+          <linearGradient id={`grad-${metricKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill={`url(#grad-${metricKey})`} />
+        <path d={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r={i === points.length - 1 ? 4 : 2.5} fill={i === points.length - 1 ? color : 'var(--bg-card)'} stroke={color} strokeWidth="1.5" />
+        ))}
+      </svg>
+      <div className="trend-chart-dates">
+        <span>{stats[0].date.slice(5)}</span>
+        <span>{stats[stats.length - 1].date.slice(5)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ProgressPage() {
   const { currentUser, getBodyStats, addBodyStat } = useApp();
   const stats = getBodyStats(currentUser.id);
@@ -28,6 +83,10 @@ export default function ProgressPage() {
   const metrics = ['weight', 'bodyFat', 'chest', 'waist', 'arms', 'legs'];
   const labels = { weight: 'Weight', bodyFat: 'Body Fat', chest: 'Chest', waist: 'Waist', arms: 'Arms', legs: 'Legs' };
   const units = { weight: 'kg', bodyFat: '%', chest: 'cm', waist: 'cm', arms: 'cm', legs: 'cm' };
+  const colors = {
+    weight: '#4361ee', bodyFat: '#ef476f', chest: '#06d6a0',
+    waist: '#ffd166', arms: '#118ab2', legs: '#8338ec',
+  };
 
   return (
     <div>
@@ -62,32 +121,15 @@ export default function ProgressPage() {
         </div>
       )}
 
-      {/* Progress bars */}
-      {stats.length > 1 && firstStat && latestStat && (
+      {/* Trend charts */}
+      {stats.length > 1 && (
         <div className="card mb-16">
-          <h3 className="card-title mb-16">Progress Overview</h3>
-          {metrics.map(key => {
-            const first = firstStat[key] || 0;
-            const last = latestStat[key] || 0;
-            const change = last - first;
-            const pct = Math.min(100, Math.max(5, (last / (first * 1.3)) * 100));
-            return (
-              <div key={key} className="chart-bar-group">
-                <div className="chart-bar-label">
-                  <span>{labels[key]}</span>
-                  <span>
-                    {last}{units[key]}
-                    <span style={{ color: change > 0 ? 'var(--accent)' : 'var(--danger)', fontSize: '0.75rem', marginLeft: 4 }}>
-                      ({change > 0 ? '+' : ''}{change.toFixed(1)})
-                    </span>
-                  </span>
-                </div>
-                <div className="chart-bar-track">
-                  <div className="chart-bar-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--primary), var(--accent))' }} />
-                </div>
-              </div>
-            );
-          })}
+          <h3 className="card-title mb-16">Trend Charts</h3>
+          <div className="trend-charts-grid">
+            {metrics.map(key => (
+              <TrendChart key={key} stats={stats} metricKey={key} label={labels[key]} unit={units[key]} color={colors[key]} />
+            ))}
+          </div>
         </div>
       )}
 
