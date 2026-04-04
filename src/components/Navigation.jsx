@@ -73,13 +73,13 @@ export default function Navigation() {
           ))}
         </nav>
         <div className="sidebar-user">
-          <div className="sidebar-user-info">
+          <NavLink to="/profile" className="sidebar-user-info sidebar-user-link">
             <div className="sidebar-user-avatar">{currentUser?.name?.[0]}</div>
             <div>
               <div className="sidebar-user-name">{currentUser?.name}</div>
               <div className="sidebar-user-role">{currentUser?.role}</div>
             </div>
-          </div>
+          </NavLink>
           <button className="btn btn-outline btn-sm" onClick={handleLogout} style={{ width: '100%' }}>
             <LogOut size={14} /> Log Out
           </button>
