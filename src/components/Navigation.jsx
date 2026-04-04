@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp, Search, MessageSquare
+  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useState } from 'react';
@@ -94,9 +94,9 @@ export default function Navigation() {
             <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
               <Search size={20} />
             </button>
-            <button className="btn-icon" onClick={handleLogout}>
-              <LogOut size={20} />
-            </button>
+            <NavLink to="/profile" className="btn-icon">
+              <UserCircle size={22} />
+            </NavLink>
           </div>
         </div>
         {mobileSearchOpen && (
