@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp, Search
+  BookOpen, LogOut, TrendingUp, Search, MessageSquare
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useState } from 'react';
@@ -10,24 +10,45 @@ import { useState } from 'react';
 const trainerLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/plans', icon: ClipboardList, label: 'Workout Plans' },
+  { to: '/plans', icon: ClipboardList, label: 'Plans' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/exercises', icon: BookOpen, label: 'Exercises' },
 ];
 
 const clientLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/my-workouts', icon: Dumbbell, label: 'My Workouts' },
-  { to: '/log', icon: ClipboardList, label: 'Workout Log' },
-  { to: '/progress', icon: TrendingUp, label: 'My Progress' },
+  { to: '/my-workouts', icon: Dumbbell, label: 'Workouts' },
+  { to: '/log', icon: ClipboardList, label: 'Log' },
+  { to: '/progress', icon: TrendingUp, label: 'Progress' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/exercises', icon: BookOpen, label: 'Exercises' },
+];
+
+// Bottom nav: pick key links (max 5) — always include Messages
+const trainerBottomLinks = [
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/clients', icon: Users, label: 'Clients' },
+  { to: '/schedule', icon: Calendar, label: 'Schedule' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/plans', icon: ClipboardList, label: 'Plans' },
+];
+
+const clientBottomLinks = [
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/my-workouts', icon: Dumbbell, label: 'Workouts' },
+  { to: '/schedule', icon: Calendar, label: 'Schedule' },
+  { to: '/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/progress', icon: TrendingUp, label: 'Progress' },
 ];
 
 export default function Navigation() {
-  const { currentUser, logout } = useApp();
+  const { currentUser, logout, getUnreadCount } = useApp();
   const navigate = useNavigate();
   const links = currentUser?.role === 'trainer' ? trainerLinks : clientLinks;
+  const bottomLinks = currentUser?.role === 'trainer' ? trainerBottomLinks : clientBottomLinks;
+  const unreadCount = getUnreadCount(currentUser?.id);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
@@ -45,6 +66,9 @@ export default function Navigation() {
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
               <link.icon size={19} strokeWidth={2} />
               {link.label}
+              {link.to === '/messages' && unreadCount > 0 && (
+                <span className="nav-badge">{unreadCount}</span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -85,10 +109,15 @@ export default function Navigation() {
       {/* Mobile Bottom Nav */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {links.slice(0, 5).map(link => (
+          {bottomLinks.map(link => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `bottom-nav-link ${isActive ? 'active' : ''}`}>
-              <link.icon size={20} strokeWidth={2} />
-              {link.label.split(' ')[0]}
+              <div className="bottom-nav-icon-wrap">
+                <link.icon size={20} strokeWidth={2} />
+                {link.to === '/messages' && unreadCount > 0 && (
+                  <span className="nav-badge-dot" />
+                )}
+              </div>
+              {link.label}
             </NavLink>
           ))}
         </div>

@@ -14,6 +14,7 @@ import ExerciseLibraryPage from './pages/ExerciseLibraryPage';
 import WorkoutLogPage from './pages/WorkoutLogPage';
 import ProgressPage from './pages/ProgressPage';
 import MyWorkoutsPage from './pages/MyWorkoutsPage';
+import MessagesPage from './pages/MessagesPage';
 
 function AppRoutes() {
   const { currentUser } = useApp();
@@ -32,6 +33,7 @@ function AppRoutes() {
           {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
           <Route path="/plans" element={<WorkoutPlansPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/messages" element={<MessagesPage />} />
           <Route path="/exercises" element={<ExerciseLibraryPage />} />
           {!isTrainer && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
           {!isTrainer && <Route path="/log" element={<WorkoutLogPage />} />}
