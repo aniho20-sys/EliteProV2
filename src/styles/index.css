@@ -1321,15 +1321,17 @@ tr:hover { background: var(--bg-card-hover); }
   gap: 0;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
+  overflow-x: scroll;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  min-width: 0;
+  width: 100%;
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  padding: 10px 16px;
+  padding: 10px 14px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
   border: none;
@@ -1337,7 +1339,7 @@ tr:hover { background: var(--bg-card-hover); }
   background: none;
   transition: all 0.2s var(--ease);
   white-space: nowrap;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 .tab:hover { color: var(--text-secondary); }
 .tab.active {
