@@ -1318,16 +1318,18 @@ tr:hover { background: var(--bg-card-hover); }
 /* ===== TABS ===== */
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 0;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
-  padding: 10px 18px;
+  padding: 10px 16px;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
   border: none;
@@ -1335,6 +1337,7 @@ tr:hover { background: var(--bg-card-hover); }
   background: none;
   transition: all 0.2s var(--ease);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .tab:hover { color: var(--text-secondary); }
 .tab.active {
