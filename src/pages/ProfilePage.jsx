@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 export default function ProfilePage() {
   const { currentUser, updateClient, resetData, logout } = useApp();
+  const navigate = useNavigate();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
 
@@ -146,6 +148,9 @@ export default function ProfilePage() {
           <span className="profile-field-label">User ID</span>
           <span className="profile-field-value" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{currentUser.id}</span>
         </div>
+        <button className="btn btn-outline mt-16" onClick={() => { logout(); navigate('/'); }} style={{ width: '100%' }}>
+          <LogOut size={16} /> Log Out
+        </button>
       </div>
 
       {/* Danger Zone */}

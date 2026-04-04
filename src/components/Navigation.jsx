@@ -94,9 +94,12 @@ export default function Navigation() {
             <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
               <Search size={20} />
             </button>
-            <NavLink to="/profile" className="btn-icon">
+            <NavLink to="/profile" className="btn-icon" style={{ textDecoration: 'none', color: 'inherit' }}>
               <UserCircle size={22} />
             </NavLink>
+            <button className="btn-icon" onClick={handleLogout}>
+              <LogOut size={20} />
+            </button>
           </div>
         </div>
         {mobileSearchOpen && (
