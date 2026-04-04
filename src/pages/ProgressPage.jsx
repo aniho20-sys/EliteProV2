@@ -140,16 +140,16 @@ export default function ProgressPage() {
             <h3 className="modal-title">Add Measurement</h3>
             <form onSubmit={handleAdd}>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Weight (kg)</label><input className="form-input" type="number" step="0.1" required value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" value={form.bodyFat} onChange={e => setForm({ ...form, bodyFat: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Weight (kg)</label><input className="form-input" type="number" step="0.1" min="20" max="300" required value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={form.bodyFat} onChange={e => setForm({ ...form, bodyFat: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" value={form.chest} onChange={e => setForm({ ...form, chest: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" min="50" max="200" value={form.chest} onChange={e => setForm({ ...form, chest: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" min="40" max="200" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" min="15" max="60" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" min="30" max="100" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
