@@ -55,6 +55,16 @@ export function AppProvider({ children }) {
     }
   }, [currentUser]);
 
+  // Keep currentUser in sync when data.users changes (e.g. profile edit)
+  useEffect(() => {
+    if (currentUser) {
+      const updated = data.users.find(u => u.id === currentUser.id);
+      if (updated && (updated.name !== currentUser.name || updated.email !== currentUser.email)) {
+        setCurrentUser(updated);
+      }
+    }
+  }, [data.users]);
+
   const login = (email, password) => {
     const user = data.users.find(u => u.email === email && u.password === password);
     if (user) {
