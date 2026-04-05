@@ -104,7 +104,7 @@ export default function WorkoutLogPage() {
             <div className="card mb-16 pr-summary-card">
               <div className="card-header">
                 <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
-                  <Trophy size={20} style={{ color: '#f59e0b' }} /> Personal Records
+                  <Trophy size={20} style={{ color: 'var(--warning)' }} /> Personal Records
                 </h3>
                 <span className="tag tag-warning">{prCount} PRs</span>
               </div>
@@ -160,7 +160,7 @@ export default function WorkoutLogPage() {
                     return (
                     <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''}`}>
                       <span className="plan-exercise-name">
-                        {hadPR && <Trophy size={14} style={{ color: '#f59e0b', marginRight: 6, verticalAlign: -2 }} />}
+                        {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                         {getExerciseName(entry.exerciseId)}
                       </span>
                       <span className="plan-exercise-detail">
@@ -198,7 +198,7 @@ export default function WorkoutLogPage() {
                 <div className="log-card-header">
                   <div className="log-card-title">
                     <h3 className="card-title">
-                      {gotNewPR && <Trophy size={16} style={{ color: '#f59e0b', marginRight: 6, verticalAlign: -2 }} />}
+                      {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                       {getExerciseName(entry.exerciseId)}
                     </h3>
                     <div className="log-card-tags">

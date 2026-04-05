@@ -167,7 +167,7 @@ export default function ClientDashboard() {
           <div className="card">
             <div className="card-header">
               <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
-                <Trophy size={18} style={{ color: '#f59e0b' }} /> Personal Records
+                <Trophy size={18} style={{ color: 'var(--warning)' }} /> Personal Records
               </h3>
               <span className="tag tag-warning">{Object.keys(prs).length} PRs</span>
             </div>
