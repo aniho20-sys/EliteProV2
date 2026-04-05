@@ -108,9 +108,6 @@ export default function Navigation() {
             <NavLink to="/profile" className="btn-icon" style={{ textDecoration: 'none', color: 'inherit' }}>
               <UserCircle size={22} />
             </NavLink>
-            <button className="btn-icon" onClick={handleLogout}>
-              <LogOut size={20} />
-            </button>
           </div>
         </div>
         {mobileSearchOpen && (
