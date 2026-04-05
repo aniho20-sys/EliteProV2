@@ -34,8 +34,23 @@ export default function SchedulePage() {
     isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id }
   );
 
+  const hasConflict = (date, time, duration) => {
+    const newStart = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    const newEnd = newStart + Number(duration);
+    return allSchedule.some(s => {
+      if (s.date !== date || s.status === 'cancelled') return false;
+      const sStart = parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]);
+      const sEnd = sStart + (s.duration || 60);
+      return newStart < sEnd && newEnd > sStart;
+    });
+  };
+
   const handleAdd = (e) => {
     e.preventDefault();
+    if (hasConflict(form.date, form.time, form.duration)) {
+      toast('Time conflict! There is already a session at this time.', 'error');
+      return;
+    }
     addScheduleItem({
       ...form,
       trainerId,

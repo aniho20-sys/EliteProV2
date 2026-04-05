@@ -105,6 +105,16 @@ export function AppProvider({ children }) {
     }));
   };
 
+  const deleteBodyStat = (clientId, index) => {
+    setData(prev => ({
+      ...prev,
+      bodyStats: {
+        ...prev.bodyStats,
+        [clientId]: (prev.bodyStats[clientId] || []).filter((_, i) => i !== index),
+      },
+    }));
+  };
+
   const getWorkoutPlans = (filter) => {
     return data.workoutPlans.filter(p => {
       if (filter.clientId && p.clientId !== filter.clientId) return false;
@@ -229,7 +239,7 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, login, logout,
     getClients, getClient, addClient, updateClient,
-    getBodyStats, addBodyStat,
+    getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog,
     getSchedule, addScheduleItem, updateScheduleItem,

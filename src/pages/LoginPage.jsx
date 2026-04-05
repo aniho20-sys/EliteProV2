@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
+import { Moon, Sun } from 'lucide-react';
 
 const demoAccounts = [
   { email: 'coach@elitepro.com', password: 'demo123', label: 'Coach Alex (Trainer)', role: 'trainer' },
@@ -10,6 +12,7 @@ const demoAccounts = [
 
 export default function LoginPage() {
   const { login } = useApp();
+  const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,6 +33,9 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <button className="login-theme-toggle btn-icon" onClick={toggleTheme}>
+        {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+      </button>
       <div className="card login-card">
         <div className="login-logo">
           Elite<span>Pro</span>

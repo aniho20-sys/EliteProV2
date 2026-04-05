@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 function TrendChart({ stats, metricKey, label, unit, color }) {
@@ -59,7 +59,7 @@ function TrendChart({ stats, metricKey, label, unit, color }) {
 }
 
 export default function ProgressPage() {
-  const { currentUser, getBodyStats, addBodyStat } = useApp();
+  const { currentUser, getBodyStats, addBodyStat, deleteBodyStat } = useApp();
   const stats = getBodyStats(currentUser.id);
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
@@ -141,33 +141,43 @@ export default function ProgressPage() {
           <div className="table-wrapper history-table-desktop">
             <table>
               <thead>
-                <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Arms</th><th>Legs</th></tr>
+                <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Arms</th><th>Legs</th><th></th></tr>
               </thead>
               <tbody>
-                {[...stats].reverse().map((s, i) => (
-                  <tr key={i}>
-                    <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
-                    <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
-                  </tr>
-                ))}
+                {[...stats].reverse().map((s, i) => {
+                  const origIdx = stats.length - 1 - i;
+                  return (
+                    <tr key={i}>
+                      <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
+                      <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
+                      <td><button className="btn-icon" onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Measurement deleted', 'error'); }} title="Delete"><Trash2 size={14} /></button></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {/* Mobile cards */}
           <div className="history-cards-mobile">
-            {[...stats].reverse().map((s, i) => (
-              <div key={i} className="history-card">
-                <div className="history-card-date">{s.date}</div>
-                <div className="body-stats-grid">
-                  <div className="body-stat-item"><span className="body-stat-label">Weight</span><span className="body-stat-value">{s.weight}kg</span></div>
-                  <div className="body-stat-item"><span className="body-stat-label">Body Fat</span><span className="body-stat-value">{s.bodyFat}%</span></div>
-                  <div className="body-stat-item"><span className="body-stat-label">Chest</span><span className="body-stat-value">{s.chest}cm</span></div>
-                  <div className="body-stat-item"><span className="body-stat-label">Waist</span><span className="body-stat-value">{s.waist}cm</span></div>
-                  <div className="body-stat-item"><span className="body-stat-label">Arms</span><span className="body-stat-value">{s.arms}cm</span></div>
-                  <div className="body-stat-item"><span className="body-stat-label">Legs</span><span className="body-stat-value">{s.legs}cm</span></div>
+            {[...stats].reverse().map((s, i) => {
+              const origIdx = stats.length - 1 - i;
+              return (
+                <div key={i} className="history-card">
+                  <div className="flex-between">
+                    <div className="history-card-date">{s.date}</div>
+                    <button className="btn-icon" onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Measurement deleted', 'error'); }} title="Delete"><Trash2 size={14} /></button>
+                  </div>
+                  <div className="body-stats-grid">
+                    <div className="body-stat-item"><span className="body-stat-label">Weight</span><span className="body-stat-value">{s.weight}kg</span></div>
+                    <div className="body-stat-item"><span className="body-stat-label">Body Fat</span><span className="body-stat-value">{s.bodyFat}%</span></div>
+                    <div className="body-stat-item"><span className="body-stat-label">Chest</span><span className="body-stat-value">{s.chest}cm</span></div>
+                    <div className="body-stat-item"><span className="body-stat-label">Waist</span><span className="body-stat-value">{s.waist}cm</span></div>
+                    <div className="body-stat-item"><span className="body-stat-label">Arms</span><span className="body-stat-value">{s.arms}cm</span></div>
+                    <div className="body-stat-item"><span className="body-stat-label">Legs</span><span className="body-stat-value">{s.legs}cm</span></div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
