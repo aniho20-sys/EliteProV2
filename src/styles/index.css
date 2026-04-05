@@ -55,6 +55,42 @@
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Dark theme */
+[data-theme="dark"] {
+  --bg: #0f1117;
+  --bg-card: #1a1d28;
+  --bg-card-hover: #222633;
+  --bg-input: #252a38;
+  --bg-elevated: #1e2230;
+
+  --text: #e8eaf0;
+  --text-secondary: #9ca3b4;
+  --text-muted: #6b7280;
+
+  --border: #2d3348;
+  --border-light: #353b50;
+  --divider: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .login-page {
+  background: linear-gradient(135deg, #0f1117 0%, #161926 40%, #1a1520 100%);
+}
+[data-theme="dark"] .login-page::before {
+  background: radial-gradient(circle, rgba(67, 97, 238, 0.12) 0%, transparent 70%);
+}
+[data-theme="dark"] .login-page::after {
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.08) 0%, transparent 70%);
+}
+[data-theme="dark"] .chat-bubble.received {
+  background: var(--bg-card-hover);
+}
+[data-theme="dark"] .stat-card {
+  border-top-color: rgba(67, 97, 238, 0.3);
+}
+
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; min-width: 0; }
 
@@ -252,6 +288,9 @@ body {
   border: 2px solid var(--bg);
 }
 
+.sidebar-theme-toggle {
+  padding: 0 24px 8px;
+}
 .sidebar-user {
   padding: 20px 24px;
   border-top: 1px solid var(--border);

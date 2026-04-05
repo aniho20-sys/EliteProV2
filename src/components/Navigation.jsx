@@ -2,9 +2,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle
+  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
+import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
 
 const trainerLinks = [
@@ -45,6 +46,7 @@ const clientBottomLinks = [
 
 export default function Navigation() {
   const { currentUser, logout, getUnreadCount } = useApp();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const links = currentUser?.role === 'trainer' ? trainerLinks : clientLinks;
   const bottomLinks = currentUser?.role === 'trainer' ? trainerBottomLinks : clientBottomLinks;
@@ -72,6 +74,12 @@ export default function Navigation() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-theme-toggle">
+          <button className="btn btn-outline btn-sm" onClick={toggleTheme} style={{ width: '100%' }}>
+            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+          </button>
+        </div>
         <div className="sidebar-user">
           <NavLink to="/profile" className="sidebar-user-info sidebar-user-link">
             <div className="sidebar-user-avatar">{currentUser?.name?.[0]}</div>
@@ -91,6 +99,9 @@ export default function Navigation() {
         <div className="mobile-header-inner">
           <span className="mobile-header-logo">Elite<span>Pro</span></span>
           <div className="mobile-header-actions">
+            <button className="btn-icon" onClick={toggleTheme}>
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
             <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
               <Search size={20} />
             </button>

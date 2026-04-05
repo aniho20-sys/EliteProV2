@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import LoginPage from './pages/LoginPage';
@@ -50,13 +51,15 @@ function AppRoutes() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <HashRouter>
-        <AppProvider>
-          <ToastProvider>
-            <AppRoutes />
-          </ToastProvider>
-        </AppProvider>
-      </HashRouter>
+      <ThemeProvider>
+        <HashRouter>
+          <AppProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </AppProvider>
+        </HashRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
