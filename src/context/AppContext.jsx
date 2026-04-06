@@ -35,7 +35,7 @@ export function AppProvider({ children }) {
   const seedingRef = useRef(false);
 
   // Pending session restore (wait for users to load from Firestore)
-  const [pendingSessionId] = useState(() => {
+  const [pendingSessionId, setPendingSessionId] = useState(() => {
     try { return localStorage.getItem(SESSION_KEY); } catch { return null; }
   });
 
@@ -163,6 +163,7 @@ export function AppProvider({ children }) {
     if (pendingSessionId) {
       const user = users.find(u => u.id === pendingSessionId);
       if (user) setCurrentUser(user);
+      setPendingSessionId(null); // Clear after use to prevent re-login after logout
     }
   }, [users, pendingSessionId, currentUser, firebaseUser]);
 
@@ -238,6 +239,7 @@ export function AppProvider({ children }) {
     try { await signOut(auth); } catch { /* ignore */ }
     setCurrentUser(null);
     setFirebaseUser(null);
+    setPendingSessionId(null);
   };
 
   // ========== Users / Clients ==========
