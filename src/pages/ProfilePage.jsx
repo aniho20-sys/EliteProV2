@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 export default function ProfilePage() {
-  const { currentUser, updateClient, resetData, logout } = useApp();
+  const { currentUser, updateClient, resetData, logout, getInviteCode, connectToTrainer, getClient } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -25,6 +25,26 @@ export default function ProfilePage() {
   });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  // Trainer: invite code state
+  const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  // Client: connect to trainer
+  const [connectCode, setConnectCode] = useState('');
+  const [connecting, setConnecting] = useState(false);
+
+  // Load invite code for trainer
+  useEffect(() => {
+    if (isTrainer && !inviteCode) {
+      getInviteCode(currentUser.id).then(code => { if (code) setInviteCode(code); });
+    }
+  }, [isTrainer, currentUser.id]);
+
+  // Get trainer name for client
+  const trainerName = !isTrainer && currentUser.trainerId
+    ? getClient(currentUser.trainerId)?.name || 'Unknown'
+    : null;
+
   const handleSave = (e) => {
     e.preventDefault();
     const updates = { ...form };
@@ -35,6 +55,38 @@ export default function ProfilePage() {
     updateClient(currentUser.id, updates);
     setEditing(false);
     toast('Profile updated');
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(inviteCode).then(() => {
+      setCodeCopied(true);
+      toast('Invite code copied!');
+      setTimeout(() => setCodeCopied(false), 2000);
+    }).catch(() => toast('Failed to copy', 'error'));
+  };
+
+  const handleShareCode = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join ElitePro',
+        text: `Join me on ElitePro! Use invite code: ${inviteCode}`,
+      }).catch(() => {});
+    } else {
+      handleCopyCode();
+    }
+  };
+
+  const handleConnect = async () => {
+    if (!connectCode.trim()) return;
+    setConnecting(true);
+    const result = await connectToTrainer(currentUser.id, connectCode.trim());
+    if (result.success) {
+      toast(`Connected to ${result.trainer.name}!`);
+      setConnectCode('');
+    } else {
+      toast(result.error, 'error');
+    }
+    setConnecting(false);
   };
 
   const handleReset = () => {
@@ -52,9 +104,13 @@ export default function ProfilePage() {
       {/* Profile Card */}
       <div className="card mb-16">
         <div className="profile-header">
-          <div className="profile-avatar">
-            {currentUser.name?.[0]}
-          </div>
+          {currentUser.avatar ? (
+            <img src={currentUser.avatar} alt="" className="profile-avatar-img" />
+          ) : (
+            <div className="profile-avatar">
+              {currentUser.name?.[0]}
+            </div>
+          )}
           <div className="profile-header-info">
             <h2 className="profile-name">{currentUser.name}</h2>
             <span className={`tag ${isTrainer ? 'tag-accent' : 'tag-primary'}`}>{isTrainer ? 'Trainer' : 'Client'}</span>
@@ -74,6 +130,10 @@ export default function ProfilePage() {
               </div>
             ) : (
               <>
+                <div className="profile-field">
+                  <span className="profile-field-label">Coach</span>
+                  <span className="profile-field-value">{trainerName || 'Not connected'}</span>
+                </div>
                 <div className="profile-field">
                   <span className="profile-field-label">Age</span>
                   <span className="profile-field-value">{currentUser.age || '—'}</span>
@@ -136,6 +196,46 @@ export default function ProfilePage() {
           </form>
         )}
       </div>
+
+      {/* Trainer: Invite Code Card */}
+      {isTrainer && inviteCode && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">Invite Code</h3>
+          <p className="invite-desc">Share this code with your clients so they can connect to you.</p>
+          <div className="invite-code-display">
+            <span className="invite-code-text">{inviteCode}</span>
+          </div>
+          <div className="flex gap-8 mt-12">
+            <button className="btn btn-primary" onClick={handleCopyCode}>
+              {codeCopied ? <Check size={16} /> : <Copy size={16} />}
+              {codeCopied ? 'Copied!' : 'Copy'}
+            </button>
+            <button className="btn btn-outline" onClick={handleShareCode}>
+              <Share2 size={16} /> Share
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Client: Connect to Trainer */}
+      {!isTrainer && !currentUser.trainerId && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">Connect to Trainer</h3>
+          <p className="invite-desc">Enter your trainer's invite code to connect.</p>
+          <div className="invite-connect-row">
+            <input
+              className="form-input invite-input"
+              placeholder="Enter 6-digit code"
+              value={connectCode}
+              onChange={e => setConnectCode(e.target.value.toUpperCase())}
+              maxLength={6}
+            />
+            <button className="btn btn-primary" onClick={handleConnect} disabled={connecting || connectCode.length < 6}>
+              <Link size={16} /> {connecting ? 'Connecting...' : 'Connect'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Account Info */}
       <div className="card mb-16">

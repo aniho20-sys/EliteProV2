@@ -8,7 +8,7 @@ export default function RoleSelectPage() {
   const { theme, toggleTheme } = useTheme();
   const [role, setRole] = useState(null);
   const [name, setName] = useState(firebaseUser?.displayName || '');
-  const [trainerId, setTrainerId] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,7 +19,7 @@ export default function RoleSelectPage() {
     setError('');
     setSaving(true);
     try {
-      await completeProfile(role, name.trim(), trainerId.trim() || null);
+      await completeProfile(role, name.trim(), inviteCode.trim() || null);
     } catch (err) {
       setError('Failed to create profile. Please try again.');
     } finally {
@@ -76,16 +76,18 @@ export default function RoleSelectPage() {
             />
           </div>
 
-          {/* Trainer ID (for clients) */}
+          {/* Invite Code (for clients) */}
           {role === 'client' && (
             <div className="form-group">
-              <label className="form-label">Trainer ID <span className="text-muted">(optional)</span></label>
+              <label className="form-label">Invite Code <span className="text-muted">(optional)</span></label>
               <input
                 className="form-input"
-                value={trainerId} onChange={e => setTrainerId(e.target.value)}
-                placeholder="Enter your trainer's ID to connect"
+                value={inviteCode}
+                onChange={e => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="e.g. AX7K2M"
+                maxLength={6}
               />
-              <small className="form-hint">Ask your trainer for their ID, or skip and connect later.</small>
+              <small className="form-hint">Ask your trainer for their 6-digit code, or skip and connect later in Profile.</small>
             </div>
           )}
 

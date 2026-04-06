@@ -17,6 +17,14 @@ const AppContext = createContext();
 const SESSION_KEY = 'elitepro_session';
 const googleProvider = new GoogleAuthProvider();
 
+// Generate a short 6-char invite code
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I/O/0/1 to avoid confusion
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 export function AppProvider({ children }) {
   // --- Individual collection states ---
   const [users, setUsers] = useState([]);
@@ -236,8 +244,14 @@ export function AppProvider({ children }) {
   };
 
   // Complete profile for new Firebase Auth users → creates Firestore doc
-  const completeProfile = async (role, name, trainerId) => {
+  const completeProfile = async (role, name, inviteCode) => {
     if (!firebaseUser) return;
+    // If client with invite code, look up trainer
+    let trainerId = null;
+    if (role === 'client' && inviteCode) {
+      const trainer = findTrainerByCode(inviteCode);
+      if (trainer) trainerId = trainer.id;
+    }
     const profile = {
       id: firebaseUser.uid,
       name: name || firebaseUser.displayName || 'User',
@@ -245,7 +259,7 @@ export function AppProvider({ children }) {
       role,
       avatar: firebaseUser.photoURL || null,
       joinDate: new Date().toISOString().split('T')[0],
-      ...(role === 'client' ? { trainerId: trainerId || null, goals: '', age: '', height: '' } : { speciality: '' }),
+      ...(role === 'client' ? { trainerId, goals: '', age: '', height: '' } : { speciality: '', inviteCode: generateInviteCode() }),
     };
     await setDoc(doc(db, 'users', profile.id), profile);
     setCurrentUser(profile);
@@ -376,6 +390,32 @@ export function AppProvider({ children }) {
     return prs;
   };
 
+  // ========== Invite Code ==========
+  // Get or generate invite code for a trainer
+  const getInviteCode = async (trainerId) => {
+    const trainer = users.find(u => u.id === trainerId && u.role === 'trainer');
+    if (!trainer) return null;
+    if (trainer.inviteCode) return trainer.inviteCode;
+    // Generate and save a new code
+    const code = generateInviteCode();
+    await updateDoc(doc(db, 'users', trainerId), { inviteCode: code });
+    return code;
+  };
+
+  // Look up trainer by invite code
+  const findTrainerByCode = (code) => {
+    if (!code) return null;
+    return users.find(u => u.role === 'trainer' && u.inviteCode === code.toUpperCase()) || null;
+  };
+
+  // Connect a client to a trainer via invite code
+  const connectToTrainer = async (clientId, inviteCode) => {
+    const trainer = findTrainerByCode(inviteCode);
+    if (!trainer) return { success: false, error: 'Invalid invite code' };
+    await updateDoc(doc(db, 'users', clientId), { trainerId: trainer.id });
+    return { success: true, trainer };
+  };
+
   // ========== Exercises ==========
   const getExercises = () => exercises.length > 0 ? exercises : defaultExercises;
 
@@ -427,6 +467,7 @@ export function AppProvider({ children }) {
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
+    getInviteCode, findTrainerByCode, connectToTrainer,
     resetData, data,
   };
 
