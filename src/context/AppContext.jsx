@@ -1,52 +1,158 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { db } from '../firebase';
+import {
+  collection, doc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, writeBatch, getDocs,
+} from 'firebase/firestore';
 import { sampleTrainer, sampleClients, sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs, sampleSchedule, sampleMessages } from '../data/sampleData';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 
 const AppContext = createContext();
-
-const STORAGE_KEY = 'elitepro_data';
-
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
-  return null;
-}
-
-function getInitialData() {
-  const saved = loadData();
-  if (saved) return saved;
-  return {
-    users: [sampleTrainer, ...sampleClients],
-    bodyStats: sampleBodyStats,
-    workoutPlans: sampleWorkoutPlans,
-    workoutLogs: sampleWorkoutLogs,
-    schedule: sampleSchedule,
-    messages: sampleMessages,
-    exercises: defaultExercises,
-  };
-}
-
 const SESSION_KEY = 'elitepro_session';
 
 export function AppProvider({ children }) {
-  const [data, setData] = useState(getInitialData);
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const savedId = localStorage.getItem(SESSION_KEY);
-      if (savedId) {
-        const initialData = getInitialData();
-        return initialData.users.find(u => u.id === savedId) || null;
-      }
-    } catch { /* ignore */ }
-    return null;
+  // --- Individual collection states ---
+  const [users, setUsers] = useState([]);
+  const [bodyStatsMap, setBodyStatsMap] = useState({});
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [workoutLogs, setWorkoutLogs] = useState([]);
+  const [schedule, setSchedule] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Track which collections have loaded their first snapshot
+  const loadedRef = useRef(new Set());
+  const seedingRef = useRef(false);
+
+  // Pending session restore (wait for users to load from Firestore)
+  const [pendingSessionId] = useState(() => {
+    try { return localStorage.getItem(SESSION_KEY); } catch { return null; }
   });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+  // Mark a collection as loaded; when all 7 are loaded, set loading=false
+  const markLoaded = useCallback((name) => {
+    loadedRef.current.add(name);
+    if (loadedRef.current.size >= 7) {
+      setLoading(false);
+    }
+  }, []);
 
+  // --- Seed sample data into Firestore (first-time only) ---
+  const seedData = useCallback(async () => {
+    if (seedingRef.current) return;
+    seedingRef.current = true;
+
+    try {
+      const batch = writeBatch(db);
+
+      // Users
+      const allUsers = [sampleTrainer, ...sampleClients];
+      allUsers.forEach(u => batch.set(doc(db, 'users', u.id), u));
+
+      // Body stats — one doc per client, entries stored as array
+      Object.entries(sampleBodyStats).forEach(([clientId, entries]) => {
+        batch.set(doc(db, 'bodyStats', clientId), { entries });
+      });
+
+      // Workout plans
+      sampleWorkoutPlans.forEach(p => batch.set(doc(db, 'workoutPlans', p.id), p));
+
+      // Workout logs
+      sampleWorkoutLogs.forEach(l => batch.set(doc(db, 'workoutLogs', l.id), l));
+
+      // Schedule
+      sampleSchedule.forEach(s => batch.set(doc(db, 'schedule', s.id), s));
+
+      // Messages
+      sampleMessages.forEach(m => batch.set(doc(db, 'messages', m.id), m));
+
+      // Exercises
+      defaultExercises.forEach(e => batch.set(doc(db, 'exercises', e.id), e));
+
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to seed data:', err);
+    }
+  }, []);
+
+  // --- Set up real-time Firestore listeners ---
+  useEffect(() => {
+    const unsubs = [];
+
+    // 1. Users
+    unsubs.push(onSnapshot(collection(db, 'users'), (snap) => {
+      if (snap.empty && !seedingRef.current) {
+        seedData();
+        return;
+      }
+      const list = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      setUsers(list);
+      markLoaded('users');
+    }));
+
+    // 2. Body stats
+    unsubs.push(onSnapshot(collection(db, 'bodyStats'), (snap) => {
+      const map = {};
+      snap.docs.forEach(d => { map[d.id] = d.data().entries || []; });
+      setBodyStatsMap(map);
+      markLoaded('bodyStats');
+    }));
+
+    // 3. Workout plans
+    unsubs.push(onSnapshot(collection(db, 'workoutPlans'), (snap) => {
+      setWorkoutPlans(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded('workoutPlans');
+    }));
+
+    // 4. Workout logs
+    unsubs.push(onSnapshot(collection(db, 'workoutLogs'), (snap) => {
+      setWorkoutLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded('workoutLogs');
+    }));
+
+    // 5. Schedule
+    unsubs.push(onSnapshot(collection(db, 'schedule'), (snap) => {
+      setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded('schedule');
+    }));
+
+    // 6. Messages
+    unsubs.push(onSnapshot(collection(db, 'messages'), (snap) => {
+      setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded('messages');
+    }));
+
+    // 7. Exercises
+    unsubs.push(onSnapshot(collection(db, 'exercises'), (snap) => {
+      const list = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      setExercises(list.length > 0 ? list : defaultExercises);
+      markLoaded('exercises');
+    }));
+
+    return () => unsubs.forEach(fn => fn());
+  }, [seedData, markLoaded]);
+
+  // --- Restore session when users load ---
+  useEffect(() => {
+    if (pendingSessionId && users.length > 0 && !currentUser) {
+      const user = users.find(u => u.id === pendingSessionId);
+      if (user) setCurrentUser(user);
+    }
+  }, [users, pendingSessionId, currentUser]);
+
+  // --- Keep currentUser in sync when user data changes ---
+  useEffect(() => {
+    if (currentUser) {
+      const updated = users.find(u => u.id === currentUser.id);
+      if (updated && (updated.name !== currentUser.name || updated.email !== currentUser.email)) {
+        setCurrentUser(updated);
+      }
+    }
+  }, [users, currentUser]);
+
+  // --- Save / clear session ---
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(SESSION_KEY, currentUser.id);
@@ -55,18 +161,12 @@ export function AppProvider({ children }) {
     }
   }, [currentUser]);
 
-  // Keep currentUser in sync when data.users changes (e.g. profile edit)
-  useEffect(() => {
-    if (currentUser) {
-      const updated = data.users.find(u => u.id === currentUser.id);
-      if (updated && (updated.name !== currentUser.name || updated.email !== currentUser.email)) {
-        setCurrentUser(updated);
-      }
-    }
-  }, [data.users]);
+  // --- Backward-compatible data object ---
+  const data = { users, bodyStats: bodyStatsMap, workoutPlans, workoutLogs, schedule, messages, exercises };
 
+  // ========== Auth ==========
   const login = (email, password) => {
-    const user = data.users.find(u => u.email === email && u.password === password);
+    const user = users.find(u => u.email === email && u.password === password);
     if (user) {
       setCurrentUser(user);
       return { success: true, user };
@@ -76,83 +176,70 @@ export function AppProvider({ children }) {
 
   const logout = () => setCurrentUser(null);
 
-  const getClients = (trainerId) => data.users.filter(u => u.role === 'client' && u.trainerId === trainerId);
+  // ========== Users / Clients ==========
+  const getClients = (trainerId) => users.filter(u => u.role === 'client' && u.trainerId === trainerId);
+  const getClient = (clientId) => users.find(u => u.id === clientId);
 
-  const getClient = (clientId) => data.users.find(u => u.id === clientId);
-
-  const addClient = (client) => {
+  const addClient = async (client) => {
     const newClient = { ...client, id: `client-${Date.now()}`, role: 'client', joinDate: new Date().toISOString().split('T')[0] };
-    setData(prev => ({ ...prev, users: [...prev.users, newClient] }));
+    await setDoc(doc(db, 'users', newClient.id), newClient);
     return newClient;
   };
 
-  const updateClient = (clientId, updates) => {
-    setData(prev => ({
-      ...prev,
-      users: prev.users.map(u => u.id === clientId ? { ...u, ...updates } : u),
-    }));
+  const updateClient = async (clientId, updates) => {
+    await updateDoc(doc(db, 'users', clientId), updates);
   };
 
-  const getBodyStats = (clientId) => data.bodyStats[clientId] || [];
+  // ========== Body Stats ==========
+  const getBodyStats = (clientId) => bodyStatsMap[clientId] || [];
 
-  const addBodyStat = (clientId, stat) => {
-    setData(prev => ({
-      ...prev,
-      bodyStats: {
-        ...prev.bodyStats,
-        [clientId]: [...(prev.bodyStats[clientId] || []), { ...stat, date: stat.date || new Date().toISOString().split('T')[0] }],
-      },
-    }));
+  const addBodyStat = async (clientId, stat) => {
+    const entry = { ...stat, date: stat.date || new Date().toISOString().split('T')[0] };
+    const current = bodyStatsMap[clientId] || [];
+    await setDoc(doc(db, 'bodyStats', clientId), { entries: [...current, entry] });
   };
 
-  const deleteBodyStat = (clientId, index) => {
-    setData(prev => ({
-      ...prev,
-      bodyStats: {
-        ...prev.bodyStats,
-        [clientId]: (prev.bodyStats[clientId] || []).filter((_, i) => i !== index),
-      },
-    }));
+  const deleteBodyStat = async (clientId, index) => {
+    const current = bodyStatsMap[clientId] || [];
+    const updated = current.filter((_, i) => i !== index);
+    await setDoc(doc(db, 'bodyStats', clientId), { entries: updated });
   };
 
+  // ========== Workout Plans ==========
   const getWorkoutPlans = (filter) => {
-    return data.workoutPlans.filter(p => {
+    return workoutPlans.filter(p => {
       if (filter.clientId && p.clientId !== filter.clientId) return false;
       if (filter.trainerId && p.trainerId !== filter.trainerId) return false;
       return true;
     });
   };
 
-  const addWorkoutPlan = (plan) => {
+  const addWorkoutPlan = async (plan) => {
     const newPlan = { ...plan, id: `plan-${Date.now()}` };
-    setData(prev => ({ ...prev, workoutPlans: [...prev.workoutPlans, newPlan] }));
+    await setDoc(doc(db, 'workoutPlans', newPlan.id), newPlan);
     return newPlan;
   };
 
-  const updateWorkoutPlan = (planId, updates) => {
-    setData(prev => ({
-      ...prev,
-      workoutPlans: prev.workoutPlans.map(p => p.id === planId ? { ...p, ...updates } : p),
-    }));
+  const updateWorkoutPlan = async (planId, updates) => {
+    await updateDoc(doc(db, 'workoutPlans', planId), updates);
   };
 
-  const deleteWorkoutPlan = (planId) => {
-    setData(prev => ({
-      ...prev,
-      workoutPlans: prev.workoutPlans.filter(p => p.id !== planId),
-    }));
+  const deleteWorkoutPlan = async (planId) => {
+    await deleteDoc(doc(db, 'workoutPlans', planId));
   };
 
-  const getWorkoutLogs = (clientId) => (data.workoutLogs || []).filter(l => l.clientId === clientId);
+  // ========== Workout Logs ==========
+  const getWorkoutLogs = (clientId) => workoutLogs.filter(l => l.clientId === clientId);
 
-  const addWorkoutLog = (log) => {
+  const addWorkoutLog = async (log) => {
     const newLog = { ...log, id: `log-${Date.now()}` };
-    setData(prev => ({ ...prev, workoutLogs: [...(prev.workoutLogs || []), newLog] }));
+    await setDoc(doc(db, 'workoutLogs', newLog.id), newLog);
     return newLog;
   };
 
+  // ========== Schedule ==========
   const getSchedule = (filter) => {
-    return data.schedule.filter(s => {
+    return schedule.filter(s => {
       if (filter.trainerId && s.trainerId !== filter.trainerId) return false;
       if (filter.clientId && s.clientId !== filter.clientId) return false;
       if (filter.date && s.date !== filter.date) return false;
@@ -160,40 +247,38 @@ export function AppProvider({ children }) {
     });
   };
 
-  const addScheduleItem = (item) => {
+  const addScheduleItem = async (item) => {
     const newItem = { ...item, id: `sched-${Date.now()}`, status: 'pending' };
-    setData(prev => ({ ...prev, schedule: [...prev.schedule, newItem] }));
+    await setDoc(doc(db, 'schedule', newItem.id), newItem);
     return newItem;
   };
 
-  const updateScheduleItem = (itemId, updates) => {
-    setData(prev => ({
-      ...prev,
-      schedule: prev.schedule.map(s => s.id === itemId ? { ...s, ...updates } : s),
-    }));
+  const updateScheduleItem = async (itemId, updates) => {
+    await updateDoc(doc(db, 'schedule', itemId), updates);
   };
 
-  const getMessages = (userId) => data.messages.filter(m => m.from === userId || m.to === userId);
+  // ========== Messages ==========
+  const getMessages = (userId) => messages.filter(m => m.from === userId || m.to === userId);
 
-  const sendMessage = (from, to, text) => {
+  const sendMessage = async (from, to, text) => {
     const msg = { id: `msg-${Date.now()}`, from, to, text, timestamp: new Date().toISOString(), read: false };
-    setData(prev => ({ ...prev, messages: [...prev.messages, msg] }));
+    await setDoc(doc(db, 'messages', msg.id), msg);
     return msg;
   };
 
-  const getUnreadCount = (userId) => data.messages.filter(m => m.to === userId && !m.read).length;
+  const getUnreadCount = (userId) => messages.filter(m => m.to === userId && !m.read).length;
 
-  const markMessagesRead = (userId, otherUserId) => {
-    setData(prev => ({
-      ...prev,
-      messages: prev.messages.map(m =>
-        m.to === userId && m.from === otherUserId ? { ...m, read: true } : m
-      ),
-    }));
+  const markMessagesRead = async (userId, otherUserId) => {
+    const toMark = messages.filter(m => m.to === userId && m.from === otherUserId && !m.read);
+    if (toMark.length === 0) return;
+    const batch = writeBatch(db);
+    toMark.forEach(m => batch.update(doc(db, 'messages', m.id), { read: true }));
+    await batch.commit();
   };
 
+  // ========== Personal Records ==========
   const getPersonalRecords = (clientId) => {
-    const logs = (data.workoutLogs || []).filter(l => l.clientId === clientId);
+    const logs = workoutLogs.filter(l => l.clientId === clientId);
     const prs = {};
     logs.forEach(log => {
       (log.entries || []).forEach(entry => {
@@ -208,36 +293,42 @@ export function AppProvider({ children }) {
     return prs;
   };
 
-  const getExercises = () => data.exercises || defaultExercises;
+  // ========== Exercises ==========
+  const getExercises = () => exercises.length > 0 ? exercises : defaultExercises;
 
-  const addExercise = (exercise) => {
+  const addExercise = async (exercise) => {
     const newEx = { ...exercise, id: `ex-${Date.now()}` };
-    setData(prev => ({ ...prev, exercises: [...(prev.exercises || defaultExercises), newEx] }));
+    await setDoc(doc(db, 'exercises', newEx.id), newEx);
     return newEx;
   };
 
-  const updateExercise = (exerciseId, updates) => {
-    setData(prev => ({
-      ...prev,
-      exercises: (prev.exercises || defaultExercises).map(e => e.id === exerciseId ? { ...e, ...updates } : e),
-    }));
+  const updateExercise = async (exerciseId, updates) => {
+    await updateDoc(doc(db, 'exercises', exerciseId), updates);
   };
 
-  const deleteExercise = (exerciseId) => {
-    setData(prev => ({
-      ...prev,
-      exercises: (prev.exercises || defaultExercises).filter(e => e.id !== exerciseId),
-    }));
+  const deleteExercise = async (exerciseId) => {
+    await deleteDoc(doc(db, 'exercises', exerciseId));
   };
 
-  const resetData = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setData(getInitialData());
+  // ========== Reset ==========
+  const resetData = async () => {
+    // Delete all documents in every collection
+    const collections = ['users', 'bodyStats', 'workoutPlans', 'workoutLogs', 'schedule', 'messages', 'exercises'];
+    for (const col of collections) {
+      const snap = await getDocs(collection(db, col));
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
     setCurrentUser(null);
+    localStorage.removeItem(SESSION_KEY);
+    // Re-seed
+    seedingRef.current = false;
+    await seedData();
   };
 
   const value = {
-    currentUser, login, logout,
+    currentUser, login, logout, loading,
     getClients, getClient, addClient, updateClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,

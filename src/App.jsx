@@ -18,9 +18,19 @@ import MyWorkoutsPage from './pages/MyWorkoutsPage';
 import MessagesPage from './pages/MessagesPage';
 import ProfilePage from './pages/ProfilePage';
 
-function AppRoutes() {
-  const { currentUser } = useApp();
+function LoadingScreen() {
+  return (
+    <div className="loading-screen">
+      <div className="loading-spinner" />
+      <p>Loading ElitePro...</p>
+    </div>
+  );
+}
 
+function AppRoutes() {
+  const { currentUser, loading } = useApp();
+
+  if (loading) return <LoadingScreen />;
   if (!currentUser) return <LoginPage />;
 
   const isTrainer = currentUser.role === 'trainer';
