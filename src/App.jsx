@@ -17,6 +17,7 @@ import ProgressPage from './pages/ProgressPage';
 import MyWorkoutsPage from './pages/MyWorkoutsPage';
 import MessagesPage from './pages/MessagesPage';
 import ProfilePage from './pages/ProfilePage';
+import RoleSelectPage from './pages/RoleSelectPage';
 
 function LoadingScreen() {
   return (
@@ -28,9 +29,10 @@ function LoadingScreen() {
 }
 
 function AppRoutes() {
-  const { currentUser, loading } = useApp();
+  const { currentUser, loading, authReady, needsProfile } = useApp();
 
-  if (loading) return <LoadingScreen />;
+  if (loading || !authReady) return <LoadingScreen />;
+  if (needsProfile) return <RoleSelectPage />;
   if (!currentUser) return <LoginPage />;
 
   const isTrainer = currentUser.role === 'trainer';

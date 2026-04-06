@@ -1,14 +1,20 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
   collection, doc, setDoc, updateDoc, deleteDoc,
   onSnapshot, writeBatch, getDocs,
 } from 'firebase/firestore';
+import {
+  onAuthStateChanged, signInWithPopup, GoogleAuthProvider,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 import { sampleTrainer, sampleClients, sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs, sampleSchedule, sampleMessages } from '../data/sampleData';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 
 const AppContext = createContext();
 const SESSION_KEY = 'elitepro_session';
+const googleProvider = new GoogleAuthProvider();
 
 export function AppProvider({ children }) {
   // --- Individual collection states ---
@@ -21,6 +27,8 @@ export function AppProvider({ children }) {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  // Firebase Auth state: undefined = checking, null = no user, object = authenticated
+  const [firebaseUser, setFirebaseUser] = useState(undefined);
 
   // Track which collections have loaded their first snapshot
   const loadedRef = useRef(new Set());
@@ -37,6 +45,14 @@ export function AppProvider({ children }) {
     if (loadedRef.current.size >= 7) {
       setLoading(false);
     }
+  }, []);
+
+  // --- Firebase Auth listener ---
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user || null);
+    });
+    return unsub;
   }, []);
 
   // --- Seed sample data into Firestore (first-time only) ---
@@ -136,11 +152,19 @@ export function AppProvider({ children }) {
 
   // --- Restore session when users load ---
   useEffect(() => {
-    if (pendingSessionId && users.length > 0 && !currentUser) {
+    if (currentUser || users.length === 0) return;
+    // Try Firebase Auth user first
+    if (firebaseUser) {
+      const profile = users.find(u => u.id === firebaseUser.uid);
+      if (profile) setCurrentUser(profile);
+      return;
+    }
+    // Fallback: demo session from localStorage
+    if (pendingSessionId) {
       const user = users.find(u => u.id === pendingSessionId);
       if (user) setCurrentUser(user);
     }
-  }, [users, pendingSessionId, currentUser]);
+  }, [users, pendingSessionId, currentUser, firebaseUser]);
 
   // --- Keep currentUser in sync when user data changes ---
   useEffect(() => {
@@ -165,6 +189,7 @@ export function AppProvider({ children }) {
   const data = { users, bodyStats: bodyStatsMap, workoutPlans, workoutLogs, schedule, messages, exercises };
 
   // ========== Auth ==========
+  // Demo login (email/password against Firestore users)
   const login = (email, password) => {
     const user = users.find(u => u.email === email && u.password === password);
     if (user) {
@@ -174,7 +199,46 @@ export function AppProvider({ children }) {
     return { success: false, error: 'Invalid email or password' };
   };
 
-  const logout = () => setCurrentUser(null);
+  // Firebase Auth: Google Sign-In
+  const signInWithGoogle = async () => {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  };
+
+  // Firebase Auth: Email/Password Sign Up
+  const signUpEmail = async (email, password) => {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result.user;
+  };
+
+  // Firebase Auth: Email/Password Sign In
+  const signInEmail = async (email, password) => {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
+  };
+
+  // Complete profile for new Firebase Auth users → creates Firestore doc
+  const completeProfile = async (role, name, trainerId) => {
+    if (!firebaseUser) return;
+    const profile = {
+      id: firebaseUser.uid,
+      name: name || firebaseUser.displayName || 'User',
+      email: firebaseUser.email || '',
+      role,
+      avatar: firebaseUser.photoURL || null,
+      joinDate: new Date().toISOString().split('T')[0],
+      ...(role === 'client' ? { trainerId: trainerId || null, goals: '', age: '', height: '' } : { speciality: '' }),
+    };
+    await setDoc(doc(db, 'users', profile.id), profile);
+    setCurrentUser(profile);
+    return profile;
+  };
+
+  const logout = async () => {
+    try { await signOut(auth); } catch { /* ignore */ }
+    setCurrentUser(null);
+    setFirebaseUser(null);
+  };
 
   // ========== Users / Clients ==========
   const getClients = (trainerId) => users.filter(u => u.role === 'client' && u.trainerId === trainerId);
@@ -320,15 +384,22 @@ export function AppProvider({ children }) {
       snap.docs.forEach(d => batch.delete(d.ref));
       await batch.commit();
     }
+    try { await signOut(auth); } catch { /* ignore */ }
     setCurrentUser(null);
+    setFirebaseUser(null);
     localStorage.removeItem(SESSION_KEY);
     // Re-seed
     seedingRef.current = false;
     await seedData();
   };
 
+  // Derived: Firebase auth user exists but no Firestore profile yet
+  const needsProfile = firebaseUser && !loading && !users.find(u => u.id === firebaseUser?.uid);
+
   const value = {
     currentUser, login, logout, loading,
+    firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
+    signInWithGoogle, signUpEmail, signInEmail, completeProfile,
     getClients, getClient, addClient, updateClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
