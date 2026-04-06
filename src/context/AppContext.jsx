@@ -5,7 +5,8 @@ import {
   onSnapshot, writeBatch, getDocs,
 } from 'firebase/firestore';
 import {
-  onAuthStateChanged, signInWithPopup, GoogleAuthProvider,
+  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
+  GoogleAuthProvider,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -47,8 +48,11 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  // --- Firebase Auth listener ---
+  // --- Firebase Auth listener + redirect result ---
   useEffect(() => {
+    // Handle redirect result (for iOS Safari where popup fails)
+    getRedirectResult(auth).catch(() => { /* no redirect pending */ });
+
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
     });
@@ -200,10 +204,23 @@ export function AppProvider({ children }) {
     return { success: false, error: 'Invalid email or password' };
   };
 
-  // Firebase Auth: Google Sign-In
+  // Firebase Auth: Google Sign-In (popup with redirect fallback for iOS Safari)
   const signInWithGoogle = async () => {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return result.user;
+    } catch (err) {
+      // iOS Safari blocks popups / storage-partitioned environments
+      if (err.code === 'auth/popup-blocked' ||
+          err.code === 'auth/popup-closed-by-user' ||
+          err.message?.includes('storage-partitioned') ||
+          err.message?.includes('missing initial state')) {
+        // Fallback to redirect flow
+        await signInWithRedirect(auth, googleProvider);
+        return null; // Page will reload, onAuthStateChanged handles the rest
+      }
+      throw err;
+    }
   };
 
   // Firebase Auth: Email/Password Sign Up

@@ -37,8 +37,9 @@ export default function LoginPage() {
     setError('');
     setAuthLoading(true);
     try {
-      await signInWithGoogle();
-      // onAuthStateChanged will handle the rest
+      const user = await signInWithGoogle();
+      // If null, redirect flow was triggered — page will reload
+      if (!user) return;
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.message || 'Google sign-in failed');
