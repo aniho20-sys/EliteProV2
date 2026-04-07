@@ -8,6 +8,7 @@ import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
   GoogleAuthProvider,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
 import { sampleTrainer, sampleClients, sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs, sampleSchedule, sampleMessages } from '../data/sampleData';
@@ -243,6 +244,11 @@ export function AppProvider({ children }) {
     return result.user;
   };
 
+  // Firebase Auth: Send password reset email
+  const sendPasswordReset = async (email) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   // Complete profile for new Firebase Auth users → creates Firestore doc
   const completeProfile = async (role, name, inviteCode) => {
     if (!firebaseUser) return;
@@ -458,7 +464,7 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, login, logout, loading,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
-    signInWithGoogle, signUpEmail, signInEmail, completeProfile,
+    signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     getClients, getClient, addClient, updateClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,

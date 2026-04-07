@@ -1,14 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
+// Detect auth provider from Firebase user object
+function getAuthProvider(firebaseUser) {
+  if (!firebaseUser) return 'demo';
+  const provider = firebaseUser.providerData?.[0]?.providerId;
+  if (provider === 'google.com') return 'google';
+  if (provider === 'password') return 'email';
+  return 'demo';
+}
+
 export default function ProfilePage() {
-  const { currentUser, updateClient, resetData, logout, getInviteCode, connectToTrainer, getClient } = useApp();
+  const { currentUser, firebaseUser, updateClient, resetData, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
+  const authProvider = getAuthProvider(firebaseUser);
+  const isDemo = authProvider === 'demo';
+  const isFirebaseAuth = !isDemo;
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -48,6 +60,8 @@ export default function ProfilePage() {
   const handleSave = (e) => {
     e.preventDefault();
     const updates = { ...form };
+    // Don't allow Firebase Auth users to change email — managed by provider
+    if (isFirebaseAuth) delete updates.email;
     if (!isTrainer) {
       updates.age = Number(updates.age) || currentUser.age;
       updates.height = Number(updates.height) || currentUser.height;
@@ -55,6 +69,15 @@ export default function ProfilePage() {
     updateClient(currentUser.id, updates);
     setEditing(false);
     toast('Profile updated');
+  };
+
+  const handlePasswordReset = async () => {
+    try {
+      await sendPasswordReset(currentUser.email);
+      toast(`Password reset email sent to ${currentUser.email}`);
+    } catch (err) {
+      toast(err.message || 'Failed to send reset email', 'error');
+    }
   };
 
   const handleCopyCode = () => {
@@ -163,8 +186,17 @@ export default function ProfilePage() {
               <input className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <label className="form-label">
+                Email {isFirebaseAuth && <span className="text-muted">(managed by {authProvider === 'google' ? 'Google' : 'login provider'})</span>}
+              </label>
+              <input
+                className="form-input"
+                type="email"
+                required
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                disabled={isFirebaseAuth}
+              />
             </div>
             {isTrainer ? (
               <div className="form-group">
@@ -245,29 +277,54 @@ export default function ProfilePage() {
           <span className="profile-field-value" style={{ textTransform: 'capitalize' }}>{currentUser.role}</span>
         </div>
         <div className="profile-field">
-          <span className="profile-field-label">User ID</span>
-          <span className="profile-field-value" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{currentUser.id}</span>
+          <span className="profile-field-label">Sign-in method</span>
+          <span className="profile-field-value">
+            {authProvider === 'google' && <span className="auth-badge auth-badge-google">Google</span>}
+            {authProvider === 'email' && <span className="auth-badge auth-badge-email"><Mail size={12} /> Email</span>}
+            {authProvider === 'demo' && <span className="auth-badge auth-badge-demo">Demo Account</span>}
+          </span>
         </div>
-        <button className="btn btn-outline mt-16" onClick={() => { logout(); navigate('/'); }} style={{ width: '100%' }}>
+
+        {/* Change Password — only for Email/Password Firebase Auth users */}
+        {authProvider === 'email' && (
+          <button className="btn btn-outline mt-16" onClick={handlePasswordReset} style={{ width: '100%' }}>
+            <KeyRound size={16} /> Send Password Reset Email
+          </button>
+        )}
+
+        <button className="btn btn-outline mt-8" onClick={() => { logout(); navigate('/'); }} style={{ width: '100%' }}>
           <LogOut size={16} /> Log Out
         </button>
       </div>
 
-      {/* Danger Zone */}
-      <div className="card profile-danger-zone">
-        <h3 className="card-title mb-8">Danger Zone</h3>
-        <p className="profile-danger-text">Reset all data to demo defaults. This will log you out and erase all changes.</p>
-        {!showResetConfirm ? (
-          <button className="btn btn-outline btn-danger mt-8" onClick={() => setShowResetConfirm(true)}>
-            <RotateCcw size={16} /> Reset All Data
-          </button>
-        ) : (
-          <div className="flex gap-8 mt-8">
-            <button className="btn btn-danger" onClick={handleReset}>Confirm Reset</button>
-            <button className="btn btn-outline" onClick={() => setShowResetConfirm(false)}>Cancel</button>
+      {/* Demo Warning */}
+      {isDemo && (
+        <div className="card demo-warning mb-16">
+          <div className="demo-warning-header">
+            <AlertTriangle size={18} />
+            <strong>Demo Account</strong>
           </div>
-        )}
-      </div>
+          <p>You are using a shared demo account. Data is visible to anyone using the same demo. For private data, please sign up with Google or Email.</p>
+        </div>
+      )}
+
+      {/* Danger Zone — only for demo accounts */}
+      {isDemo && (
+        <div className="card profile-danger-zone">
+          <h3 className="card-title mb-8">Danger Zone</h3>
+          <p className="profile-danger-text">Reset all demo data to defaults. This will log you out and erase all changes made by all demo users.</p>
+          {!showResetConfirm ? (
+            <button className="btn btn-outline btn-danger mt-8" onClick={() => setShowResetConfirm(true)}>
+              <RotateCcw size={16} /> Reset Demo Data
+            </button>
+          ) : (
+            <div className="flex gap-8 mt-8">
+              <button className="btn btn-danger" onClick={handleReset}>Confirm Reset</button>
+              <button className="btn btn-outline" onClick={() => setShowResetConfirm(false)}>Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
