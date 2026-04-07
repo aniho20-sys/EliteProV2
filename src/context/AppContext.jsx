@@ -11,16 +11,21 @@ import {
   sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
-import { sampleTrainer, sampleClients, sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs, sampleSchedule, sampleMessages } from '../data/sampleData';
+import {
+  sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs,
+  sampleSchedule, sampleMessages,
+} from '../data/sampleData';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 
 const AppContext = createContext();
-const SESSION_KEY = 'elitepro_session';
 const googleProvider = new GoogleAuthProvider();
+
+// Demo account emails — used to trigger auto-seed of sample data
+const DEMO_COACH_EMAIL = 'coach@elitepro.com';
 
 // Generate a short 6-char invite code
 function generateInviteCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I/O/0/1 to avoid confusion
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I/O/0/1
   let code = '';
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
@@ -40,219 +45,258 @@ export function AppProvider({ children }) {
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
   const [firebaseUser, setFirebaseUser] = useState(undefined);
 
-  // Track which collections have loaded their first snapshot
   const loadedRef = useRef(new Set());
-  const seedingRef = useRef(false);
 
-  // Pending session restore (wait for users to load from Firestore)
-  const [pendingSessionId, setPendingSessionId] = useState(() => {
-    try { return localStorage.getItem(SESSION_KEY); } catch { return null; }
-  });
-
-  // Mark a collection as loaded; when all 7 are loaded, set loading=false
   const markLoaded = useCallback((name) => {
     loadedRef.current.add(name);
-    if (loadedRef.current.size >= 7) {
-      setLoading(false);
-    }
+    if (loadedRef.current.size >= 7) setLoading(false);
   }, []);
 
   // --- Firebase Auth listener + redirect result ---
   useEffect(() => {
-    // Handle redirect result (for iOS Safari where popup fails)
     getRedirectResult(auth).catch(() => { /* no redirect pending */ });
-
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
+      if (!user) setCurrentUser(null);
     });
     return unsub;
   }, []);
 
-  // --- Seed sample data into Firestore (first-time only) ---
-  const seedData = useCallback(async () => {
-    if (seedingRef.current) return;
-    seedingRef.current = true;
-
-    try {
-      const batch = writeBatch(db);
-
-      // Users
-      const allUsers = [sampleTrainer, ...sampleClients];
-      allUsers.forEach(u => batch.set(doc(db, 'users', u.id), u));
-
-      // Body stats — one doc per client, entries stored as array
-      Object.entries(sampleBodyStats).forEach(([clientId, entries]) => {
-        batch.set(doc(db, 'bodyStats', clientId), { entries });
-      });
-
-      // Workout plans
-      sampleWorkoutPlans.forEach(p => batch.set(doc(db, 'workoutPlans', p.id), p));
-
-      // Workout logs
-      sampleWorkoutLogs.forEach(l => batch.set(doc(db, 'workoutLogs', l.id), l));
-
-      // Schedule
-      sampleSchedule.forEach(s => batch.set(doc(db, 'schedule', s.id), s));
-
-      // Messages
-      sampleMessages.forEach(m => batch.set(doc(db, 'messages', m.id), m));
-
-      // Exercises
-      defaultExercises.forEach(e => batch.set(doc(db, 'exercises', e.id), e));
-
-      await batch.commit();
-    } catch (err) {
-      console.error('Failed to seed data:', err);
-    }
-  }, []);
-
-  // --- Set up real-time Firestore listeners ---
+  // --- Set up real-time Firestore listeners (only when authed) ---
   useEffect(() => {
+    if (!firebaseUser) {
+      // Not authed: reset state and mark as non-loading
+      setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
+      setWorkoutLogs([]); setSchedule([]); setMessages([]); setExercises([]);
+      loadedRef.current = new Set();
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    loadedRef.current = new Set();
     const unsubs = [];
 
-    // 1. Users
     unsubs.push(onSnapshot(collection(db, 'users'), (snap) => {
-      if (snap.empty && !seedingRef.current) {
-        seedData();
-        return;
-      }
-      const list = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      setUsers(list);
+      setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('users');
-    }));
+    }, () => markLoaded('users')));
 
-    // 2. Body stats
     unsubs.push(onSnapshot(collection(db, 'bodyStats'), (snap) => {
       const map = {};
       snap.docs.forEach(d => { map[d.id] = d.data().entries || []; });
       setBodyStatsMap(map);
       markLoaded('bodyStats');
-    }));
+    }, () => markLoaded('bodyStats')));
 
-    // 3. Workout plans
     unsubs.push(onSnapshot(collection(db, 'workoutPlans'), (snap) => {
       setWorkoutPlans(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutPlans');
-    }));
+    }, () => markLoaded('workoutPlans')));
 
-    // 4. Workout logs
     unsubs.push(onSnapshot(collection(db, 'workoutLogs'), (snap) => {
       setWorkoutLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutLogs');
-    }));
+    }, () => markLoaded('workoutLogs')));
 
-    // 5. Schedule
     unsubs.push(onSnapshot(collection(db, 'schedule'), (snap) => {
       setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('schedule');
-    }));
+    }, () => markLoaded('schedule')));
 
-    // 6. Messages
     unsubs.push(onSnapshot(collection(db, 'messages'), (snap) => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('messages');
-    }));
+    }, () => markLoaded('messages')));
 
-    // 7. Exercises
     unsubs.push(onSnapshot(collection(db, 'exercises'), (snap) => {
       const list = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       setExercises(list.length > 0 ? list : defaultExercises);
       markLoaded('exercises');
-    }));
+    }, () => markLoaded('exercises')));
 
     return () => unsubs.forEach(fn => fn());
-  }, [seedData, markLoaded]);
+  }, [firebaseUser, markLoaded]);
 
-  // --- Restore session when users load ---
+  // --- Sync currentUser when users list or firebaseUser changes ---
   useEffect(() => {
-    if (currentUser || users.length === 0) return;
-    // Try Firebase Auth user first
-    if (firebaseUser) {
-      const profile = users.find(u => u.id === firebaseUser.uid);
-      if (profile) setCurrentUser(profile);
-      return;
-    }
-    // Fallback: demo session from localStorage
-    if (pendingSessionId) {
-      const user = users.find(u => u.id === pendingSessionId);
-      if (user) setCurrentUser(user);
-      setPendingSessionId(null); // Clear after use to prevent re-login after logout
-    }
-  }, [users, pendingSessionId, currentUser, firebaseUser]);
+    if (!firebaseUser) return;
+    const profile = users.find(u => u.id === firebaseUser.uid);
+    if (profile) setCurrentUser(profile);
+  }, [users, firebaseUser]);
 
-  // --- Keep currentUser in sync when user data changes ---
-  useEffect(() => {
-    if (currentUser) {
-      const updated = users.find(u => u.id === currentUser.id);
-      if (updated && (updated.name !== currentUser.name || updated.email !== currentUser.email)) {
-        setCurrentUser(updated);
-      }
-    }
-  }, [users, currentUser]);
-
-  // --- Save / clear session ---
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(SESSION_KEY, currentUser.id);
-    } else {
-      localStorage.removeItem(SESSION_KEY);
-    }
-  }, [currentUser]);
-
-  // --- Backward-compatible data object ---
+  // Backward-compatible data object
   const data = { users, bodyStats: bodyStatsMap, workoutPlans, workoutLogs, schedule, messages, exercises };
 
-  // ========== Auth ==========
-  // Demo login (email/password against Firestore users)
-  const login = (email, password) => {
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      return { success: true, user };
-    }
-    return { success: false, error: 'Invalid email or password' };
+  // ========== Seeding demo data for the coach ==========
+  // Creates ghost clients + plans/stats/logs/schedule/messages scoped to trainerUid
+  const seedDemoDataForCoach = async (trainerUid) => {
+    const batch = writeBatch(db);
+
+    // Generate stable ghost client IDs tied to the trainer
+    const c1 = `${trainerUid}-c1`;
+    const c2 = `${trainerUid}-c2`;
+    const c3 = `${trainerUid}-c3`;
+    const idMap = { 'client-1': c1, 'client-2': c2, 'client-3': c3, 'trainer-1': trainerUid };
+
+    // Ghost clients
+    batch.set(doc(db, 'users', c1), {
+      id: c1, name: 'David Chan', email: 'david@demo.local', role: 'client',
+      trainerId: trainerUid, age: 28, height: 175,
+      goals: 'Build muscle, improve strength',
+      notes: 'Previous shoulder injury - avoid heavy overhead pressing',
+      joinDate: '2026-01-15', isDemo: true,
+    });
+    batch.set(doc(db, 'users', c2), {
+      id: c2, name: 'Sarah Wong', email: 'sarah@demo.local', role: 'client',
+      trainerId: trainerUid, age: 32, height: 163,
+      goals: 'Fat loss, toning', notes: 'Beginner - focus on form',
+      joinDate: '2026-02-01', isDemo: true,
+    });
+    batch.set(doc(db, 'users', c3), {
+      id: c3, name: 'Michael Lee', email: 'michael@demo.local', role: 'client',
+      trainerId: trainerUid, age: 24, height: 180,
+      goals: 'Powerlifting competition prep',
+      notes: 'Advanced lifter, targets: S:200kg B:140kg D:240kg',
+      joinDate: '2026-02-20', isDemo: true,
+    });
+
+    // Body stats — doc id = clientId
+    Object.entries(sampleBodyStats).forEach(([origId, entries]) => {
+      const cid = idMap[origId];
+      if (cid) batch.set(doc(db, 'bodyStats', cid), { entries });
+    });
+
+    // Workout plans
+    sampleWorkoutPlans.forEach((p, i) => {
+      const newId = `${trainerUid}-plan-${i + 1}`;
+      batch.set(doc(db, 'workoutPlans', newId), {
+        ...p, id: newId,
+        trainerId: trainerUid,
+        clientId: idMap[p.clientId] || p.clientId,
+      });
+    });
+
+    // Workout logs
+    sampleWorkoutLogs.forEach((l, i) => {
+      const newId = `${trainerUid}-log-${i + 1}`;
+      batch.set(doc(db, 'workoutLogs', newId), {
+        ...l, id: newId,
+        clientId: idMap[l.clientId] || l.clientId,
+      });
+    });
+
+    // Schedule
+    sampleSchedule.forEach((s, i) => {
+      const newId = `${trainerUid}-sched-${i + 1}`;
+      batch.set(doc(db, 'schedule', newId), {
+        ...s, id: newId,
+        trainerId: trainerUid,
+        clientId: idMap[s.clientId] || s.clientId,
+      });
+    });
+
+    // Messages
+    sampleMessages.forEach((m, i) => {
+      const newId = `${trainerUid}-msg-${i + 1}`;
+      batch.set(doc(db, 'messages', newId), {
+        ...m, id: newId,
+        from: idMap[m.from] || m.from,
+        to: idMap[m.to] || m.to,
+      });
+    });
+
+    await batch.commit();
   };
 
-  // Firebase Auth: Google Sign-In (popup with redirect fallback for iOS Safari)
+  // Seed global exercise library (idempotent — only if empty)
+  const seedExercisesIfEmpty = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'exercises'));
+      if (!snap.empty) return;
+      const batch = writeBatch(db);
+      defaultExercises.forEach(e => batch.set(doc(db, 'exercises', e.id), e));
+      await batch.commit();
+    } catch (err) {
+      console.warn('Exercise seed skipped:', err.message);
+    }
+  };
+
+  // ========== Auth ==========
+
+  // Firebase Auth: Google Sign-In (popup + redirect fallback)
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
-      // iOS Safari blocks popups / storage-partitioned environments
       if (err.code === 'auth/popup-blocked' ||
           err.code === 'auth/popup-closed-by-user' ||
           err.message?.includes('storage-partitioned') ||
           err.message?.includes('missing initial state')) {
-        // Fallback to redirect flow
         await signInWithRedirect(auth, googleProvider);
-        return null; // Page will reload, onAuthStateChanged handles the rest
+        return null;
       }
       throw err;
     }
   };
 
-  // Firebase Auth: Email/Password Sign Up
   const signUpEmail = async (email, password) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     return result.user;
   };
 
-  // Firebase Auth: Email/Password Sign In
   const signInEmail = async (email, password) => {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
   };
 
-  // Firebase Auth: Send password reset email
   const sendPasswordReset = async (email) => {
     await sendPasswordResetEmail(auth, email);
   };
 
-  // Complete profile for new Firebase Auth users → creates Firestore doc
+  // Demo login: uses Firebase Auth under the hood.
+  // If the demo Auth account doesn't exist yet, sign-up and auto-seed.
+  const loginDemoCoach = async () => {
+    let firstTime = false;
+    try {
+      await signInEmail(DEMO_COACH_EMAIL, 'demo123');
+    } catch (err) {
+      if (err.code === 'auth/user-not-found' ||
+          err.code === 'auth/invalid-credential' ||
+          err.code === 'auth/invalid-login-credentials') {
+        await signUpEmail(DEMO_COACH_EMAIL, 'demo123');
+        firstTime = true;
+      } else {
+        throw err;
+      }
+    }
+    if (firstTime) {
+      const fbUser = auth.currentUser;
+      if (!fbUser) throw new Error('Demo signup failed — no current user');
+      // Step 1: create trainer profile so rules isTrainer() succeeds
+      const profile = {
+        id: fbUser.uid,
+        name: 'Coach Alex',
+        email: DEMO_COACH_EMAIL,
+        role: 'trainer',
+        speciality: 'Strength & Conditioning',
+        avatar: null,
+        joinDate: new Date().toISOString().split('T')[0],
+        inviteCode: generateInviteCode(),
+        isDemo: true,
+      };
+      await setDoc(doc(db, 'users', fbUser.uid), profile);
+      // Step 2: seed ghost clients + plans + logs
+      await seedDemoDataForCoach(fbUser.uid);
+      // Step 3: seed exercise library if empty
+      await seedExercisesIfEmpty();
+    }
+  };
+
+  // Complete profile for real Firebase Auth users → creates Firestore doc
   const completeProfile = async (role, name, inviteCode) => {
     if (!firebaseUser) return;
-    // If client with invite code, look up trainer
     let trainerId = null;
     if (role === 'client' && inviteCode) {
       const trainer = findTrainerByCode(inviteCode);
@@ -265,9 +309,14 @@ export function AppProvider({ children }) {
       role,
       avatar: firebaseUser.photoURL || null,
       joinDate: new Date().toISOString().split('T')[0],
-      ...(role === 'client' ? { trainerId, goals: '', age: '', height: '' } : { speciality: '', inviteCode: generateInviteCode() }),
+      ...(role === 'client'
+        ? { trainerId, goals: '', age: '', height: '' }
+        : { speciality: '', inviteCode: generateInviteCode() }
+      ),
     };
     await setDoc(doc(db, 'users', profile.id), profile);
+    // Seed exercise library on first trainer sign-up
+    if (role === 'trainer') await seedExercisesIfEmpty();
     setCurrentUser(profile);
     return profile;
   };
@@ -276,18 +325,11 @@ export function AppProvider({ children }) {
     try { await signOut(auth); } catch { /* ignore */ }
     setCurrentUser(null);
     setFirebaseUser(null);
-    setPendingSessionId(null);
   };
 
   // ========== Users / Clients ==========
   const getClients = (trainerId) => users.filter(u => u.role === 'client' && u.trainerId === trainerId);
   const getClient = (clientId) => users.find(u => u.id === clientId);
-
-  const addClient = async (client) => {
-    const newClient = { ...client, id: `client-${Date.now()}`, role: 'client', joinDate: new Date().toISOString().split('T')[0] };
-    await setDoc(doc(db, 'users', newClient.id), newClient);
-    return newClient;
-  };
 
   const updateClient = async (clientId, updates) => {
     await updateDoc(doc(db, 'users', clientId), updates);
@@ -318,7 +360,7 @@ export function AppProvider({ children }) {
   };
 
   const addWorkoutPlan = async (plan) => {
-    const newPlan = { ...plan, id: `plan-${Date.now()}` };
+    const newPlan = { ...plan, id: `plan-${Date.now()}`, trainerId: currentUser?.id || plan.trainerId };
     await setDoc(doc(db, 'workoutPlans', newPlan.id), newPlan);
     return newPlan;
   };
@@ -335,7 +377,7 @@ export function AppProvider({ children }) {
   const getWorkoutLogs = (clientId) => workoutLogs.filter(l => l.clientId === clientId);
 
   const addWorkoutLog = async (log) => {
-    const newLog = { ...log, id: `log-${Date.now()}` };
+    const newLog = { ...log, id: `log-${Date.now()}`, clientId: currentUser?.id || log.clientId };
     await setDoc(doc(db, 'workoutLogs', newLog.id), newLog);
     return newLog;
   };
@@ -351,7 +393,7 @@ export function AppProvider({ children }) {
   };
 
   const addScheduleItem = async (item) => {
-    const newItem = { ...item, id: `sched-${Date.now()}`, status: 'pending' };
+    const newItem = { ...item, id: `sched-${Date.now()}`, status: item.status || 'pending' };
     await setDoc(doc(db, 'schedule', newItem.id), newItem);
     return newItem;
   };
@@ -397,24 +439,20 @@ export function AppProvider({ children }) {
   };
 
   // ========== Invite Code ==========
-  // Get or generate invite code for a trainer
   const getInviteCode = async (trainerId) => {
     const trainer = users.find(u => u.id === trainerId && u.role === 'trainer');
     if (!trainer) return null;
     if (trainer.inviteCode) return trainer.inviteCode;
-    // Generate and save a new code
     const code = generateInviteCode();
     await updateDoc(doc(db, 'users', trainerId), { inviteCode: code });
     return code;
   };
 
-  // Look up trainer by invite code
   const findTrainerByCode = (code) => {
     if (!code) return null;
     return users.find(u => u.role === 'trainer' && u.inviteCode === code.toUpperCase()) || null;
   };
 
-  // Connect a client to a trainer via invite code
   const connectToTrainer = async (clientId, inviteCode) => {
     const trainer = findTrainerByCode(inviteCode);
     if (!trainer) return { success: false, error: 'Invalid invite code' };
@@ -439,33 +477,46 @@ export function AppProvider({ children }) {
     await deleteDoc(doc(db, 'exercises', exerciseId));
   };
 
-  // ========== Reset ==========
+  // ========== Reset (demo only) ==========
+  // Wipes only the current user's demo-scoped data, then re-seeds
   const resetData = async () => {
-    // Delete all documents in every collection
-    const collections = ['users', 'bodyStats', 'workoutPlans', 'workoutLogs', 'schedule', 'messages', 'exercises'];
-    for (const col of collections) {
-      const snap = await getDocs(collection(db, col));
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
+    if (!currentUser?.isDemo || currentUser.role !== 'trainer') {
+      throw new Error('Reset is only available for demo accounts');
     }
-    try { await signOut(auth); } catch { /* ignore */ }
-    setCurrentUser(null);
-    setFirebaseUser(null);
-    localStorage.removeItem(SESSION_KEY);
+    const uid = currentUser.id;
+    const batch = writeBatch(db);
+    // Delete ghost clients (users whose trainerId == uid and isDemo)
+    users.filter(u => u.isDemo && u.trainerId === uid).forEach(u => {
+      // Rules disallow user delete — we'll orphan them by clearing trainerId instead
+      batch.update(doc(db, 'users', u.id), { trainerId: null });
+    });
+    // Delete plans/logs/schedule/messages created for this trainer
+    workoutPlans.filter(p => p.trainerId === uid).forEach(p => batch.delete(doc(db, 'workoutPlans', p.id)));
+    workoutLogs.filter(l => l.id.startsWith(`${uid}-`)).forEach(l => {
+      // Can't delete logs per rules; skip
+    });
+    schedule.filter(s => s.trainerId === uid).forEach(s => batch.delete(doc(db, 'schedule', s.id)));
+    messages.filter(m => m.id.startsWith(`${uid}-`)).forEach(m => {
+      // Can't delete messages per rules; skip
+    });
+    try {
+      await batch.commit();
+    } catch (err) {
+      console.warn('Partial reset:', err.message);
+    }
     // Re-seed
-    seedingRef.current = false;
-    await seedData();
+    await seedDemoDataForCoach(uid);
   };
 
   // Derived: Firebase auth user exists but no Firestore profile yet
   const needsProfile = firebaseUser && !loading && !users.find(u => u.id === firebaseUser?.uid);
 
   const value = {
-    currentUser, login, logout, loading,
+    currentUser, logout, loading,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
-    getClients, getClient, addClient, updateClient,
+    loginDemoCoach,
+    getClients, getClient, updateClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog,

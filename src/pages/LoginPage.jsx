@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { Moon, Sun, Mail, LogIn } from 'lucide-react';
-
-const demoAccounts = [
-  { email: 'coach@elitepro.com', password: 'demo123', label: 'Coach Alex (Trainer)', role: 'trainer' },
-  { email: 'david@example.com', password: 'demo123', label: 'David Chan (Client)', role: 'client' },
-  { email: 'sarah@example.com', password: 'demo123', label: 'Sarah Wong (Client)', role: 'client' },
-  { email: 'michael@example.com', password: 'demo123', label: 'Michael Lee (Client)', role: 'client' },
-];
+import { Moon, Sun, Mail, LogIn, PlayCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, signInWithGoogle, signUpEmail, signInEmail } = useApp();
+  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,18 +12,16 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
 
-  const handleDemoSubmit = (e) => {
-    e.preventDefault();
-    const result = login(email, password);
-    if (!result.success) setError(result.error);
-    else setError('');
-  };
-
-  const handleDemoLogin = (account) => {
-    setEmail(account.email);
-    setPassword(account.password);
+  const handleDemoCoach = async () => {
     setError('');
-    login(account.email, account.password);
+    setAuthLoading(true);
+    try {
+      await loginDemoCoach();
+    } catch (err) {
+      setError(err.message || 'Demo login failed');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -38,8 +29,7 @@ export default function LoginPage() {
     setAuthLoading(true);
     try {
       const user = await signInWithGoogle();
-      // If null, redirect flow was triggered — page will reload
-      if (!user) return;
+      if (!user) return; // redirect flow
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.message || 'Google sign-in failed');
@@ -141,16 +131,19 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Demo Accounts */}
+        {/* Demo account */}
         <div className="login-demo">
-          <div className="login-demo-title">Demo Accounts (click to login):</div>
-          <div className="login-demo-accounts">
-            {demoAccounts.map(acc => (
-              <div key={acc.email} className="login-demo-account" onClick={() => handleDemoLogin(acc)}>
-                <span>{acc.label}</span>
-                <span className={`tag ${acc.role === 'trainer' ? 'tag-accent' : 'tag-primary'}`}>{acc.role}</span>
-              </div>
-            ))}
+          <div className="login-demo-title">Try it out:</div>
+          <button
+            className="btn btn-outline"
+            style={{ width: '100%' }}
+            onClick={handleDemoCoach}
+            disabled={authLoading}
+          >
+            <PlayCircle size={16} /> Explore as Demo Coach
+          </button>
+          <div className="text-sm text-muted mt-8" style={{ textAlign: 'center' }}>
+            Loads pre-filled sample clients, plans & logs
           </div>
         </div>
       </div>

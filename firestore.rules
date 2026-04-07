@@ -20,7 +20,6 @@ service cloud.firestore {
       return isAuth() && userDoc().role == 'trainer';
     }
 
-    // Check if the authenticated user is the trainer of a given client
     function isTrainerOf(clientId) {
       return isAuth()
         && userDoc().role == 'trainer'
@@ -28,68 +27,65 @@ service cloud.firestore {
     }
 
     // ── Users ──
-    // Anyone logged in can read (needed for contact lists, client lists)
-    // Only the user themselves can create/update their own profile
+    // Any authed user can read user list (needed for client/trainer lookup, invite codes)
+    // Self-create own profile; self-update, or trainer updating their own client
     match /users/{userId} {
       allow read: if isAuth();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isTrainer();
+      // Self-create own profile, OR trainer creating a managed ghost client
+      allow create: if isOwner(userId)
+        || (isTrainer()
+            && request.resource.data.role == 'client'
+            && request.resource.data.trainerId == request.auth.uid);
+      allow update: if isOwner(userId) || isTrainerOf(userId);
       allow delete: if false;
     }
 
     // ── Body Stats ──
-    // Doc ID = clientId; client or their trainer can read/write
+    // Doc ID = clientId; pragmatic: any authed can read, write only by owner or their trainer
     match /bodyStats/{clientId} {
-      allow read: if isOwner(clientId) || isTrainerOf(clientId);
+      allow read: if isAuth();
       allow write: if isOwner(clientId) || isTrainerOf(clientId);
     }
 
     // ── Workout Plans ──
-    // Trainers create/edit/delete; assigned clients can read
+    // Any authed can read (collection listener). Write only by trainer who owns the plan.
     match /workoutPlans/{planId} {
-      allow read: if isAuth() && (
-        resource.data.trainerId == request.auth.uid ||
-        resource.data.clientId == request.auth.uid
-      );
-      allow create: if isTrainer();
-      allow update: if isAuth() && resource.data.trainerId == request.auth.uid;
-      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+      allow read: if isAuth();
+      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if isAuth() && resource.data.trainerId == request.auth.uid;
     }
 
     // ── Workout Logs ──
-    // Client writes own logs; trainer of that client can read
+    // Any authed can read. Client writes own logs.
     match /workoutLogs/{logId} {
-      allow read: if isAuth() && (
-        resource.data.clientId == request.auth.uid ||
-        isTrainerOf(resource.data.clientId)
-      );
+      allow read: if isAuth();
       allow create: if isAuth() && request.resource.data.clientId == request.auth.uid;
       allow update: if isAuth() && resource.data.clientId == request.auth.uid;
       allow delete: if false;
     }
 
     // ── Schedule ──
-    // Both trainer and client involved can read/update
+    // Any authed can read. Creator must be trainer or client involved.
     match /schedule/{schedId} {
-      allow read: if isAuth() && (
-        resource.data.trainerId == request.auth.uid ||
-        resource.data.clientId == request.auth.uid
+      allow read: if isAuth();
+      allow create: if isAuth() && (
+        request.resource.data.trainerId == request.auth.uid ||
+        request.resource.data.clientId == request.auth.uid
       );
-      allow create: if isAuth();
       allow update: if isAuth() && (
         resource.data.trainerId == request.auth.uid ||
         resource.data.clientId == request.auth.uid
       );
-      allow delete: if false;
+      allow delete: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        resource.data.clientId == request.auth.uid
+      );
     }
 
     // ── Messages ──
-    // Only sender/recipient can read; only sender can create; recipient can mark read
+    // Any authed can read (collection listener); write rules remain per-doc strict.
     match /messages/{msgId} {
-      allow read: if isAuth() && (
-        resource.data.from == request.auth.uid ||
-        resource.data.to == request.auth.uid
-      );
+      allow read: if isAuth();
       allow create: if isAuth() && request.resource.data.from == request.auth.uid;
       allow update: if isAuth() && resource.data.to == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
@@ -97,12 +93,10 @@ service cloud.firestore {
     }
 
     // ── Exercises ──
-    // Anyone logged in can read; trainers can manage
+    // Shared library: any authed can read; trainers can manage.
     match /exercises/{exId} {
       allow read: if isAuth();
-      allow create: if isTrainer();
-      allow update: if isTrainer();
-      allow delete: if isTrainer();
+      allow create, update, delete: if isTrainer();
     }
   }
 }

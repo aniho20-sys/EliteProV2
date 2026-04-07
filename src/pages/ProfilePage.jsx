@@ -19,8 +19,9 @@ export default function ProfilePage() {
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const authProvider = getAuthProvider(firebaseUser);
-  const isDemo = authProvider === 'demo';
-  const isFirebaseAuth = !isDemo;
+  // Demo = explicit isDemo flag on profile (seeded demo coach) OR no Firebase Auth at all
+  const isDemo = currentUser?.isDemo === true || authProvider === 'demo';
+  const isFirebaseAuth = !!firebaseUser;
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({

@@ -1,39 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Search } from 'lucide-react';
+import { Search, Copy, Check, Share2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 export default function ClientsPage() {
-  const { currentUser, getClients, addClient, getBodyStats } = useApp();
+  const { currentUser, getClients, getBodyStats, getInviteCode } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
   const clients = getClients(currentUser.id);
   const [search, setSearch] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '', age: '', height: '', goals: '', notes: '' });
+  const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!inviteCode && currentUser?.id) {
+      getInviteCode(currentUser.id).then(code => code && setInviteCode(code));
+    }
+  }, [currentUser, inviteCode, getInviteCode]);
 
   const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleAdd = (e) => {
-    e.preventDefault();
-    addClient({ ...form, trainerId: currentUser.id, age: Number(form.age), height: Number(form.height) });
-    setForm({ name: '', email: '', password: '', age: '', height: '', goals: '', notes: '' });
-    setShowAdd(false);
-    toast('Client added successfully');
+  const handleCopy = () => {
+    if (!inviteCode) return;
+    navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    toast('Invite code copied');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShare = async () => {
+    if (!inviteCode) return;
+    const text = `Join me on ElitePro! Use invite code: ${inviteCode}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'ElitePro Invite', text }); } catch { /* cancelled */ }
+    } else {
+      navigator.clipboard.writeText(text);
+      toast('Invite message copied');
+    }
   };
 
   return (
     <div>
       <div className="page-header">
-        <div className="flex-between">
+        <h1 className="page-title">Clients</h1>
+        <p className="page-subtitle">{clients.length} active {clients.length === 1 ? 'client' : 'clients'}</p>
+      </div>
+
+      {/* Invite Code Card */}
+      <div className="card invite-code-card">
+        <div className="flex-between" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Clients</h1>
-            <p className="page-subtitle">{clients.length} active clients</p>
+            <div className="text-sm text-muted">Your Invite Code</div>
+            <div className="invite-code-text">{inviteCode || '------'}</div>
+            <div className="text-sm text-muted mt-8">
+              Share this code with clients so they can sign up and connect to you.
+            </div>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-            <UserPlus size={18} /> Add Client
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline" onClick={handleCopy} disabled={!inviteCode}>
+              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button className="btn btn-primary" onClick={handleShare} disabled={!inviteCode}>
+              <Share2 size={16} /> Share
+            </button>
+          </div>
         </div>
       </div>
 
@@ -44,65 +75,26 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="grid-3">
-        {filtered.map(client => {
-          const stats = getBodyStats(client.id);
-          const latest = stats[stats.length - 1];
-          return (
-            <div key={client.id} className="card client-card" onClick={() => navigate(`/clients/${client.id}`)}>
-              <div className="client-name">{client.name}</div>
-              <div className="client-meta">Age: {client.age} | {client.height}cm | Joined: {client.joinDate}</div>
-              {latest && <div className="client-meta mt-8">Weight: {latest.weight}kg | BF: {latest.bodyFat}%</div>}
-              <div className="client-goals">{client.goals}</div>
-              {client.notes && <div className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{client.notes}</div>}
-            </div>
-          );
-        })}
-      </div>
-
-      {showAdd && (
-        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Add New Client</h3>
-            <form onSubmit={handleAdd}>
-              <div className="form-group">
-                <label className="form-label">Name</label>
-                <input className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+      {filtered.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div className="text-muted">No clients yet.</div>
+          <div className="text-sm text-muted mt-8">Share your invite code above to get your first client onboard.</div>
+        </div>
+      ) : (
+        <div className="grid-3">
+          {filtered.map(client => {
+            const stats = getBodyStats(client.id);
+            const latest = stats[stats.length - 1];
+            return (
+              <div key={client.id} className="card client-card" onClick={() => navigate(`/clients/${client.id}`)}>
+                <div className="client-name">{client.name}</div>
+                <div className="client-meta">Age: {client.age || '—'} | {client.height || '—'}cm | Joined: {client.joinDate}</div>
+                {latest && <div className="client-meta mt-8">Weight: {latest.weight}kg | BF: {latest.bodyFat}%</div>}
+                <div className="client-goals">{client.goals}</div>
+                {client.notes && <div className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{client.notes}</div>}
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input className="form-input" type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Password</label>
-                  <input className="form-input" type="password" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Age</label>
-                  <input className="form-input" type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Height (cm)</label>
-                  <input className="form-input" type="number" value={form.height} onChange={e => setForm({ ...form, height: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Goals</label>
-                <textarea className="form-textarea" value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Notes</label>
-                <textarea className="form-textarea" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add Client</button>
-              </div>
-            </form>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>
