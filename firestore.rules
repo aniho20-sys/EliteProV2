@@ -37,7 +37,7 @@ service cloud.firestore {
             && request.resource.data.role == 'client'
             && request.resource.data.trainerId == request.auth.uid);
       allow update: if isOwner(userId) || isTrainerOf(userId);
-      allow delete: if false;
+      allow delete: if isOwner(userId);
     }
 
     // ── Body Stats ──
@@ -45,6 +45,7 @@ service cloud.firestore {
     match /bodyStats/{clientId} {
       allow read: if isAuth();
       allow write: if isOwner(clientId) || isTrainerOf(clientId);
+      allow delete: if isOwner(clientId);
     }
 
     // ── Workout Plans ──

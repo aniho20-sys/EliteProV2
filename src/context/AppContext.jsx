@@ -9,7 +9,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  signOut,
+  signOut, deleteUser,
 } from 'firebase/auth';
 import {
   sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs,
@@ -327,6 +327,36 @@ export function AppProvider({ children }) {
     setFirebaseUser(null);
   };
 
+  // Delete the current user's account: Firestore profile + bodyStats + Firebase Auth user.
+  // Workout logs / messages remain as orphan history (rules disallow delete).
+  // Returns { success } or throws on auth/recent-login required.
+  const deleteAccount = async () => {
+    const fbUser = auth.currentUser;
+    if (!fbUser || !currentUser) throw new Error('Not signed in');
+    const uid = currentUser.id;
+
+    // 1. Delete bodyStats doc (best-effort; only clients have one)
+    try { await deleteDoc(doc(db, 'bodyStats', uid)); } catch { /* may not exist */ }
+
+    // 2. If trainer, orphan ghost clients (clear trainerId so they're not "owned")
+    if (currentUser.role === 'trainer') {
+      const ghosts = users.filter(u => u.isDemo && u.trainerId === uid);
+      for (const g of ghosts) {
+        try { await updateDoc(doc(db, 'users', g.id), { trainerId: null }); } catch { /* ignore */ }
+      }
+    }
+
+    // 3. Delete Firestore user profile
+    await deleteDoc(doc(db, 'users', uid));
+
+    // 4. Delete Firebase Auth account (may fail if login is too old → caller handles)
+    await deleteUser(fbUser);
+
+    // 5. Local cleanup
+    setCurrentUser(null);
+    setFirebaseUser(null);
+  };
+
   // ========== Users / Clients ==========
   const getClients = (trainerId) => users.filter(u => u.role === 'client' && u.trainerId === trainerId);
   const getClient = (clientId) => users.find(u => u.id === clientId);
@@ -515,7 +545,7 @@ export function AppProvider({ children }) {
     currentUser, logout, loading,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
-    loginDemoCoach,
+    loginDemoCoach, deleteAccount,
     getClients, getClient, updateClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,

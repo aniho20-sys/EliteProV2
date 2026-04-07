@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle, Trash2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 // Detect auth provider from Firebase user object
@@ -14,7 +14,7 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, resetData, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient } = useApp();
+  const { currentUser, firebaseUser, updateClient, resetData, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -37,6 +37,9 @@ export default function ProfilePage() {
     ),
   });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   // Trainer: invite code state
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
@@ -117,6 +120,25 @@ export default function ProfilePage() {
     resetData();
     logout();
     toast('All data reset to defaults', 'info');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      toast('Account deleted', 'info');
+      navigate('/');
+    } catch (err) {
+      if (err.code === 'auth/requires-recent-login') {
+        toast('For security, please log out and sign in again before deleting your account', 'error');
+      } else {
+        toast(err.message || 'Failed to delete account', 'error');
+      }
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+      setDeleteConfirmText('');
+    }
   };
 
   return (
@@ -309,21 +331,83 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Danger Zone — only for demo accounts */}
-      {isDemo && (
-        <div className="card profile-danger-zone">
-          <h3 className="card-title mb-8">Danger Zone</h3>
-          <p className="profile-danger-text">Reset all demo data to defaults. This will log you out and erase all changes made by all demo users.</p>
-          {!showResetConfirm ? (
-            <button className="btn btn-outline btn-danger mt-8" onClick={() => setShowResetConfirm(true)}>
-              <RotateCcw size={16} /> Reset Demo Data
-            </button>
-          ) : (
-            <div className="flex gap-8 mt-8">
-              <button className="btn btn-danger" onClick={handleReset}>Confirm Reset</button>
-              <button className="btn btn-outline" onClick={() => setShowResetConfirm(false)}>Cancel</button>
+      {/* Danger Zone */}
+      <div className="card profile-danger-zone">
+        <h3 className="card-title mb-8">Danger Zone</h3>
+
+        {isDemo && (
+          <>
+            <p className="profile-danger-text">Reset all demo data to defaults. This will log you out and erase all changes made on this demo account.</p>
+            {!showResetConfirm ? (
+              <button className="btn btn-outline btn-danger mt-8" onClick={() => setShowResetConfirm(true)}>
+                <RotateCcw size={16} /> Reset Demo Data
+              </button>
+            ) : (
+              <div className="flex gap-8 mt-8">
+                <button className="btn btn-danger" onClick={handleReset}>Confirm Reset</button>
+                <button className="btn btn-outline" onClick={() => setShowResetConfirm(false)}>Cancel</button>
+              </div>
+            )}
+            <hr className="mt-16 mb-16" style={{ border: 0, borderTop: '1px solid var(--border)' }} />
+          </>
+        )}
+
+        <p className="profile-danger-text">
+          Permanently delete your account. Your profile and body stats will be removed.
+          Workout logs and message history will remain as orphan data for your trainer's records.
+          <strong> This action cannot be undone.</strong>
+        </p>
+        <button className="btn btn-danger mt-8" onClick={() => setShowDeleteModal(true)}>
+          <Trash2 size={16} /> Delete Account
+        </button>
+      </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => !deleting && setShowDeleteModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: 'var(--danger, #dc2626)' }}>
+              <AlertTriangle size={20} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Delete Account
+            </h3>
+            <p className="profile-danger-text">
+              You are about to permanently delete the account <strong>{currentUser.email}</strong>.
+            </p>
+            <ul className="profile-danger-text" style={{ paddingLeft: 20, marginTop: 8 }}>
+              <li>Your profile and login will be removed</li>
+              <li>Your body stats will be deleted</li>
+              <li>Workout logs and messages will remain (orphaned)</li>
+              {isTrainer && <li>Your clients will be disconnected from you</li>}
+            </ul>
+            <p className="profile-danger-text mt-8">
+              Type <code>DELETE</code> to confirm:
+            </p>
+            <input
+              className="form-input"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoFocus
+            />
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                onClick={handleDeleteAccount}
+              >
+                <Trash2 size={16} /> {deleting ? 'Deleting...' : 'Permanently Delete'}
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
