@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { Moon, Sun, Mail, LogIn, PlayCircle } from 'lucide-react';
+import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
 
 export default function LoginPage() {
-  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach } = useApp();
+  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const handleDemoCoach = async () => {
     setError('');
@@ -39,9 +43,36 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setInfo('');
+    if (!forgotEmail.trim()) {
+      setError('Please enter your email');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      await sendPasswordReset(forgotEmail.trim());
+      setInfo(`Password reset email sent to ${forgotEmail.trim()}. Check your inbox (and spam folder).`);
+      setShowForgot(false);
+      setForgotEmail('');
+    } catch (err) {
+      const messages = {
+        'auth/user-not-found': 'No account found with this email',
+        'auth/invalid-email': 'Please enter a valid email',
+        'auth/missing-email': 'Please enter your email',
+      };
+      setError(messages[err.code] || err.message || 'Failed to send reset email');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setAuthLoading(true);
     try {
       if (isSignUp) {
@@ -80,6 +111,7 @@ export default function LoginPage() {
         <div className="login-subtitle">Fitness Training Platform</div>
 
         {error && <div className="login-error">{error}</div>}
+        {info && <div className="login-info">{info}</div>}
 
         {/* Google Sign-In */}
         <button
@@ -126,9 +158,18 @@ export default function LoginPage() {
         </form>
 
         <div className="login-switch">
-          <button className="btn-link" onClick={() => { setIsSignUp(!isSignUp); setError(''); }}>
+          <button className="btn-link" onClick={() => { setIsSignUp(!isSignUp); setError(''); setInfo(''); }}>
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
+          {!isSignUp && (
+            <button
+              className="btn-link"
+              onClick={() => { setShowForgot(true); setForgotEmail(email); setError(''); setInfo(''); }}
+              style={{ marginTop: 4 }}
+            >
+              Forgot password?
+            </button>
+          )}
         </div>
 
         {/* Demo account */}
@@ -147,6 +188,48 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div className="modal-overlay" onClick={() => !forgotLoading && setShowForgot(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">
+              <KeyRound size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Reset Password
+            </h3>
+            <p className="text-sm text-muted">
+              Enter the email you signed up with. We'll send you a link to reset your password.
+            </p>
+            <form onSubmit={handleForgotPassword}>
+              <div className="form-group mt-8">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => { setShowForgot(false); setForgotEmail(''); }}
+                  disabled={forgotLoading}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={forgotLoading}>
+                  <Mail size={16} /> {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
