@@ -1404,6 +1404,22 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-exercise-drag { cursor: grab; }
 .plan-exercise-drag.dragging { opacity: 0.4; border-style: dashed; }
 .drag-handle { color: var(--text-muted); flex-shrink: 0; cursor: grab; }
+.plan-ex-no-results { font-size: 0.8rem; color: var(--text-muted); padding: 8px 12px; }
+.plan-ex-custom-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.plan-ex-custom-add:hover { background: var(--primary-glow); }
+.plan-ex-custom-add.loading { opacity: 0.6; cursor: default; }
 @media (max-width: 640px) {
   .plan-header .btn { align-self: flex-start; }
   .plan-exercise { gap: 8px; padding: 10px 12px; }

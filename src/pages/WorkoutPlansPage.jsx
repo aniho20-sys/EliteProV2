@@ -4,7 +4,7 @@ import { Plus, Trash2, Play, Copy, GripVertical } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -15,14 +15,31 @@ export default function WorkoutPlansPage() {
   const [form, setForm] = useState({ name: '', clientId: '', day: 'Monday', exercises: [] });
   const [exFilter, setExFilter] = useState('');
   const [dragIdx, setDragIdx] = useState(null);
+  const [creatingCustom, setCreatingCustom] = useState(false);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  const addExercise = (exercise) => {
+  const addExToForm = (exercise) => {
     setForm(prev => ({
       ...prev,
-      exercises: [...prev.exercises, { exerciseId: exercise.id, sets: 3, reps: '10', rest: 60, notes: '' }],
+      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: '10', rest: 60, notes: '' }],
     }));
+  };
+
+  const handleCreateCustomExercise = async () => {
+    const name = exFilter.trim();
+    if (!name) return;
+    setCreatingCustom(true);
+    try {
+      const newEx = await addExercise({ name, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
+      addExToForm(newEx);
+      setExFilter('');
+      toast(`"${newEx.name}" added to library and plan`);
+    } catch {
+      toast('Failed to create exercise', 'error');
+    } finally {
+      setCreatingCustom(false);
+    }
   };
 
   const removeExercise = (index) => {
@@ -53,7 +70,7 @@ export default function WorkoutPlansPage() {
     toast('Workout plan created');
   };
 
-  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
   const duplicatePlan = (plan) => {
@@ -150,15 +167,26 @@ export default function WorkoutPlansPage() {
 
               <div className="form-group">
                 <label className="form-label">Add Exercises</label>
-                <input className="form-input" placeholder="Search exercises..." value={exFilter} onChange={e => setExFilter(e.target.value)} />
+                <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => setExFilter(e.target.value)} />
                 {exFilter && (
-                  <div style={{ maxHeight: 150, overflowY: 'auto', marginTop: 4, background: 'var(--bg-input)', borderRadius: 8, padding: 4 }}>
+                  <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 4, background: 'var(--bg-input)', borderRadius: 8, padding: 4 }}>
                     {filteredExercises.slice(0, 8).map(ex => (
-                      <div key={ex.id} className="contact-item" onClick={() => { addExercise(ex); setExFilter(''); }}>
+                      <div key={ex.id} className="contact-item" onClick={() => { addExToForm(ex); setExFilter(''); }}>
                         <span className="text-sm">{ex.name}</span>
                         <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
                       </div>
                     ))}
+                    {filteredExercises.length === 0 && (
+                      <div className="plan-ex-no-results">No matches in library</div>
+                    )}
+                    <div
+                      className={`plan-ex-custom-add ${creatingCustom ? 'loading' : ''}`}
+                      style={{ borderTop: filteredExercises.length > 0 ? '1px solid var(--border)' : 'none' }}
+                      onClick={!creatingCustom ? handleCreateCustomExercise : undefined}
+                    >
+                      <Plus size={14} />
+                      <span>{creatingCustom ? 'Adding...' : `Add "${exFilter}" as custom exercise`}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -176,7 +204,7 @@ export default function WorkoutPlansPage() {
                       onDragEnd={() => setDragIdx(null)}
                     >
                       <GripVertical size={14} className="drag-handle" />
-                      <span className="plan-exercise-name">{getExerciseName(ex.exerciseId)}</span>
+                      <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                       <input className="form-input log-set-input" type="number" value={ex.sets} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
                       <span className="text-sm text-muted">x</span>
                       <input className="form-input log-set-input" value={ex.reps} onChange={e => updateExercise(i, 'reps', e.target.value)} title="Reps" />
