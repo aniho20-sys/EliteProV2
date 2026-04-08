@@ -62,13 +62,34 @@ export default function WorkoutPlansPage() {
     }));
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (form.exercises.length === 0) {
+    let exercises = form.exercises;
+
+    // Auto-add any text left in the search field
+    const pending = exFilter.trim();
+    if (pending) {
+      setExFilter('');
+      const exact = exerciseLibrary.find(ex => ex.name.toLowerCase() === pending.toLowerCase());
+      let newEx;
+      if (exact) {
+        newEx = exact;
+      } else {
+        try {
+          newEx = await addExercise({ name: pending, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
+        } catch {
+          toast('Failed to create exercise', 'error');
+          return;
+        }
+      }
+      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', rest: 60, notes: '' }];
+    }
+
+    if (exercises.length === 0) {
       toast('Please add at least one exercise', 'error');
       return;
     }
-    addWorkoutPlan({ ...form, trainerId: currentUser.id, sets: undefined });
+    addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id, sets: undefined });
     setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
     setShowCreate(false);
     toast('Workout plan created');
