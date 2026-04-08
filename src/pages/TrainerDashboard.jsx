@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { Users, Calendar, Dumbbell, TrendingUp } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -100,6 +100,7 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
 }
 
 export default function TrainerDashboard() {
+  const navigate = useNavigate();
   const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs } = useApp();
   const clients = getClients(currentUser.id);
   const totalPlans = getWorkoutPlans({ trainerId: currentUser.id }).length;
@@ -202,7 +203,7 @@ export default function TrainerDashboard() {
             recentMessages.map(m => {
               const sender = clients.find(c => c.id === m.from);
               return (
-                <div key={m.id} className="contact-item" onClick={() => sender && (window.location.hash = `/clients/${sender.id}`)}>
+                <div key={m.id} className="contact-item" onClick={() => navigate('/messages')}>
                   <div className="contact-avatar">{sender?.name?.[0] || '?'}</div>
                   <div className="contact-info">
                     <div className="contact-name">{sender?.name || 'Unknown'}</div>
