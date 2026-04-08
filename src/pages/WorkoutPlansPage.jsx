@@ -75,6 +75,10 @@ export default function WorkoutPlansPage() {
     const pending = exFilterRef.current.trim();
     let exercises = form.exercises;
 
+    if (!form.name.trim()) {
+      toast('Please enter a plan name', 'error');
+      return;
+    }
     if (!form.clientId) {
       toast('Please select a client', 'error');
       return;
@@ -185,7 +189,7 @@ export default function WorkoutPlansPage() {
             <form onSubmit={handleCreate}>
               <div className="form-group">
                 <label className="form-label">Plan Name</label>
-                <input className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Upper Body A" />
+                <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Upper Body A" />
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -203,11 +207,11 @@ export default function WorkoutPlansPage() {
                 </div>
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ position: 'relative' }}>
                 <label className="form-label">Add Exercises</label>
                 <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
                 {exFilter && (
-                  <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 4, background: 'var(--bg-input)', borderRadius: 8, padding: 4 }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: 220, overflowY: 'auto', marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
                     {filteredExercises.slice(0, 8).map(ex => (
                       <div key={ex.id} className="contact-item" onClick={() => { addExToForm(ex); updateExFilter(''); }}>
                         <span className="text-sm">{ex.name}</span>
