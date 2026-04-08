@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus, Trash2, Play, Copy, GripVertical } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -14,6 +14,7 @@ export default function WorkoutPlansPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', clientId: '', day: 'Monday', exercises: [] });
   const [exFilter, setExFilter] = useState('');
+  const exFilterRef = useRef('');
   const [dragIdx, setDragIdx] = useState(null);
   const [creatingCustom, setCreatingCustom] = useState(false);
 
@@ -33,7 +34,7 @@ export default function WorkoutPlansPage() {
     try {
       const newEx = await addExercise({ name, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
       addExToForm(newEx);
-      setExFilter('');
+      updateExFilter('');
       toast(`"${newEx.name}" added to library and plan`);
     } catch {
       toast('Failed to create exercise', 'error');
@@ -62,14 +63,25 @@ export default function WorkoutPlansPage() {
     }));
   };
 
+  const updateExFilter = (val) => {
+    exFilterRef.current = val;
+    setExFilter(val);
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    // Use ref to guarantee we read the latest value regardless of closure timing
+    const pending = exFilterRef.current.trim();
     let exercises = form.exercises;
 
-    // Auto-add any text left in the search field
-    const pending = exFilter.trim();
+    if (!form.clientId) {
+      toast('Please select a client', 'error');
+      return;
+    }
+
     if (pending) {
-      setExFilter('');
+      updateExFilter('');
       const exact = exerciseLibrary.find(ex => ex.name.toLowerCase() === pending.toLowerCase());
       let newEx;
       if (exact) {
@@ -91,6 +103,7 @@ export default function WorkoutPlansPage() {
     }
     addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id, sets: undefined });
     setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
+    updateExFilter('');
     setShowCreate(false);
     toast('Workout plan created');
   };
@@ -177,7 +190,7 @@ export default function WorkoutPlansPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Client</label>
-                  <select className="form-select" required value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
+                  <select className="form-select" value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
                     <option value="">Select client</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -192,11 +205,11 @@ export default function WorkoutPlansPage() {
 
               <div className="form-group">
                 <label className="form-label">Add Exercises</label>
-                <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => setExFilter(e.target.value)} onBlur={() => setTimeout(() => setExFilter(''), 150)} />
+                <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
                 {exFilter && (
                   <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 4, background: 'var(--bg-input)', borderRadius: 8, padding: 4 }}>
                     {filteredExercises.slice(0, 8).map(ex => (
-                      <div key={ex.id} className="contact-item" onClick={() => { addExToForm(ex); setExFilter(''); }}>
+                      <div key={ex.id} className="contact-item" onClick={() => { addExToForm(ex); updateExFilter(''); }}>
                         <span className="text-sm">{ex.name}</span>
                         <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
                       </div>
