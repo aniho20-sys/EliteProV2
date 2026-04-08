@@ -64,6 +64,10 @@ export default function WorkoutPlansPage() {
 
   const handleCreate = (e) => {
     e.preventDefault();
+    if (form.exercises.length === 0) {
+      toast('Please add at least one exercise', 'error');
+      return;
+    }
     addWorkoutPlan({ ...form, trainerId: currentUser.id, sets: undefined });
     setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
     setShowCreate(false);
@@ -167,7 +171,7 @@ export default function WorkoutPlansPage() {
 
               <div className="form-group">
                 <label className="form-label">Add Exercises</label>
-                <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => setExFilter(e.target.value)} />
+                <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => setExFilter(e.target.value)} onBlur={() => setTimeout(() => setExFilter(''), 150)} />
                 {exFilter && (
                   <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 4, background: 'var(--bg-input)', borderRadius: 8, padding: 4 }}>
                     {filteredExercises.slice(0, 8).map(ex => (
@@ -218,7 +222,7 @@ export default function WorkoutPlansPage() {
 
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowCreate(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={form.exercises.length === 0}>Create Plan</button>
+                <button type="submit" className="btn btn-primary">Create Plan</button>
               </div>
             </form>
           </div>
