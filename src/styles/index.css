@@ -1802,6 +1802,85 @@ tr:hover { background: var(--bg-card-hover); }
   .pr-weight { font-size: 1rem; }
 }
 
+/* ===== TRAINER DASHBOARD CHARTS ===== */
+.week-chart-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.client-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.client-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  padding: 4px 0;
+  transition: opacity 0.15s;
+}
+
+.client-activity-item:hover { opacity: 0.75; }
+
+.client-activity-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-glow);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.client-activity-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.client-activity-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.client-activity-bar-wrap {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.client-activity-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s var(--ease);
+  min-width: 4px;
+}
+
+.client-activity-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* ===== ONBOARDING ===== */
 .onboarding-card {
   border-left: 3px solid var(--primary);
