@@ -14,7 +14,7 @@ export default function ClientDetailPage() {
   const logs = getWorkoutLogs(clientId);
   const [tab, setTab] = useState('overview');
   const [showAddStat, setShowAddStat] = useState(false);
-  const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', arms: '', legs: '' });
+  const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
 
   if (!client) return <div className="empty-state"><p>Client not found</p></div>;
 
@@ -24,10 +24,10 @@ export default function ClientDetailPage() {
     e.preventDefault();
     addBodyStat(clientId, {
       weight: Number(statForm.weight), bodyFat: Number(statForm.bodyFat),
-      chest: Number(statForm.chest), waist: Number(statForm.waist),
+      chest: Number(statForm.chest), waist: Number(statForm.waist), hips: Number(statForm.hips),
       arms: Number(statForm.arms), legs: Number(statForm.legs),
     });
-    setStatForm({ weight: '', bodyFat: '', chest: '', waist: '', arms: '', legs: '' });
+    setStatForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
     setShowAddStat(false);
   };
 
@@ -88,13 +88,13 @@ export default function ClientDetailPage() {
               {stats.length > 1 && (
                 <div className="card mb-16">
                   <h4 className="card-title mb-16">Progress Overview</h4>
-                  {['weight', 'bodyFat', 'chest', 'waist', 'arms', 'legs'].map(key => {
+                  {['weight', 'bodyFat', 'chest', 'waist', 'hips', 'arms', 'legs'].map(key => {
                     const first = stats[0][key];
                     const last = stats[stats.length - 1][key];
                     const change = last - first;
                     const pct = Math.min(100, Math.max(5, (last / (first * 1.3)) * 100));
                     const unit = key === 'bodyFat' ? '%' : key === 'weight' ? 'kg' : 'cm';
-                    const label = key === 'bodyFat' ? 'Body Fat' : key.charAt(0).toUpperCase() + key.slice(1);
+                    const label = key === 'bodyFat' ? 'Body Fat' : key === 'hips' ? 'Hips' : key.charAt(0).toUpperCase() + key.slice(1);
                     return (
                       <div key={key} className="chart-bar-group">
                         <div className="chart-bar-label">
@@ -112,10 +112,10 @@ export default function ClientDetailPage() {
 
               <div className="card table-wrapper">
                 <table>
-                  <thead><tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Arms</th><th>Legs</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th></tr></thead>
                   <tbody>
                     {[...stats].reverse().map((s, i) => (
-                      <tr key={i}><td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td><td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td></tr>
+                      <tr key={i}><td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td><td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips ? `${s.hips}cm` : '—'}</td><td>{s.arms}cm</td><td>{s.legs}cm</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -137,7 +137,10 @@ export default function ClientDetailPage() {
                     <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.waist} onChange={e => setStatForm({ ...statForm, waist: e.target.value })} /></div>
                   </div>
                   <div className="form-row">
+                    <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.hips} onChange={e => setStatForm({ ...statForm, hips: e.target.value })} /></div>
                     <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.arms} onChange={e => setStatForm({ ...statForm, arms: e.target.value })} /></div>
+                  </div>
+                  <div className="form-row">
                     <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.legs} onChange={e => setStatForm({ ...statForm, legs: e.target.value })} /></div>
                   </div>
                   <div className="modal-actions">

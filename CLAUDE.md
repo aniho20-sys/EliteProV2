@@ -116,6 +116,7 @@ Top-level config files:
       bodyFat: number,   // %
       chest: number,     // cm
       waist: number,     // cm
+      hips: number,      // cm
       arms: number,      // cm
       legs: number,      // cm
     }

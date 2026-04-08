@@ -53,22 +53,22 @@ export const sampleClients = [
 
 export const sampleBodyStats = {
   'client-1': [
-    { date: '2026-01-15', weight: 72, bodyFat: 18, chest: 95, waist: 82, arms: 34, legs: 55 },
-    { date: '2026-02-01', weight: 73.5, bodyFat: 17.2, chest: 96, waist: 81, arms: 34.5, legs: 55.5 },
-    { date: '2026-02-15', weight: 74, bodyFat: 16.5, chest: 97, waist: 80.5, arms: 35, legs: 56 },
-    { date: '2026-03-01', weight: 74.5, bodyFat: 16, chest: 98, waist: 80, arms: 35.5, legs: 56.5 },
-    { date: '2026-03-15', weight: 75, bodyFat: 15.5, chest: 99, waist: 79.5, arms: 36, legs: 57 },
+    { date: '2026-01-15', weight: 72, bodyFat: 18, chest: 95, waist: 82, hips: 94, arms: 34, legs: 55 },
+    { date: '2026-02-01', weight: 73.5, bodyFat: 17.2, chest: 96, waist: 81, hips: 94, arms: 34.5, legs: 55.5 },
+    { date: '2026-02-15', weight: 74, bodyFat: 16.5, chest: 97, waist: 80.5, hips: 93.5, arms: 35, legs: 56 },
+    { date: '2026-03-01', weight: 74.5, bodyFat: 16, chest: 98, waist: 80, hips: 93, arms: 35.5, legs: 56.5 },
+    { date: '2026-03-15', weight: 75, bodyFat: 15.5, chest: 99, waist: 79.5, hips: 92.5, arms: 36, legs: 57 },
   ],
   'client-2': [
-    { date: '2026-02-01', weight: 65, bodyFat: 28, chest: 88, waist: 74, arms: 27, legs: 52 },
-    { date: '2026-02-15', weight: 64, bodyFat: 27, chest: 87, waist: 73, arms: 27, legs: 52 },
-    { date: '2026-03-01', weight: 63, bodyFat: 25.5, chest: 87, waist: 71.5, arms: 27, legs: 51.5 },
-    { date: '2026-03-15', weight: 62, bodyFat: 24, chest: 86.5, waist: 70, arms: 27.5, legs: 51 },
+    { date: '2026-02-01', weight: 65, bodyFat: 28, chest: 88, waist: 74, hips: 102, arms: 27, legs: 52 },
+    { date: '2026-02-15', weight: 64, bodyFat: 27, chest: 87, waist: 73, hips: 101, arms: 27, legs: 52 },
+    { date: '2026-03-01', weight: 63, bodyFat: 25.5, chest: 87, waist: 71.5, hips: 99.5, arms: 27, legs: 51.5 },
+    { date: '2026-03-15', weight: 62, bodyFat: 24, chest: 86.5, waist: 70, hips: 98, arms: 27.5, legs: 51 },
   ],
   'client-3': [
-    { date: '2026-02-20', weight: 95, bodyFat: 14, chest: 112, waist: 88, arms: 40, legs: 65 },
-    { date: '2026-03-05', weight: 96, bodyFat: 13.5, chest: 113, waist: 88, arms: 40.5, legs: 65.5 },
-    { date: '2026-03-20', weight: 97, bodyFat: 13, chest: 114, waist: 87.5, arms: 41, legs: 66 },
+    { date: '2026-02-20', weight: 95, bodyFat: 14, chest: 112, waist: 88, hips: 100, arms: 40, legs: 65 },
+    { date: '2026-03-05', weight: 96, bodyFat: 13.5, chest: 113, waist: 88, hips: 101, arms: 40.5, legs: 65.5 },
+    { date: '2026-03-20', weight: 97, bodyFat: 13, chest: 114, waist: 87.5, hips: 101.5, arms: 41, legs: 66 },
   ],
 };
 

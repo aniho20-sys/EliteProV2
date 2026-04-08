@@ -63,7 +63,7 @@ export default function ProgressPage() {
   const stats = getBodyStats(currentUser.id);
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', arms: '', legs: '' });
+  const [form, setForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
 
   const latestStat = stats[stats.length - 1];
   const firstStat = stats[0];
@@ -72,20 +72,20 @@ export default function ProgressPage() {
     e.preventDefault();
     addBodyStat(currentUser.id, {
       weight: Number(form.weight), bodyFat: Number(form.bodyFat),
-      chest: Number(form.chest), waist: Number(form.waist),
+      chest: Number(form.chest), waist: Number(form.waist), hips: Number(form.hips),
       arms: Number(form.arms), legs: Number(form.legs),
     });
-    setForm({ weight: '', bodyFat: '', chest: '', waist: '', arms: '', legs: '' });
+    setForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
     setShowAdd(false);
     toast('Measurement saved');
   };
 
-  const metrics = ['weight', 'bodyFat', 'chest', 'waist', 'arms', 'legs'];
-  const labels = { weight: 'Weight', bodyFat: 'Body Fat', chest: 'Chest', waist: 'Waist', arms: 'Arms', legs: 'Legs' };
-  const units = { weight: 'kg', bodyFat: '%', chest: 'cm', waist: 'cm', arms: 'cm', legs: 'cm' };
+  const metrics = ['weight', 'bodyFat', 'chest', 'waist', 'hips', 'arms', 'legs'];
+  const labels = { weight: 'Weight', bodyFat: 'Body Fat', chest: 'Chest', waist: 'Waist', hips: 'Hips', arms: 'Arms', legs: 'Legs' };
+  const units = { weight: 'kg', bodyFat: '%', chest: 'cm', waist: 'cm', hips: 'cm', arms: 'cm', legs: 'cm' };
   const colors = {
     weight: '#4361ee', bodyFat: '#ef476f', chest: '#06d6a0',
-    waist: '#ffd166', arms: '#118ab2', legs: '#8338ec',
+    waist: '#ffd166', hips: '#ff6b6b', arms: '#118ab2', legs: '#8338ec',
   };
 
   return (
@@ -141,7 +141,7 @@ export default function ProgressPage() {
           <div className="table-wrapper history-table-desktop">
             <table>
               <thead>
-                <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Arms</th><th>Legs</th><th></th></tr>
+                <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th></th></tr>
               </thead>
               <tbody>
                 {[...stats].reverse().map((s, i) => {
@@ -149,7 +149,7 @@ export default function ProgressPage() {
                   return (
                     <tr key={i}>
                       <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
-                      <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
+                      <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
                       <td><button className="btn-icon" onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Measurement deleted', 'error'); }} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   );
@@ -172,6 +172,7 @@ export default function ProgressPage() {
                     <div className="body-stat-item"><span className="body-stat-label">Body Fat</span><span className="body-stat-value">{s.bodyFat}%</span></div>
                     <div className="body-stat-item"><span className="body-stat-label">Chest</span><span className="body-stat-value">{s.chest}cm</span></div>
                     <div className="body-stat-item"><span className="body-stat-label">Waist</span><span className="body-stat-value">{s.waist}cm</span></div>
+                    <div className="body-stat-item"><span className="body-stat-label">Hips</span><span className="body-stat-value">{s.hips ? `${s.hips}cm` : '—'}</span></div>
                     <div className="body-stat-item"><span className="body-stat-label">Arms</span><span className="body-stat-value">{s.arms}cm</span></div>
                     <div className="body-stat-item"><span className="body-stat-label">Legs</span><span className="body-stat-value">{s.legs}cm</span></div>
                   </div>
@@ -200,7 +201,10 @@ export default function ProgressPage() {
                 <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" min="40" max="200" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
               </div>
               <div className="form-row">
+                <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" min="50" max="200" value={form.hips} onChange={e => setForm({ ...form, hips: e.target.value })} /></div>
                 <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" min="15" max="60" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
+              </div>
+              <div className="form-row">
                 <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" min="30" max="100" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
               </div>
               <div className="modal-actions">
