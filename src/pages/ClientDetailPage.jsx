@@ -31,7 +31,7 @@ export default function ClientDetailPage() {
     setShowAddStat(false);
   };
 
-  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
 
   return (
     <div>
@@ -165,7 +165,7 @@ export default function ClientDetailPage() {
                 </div>
                 {p.exercises.map((ex, i) => (
                   <div key={i} className="plan-exercise">
-                    <span className="plan-exercise-name">{getExerciseName(ex.exerciseId)}</span>
+                    <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                     <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
                     <span className="plan-exercise-detail">Rest: {ex.rest}s</span>
                   </div>

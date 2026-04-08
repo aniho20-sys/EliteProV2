@@ -110,8 +110,11 @@ export function AppProvider({ children }) {
     }, () => markLoaded('messages')));
 
     unsubs.push(onSnapshot(collection(db, 'exercises'), (snap) => {
-      const list = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      setExercises(list.length > 0 ? list : defaultExercises);
+      const firestoreList = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      // Merge: keep Firestore items first, then fill in any default exercises not already stored
+      const firestoreIds = new Set(firestoreList.map(e => e.id));
+      const merged = [...firestoreList, ...defaultExercises.filter(e => !firestoreIds.has(e.id))];
+      setExercises(merged.length > 0 ? merged : defaultExercises);
       markLoaded('exercises');
     }, () => markLoaded('exercises')));
 

@@ -6,7 +6,7 @@ export default function MyWorkoutsPage() {
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const exercises = getExercises();
 
-  const getExerciseName = (id) => exercises.find(e => e.id === id)?.name || id;
+  const getExerciseName = (id, fallback) => exercises.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exercises.find(e => e.id === id);
 
   return (
@@ -33,7 +33,7 @@ export default function MyWorkoutsPage() {
                 <div key={i} className="card mb-16" style={{ background: 'var(--bg-hover)', border: 'none', padding: 14 }}>
                   <div className="flex-between">
                     <div>
-                      <div className="fw-bold">{getExerciseName(ex.exerciseId)}</div>
+                      <div className="fw-bold">{getExerciseName(ex.exerciseId, ex.name)}</div>
                       <div className="flex gap-8 mt-8">
                         <span className="tag tag-primary">{exercise?.muscle}</span>
                         <span className="tag tag-accent">{exercise?.equipment}</span>

@@ -123,7 +123,7 @@ export default function WorkoutPlansPage() {
                 const exData = getExercise(ex.exerciseId);
                 return (
                 <div key={i} className="plan-exercise">
-                  <span className="plan-exercise-name">{getExerciseName(ex.exerciseId)}</span>
+                  <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                   <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
                   <span className="plan-exercise-detail">Rest: {ex.rest}s</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
