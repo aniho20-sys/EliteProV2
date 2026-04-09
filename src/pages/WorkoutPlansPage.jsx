@@ -30,7 +30,7 @@ export default function WorkoutPlansPage() {
   const addExToForm = (exercise) => {
     setForm(prev => ({
       ...prev,
-      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: '10', weight: 0, notes: '' }],
+      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: '10', weights: [0, 0, 0], notes: '' }],
     }));
   };
 
@@ -66,7 +66,31 @@ export default function WorkoutPlansPage() {
   const updateExercise = (index, field, value) => {
     setForm(prev => ({
       ...prev,
-      exercises: prev.exercises.map((ex, i) => i === index ? { ...ex, [field]: value } : ex),
+      exercises: prev.exercises.map((ex, i) => {
+        if (i !== index) return ex;
+        const updated = { ...ex, [field]: value };
+        if (field === 'sets') {
+          const newCount = Math.max(1, Number(value) || 1);
+          const oldWeights = ex.weights || [];
+          const lastW = oldWeights[oldWeights.length - 1] || 0;
+          updated.weights = newCount > oldWeights.length
+            ? [...oldWeights, ...Array(newCount - oldWeights.length).fill(lastW)]
+            : oldWeights.slice(0, newCount);
+        }
+        return updated;
+      }),
+    }));
+  };
+
+  const updateWeight = (exIndex, setIndex, value) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => {
+        if (i !== exIndex) return ex;
+        const weights = [...(ex.weights || [])];
+        weights[setIndex] = Number(value) || 0;
+        return { ...ex, weights };
+      }),
     }));
   };
 
@@ -101,7 +125,7 @@ export default function WorkoutPlansPage() {
         });
         setForm(prev => ({
           ...prev,
-          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weight: 0, notes: '' }],
+          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weights: [0, 0, 0], notes: '' }],
         }));
         toast(`"${name}" saved to Exercise Library`);
       } else {
@@ -110,7 +134,7 @@ export default function WorkoutPlansPage() {
           exercises: [...prev.exercises, {
             exerciseId: name,
             customMuscle: muscleStr,
-            sets: 3, reps: '10', weight: 0, notes: '',
+            sets: 3, reps: '10', weights: [0, 0, 0], notes: '',
           }],
         }));
       }
@@ -152,7 +176,7 @@ export default function WorkoutPlansPage() {
           return;
         }
       }
-      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weight: 0, notes: '' }];
+      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weights: [0, 0, 0], notes: '' }];
     }
 
     if (exercises.length === 0) {
@@ -175,6 +199,14 @@ export default function WorkoutPlansPage() {
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
+
+  const formatWeights = (ex) => {
+    const w = ex.weights || Array(ex.sets).fill(ex.weight || 0);
+    const nonZero = w.filter(v => v > 0);
+    if (nonZero.length === 0) return null;
+    if (w.every(v => v === w[0])) return `${w[0]}kg`;
+    return w.join('/') + 'kg';
+  };
 
   const duplicatePlan = (plan) => {
     setForm({
@@ -229,7 +261,7 @@ export default function WorkoutPlansPage() {
                   <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                   {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                   <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
-                  {ex.weight > 0 && <span className="plan-exercise-detail">{ex.weight}kg</span>}
+                  {formatWeights(ex) && <span className="plan-exercise-detail">{formatWeights(ex)}</span>}
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                   {exData?.videoUrl && (
                     <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
@@ -374,21 +406,30 @@ export default function WorkoutPlansPage() {
                   {form.exercises.map((ex, i) => (
                     <div
                       key={i}
-                      className={`plan-exercise plan-exercise-drag ${dragIdx === i ? 'dragging' : ''}`}
+                      className={`plan-exercise-builder ${dragIdx === i ? 'dragging' : ''}`}
                       draggable
                       onDragStart={() => setDragIdx(i)}
                       onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) reorderExercise(dragIdx, i); setDragIdx(i); }}
                       onDragEnd={() => setDragIdx(null)}
                     >
-                      <GripVertical size={14} className="drag-handle" />
-                      <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
-                      {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
-                      <input className="form-input log-set-input" type="number" value={ex.sets} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
-                      <span className="text-sm text-muted">x</span>
-                      <input className="form-input log-set-input" value={ex.reps} onChange={e => updateExercise(i, 'reps', e.target.value)} title="Reps" />
-                      <input className="form-input log-set-input" type="number" value={ex.weight} onChange={e => updateExercise(i, 'weight', Number(e.target.value))} title="Weight (kg)" placeholder="kg" />
-                      <span className="text-sm text-muted">kg</span>
-                      <button type="button" className="btn-icon" onClick={() => removeExercise(i)}><Trash2 size={14} /></button>
+                      <div className="plan-exercise plan-exercise-drag">
+                        <GripVertical size={14} className="drag-handle" />
+                        <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                        {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
+                        <input className="form-input log-set-input" type="number" value={ex.sets} min={1} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
+                        <span className="text-sm text-muted">x</span>
+                        <input className="form-input log-set-input" value={ex.reps} onChange={e => updateExercise(i, 'reps', e.target.value)} title="Reps" />
+                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)}><Trash2 size={14} /></button>
+                      </div>
+                      <div className="plan-set-weights">
+                        {(ex.weights || []).map((w, si) => (
+                          <div key={si} className="plan-set-weight">
+                            <span className="text-xs text-muted">S{si + 1}</span>
+                            <input className="form-input log-set-input" type="number" value={w || ''} onChange={e => updateWeight(i, si, e.target.value)} placeholder="0" title={`Set ${si + 1} weight (kg)`} />
+                          </div>
+                        ))}
+                        <span className="text-xs text-muted">kg</span>
+                      </div>
                     </div>
                   ))}
                 </div>

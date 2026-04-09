@@ -25,11 +25,14 @@ export default function WorkoutLogPage() {
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
     setEntries(plan.exercises.map(ex => {
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
+      const planWeights = ex.weights || Array(ex.sets).fill(ex.weight || 0);
       return {
         exerciseId: ex.exerciseId,
         sets: Array.from({ length: ex.sets }, (_, i) => {
           const prev = lastEntry?.sets?.[i];
-          return prev ? { weight: String(prev.weight), reps: String(prev.reps) } : { weight: '', reps: '' };
+          if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
+          const pw = planWeights[i] || 0;
+          return { weight: pw > 0 ? String(pw) : '', reps: '' };
         }),
       };
     }));
@@ -205,7 +208,13 @@ export default function WorkoutLogPage() {
                     </h3>
                     <div className="log-card-tags">
                       {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
-                      <span className="text-sm text-muted">{planEx.sets} x {planEx.reps}{planEx.weight > 0 ? ` | ${planEx.weight}kg` : ''}</span>
+                      <span className="text-sm text-muted">{planEx.sets} x {planEx.reps}{(() => {
+                        const w = planEx.weights || Array(planEx.sets).fill(planEx.weight || 0);
+                        const nonZero = w.filter(v => v > 0);
+                        if (nonZero.length === 0) return '';
+                        if (w.every(v => v === w[0])) return ` | ${w[0]}kg`;
+                        return ` | ${w.join('/')}kg`;
+                      })()}</span>
                       {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                     </div>
                   </div>

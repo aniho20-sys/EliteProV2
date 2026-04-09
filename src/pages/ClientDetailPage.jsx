@@ -35,6 +35,14 @@ export default function ClientDetailPage() {
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
 
+  const formatWeights = (ex) => {
+    const w = ex.weights || Array(ex.sets).fill(ex.weight || 0);
+    const nonZero = w.filter(v => v > 0);
+    if (nonZero.length === 0) return null;
+    if (w.every(v => v === w[0])) return `${w[0]}kg`;
+    return w.join('/') + 'kg';
+  };
+
   return (
     <div>
       <Link to="/clients" className="btn btn-outline btn-sm mb-16"><ArrowLeft size={16} /> Back to Clients</Link>
@@ -169,7 +177,7 @@ export default function ClientDetailPage() {
                   <div key={i} className="plan-exercise">
                     <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                     <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
-                    {ex.weight > 0 && <span className="plan-exercise-detail">{ex.weight}kg</span>}
+                    {formatWeights(ex) && <span className="plan-exercise-detail">{formatWeights(ex)}</span>}
                   </div>
                 ))}
               </div>

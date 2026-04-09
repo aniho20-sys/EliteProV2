@@ -9,6 +9,14 @@ export default function MyWorkoutsPage() {
   const getExerciseName = (id, fallback) => exercises.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exercises.find(e => e.id === id);
 
+  const formatWeights = (ex) => {
+    const w = ex.weights || Array(ex.sets).fill(ex.weight || 0);
+    const nonZero = w.filter(v => v > 0);
+    if (nonZero.length === 0) return null;
+    if (w.every(v => v === w[0])) return `${w[0]}kg`;
+    return w.join('/') + 'kg';
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -41,7 +49,7 @@ export default function MyWorkoutsPage() {
                     </div>
                     <div className="text-center">
                       <div className="fw-bold" style={{ fontSize: '1.1rem' }}>{ex.sets} x {ex.reps}</div>
-                      {ex.weight > 0 && <div className="text-sm text-muted">{ex.weight}kg</div>}
+                      {formatWeights(ex) && <div className="text-sm text-muted">{formatWeights(ex)}</div>}
                     </div>
                   </div>
                   {exercise?.description && <p className="text-sm text-muted mt-8">{exercise.description}</p>}
