@@ -45,12 +45,23 @@ export default function WorkoutPlansPage() {
     }));
   };
 
-  const handleCreate = (e) => {
+  const addCustomExercise = (name) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: [...prev.exercises, { exerciseId: name, sets: 3, reps: '10', rest: 60, notes: '' }],
+    }));
+  };
+
+  const handleCreate = async (e) => {
     e.preventDefault();
-    addWorkoutPlan({ ...form, trainerId: currentUser.id, sets: undefined });
-    setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
-    setShowCreate(false);
-    toast('Workout plan created');
+    try {
+      await addWorkoutPlan({ ...form, trainerId: currentUser.id });
+      setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
+      setShowCreate(false);
+      toast('Workout plan created');
+    } catch (err) {
+      toast('Failed to create plan: ' + (err.message || 'Unknown error'), 'error');
+    }
   };
 
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
@@ -159,6 +170,12 @@ export default function WorkoutPlansPage() {
                         <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
                       </div>
                     ))}
+                    {filteredExercises.length === 0 && (
+                      <div className="contact-item" onClick={() => { addCustomExercise(exFilter); setExFilter(''); }}>
+                        <span className="text-sm">Add "{exFilter}" as custom exercise</span>
+                        <span className="tag" style={{ marginLeft: 'auto' }}>Custom</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
