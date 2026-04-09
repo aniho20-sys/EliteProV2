@@ -277,7 +277,6 @@ export function AppProvider({ children }) {
     if (firstTime) {
       const fbUser = auth.currentUser;
       if (!fbUser) throw new Error('Demo signup failed — no current user');
-      // Step 1: create trainer profile so rules isTrainer() succeeds
       const profile = {
         id: fbUser.uid,
         name: 'Coach Alex',
@@ -290,10 +289,12 @@ export function AppProvider({ children }) {
         isDemo: true,
       };
       await setDoc(doc(db, 'users', fbUser.uid), profile);
-      // Step 2: seed ghost clients + plans + logs
-      await seedDemoDataForCoach(fbUser.uid);
-      // Step 3: seed exercise library if empty
-      await seedExercisesIfEmpty();
+      try {
+        await seedDemoDataForCoach(fbUser.uid);
+        await seedExercisesIfEmpty();
+      } catch (err) {
+        console.warn('Demo seed partial failure:', err.message);
+      }
     }
   };
 
@@ -302,7 +303,13 @@ export function AppProvider({ children }) {
     if (!firebaseUser) return;
     let trainerId = null;
     if (role === 'client' && inviteCode) {
-      const trainer = findTrainerByCode(inviteCode);
+      // Try in-memory first, fall back to Firestore query (users may not be loaded yet)
+      let trainer = findTrainerByCode(inviteCode);
+      if (!trainer) {
+        const snap = await getDocs(collection(db, 'users'));
+        const allUsers = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        trainer = allUsers.find(u => u.role === 'trainer' && u.inviteCode === inviteCode.toUpperCase()) || null;
+      }
       if (trainer) trainerId = trainer.id;
     }
     const profile = {

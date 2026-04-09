@@ -35,20 +35,25 @@ export default function ExerciseLibraryPage() {
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingEx) {
-      updateExercise(editingEx.id, form);
-      toast('Exercise updated');
-    } else {
-      addExercise(form);
-      toast('Exercise added');
-    }
-    setShowModal(false);
+    try {
+      if (editingEx) {
+        await updateExercise(editingEx.id, form);
+        toast('Exercise updated');
+      } else {
+        await addExercise(form);
+        toast('Exercise added');
+      }
+      setShowModal(false);
+    } catch { toast('Failed to save exercise', 'error'); }
   };
 
-  const handleDelete = (id) => {
-    if (confirm('Delete this exercise?')) { deleteExercise(id); toast('Exercise deleted', 'error'); }
+  const handleDelete = async (id) => {
+    try {
+      await deleteExercise(id);
+      toast('Exercise deleted', 'error');
+    } catch { toast('Failed to delete', 'error'); }
   };
 
   return (

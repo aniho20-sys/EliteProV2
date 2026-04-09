@@ -20,15 +20,17 @@ export default function ClientDetailPage() {
 
   const latestStat = stats[stats.length - 1];
 
-  const handleAddStat = (e) => {
+  const handleAddStat = async (e) => {
     e.preventDefault();
-    addBodyStat(clientId, {
-      weight: Number(statForm.weight), bodyFat: Number(statForm.bodyFat),
-      chest: Number(statForm.chest), waist: Number(statForm.waist), hips: Number(statForm.hips),
-      arms: Number(statForm.arms), legs: Number(statForm.legs),
-    });
-    setStatForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
-    setShowAddStat(false);
+    try {
+      await addBodyStat(clientId, {
+        weight: Number(statForm.weight), bodyFat: Number(statForm.bodyFat),
+        chest: Number(statForm.chest), waist: Number(statForm.waist), hips: Number(statForm.hips),
+        arms: Number(statForm.arms), legs: Number(statForm.legs),
+      });
+      setStatForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+      setShowAddStat(false);
+    } catch { /* error handled by Firestore listener */ }
   };
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;

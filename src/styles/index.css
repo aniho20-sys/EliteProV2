@@ -782,7 +782,7 @@ tr:hover { background: var(--bg-card-hover); }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg-card);
-  color: var(--text-primary);
+  color: var(--text);
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
@@ -837,7 +837,7 @@ tr:hover { background: var(--bg-card-hover); }
   text-align: center;
   font-size: 1.2rem;
   margin-bottom: 4px;
-  color: var(--text-primary);
+  color: var(--text);
 }
 .role-select-subtitle {
   text-align: center;
@@ -863,7 +863,7 @@ tr:hover { background: var(--bg-card-hover); }
   cursor: pointer;
   transition: all 0.2s var(--ease);
   text-align: center;
-  color: var(--text-primary);
+  color: var(--text);
 }
 .role-card strong { font-size: 0.95rem; }
 .role-card span { font-size: 0.75rem; color: var(--text-muted); }
@@ -2037,7 +2037,7 @@ tr:hover { background: var(--bg-card-hover); }
   gap: 16px;
   color: var(--text-secondary);
   font-size: 1rem;
-  background: var(--bg-main);
+  background: var(--bg);
 }
 .loading-spinner {
   width: 40px;

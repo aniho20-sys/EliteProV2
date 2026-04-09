@@ -68,16 +68,18 @@ export default function ProgressPage() {
   const latestStat = stats[stats.length - 1];
   const firstStat = stats[0];
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    addBodyStat(currentUser.id, {
-      weight: Number(form.weight), bodyFat: Number(form.bodyFat),
-      chest: Number(form.chest), waist: Number(form.waist), hips: Number(form.hips),
-      arms: Number(form.arms), legs: Number(form.legs),
-    });
-    setForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
-    setShowAdd(false);
-    toast('Measurement saved');
+    try {
+      await addBodyStat(currentUser.id, {
+        weight: Number(form.weight), bodyFat: Number(form.bodyFat),
+        chest: Number(form.chest), waist: Number(form.waist), hips: Number(form.hips),
+        arms: Number(form.arms), legs: Number(form.legs),
+      });
+      setForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+      setShowAdd(false);
+      toast('Measurement saved');
+    } catch { toast('Failed to save', 'error'); }
   };
 
   const metrics = ['weight', 'bodyFat', 'chest', 'waist', 'hips', 'arms', 'legs'];

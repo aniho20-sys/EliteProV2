@@ -68,23 +68,25 @@ export default function WorkoutLogPage() {
     return maxWeight > priorMax;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const logEntries = entries.map(e => ({
       exerciseId: e.exerciseId,
       sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
     })).filter(e => e.sets.length > 0);
 
-    addWorkoutLog({
-      clientId: currentUser.id,
-      planId: selectedPlan.id,
-      date: new Date().toISOString().split('T')[0],
-      completed: logEntries.length === entries.length,
-      entries: logEntries,
-      rpe,
-      notes,
-    });
-    setShowLog(false);
-    toast('Workout saved');
+    try {
+      await addWorkoutLog({
+        clientId: currentUser.id,
+        planId: selectedPlan.id,
+        date: new Date().toISOString().split('T')[0],
+        completed: logEntries.length === entries.length,
+        entries: logEntries,
+        rpe,
+        notes,
+      });
+      setShowLog(false);
+      toast('Workout saved');
+    } catch { toast('Failed to save workout', 'error'); }
   };
 
   // Count total PRs

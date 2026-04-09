@@ -45,20 +45,22 @@ export default function SchedulePage() {
     });
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (hasConflict(form.date, form.time, form.duration)) {
       toast('Time conflict! There is already a session at this time.', 'error');
       return;
     }
-    addScheduleItem({
-      ...form,
-      trainerId,
-      clientId: isTrainer ? form.clientId : currentUser.id,
-    });
-    setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
-    setShowAdd(false);
-    toast('Session booked');
+    try {
+      await addScheduleItem({
+        ...form,
+        trainerId,
+        clientId: isTrainer ? form.clientId : currentUser.id,
+      });
+      setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
+      setShowAdd(false);
+      toast('Session booked');
+    } catch { toast('Failed to book session', 'error'); }
   };
 
   const formatDay = (dateStr) => {
