@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
+const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
+
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, muscleGroups } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -17,6 +19,11 @@ export default function WorkoutPlansPage() {
   const exFilterRef = useRef('');
   const [dragIdx, setDragIdx] = useState(null);
   const [creatingCustom, setCreatingCustom] = useState(false);
+
+  // Custom exercise form state
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customForm, setCustomForm] = useState(EMPTY_CUSTOM);
+  const [customSaving, setCustomSaving] = useState(false);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -63,9 +70,56 @@ export default function WorkoutPlansPage() {
     }));
   };
 
+  // Sync ref + state to avoid closure staleness in handleCreate
   const updateExFilter = (val) => {
     exFilterRef.current = val;
     setExFilter(val);
+  };
+
+  const toggleMuscle = (muscle) => {
+    setCustomForm(prev => ({
+      ...prev,
+      muscles: prev.muscles.includes(muscle)
+        ? prev.muscles.filter(m => m !== muscle)
+        : [...prev.muscles, muscle],
+    }));
+  };
+
+  const handleAddCustom = async () => {
+    const name = customForm.name.trim();
+    if (!name) return;
+    const muscleStr = customForm.muscles.length > 0 ? customForm.muscles.join(', ') : '';
+
+    setCustomSaving(true);
+    try {
+      if (customForm.saveToLibrary) {
+        const newEx = await addExercise({
+          name,
+          muscle: muscleStr || 'Custom',
+          equipment: 'Other',
+          description: '',
+        });
+        setForm(prev => ({
+          ...prev,
+          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', rest: 60, notes: '' }],
+        }));
+        toast(`"${name}" saved to Exercise Library`);
+      } else {
+        setForm(prev => ({
+          ...prev,
+          exercises: [...prev.exercises, {
+            exerciseId: name,
+            customMuscle: muscleStr,
+            sets: 3, reps: '10', rest: 60, notes: '',
+          }],
+        }));
+      }
+      setCustomForm(EMPTY_CUSTOM);
+    } catch (err) {
+      toast('Failed to add exercise: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      setCustomSaving(false);
+    }
   };
 
   const handleCreate = async (e) => {
@@ -105,11 +159,18 @@ export default function WorkoutPlansPage() {
       toast('Please add at least one exercise', 'error');
       return;
     }
-    addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id, sets: undefined });
-    setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
-    updateExFilter('');
-    setShowCreate(false);
-    toast('Workout plan created');
+
+    try {
+      await addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id });
+      setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
+      updateExFilter('');
+      setShowCreate(false);
+      setShowCustomForm(false);
+      setCustomForm(EMPTY_CUSTOM);
+      toast('Workout plan created');
+    } catch (err) {
+      toast('Failed to create plan: ' + (err.message || 'Unknown error'), 'error');
+    }
   };
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
@@ -136,7 +197,7 @@ export default function WorkoutPlansPage() {
           <h1 className="page-title">Workout Plans</h1>
           <p className="page-subtitle">{plans.length} plans</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
+        {isTrainer && <button className="btn btn-primary" onClick={() => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
       </div>
 
       {plans.length === 0 ? (
@@ -166,6 +227,7 @@ export default function WorkoutPlansPage() {
                 return (
                 <div key={i} className="plan-exercise">
                   <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                  {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                   <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
                   <span className="plan-exercise-detail">Rest: {ex.rest}s</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
@@ -207,6 +269,7 @@ export default function WorkoutPlansPage() {
                 </div>
               </div>
 
+              {/* Exercise search */}
               <div className="form-group" style={{ position: 'relative' }}>
                 <label className="form-label">Add Exercises</label>
                 <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
@@ -231,6 +294,78 @@ export default function WorkoutPlansPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Custom exercise toggle button */}
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ marginTop: 8, width: '100%', justifyContent: 'space-between' }}
+                  onClick={() => { setShowCustomForm(p => !p); setCustomForm(EMPTY_CUSTOM); }}
+                >
+                  <span><Plus size={14} style={{ marginRight: 4 }} />Custom Exercise (with muscle groups)</span>
+                  {showCustomForm ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+
+                {/* Custom exercise inline form */}
+                {showCustomForm && (
+                  <div style={{ marginTop: 8, padding: 16, background: 'var(--bg-input)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Exercise Name *</label>
+                      <input
+                        className="form-input"
+                        placeholder="e.g. Cable Lateral Raise"
+                        value={customForm.name}
+                        onChange={e => setCustomForm(p => ({ ...p, name: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustom(); } }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="form-label" style={{ marginBottom: 8 }}>Muscle Groups <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {muscleGroups.map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            className={`tag${customForm.muscles.includes(m) ? ' tag-primary' : ''}`}
+                            style={{ cursor: 'pointer', padding: '5px 12px', fontSize: 13, border: customForm.muscles.includes(m) ? 'none' : '1px solid var(--border)' }}
+                            onClick={() => toggleMuscle(m)}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={customForm.saveToLibrary}
+                        onChange={e => setCustomForm(p => ({ ...p, saveToLibrary: e.target.checked }))}
+                      />
+                      Save to Exercise Library for future use
+                    </label>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ flex: 1 }}
+                        onClick={handleAddCustom}
+                        disabled={!customForm.name.trim() || customSaving}
+                      >
+                        {customSaving ? 'Adding...' : 'Add Exercise'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => { setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {form.exercises.length > 0 && (
@@ -247,10 +382,11 @@ export default function WorkoutPlansPage() {
                     >
                       <GripVertical size={14} className="drag-handle" />
                       <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                      {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                       <input className="form-input log-set-input" type="number" value={ex.sets} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
                       <span className="text-sm text-muted">x</span>
                       <input className="form-input log-set-input" value={ex.reps} onChange={e => updateExercise(i, 'reps', e.target.value)} title="Reps" />
-                      <input className="form-input log-set-input" type="number" value={ex.rest} onChange={e => updateExercise(i, 'rest', Number(e.target.value))} title="Rest" />
+                      <input className="form-input log-set-input" type="number" value={ex.rest} onChange={e => updateExercise(i, 'rest', Number(e.target.value))} title="Rest (s)" />
                       <span className="text-sm text-muted">s</span>
                       <button type="button" className="btn-icon" onClick={() => removeExercise(i)}><Trash2 size={14} /></button>
                     </div>

@@ -353,3 +353,20 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 8. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
 9. **No localStorage for app data** — only `ThemeContext` uses localStorage; all app state lives in Firestore
 10. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
+
+## Team Structure & Working Rules
+
+### 團隊成員
+| 職位 | 代號 | 職責 |
+|------|------|------|
+| PM（主管） | — | 帶領團隊、最終總結、確保回覆清晰 |
+| 員工 A | SA - 系統分析 | App 邏輯、資料庫設計、功能流程 |
+| 員工 B | Dev - 核心開發 | 編寫程式碼、處理 API 串接 |
+| 員工 C | Reviewer - 審核 | Code Review、檢查 Bug、安全性和效能 |
+| 員工 D | UI/UX - 設計 | 介面、配色、排版，運用心理學效應優化體驗 |
+| 員工 E | QA - 測試與合規 | 搵 Bug、寫測試報告、處理合規問題（如 SAR）|
+
+### 工作規範
+- 內部討論必須使用**廣東話（繁體字）**
+- 每位員工發言前標註職位，例如：`[員工 B - Dev]`
+- 主管負責最後總結
