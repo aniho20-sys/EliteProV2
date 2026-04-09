@@ -35,12 +35,11 @@ export default function ClientDetailPage() {
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
 
-  const formatWeights = (ex) => {
-    const w = ex.weights || Array(ex.sets).fill(ex.weight || 0);
-    const nonZero = w.filter(v => v > 0);
-    if (nonZero.length === 0) return null;
-    if (w.every(v => v === w[0])) return `${w[0]}kg`;
-    return w.join('/') + 'kg';
+  const normalizeSets = (ex) => {
+    if (Array.isArray(ex.sets)) return ex.sets;
+    const count = ex.sets || 1;
+    const weights = ex.weights || Array(count).fill(ex.weight || 0);
+    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
   };
 
   return (
@@ -176,8 +175,20 @@ export default function ClientDetailPage() {
                 {p.exercises.map((ex, i) => (
                   <div key={i} className="plan-exercise">
                     <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
-                    <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
-                    {formatWeights(ex) && <span className="plan-exercise-detail">{formatWeights(ex)}</span>}
+                    {(() => {
+                      const sets = normalizeSets(ex);
+                      const reps = sets.map(s => s.reps);
+                      const weights = sets.map(s => s.weight);
+                      const allSameReps = reps.every(r => r === reps[0]);
+                      const hasWeight = weights.some(w => w > 0);
+                      const allSameWeight = weights.every(w => w === weights[0]);
+                      return (
+                        <>
+                          <span className="plan-exercise-detail">{allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`}</span>
+                          {hasWeight && <span className="plan-exercise-detail">{allSameWeight ? `${weights[0]}kg` : weights.join('/') + 'kg'}</span>}
+                        </>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

@@ -27,10 +27,12 @@ export default function WorkoutPlansPage() {
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+  const defaultSets = () => [{ weight: 0, reps: '10' }, { weight: 0, reps: '10' }, { weight: 0, reps: '10' }];
+
   const addExToForm = (exercise) => {
     setForm(prev => ({
       ...prev,
-      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: '10', weights: [0, 0, 0], notes: '' }],
+      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: defaultSets(), notes: '' }],
     }));
   };
 
@@ -63,33 +65,33 @@ export default function WorkoutPlansPage() {
     });
   };
 
-  const updateExercise = (index, field, value) => {
-    setForm(prev => ({
-      ...prev,
-      exercises: prev.exercises.map((ex, i) => {
-        if (i !== index) return ex;
-        const updated = { ...ex, [field]: value };
-        if (field === 'sets') {
-          const newCount = Math.max(1, Number(value) || 1);
-          const oldWeights = ex.weights || [];
-          const lastW = oldWeights[oldWeights.length - 1] || 0;
-          updated.weights = newCount > oldWeights.length
-            ? [...oldWeights, ...Array(newCount - oldWeights.length).fill(lastW)]
-            : oldWeights.slice(0, newCount);
-        }
-        return updated;
-      }),
-    }));
-  };
-
-  const updateWeight = (exIndex, setIndex, value) => {
+  const addSet = (exIndex) => {
     setForm(prev => ({
       ...prev,
       exercises: prev.exercises.map((ex, i) => {
         if (i !== exIndex) return ex;
-        const weights = [...(ex.weights || [])];
-        weights[setIndex] = Number(value) || 0;
-        return { ...ex, weights };
+        const last = ex.sets[ex.sets.length - 1] || { weight: 0, reps: '10' };
+        return { ...ex, sets: [...ex.sets, { ...last }] };
+      }),
+    }));
+  };
+
+  const removeSet = (exIndex, setIndex) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => {
+        if (i !== exIndex || ex.sets.length <= 1) return ex;
+        return { ...ex, sets: ex.sets.filter((_, j) => j !== setIndex) };
+      }),
+    }));
+  };
+
+  const updateSet = (exIndex, setIndex, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => {
+        if (i !== exIndex) return ex;
+        return { ...ex, sets: ex.sets.map((s, j) => j === setIndex ? { ...s, [field]: value } : s) };
       }),
     }));
   };
@@ -125,7 +127,7 @@ export default function WorkoutPlansPage() {
         });
         setForm(prev => ({
           ...prev,
-          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weights: [0, 0, 0], notes: '' }],
+          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: defaultSets(), notes: '' }],
         }));
         toast(`"${name}" saved to Exercise Library`);
       } else {
@@ -134,7 +136,7 @@ export default function WorkoutPlansPage() {
           exercises: [...prev.exercises, {
             exerciseId: name,
             customMuscle: muscleStr,
-            sets: 3, reps: '10', weights: [0, 0, 0], notes: '',
+            sets: defaultSets(), notes: '',
           }],
         }));
       }
@@ -176,7 +178,7 @@ export default function WorkoutPlansPage() {
           return;
         }
       }
-      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weights: [0, 0, 0], notes: '' }];
+      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: defaultSets(), notes: '' }];
     }
 
     if (exercises.length === 0) {
@@ -200,12 +202,27 @@ export default function WorkoutPlansPage() {
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
-  const formatWeights = (ex) => {
-    const w = ex.weights || Array(ex.sets).fill(ex.weight || 0);
-    const nonZero = w.filter(v => v > 0);
-    if (nonZero.length === 0) return null;
-    if (w.every(v => v === w[0])) return `${w[0]}kg`;
-    return w.join('/') + 'kg';
+  // Backward compat: convert old format { sets: 3, reps: '10', weight/weights } to new { sets: [{weight, reps}] }
+  const normalizeSets = (ex) => {
+    if (Array.isArray(ex.sets)) return ex.sets;
+    const count = ex.sets || 1;
+    const weights = ex.weights || Array(count).fill(ex.weight || 0);
+    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
+  };
+
+  const formatExDetail = (ex) => {
+    const sets = normalizeSets(ex);
+    const reps = sets.map(s => s.reps);
+    const weights = sets.map(s => s.weight);
+    const allSameReps = reps.every(r => r === reps[0]);
+    const allSameWeight = weights.every(w => w === weights[0]);
+    const hasWeight = weights.some(w => w > 0);
+
+    let detail = allSameReps ? `${sets.length} x ${reps[0]}` : sets.map(s => s.reps).join('/') + ' reps';
+    if (hasWeight) {
+      detail += allSameWeight ? ` @ ${weights[0]}kg` : ` | ${weights.join('/')}kg`;
+    }
+    return detail;
   };
 
   const duplicatePlan = (plan) => {
@@ -213,7 +230,7 @@ export default function WorkoutPlansPage() {
       name: `${plan.name} (Copy)`,
       clientId: '',
       day: plan.day,
-      exercises: plan.exercises.map(ex => ({ ...ex })),
+      exercises: plan.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })),
     });
     setShowCreate(true);
   };
@@ -260,8 +277,7 @@ export default function WorkoutPlansPage() {
                 <div key={i} className="plan-exercise">
                   <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                   {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
-                  <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
-                  {formatWeights(ex) && <span className="plan-exercise-detail">{formatWeights(ex)}</span>}
+                  <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                   {exData?.videoUrl && (
                     <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
@@ -416,19 +432,26 @@ export default function WorkoutPlansPage() {
                         <GripVertical size={14} className="drag-handle" />
                         <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                         {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
-                        <input className="form-input log-set-input" type="number" value={ex.sets} min={1} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
-                        <span className="text-sm text-muted">x</span>
-                        <input className="form-input log-set-input" value={ex.reps} onChange={e => updateExercise(i, 'reps', e.target.value)} title="Reps" />
-                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)}><Trash2 size={14} /></button>
+                        <span className="text-xs text-muted" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
+                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
                       </div>
-                      <div className="plan-set-weights">
-                        {(ex.weights || []).map((w, si) => (
-                          <div key={si} className="plan-set-weight">
-                            <span className="text-xs text-muted">S{si + 1}</span>
-                            <input className="form-input log-set-input" type="number" value={w || ''} onChange={e => updateWeight(i, si, e.target.value)} placeholder="0" title={`Set ${si + 1} weight (kg)`} />
+                      <div className="plan-sets-list">
+                        {ex.sets.map((s, si) => (
+                          <div key={si} className="plan-set-row">
+                            <span className="plan-set-label">Set {si + 1}</span>
+                            <input className="form-input log-set-input" type="number" value={s.weight || ''} onChange={e => updateSet(i, si, 'weight', Number(e.target.value) || 0)} placeholder="0" title="Weight (kg)" />
+                            <span className="text-xs text-muted">kg</span>
+                            <span className="text-xs text-muted">x</span>
+                            <input className="form-input log-set-input" value={s.reps} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
+                            <span className="text-xs text-muted">reps</span>
+                            {ex.sets.length > 1 && (
+                              <button type="button" className="btn-icon" onClick={() => removeSet(i, si)} title="Remove set"><Trash2 size={12} /></button>
+                            )}
                           </div>
                         ))}
-                        <span className="text-xs text-muted">kg</span>
+                        <button type="button" className="btn btn-sm btn-outline plan-add-set-btn" onClick={() => addSet(i)}>
+                          <Plus size={14} /> New Set
+                        </button>
                       </div>
                     </div>
                   ))}

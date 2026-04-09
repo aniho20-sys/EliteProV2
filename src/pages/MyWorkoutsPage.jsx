@@ -9,12 +9,11 @@ export default function MyWorkoutsPage() {
   const getExerciseName = (id, fallback) => exercises.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exercises.find(e => e.id === id);
 
-  const formatWeights = (ex) => {
-    const w = ex.weights || Array(ex.sets).fill(ex.weight || 0);
-    const nonZero = w.filter(v => v > 0);
-    if (nonZero.length === 0) return null;
-    if (w.every(v => v === w[0])) return `${w[0]}kg`;
-    return w.join('/') + 'kg';
+  const normalizeSets = (ex) => {
+    if (Array.isArray(ex.sets)) return ex.sets;
+    const count = ex.sets || 1;
+    const weights = ex.weights || Array(count).fill(ex.weight || 0);
+    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
   };
 
   return (
@@ -48,8 +47,23 @@ export default function MyWorkoutsPage() {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="fw-bold" style={{ fontSize: '1.1rem' }}>{ex.sets} x {ex.reps}</div>
-                      {formatWeights(ex) && <div className="text-sm text-muted">{formatWeights(ex)}</div>}
+                      {(() => {
+                        const sets = normalizeSets(ex);
+                        const reps = sets.map(s => s.reps);
+                        const weights = sets.map(s => s.weight);
+                        const allSameReps = reps.every(r => r === reps[0]);
+                        const hasWeight = weights.some(w => w > 0);
+                        return (
+                          <>
+                            <div className="fw-bold" style={{ fontSize: '1.1rem' }}>
+                              {allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`}
+                            </div>
+                            {hasWeight && <div className="text-sm text-muted">
+                              {weights.every(w => w === weights[0]) ? `${weights[0]}kg` : weights.join('/') + 'kg'}
+                            </div>}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                   {exercise?.description && <p className="text-sm text-muted mt-8">{exercise.description}</p>}

@@ -19,20 +19,27 @@ export default function WorkoutLogPage() {
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
+  // Backward compat: convert old format to new
+  const normalizeSets = (ex) => {
+    if (Array.isArray(ex.sets)) return ex.sets;
+    const count = ex.sets || 1;
+    const weights = ex.weights || Array(count).fill(ex.weight || 0);
+    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
+  };
+
   const startLog = (plan) => {
     setSelectedPlan(plan);
     // Find the most recent log for this plan
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
     setEntries(plan.exercises.map(ex => {
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
-      const planWeights = ex.weights || Array(ex.sets).fill(ex.weight || 0);
+      const planSets = normalizeSets(ex);
       return {
         exerciseId: ex.exerciseId,
-        sets: Array.from({ length: ex.sets }, (_, i) => {
+        sets: planSets.map((ps, i) => {
           const prev = lastEntry?.sets?.[i];
           if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
-          const pw = planWeights[i] || 0;
-          return { weight: pw > 0 ? String(pw) : '', reps: '' };
+          return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
         }),
       };
     }));
@@ -208,12 +215,15 @@ export default function WorkoutLogPage() {
                     </h3>
                     <div className="log-card-tags">
                       {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
-                      <span className="text-sm text-muted">{planEx.sets} x {planEx.reps}{(() => {
-                        const w = planEx.weights || Array(planEx.sets).fill(planEx.weight || 0);
-                        const nonZero = w.filter(v => v > 0);
-                        if (nonZero.length === 0) return '';
-                        if (w.every(v => v === w[0])) return ` | ${w[0]}kg`;
-                        return ` | ${w.join('/')}kg`;
+                      <span className="text-sm text-muted">{(() => {
+                        const sets = normalizeSets(planEx);
+                        const reps = sets.map(s => s.reps);
+                        const weights = sets.map(s => s.weight);
+                        const allSameReps = reps.every(r => r === reps[0]);
+                        const hasWeight = weights.some(w => w > 0);
+                        let detail = allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`;
+                        if (hasWeight) detail += ` | ${weights.every(w => w === weights[0]) ? weights[0] + 'kg' : weights.join('/') + 'kg'}`;
+                        return detail;
                       })()}</span>
                       {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                     </div>

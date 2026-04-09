@@ -1403,12 +1403,16 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-exercise-detail { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
 .plan-exercise-drag { cursor: grab; }
 .plan-exercise-drag.dragging { opacity: 0.4; border-style: dashed; }
-.plan-exercise-builder { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; background: var(--surface); }
+.plan-exercise-builder { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; background: var(--surface); }
 .plan-exercise-builder.dragging { opacity: 0.4; border-style: dashed; }
 .plan-exercise-builder .plan-exercise { border: none; padding: 0; margin: 0; border-radius: 0; }
-.plan-set-weights { display: flex; align-items: center; gap: 6px; padding: 6px 0 2px 28px; flex-wrap: wrap; }
-.plan-set-weight { display: flex; align-items: center; gap: 3px; }
-.plan-set-weight .log-set-input { width: 56px; }
+.plan-sets-list { padding: 8px 0 4px 28px; display: flex; flex-direction: column; gap: 6px; }
+.plan-set-row { display: flex; align-items: center; gap: 6px; }
+.plan-set-label { font-size: 0.75rem; color: var(--text-muted); min-width: 36px; font-weight: 600; }
+.plan-set-row .log-set-input { width: 56px; }
+.plan-set-row .btn-icon { opacity: 0.4; }
+.plan-set-row:hover .btn-icon { opacity: 1; }
+.plan-add-set-btn { margin-top: 4px; align-self: flex-start; font-size: 0.75rem; padding: 4px 12px; gap: 4px; }
 .drag-handle { color: var(--text-muted); flex-shrink: 0; cursor: grab; }
 .plan-ex-no-results { font-size: 0.8rem; color: var(--text-muted); padding: 8px 12px; }
 .plan-ex-custom-add {
