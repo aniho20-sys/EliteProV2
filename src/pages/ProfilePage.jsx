@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle, Trash2 } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { useNotifications } from '../context/NotificationContext';
 
 // Detect auth provider from Firebase user object
 function getAuthProvider(firebaseUser) {
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const { currentUser, firebaseUser, updateClient, resetData, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
+  const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission } = useNotifications();
   const isTrainer = currentUser.role === 'trainer';
   const authProvider = getAuthProvider(firebaseUser);
   // Demo = explicit isDemo flag on profile (seeded demo coach) OR no Firebase Auth at all
@@ -291,6 +293,36 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Notifications */}
+      <div className="card mb-16">
+        <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Bell size={18} /> Notifications
+        </h3>
+        {!notifSupported ? (
+          <p className="text-sm text-muted">Push notifications are not supported on this browser. Try adding the app to your home screen first.</p>
+        ) : notifPermission === 'granted' ? (
+          <div className="flex gap-8" style={{ alignItems: 'center' }}>
+            <span className="tag tag-accent">Enabled</span>
+            <span className="text-sm text-muted">You'll receive push notifications for new messages and session updates</span>
+          </div>
+        ) : notifPermission === 'denied' ? (
+          <div>
+            <div className="flex gap-8 mb-8" style={{ alignItems: 'center' }}>
+              <BellOff size={16} style={{ color: 'var(--danger)' }} />
+              <span className="text-sm" style={{ color: 'var(--danger)' }}>Notifications blocked</span>
+            </div>
+            <p className="text-sm text-muted">To enable, go to your browser settings and allow notifications for this site.</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted mb-12">Get notified when you receive messages or when sessions are scheduled.</p>
+            <button className="btn btn-primary" onClick={() => requestNotifPermission(currentUser.id)}>
+              <Bell size={16} /> Enable Push Notifications
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Account Info */}
       <div className="card mb-16">
