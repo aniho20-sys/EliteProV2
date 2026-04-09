@@ -30,7 +30,7 @@ export default function WorkoutPlansPage() {
   const addExToForm = (exercise) => {
     setForm(prev => ({
       ...prev,
-      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: '10', rest: 60, notes: '' }],
+      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: '10', weight: 0, notes: '' }],
     }));
   };
 
@@ -101,7 +101,7 @@ export default function WorkoutPlansPage() {
         });
         setForm(prev => ({
           ...prev,
-          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', rest: 60, notes: '' }],
+          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weight: 0, notes: '' }],
         }));
         toast(`"${name}" saved to Exercise Library`);
       } else {
@@ -110,7 +110,7 @@ export default function WorkoutPlansPage() {
           exercises: [...prev.exercises, {
             exerciseId: name,
             customMuscle: muscleStr,
-            sets: 3, reps: '10', rest: 60, notes: '',
+            sets: 3, reps: '10', weight: 0, notes: '',
           }],
         }));
       }
@@ -152,7 +152,7 @@ export default function WorkoutPlansPage() {
           return;
         }
       }
-      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', rest: 60, notes: '' }];
+      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: 3, reps: '10', weight: 0, notes: '' }];
     }
 
     if (exercises.length === 0) {
@@ -229,7 +229,7 @@ export default function WorkoutPlansPage() {
                   <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                   {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                   <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
-                  <span className="plan-exercise-detail">Rest: {ex.rest}s</span>
+                  {ex.weight > 0 && <span className="plan-exercise-detail">{ex.weight}kg</span>}
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                   {exData?.videoUrl && (
                     <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
@@ -386,8 +386,8 @@ export default function WorkoutPlansPage() {
                       <input className="form-input log-set-input" type="number" value={ex.sets} onChange={e => updateExercise(i, 'sets', Number(e.target.value))} title="Sets" />
                       <span className="text-sm text-muted">x</span>
                       <input className="form-input log-set-input" value={ex.reps} onChange={e => updateExercise(i, 'reps', e.target.value)} title="Reps" />
-                      <input className="form-input log-set-input" type="number" value={ex.rest} onChange={e => updateExercise(i, 'rest', Number(e.target.value))} title="Rest (s)" />
-                      <span className="text-sm text-muted">s</span>
+                      <input className="form-input log-set-input" type="number" value={ex.weight} onChange={e => updateExercise(i, 'weight', Number(e.target.value))} title="Weight (kg)" placeholder="kg" />
+                      <span className="text-sm text-muted">kg</span>
                       <button type="button" className="btn-icon" onClick={() => removeExercise(i)}><Trash2 size={14} /></button>
                     </div>
                   ))}

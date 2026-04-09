@@ -203,7 +203,7 @@ export default function WorkoutLogPage() {
                     </h3>
                     <div className="log-card-tags">
                       {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
-                      <span className="text-sm text-muted">{planEx.sets} x {planEx.reps} | Rest: {planEx.rest}s</span>
+                      <span className="text-sm text-muted">{planEx.sets} x {planEx.reps}{planEx.weight > 0 ? ` | ${planEx.weight}kg` : ''}</span>
                       {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                     </div>
                   </div>

@@ -167,7 +167,7 @@ export default function ClientDetailPage() {
                   <div key={i} className="plan-exercise">
                     <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                     <span className="plan-exercise-detail">{ex.sets} x {ex.reps}</span>
-                    <span className="plan-exercise-detail">Rest: {ex.rest}s</span>
+                    {ex.weight > 0 && <span className="plan-exercise-detail">{ex.weight}kg</span>}
                   </div>
                 ))}
               </div>

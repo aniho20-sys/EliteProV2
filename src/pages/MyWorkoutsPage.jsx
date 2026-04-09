@@ -41,7 +41,7 @@ export default function MyWorkoutsPage() {
                     </div>
                     <div className="text-center">
                       <div className="fw-bold" style={{ fontSize: '1.1rem' }}>{ex.sets} x {ex.reps}</div>
-                      <div className="text-sm text-muted">Rest: {ex.rest}s</div>
+                      {ex.weight > 0 && <div className="text-sm text-muted">{ex.weight}kg</div>}
                     </div>
                   </div>
                   {exercise?.description && <p className="text-sm text-muted mt-8">{exercise.description}</p>}
