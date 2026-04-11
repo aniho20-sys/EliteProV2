@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, LineChart } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
 
 function TrendChart({ stats, metricKey, label, unit, color }) {
   if (stats.length < 2) return null;
@@ -184,9 +185,12 @@ export default function ProgressPage() {
           </div>
         </div>
       ) : (
-        <div className="card empty-state">
-          <p className="empty-state-text">No measurements yet. Add your first one!</p>
-        </div>
+        <EmptyState
+          icon={LineChart}
+          title="No measurements yet"
+          description="Track your first measurement to start seeing progress trends over time."
+          action={{ label: 'Add Measurement', onClick: () => setShowAdd(true) }}
+        />
       )}
 
       {showAdd && (

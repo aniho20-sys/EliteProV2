@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus, Check, X, CalendarOff } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
 
 export default function SchedulePage() {
   const { currentUser, getSchedule, getClients, getClient, addScheduleItem, updateScheduleItem } = useApp();
@@ -11,6 +12,7 @@ export default function SchedulePage() {
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAdd, setShowAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
 
   // For client: find their trainer
@@ -47,10 +49,24 @@ export default function SchedulePage() {
 
   const handleAdd = async (e) => {
     e.preventDefault();
+
+    // Validate: client must be connected to a trainer before booking
+    if (!isTrainer && !trainerId) {
+      toast('Connect to a coach first from your Profile before booking', 'error');
+      return;
+    }
+    // Validate: trainer must pick a client
+    if (isTrainer && !form.clientId) {
+      toast('Please select a client', 'error');
+      return;
+    }
+
     if (hasConflict(form.date, form.time, form.duration)) {
       toast('Time conflict! There is already a session at this time.', 'error');
       return;
     }
+
+    setSaving(true);
     try {
       await addScheduleItem({
         ...form,
@@ -60,7 +76,22 @@ export default function SchedulePage() {
       setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
       setShowAdd(false);
       toast('Session booked');
-    } catch { toast('Failed to book session', 'error'); }
+    } catch (err) {
+      toast(`Failed to book session: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateStatus = async (itemId, status) => {
+    try {
+      await updateScheduleItem(itemId, { status });
+      if (status === 'confirmed') toast('Session confirmed');
+      else if (status === 'cancelled') toast('Session cancelled', 'error');
+      else toast(`Session ${status}`);
+    } catch (err) {
+      toast(`Failed to update: ${err?.message || 'unknown error'}`, 'error');
+    }
   };
 
   const formatDay = (dateStr) => {
@@ -77,7 +108,14 @@ export default function SchedulePage() {
           <h1 className="page-title">Schedule</h1>
           <p className="page-subtitle">Manage your appointments</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={18} /> Book Session</button>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowAdd(true)}
+          disabled={!isTrainer && !trainerId}
+          title={!isTrainer && !trainerId ? 'Connect a coach first' : undefined}
+        >
+          <Plus size={18} /> Book Session
+        </button>
       </div>
 
       {/* Date selector */}
@@ -104,10 +142,14 @@ export default function SchedulePage() {
       <div className="card">
         <h3 className="card-title mb-16">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
         {schedule.length === 0 ? (
-          <div className="empty-state">
-            <p className="empty-state-text">No sessions on this day</p>
-            <button className="btn btn-outline btn-sm mt-8" onClick={() => setShowAdd(true)}>Book a session</button>
-          </div>
+          <EmptyState
+            inCard={false}
+            compact
+            icon={CalendarOff}
+            title="No sessions on this day"
+            description="Tap below to book a session for this date."
+            action={{ label: 'Book a Session', onClick: () => { setForm(f => ({ ...f, date: selectedDate })); setShowAdd(true); } }}
+          />
         ) : (
           schedule.sort((a, b) => a.time.localeCompare(b.time)).map(s => {
             const client = getClient(s.clientId);
@@ -124,12 +166,12 @@ export default function SchedulePage() {
                   <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
                   {isTrainer && s.status === 'pending' && (
                     <div className="flex gap-8">
-                      <button className="btn-icon" onClick={() => { updateScheduleItem(s.id, { status: 'confirmed' }); toast('Session confirmed'); }} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                      <button className="btn-icon" onClick={() => { updateScheduleItem(s.id, { status: 'cancelled' }); toast('Session cancelled', 'error'); }} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                      <button className="btn-icon" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
+                      <button className="btn-icon" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
                     </div>
                   )}
                   {!isTrainer && s.status === 'pending' && (
-                    <button className="btn btn-sm btn-outline" onClick={() => { updateScheduleItem(s.id, { status: 'cancelled' }); toast('Session cancelled', 'error'); }} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
+                    <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
                   )}
                 </div>
               </div>
@@ -183,8 +225,8 @@ export default function SchedulePage() {
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Book</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)} disabled={saving}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Booking…' : 'Book'}</button>
               </div>
             </form>
           </div>

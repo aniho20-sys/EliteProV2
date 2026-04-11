@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink } from 'lucide-react';
+import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
 
 export default function ExerciseLibraryPage() {
   const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
@@ -110,8 +111,16 @@ export default function ExerciseLibraryPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="card empty-state mt-16">
-          <p className="empty-state-text">No exercises found matching your filters</p>
+        <div className="mt-16">
+          <EmptyState
+            icon={SearchX}
+            title="No exercises found"
+            description="Try clearing filters or use a different search term."
+            action={{
+              label: 'Clear Filters',
+              onClick: () => { setSearch(''); setMuscleFilter(''); setEquipFilter(''); },
+            }}
+          />
         </div>
       )}
 

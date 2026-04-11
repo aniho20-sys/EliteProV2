@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trophy, Play } from 'lucide-react';
+import { Trophy, Play, NotebookPen } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
 
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises, getPersonalRecords } = useApp();
@@ -150,7 +151,13 @@ export default function WorkoutLogPage() {
           {/* Log history */}
           <h3 className="mb-16">History</h3>
           {logs.length === 0 ? (
-            <div className="card empty-state"><p className="empty-state-text">No workouts logged yet. Start one above!</p></div>
+            <EmptyState
+              icon={NotebookPen}
+              title="No workouts logged yet"
+              description={plans.length > 0
+                ? 'Select a plan above to start logging your first session.'
+                : 'Once your coach assigns a plan, you can log workouts here.'}
+            />
           ) : (
             [...logs].reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);

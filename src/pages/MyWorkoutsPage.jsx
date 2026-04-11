@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
-import { Play } from 'lucide-react';
+import { Play, ClipboardList } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();
@@ -24,9 +25,14 @@ export default function MyWorkoutsPage() {
       </div>
 
       {plans.length === 0 ? (
-        <div className="card empty-state">
-          <p className="empty-state-text">No workout plans assigned yet. Your coach will create them for you.</p>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="No workout plans assigned yet"
+          description={currentUser.trainerId
+            ? 'Your coach will create plans for you soon. Check back in a bit.'
+            : 'Connect to a coach first, then they can assign plans to you.'}
+          action={!currentUser.trainerId ? { label: 'Connect Coach', to: '/profile' } : undefined}
+        />
       ) : (
         plans.map(p => (
           <div key={p.id} className="card mb-16">

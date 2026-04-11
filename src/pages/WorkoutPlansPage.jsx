@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
@@ -250,7 +251,17 @@ export default function WorkoutPlansPage() {
       </div>
 
       {plans.length === 0 ? (
-        <div className="card empty-state"><p className="empty-state-text">No workout plans yet</p></div>
+        <EmptyState
+          icon={Dumbbell}
+          title="No workout plans yet"
+          description={isTrainer
+            ? 'Create a plan to start assigning workouts to your clients.'
+            : 'Your coach will create plans for you soon.'}
+          action={isTrainer ? {
+            label: 'Create Plan',
+            onClick: () => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }
+          } : undefined}
+        />
       ) : (
         plans.map(p => {
           const client = clients.find(c => c.id === p.clientId);

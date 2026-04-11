@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, Users } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
+import { useToast } from '../context/ToastContext';
 
 export default function MessagesPage() {
   const { currentUser, getMessages, sendMessage, getClients, getClient, markMessagesRead, data } = useApp();
+  const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const [selectedContact, setSelectedContact] = useState(null);
   const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
 
   // Get contacts
@@ -36,16 +40,31 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (selectedContact) {
-      markMessagesRead(currentUser.id, selectedContact);
+      // Best-effort; swallow errors to avoid unhandled rejections
+      Promise.resolve(markMessagesRead(currentUser.id, selectedContact)).catch(() => { /* ignore */ });
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact, messages.length]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!text.trim() || !selectedContact) return;
-    sendMessage(currentUser.id, selectedContact, text.trim());
-    setText('');
+    const trimmed = text.trim();
+    if (!trimmed || !selectedContact || sending) return;
+    // Basic length guard (Firestore string field limit is 1MB; keep UI sane)
+    if (trimmed.length > 2000) {
+      toast('Message too long (max 2000 characters)', 'error');
+      return;
+    }
+    setSending(true);
+    try {
+      await sendMessage(currentUser.id, selectedContact, trimmed);
+      setText('');
+    } catch (err) {
+      toast(`Failed to send: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setSending(false);
+    }
   };
 
   const contactMessages = selectedContact ? getContactMessages(selectedContact) : [];
@@ -63,6 +82,18 @@ export default function MessagesPage() {
           <div className="msg-sidebar-title">
             {isTrainer ? 'Clients' : 'Coach'}
           </div>
+          {contacts.length === 0 && (
+            <EmptyState
+              inCard={false}
+              compact
+              icon={Users}
+              title={isTrainer ? 'No clients yet' : 'No coach connected'}
+              description={isTrainer
+                ? 'Invite clients to start messaging them here.'
+                : 'Connect to a coach from your profile to start a conversation.'}
+              action={{ label: isTrainer ? 'Invite Client' : 'Go to Profile', to: isTrainer ? '/clients' : '/profile' }}
+            />
+          )}
           {contacts.map(c => {
             const unread = getUnreadFrom(c.id);
             const last = getLastMessage(c.id);
@@ -108,13 +139,29 @@ export default function MessagesPage() {
                 <div ref={chatEndRef} />
               </div>
               <form onSubmit={handleSend} className="msg-chat-input">
-                <input className="form-input" value={text} onChange={e => setText(e.target.value)} placeholder="Type a message..." />
-                <button type="submit" className="btn btn-primary"><Send size={18} /></button>
+                <input
+                  className="form-input"
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  placeholder="Type a message..."
+                  maxLength={2000}
+                  disabled={sending}
+                />
+                <button type="submit" className="btn btn-primary" disabled={sending || !text.trim()}>
+                  <Send size={18} />
+                </button>
               </form>
             </>
           ) : (
             <div className="msg-empty">
-              <p className="empty-state-text">Select a contact to start chatting</p>
+              <EmptyState
+                inCard={false}
+                icon={MessageCircle}
+                title="Select a conversation"
+                description={contacts.length > 0
+                  ? 'Choose a contact from the list to start chatting.'
+                  : 'Once you have contacts, they will appear here.'}
+              />
             </div>
           )}
         </div>

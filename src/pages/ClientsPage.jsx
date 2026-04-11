@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, Copy, Check, Share2 } from 'lucide-react';
+import { Search, Copy, Check, Share2, UserPlus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
 
 export default function ClientsPage() {
   const { currentUser, getClients, getBodyStats, getInviteCode } = useApp();
@@ -76,10 +77,16 @@ export default function ClientsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div className="text-muted">No clients yet.</div>
-          <div className="text-sm text-muted mt-8">Share your invite code above to get your first client onboard.</div>
-        </div>
+        <EmptyState
+          icon={UserPlus}
+          title={search ? 'No matching clients' : 'No clients yet'}
+          description={
+            search
+              ? 'Try a different search term.'
+              : 'Share your invite code above to get your first client onboard.'
+          }
+          action={!search && inviteCode ? { label: 'Copy Invite Code', onClick: handleCopy } : undefined}
+        />
       ) : (
         <div className="grid-3">
           {filtered.map(client => {

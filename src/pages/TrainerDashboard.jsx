@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import EmptyState from '../components/EmptyState';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -175,7 +176,14 @@ export default function TrainerDashboard() {
             <Link to="/schedule" className="btn btn-outline btn-sm">View All</Link>
           </div>
           {todaySchedule.length === 0 ? (
-            <div className="empty-state"><p className="empty-state-text">No sessions today</p></div>
+            <EmptyState
+              inCard={false}
+              compact
+              icon={CalendarOff}
+              title="No sessions today"
+              description="Enjoy the rest day, or book a new session from the Schedule page."
+              action={{ label: 'Open Schedule', to: '/schedule' }}
+            />
           ) : (
             todaySchedule.map(s => {
               const client = clients.find(c => c.id === s.clientId);
@@ -198,7 +206,13 @@ export default function TrainerDashboard() {
             <h3 className="card-title">Unread Messages</h3>
           </div>
           {recentMessages.length === 0 ? (
-            <div className="empty-state"><p className="empty-state-text">All caught up!</p></div>
+            <EmptyState
+              inCard={false}
+              compact
+              icon={MailCheck}
+              title="All caught up!"
+              description="No unread messages from your clients right now."
+            />
           ) : (
             recentMessages.map(m => {
               const sender = clients.find(c => c.id === m.from);
@@ -238,7 +252,14 @@ export default function TrainerDashboard() {
             <Link to="/clients" className="btn btn-outline btn-sm">View All</Link>
           </div>
           {clients.length === 0 ? (
-            <div className="empty-state"><p className="empty-state-text">No clients yet</p></div>
+            <EmptyState
+              inCard={false}
+              compact
+              icon={Users}
+              title="No clients yet"
+              description="Invite your first client to see their activity here."
+              action={{ label: 'Get Invite Code', to: '/clients' }}
+            />
           ) : (
             <ClientActivityList clients={clients} getWorkoutLogs={getWorkoutLogs} today={today} />
           )}

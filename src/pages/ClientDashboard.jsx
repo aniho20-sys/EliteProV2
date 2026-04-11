@@ -1,7 +1,8 @@
 import { useApp } from '../context/AppContext';
-import { Dumbbell, Calendar, TrendingDown, TrendingUp, Activity, Trophy } from 'lucide-react';
+import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
+import EmptyState from '../components/EmptyState';
 
 export default function ClientDashboard() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords } = useApp();
@@ -84,7 +85,13 @@ export default function ClientDashboard() {
             <Link to="/schedule" className="btn btn-outline btn-sm">View All</Link>
           </div>
           {todaySchedule.length === 0 ? (
-            <div className="empty-state"><p className="empty-state-text">No sessions today</p></div>
+            <EmptyState
+              inCard={false}
+              compact
+              icon={CalendarOff}
+              title="No sessions today"
+              description="Your schedule is clear. Book one anytime from the Schedule page."
+            />
           ) : (
             todaySchedule.map(s => (
               <div key={s.id} className="schedule-item">
@@ -105,7 +112,14 @@ export default function ClientDashboard() {
             <Link to="/my-workouts" className="btn btn-outline btn-sm">View All</Link>
           </div>
           {plans.length === 0 ? (
-            <div className="empty-state"><p className="empty-state-text">No plans assigned yet</p></div>
+            <EmptyState
+              inCard={false}
+              compact
+              icon={ClipboardList}
+              title="No plans assigned yet"
+              description={currentUser.trainerId ? 'Your coach will add a plan soon.' : 'Connect to a coach first from your profile.'}
+              action={!currentUser.trainerId ? { label: 'Connect Coach', to: '/profile' } : undefined}
+            />
           ) : (
             plans.map(p => (
               <div key={p.id} className="schedule-item">

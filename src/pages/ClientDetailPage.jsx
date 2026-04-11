@@ -1,8 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen } from 'lucide-react';
 import NotesSection from '../components/NotesSection';
+import EmptyState from '../components/EmptyState';
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
@@ -16,7 +17,16 @@ export default function ClientDetailPage() {
   const [showAddStat, setShowAddStat] = useState(false);
   const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
 
-  if (!client) return <div className="empty-state"><p>Client not found</p></div>;
+  if (!client) {
+    return (
+      <EmptyState
+        icon={UserX}
+        title="Client not found"
+        description="This client may have been removed or you may not have access."
+        action={{ label: 'Back to Clients', to: '/clients' }}
+      />
+    );
+  }
 
   const latestStat = stats[stats.length - 1];
 
@@ -91,7 +101,14 @@ export default function ClientDetailPage() {
             <h3>Body Stats History</h3>
             <button className="btn btn-primary btn-sm" onClick={() => setShowAddStat(true)}><Plus size={16} /> Add Record</button>
           </div>
-          {stats.length === 0 ? <div className="empty-state"><p>No records yet</p></div> : (
+          {stats.length === 0 ? (
+            <EmptyState
+              icon={LineChart}
+              title="No measurements yet"
+              description="Add a body stat record to start tracking this client's progress."
+              action={{ label: 'Add Record', onClick: () => setShowAddStat(true) }}
+            />
+          ) : (
             <>
               {/* Simple progress bars for latest vs first */}
               {stats.length > 1 && (
@@ -165,7 +182,14 @@ export default function ClientDetailPage() {
 
       {tab === 'workout plans' && (
         <div>
-          {plans.length === 0 ? <div className="empty-state"><p>No plans assigned. Go to Workout Plans to create one.</p></div> : (
+          {plans.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No plans assigned"
+              description="Create a workout plan to help this client train consistently."
+              action={{ label: 'Go to Workout Plans', to: '/plans' }}
+            />
+          ) : (
             plans.map(p => (
               <div key={p.id} className="card mb-16">
                 <div className="card-header">
@@ -199,7 +223,13 @@ export default function ClientDetailPage() {
 
       {tab === 'workout logs' && (
         <div>
-          {logs.length === 0 ? <div className="empty-state"><p>No workout logs yet</p></div> : (
+          {logs.length === 0 ? (
+            <EmptyState
+              icon={NotebookPen}
+              title="No workout logs yet"
+              description="This client hasn't logged a workout yet. Logs will appear here once they do."
+            />
+          ) : (
             [...logs].reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);
               return (
