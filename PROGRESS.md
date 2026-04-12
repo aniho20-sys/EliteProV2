@@ -75,6 +75,21 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 
 ---
 
+## 最近 Session 完成嘅工作（2026-04-12 Session 3）
+
+### 即時修 + Phase 2 先行項（F + A + C + D + B）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | XSS：videoUrl scheme 過濾 | `isSafeUrl()` whitelist `https?://`；擋住 `javascript:`/`data:`/`vbscript:` 等；ExerciseLibraryPage + WorkoutPlansPage 兩處 `<a href>` + preview link 全部修正 |
+| 2 | Firestore rules：exercises ownership | create 要求 `trainerId == uid`；update/delete 要求 owner 或 legacy（無 `trainerId` field）；`addExercise` 自動寫入 `trainerId: currentUser.id` |
+| 3 | `deleteWorkoutPlan` async/await | 補 `await` + try/catch + `deleting` state 防 double-submit（原為 fire-and-forget） |
+| 4 | 清 lint errors | 22 errors → **0 errors**, 2 warnings（pre-existing）；修項包括 unused vars、setState-in-effect、fast-refresh、globals、NotificationContext TDZ + ref-in-render |
+| 5 | Delete Plan 確認 modal | 新增確認 modal，行為與 Remove Client 一致；Cancel + Delete(disabled on deleting) |
+| 6 | Messages scroll-to-bottom | `prevContactRef` 追蹤前一個 contact；contact 切換 → `instant` 跳底；新訊息到達 → `smooth` 捲底；依賴 `contactMessages.length` 觸發 |
+
+---
+
 ## 最近 Session 完成嘅工作（2026-04-12 Session 2）
 
 ### UI Bug Fixes（D + B）
@@ -362,7 +377,7 @@ Build time： 1.81s                  ✅
 |---|------|------|------|
 | 1 | Firestore rules：messages / bodyStats read 收緊 | 未開始 | F + A |
 | 2 | Bundle code-splitting（React.lazy per page）| 未開始 | B |
-| 3 | Messages scroll-to-bottom | 未開始 | D + B |
+| 3 | Messages scroll-to-bottom | ✅ 完成 | D + B |
 | 4 | GDPR cascaded delete via Cloud Functions | 未開始 | E + B |
 | 5 | Invite code 改用 `crypto.getRandomValues()` | 未開始 | F + B |
 | 6 | 真機 QA：iPhone Safari + Android Chrome | 未開始 | E |
