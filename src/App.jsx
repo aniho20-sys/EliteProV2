@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
@@ -5,20 +6,21 @@ import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
-import LoginPage from './pages/LoginPage';
-import TrainerDashboard from './pages/TrainerDashboard';
-import ClientDashboard from './pages/ClientDashboard';
-import ClientsPage from './pages/ClientsPage';
-import ClientDetailPage from './pages/ClientDetailPage';
-import WorkoutPlansPage from './pages/WorkoutPlansPage';
-import SchedulePage from './pages/SchedulePage';
-import ExerciseLibraryPage from './pages/ExerciseLibraryPage';
-import WorkoutLogPage from './pages/WorkoutLogPage';
-import ProgressPage from './pages/ProgressPage';
-import MyWorkoutsPage from './pages/MyWorkoutsPage';
-import MessagesPage from './pages/MessagesPage';
-import ProfilePage from './pages/ProfilePage';
-import RoleSelectPage from './pages/RoleSelectPage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RoleSelectPage = lazy(() => import('./pages/RoleSelectPage'));
+const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'));
+const ClientDashboard = lazy(() => import('./pages/ClientDashboard'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const ClientDetailPage = lazy(() => import('./pages/ClientDetailPage'));
+const WorkoutPlansPage = lazy(() => import('./pages/WorkoutPlansPage'));
+const SchedulePage = lazy(() => import('./pages/SchedulePage'));
+const ExerciseLibraryPage = lazy(() => import('./pages/ExerciseLibraryPage'));
+const WorkoutLogPage = lazy(() => import('./pages/WorkoutLogPage'));
+const ProgressPage = lazy(() => import('./pages/ProgressPage'));
+const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 function LoadingScreen() {
   return (
@@ -33,31 +35,37 @@ function AppRoutes() {
   const { currentUser, loading, authReady, needsProfile } = useApp();
 
   if (loading || !authReady) return <LoadingScreen />;
-  if (needsProfile) return <RoleSelectPage />;
-  if (!currentUser) return <LoginPage />;
 
-  const isTrainer = currentUser.role === 'trainer';
+  const isTrainer = currentUser?.role === 'trainer';
 
   return (
-    <div className="app-layout">
-      <Navigation />
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={isTrainer ? <TrainerDashboard /> : <ClientDashboard />} />
-          {isTrainer && <Route path="/clients" element={<ClientsPage />} />}
-          {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
-          <Route path="/plans" element={<WorkoutPlansPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/messages" element={<MessagesPage />} />
-          <Route path="/exercises" element={<ExerciseLibraryPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          {!isTrainer && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
-          {!isTrainer && <Route path="/log" element={<WorkoutLogPage />} />}
-          {!isTrainer && <Route path="/progress" element={<ProgressPage />} />}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </div>
+    <Suspense fallback={<LoadingScreen />}>
+      {needsProfile ? (
+        <RoleSelectPage />
+      ) : !currentUser ? (
+        <LoginPage />
+      ) : (
+        <div className="app-layout">
+          <Navigation />
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={isTrainer ? <TrainerDashboard /> : <ClientDashboard />} />
+              {isTrainer && <Route path="/clients" element={<ClientsPage />} />}
+              {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
+              <Route path="/plans" element={<WorkoutPlansPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/exercises" element={<ExerciseLibraryPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              {!isTrainer && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
+              {!isTrainer && <Route path="/log" element={<WorkoutLogPage />} />}
+              {!isTrainer && <Route path="/progress" element={<ProgressPage />} />}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+        </div>
+      )}
+    </Suspense>
   );
 }
 
