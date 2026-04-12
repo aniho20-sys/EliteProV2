@@ -356,10 +356,17 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 
 ## Deployment
 - **Primary**: Firebase Hosting at `https://elitepro-16718.web.app`
-- **CI**: GitHub Actions (`.github/workflows/firebase-hosting.yml`) deploys on push to `claude/fitness-app-features-LbxtG`
+- **CI branch**: `claude/fitness-app-features-LbxtG` — this is the single source of truth
+- **Auto-deploy**: GitHub Actions (`.github/workflows/firebase-hosting.yml`) triggers on every push to `claude/fitness-app-features-LbxtG` → builds + deploys to Firebase Hosting
 - **GitHub Pages**: `npm run build:gh` sets `base: '/EliteProV2/'`
 - **Firestore rules**: deploy with `npm run deploy:rules`
 - **Required secrets** (GitHub): `FIREBASE_SERVICE_ACCOUNT`
+
+## Git Workflow Rules
+- **Work directly on `claude/fitness-app-features-LbxtG`** — do NOT create new branches
+- All changes must be committed and pushed to `claude/fitness-app-features-LbxtG`
+- If work was done on a separate branch, merge it into `claude/fitness-app-features-LbxtG` before considering it complete
+- Pushing to `claude/fitness-app-features-LbxtG` automatically triggers Firebase Hosting deployment via CI
 
 ## Key Conventions for AI Assistants
 1. **Never bypass AppContext** — all Firestore reads/writes must go through context functions, not direct `db` imports in components
