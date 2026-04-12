@@ -12,6 +12,7 @@ export default function MessagesPage() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
+  const prevContactRef = useRef(null);
 
   // Get contacts
   let contacts;
@@ -38,14 +39,18 @@ export default function MessagesPage() {
     return msgs[msgs.length - 1];
   };
 
+  const contactMessages = selectedContact ? getContactMessages(selectedContact) : [];
+  const selectedContactUser = selectedContact ? (getClient(selectedContact) || data.users.find(u => u.id === selectedContact)) : null;
+
   useEffect(() => {
-    if (selectedContact) {
-      // Best-effort; swallow errors to avoid unhandled rejections
-      Promise.resolve(markMessagesRead(currentUser.id, selectedContact)).catch(() => { /* ignore */ });
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (!selectedContact) return;
+    Promise.resolve(markMessagesRead(currentUser.id, selectedContact)).catch(() => {});
+    // Instant jump when switching contacts, smooth scroll for new messages
+    const behavior = prevContactRef.current !== selectedContact ? 'instant' : 'smooth';
+    prevContactRef.current = selectedContact;
+    chatEndRef.current?.scrollIntoView({ behavior });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedContact, messages.length]);
+  }, [selectedContact, contactMessages.length]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -66,9 +71,6 @@ export default function MessagesPage() {
       setSending(false);
     }
   };
-
-  const contactMessages = selectedContact ? getContactMessages(selectedContact) : [];
-  const selectedContactUser = selectedContact ? (getClient(selectedContact) || data.users.find(u => u.id === selectedContact)) : null;
 
   return (
     <div>
