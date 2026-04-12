@@ -1370,6 +1370,26 @@ tr:hover { background: var(--bg-card-hover); }
   background: rgba(239, 71, 111, 0.15);
   transform: translateY(-1px);
 }
+.btn-add-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-full);
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+.btn-add-link:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  border-style: solid;
+  background: var(--primary-glow);
+}
 .btn-link-ref {
   display: inline-flex;
   align-items: center;

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX } from 'lucide-react';
+import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX, Link2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
@@ -16,8 +16,18 @@ export default function ExerciseLibraryPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingEx, setEditingEx] = useState(null);
   const [form, setForm] = useState({ name: '', muscle: '', equipment: '', description: '', videoUrl: '' });
+  const [focusUrl, setFocusUrl] = useState(false);
+  const urlInputRef = useRef(null);
 
   const isYouTube = (url) => /youtu\.?be/i.test(url);
+
+  useEffect(() => {
+    if (showModal && focusUrl && urlInputRef.current) {
+      // Small delay to let modal animation finish before focusing
+      const t = setTimeout(() => { urlInputRef.current?.focus(); }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [showModal, focusUrl]);
 
   const filtered = exercises.filter(e => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -27,14 +37,24 @@ export default function ExerciseLibraryPage() {
   });
 
   const openAdd = () => {
+    setFocusUrl(false);
     setEditingEx(null);
     setForm({ name: '', muscle: muscleGroups[0], equipment: equipmentTypes[0], description: '', videoUrl: '' });
     setShowModal(true);
   };
 
   const openEdit = (ex) => {
+    setFocusUrl(false);
     setEditingEx(ex);
     setForm({ name: ex.name, muscle: ex.muscle, equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
+    setShowModal(true);
+  };
+
+  // Opens edit modal with URL field auto-focused
+  const openEditAtUrl = (ex) => {
+    setEditingEx(ex);
+    setForm({ name: ex.name, muscle: ex.muscle, equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
+    setFocusUrl(true);
     setShowModal(true);
   };
 
@@ -107,6 +127,11 @@ export default function ExerciseLibraryPage() {
                   </a>
                 )
               )}
+              {isTrainer && !ex.videoUrl && (
+                <button className="btn btn-sm btn-add-link" onClick={() => openEditAtUrl(ex)}>
+                  <Link2 size={13} /> Add Link
+                </button>
+              )}
               {isTrainer && (
                 <div className="exercise-trainer-actions">
                   <button className="btn-icon" title="Edit" onClick={() => openEdit(ex)}><Pencil size={15} /></button>
@@ -165,6 +190,7 @@ export default function ExerciseLibraryPage() {
                   </span>
                 </label>
                 <input
+                  ref={urlInputRef}
                   className="form-input"
                   value={form.videoUrl}
                   onChange={e => setForm({ ...form, videoUrl: e.target.value })}
