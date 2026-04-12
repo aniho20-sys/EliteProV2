@@ -41,9 +41,9 @@ service cloud.firestore {
     }
 
     // ── Body Stats ──
-    // Doc ID = clientId; pragmatic: any authed can read, write only by owner or their trainer
+    // Doc ID = clientId; only the client themselves or their trainer can read/write
     match /bodyStats/{clientId} {
-      allow read: if isAuth();
+      allow read: if isOwner(clientId) || isTrainerOf(clientId);
       allow write: if isOwner(clientId) || isTrainerOf(clientId);
       allow delete: if isOwner(clientId);
     }
@@ -84,9 +84,9 @@ service cloud.firestore {
     }
 
     // ── Messages ──
-    // Any authed can read (collection listener); write rules remain per-doc strict.
+    // Only sender and recipient can read their messages.
     match /messages/{msgId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
       allow create: if isAuth() && request.resource.data.from == request.auth.uid;
       allow update: if isAuth() && resource.data.to == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
