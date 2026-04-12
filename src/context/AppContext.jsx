@@ -26,9 +26,9 @@ const DEMO_COACH_EMAIL = 'coach@elitepro.com';
 // Generate a short 6-char invite code
 function generateInviteCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I/O/0/1
-  let code = '';
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
+  const arr = new Uint8Array(6);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, n => chars[n % chars.length]).join('');
 }
 
 export function AppProvider({ children }) {
