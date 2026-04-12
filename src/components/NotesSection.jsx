@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Send } from 'lucide-react';
 
 export default function NotesSection({ clientId }) {
-  const { currentUser, getMessages, sendMessage, getClient, markMessagesRead, data } = useApp();
+  const { currentUser, getMessages, sendMessage, markMessagesRead, data } = useApp();
   const [text, setText] = useState('');
   const listRef = useRef(null);
 

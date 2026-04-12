@@ -20,7 +20,7 @@ export default function RoleSelectPage() {
     setSaving(true);
     try {
       await completeProfile(role, name.trim(), inviteCode.trim() || null);
-    } catch (err) {
+    } catch {
       setError('Failed to create profile. Please try again.');
     } finally {
       setSaving(false);

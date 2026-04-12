@@ -66,6 +66,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!firebaseUser) {
       // Not authed: reset state and mark as non-loading
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
       setWorkoutLogs([]); setSchedule([]); setMessages([]); setExercises([]);
       loadedRef.current = new Set();
@@ -125,6 +126,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!firebaseUser) return;
     const profile = users.find(u => u.id === firebaseUser.uid);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (profile) setCurrentUser(profile);
   }, [users, firebaseUser]);
 
@@ -510,7 +512,7 @@ export function AppProvider({ children }) {
   const getExercises = () => exercises.length > 0 ? exercises : defaultExercises;
 
   const addExercise = async (exercise) => {
-    const newEx = { ...exercise, id: `ex-${Date.now()}` };
+    const newEx = { ...exercise, id: `ex-${Date.now()}`, trainerId: currentUser?.id };
     await setDoc(doc(db, 'exercises', newEx.id), newEx);
     return newEx;
   };
@@ -538,11 +540,11 @@ export function AppProvider({ children }) {
     });
     // Delete plans/logs/schedule/messages created for this trainer
     workoutPlans.filter(p => p.trainerId === uid).forEach(p => batch.delete(doc(db, 'workoutPlans', p.id)));
-    workoutLogs.filter(l => l.id.startsWith(`${uid}-`)).forEach(l => {
+    workoutLogs.filter(l => l.id.startsWith(`${uid}-`)).forEach(() => {
       // Can't delete logs per rules; skip
     });
     schedule.filter(s => s.trainerId === uid).forEach(s => batch.delete(doc(db, 'schedule', s.id)));
-    messages.filter(m => m.id.startsWith(`${uid}-`)).forEach(m => {
+    messages.filter(m => m.id.startsWith(`${uid}-`)).forEach(() => {
       // Can't delete messages per rules; skip
     });
     try {
@@ -577,4 +579,5 @@ export function AppProvider({ children }) {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useApp = () => useContext(AppContext);

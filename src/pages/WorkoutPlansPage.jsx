@@ -12,6 +12,7 @@ export default function WorkoutPlansPage() {
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const isYouTube = (url) => /youtu\.?be/i.test(url);
+  const isSafeUrl = (url) => /^https?:\/\//i.test(url.trim());
   const clients = isTrainer ? getClients(currentUser.id) : [];
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
 
@@ -24,6 +25,8 @@ export default function WorkoutPlansPage() {
   const [addLinkModal, setAddLinkModal] = useState(null); // { exerciseId, name }
   const [addLinkUrl, setAddLinkUrl] = useState('');
   const [savingLink, setSavingLink] = useState(false);
+  const [deletePlanModal, setDeletePlanModal] = useState(null); // planId
+  const [deleting, setDeleting] = useState(false);
 
   // Custom exercise form state
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -240,6 +243,20 @@ export default function WorkoutPlansPage() {
     setShowCreate(true);
   };
 
+  const handleDeletePlan = async () => {
+    if (!deletePlanModal) return;
+    setDeleting(true);
+    try {
+      await deleteWorkoutPlan(deletePlanModal);
+      toast('Plan deleted', 'error');
+      setDeletePlanModal(null);
+    } catch {
+      toast('Failed to delete plan', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleSaveLink = async (e) => {
     e.preventDefault();
     if (!addLinkModal) return;
@@ -297,7 +314,7 @@ export default function WorkoutPlansPage() {
                   {isTrainer && (
                     <>
                       <button className="btn-icon" title="Duplicate" onClick={() => duplicatePlan(p)}><Copy size={16} /></button>
-                      <button className="btn-icon" onClick={() => { deleteWorkoutPlan(p.id); toast('Plan deleted', 'error'); }} title="Delete" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
+                      <button className="btn-icon" onClick={() => setDeletePlanModal(p.id)} title="Delete" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
                     </>
                   )}
                 </div>
@@ -310,7 +327,7 @@ export default function WorkoutPlansPage() {
                   {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                   <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
-                  {exData?.videoUrl ? (
+                  {exData?.videoUrl && isSafeUrl(exData.videoUrl) ? (
                     isYouTube(exData.videoUrl) ? (
                       <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
                         <Play size={14} />
@@ -333,6 +350,19 @@ export default function WorkoutPlansPage() {
         })
       )}
 
+      {deletePlanModal && (
+        <div className="modal-overlay" onClick={() => setDeletePlanModal(null)}>
+          <div className="modal" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Delete Plan</h3>
+            <p className="text-sm text-muted mb-16">This will permanently delete this workout plan. This cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setDeletePlanModal(null)} disabled={deleting}>Cancel</button>
+              <button className="btn btn-danger" onClick={handleDeletePlan} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {addLinkModal && (
         <div className="modal-overlay" onClick={() => setAddLinkModal(null)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -348,7 +378,7 @@ export default function WorkoutPlansPage() {
                   onChange={e => setAddLinkUrl(e.target.value)}
                   placeholder="YouTube, Instagram, article link…"
                 />
-                {addLinkUrl && (
+                {addLinkUrl && isSafeUrl(addLinkUrl) && (
                   <a href={addLinkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
                     {isYouTube(addLinkUrl) ? <Play size={12} /> : <ExternalLink size={12} />}
                     {isYouTube(addLinkUrl) ? 'Preview YouTube link' : 'Preview link'}

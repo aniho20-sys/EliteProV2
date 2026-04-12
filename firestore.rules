@@ -94,10 +94,14 @@ service cloud.firestore {
     }
 
     // ── Exercises ──
-    // Shared library: any authed can read; trainers can manage.
+    // Any authed can read; trainer can create their own; update/delete only by owner.
+    // Legacy exercises without trainerId can be updated/deleted by any trainer.
     match /exercises/{exId} {
       allow read: if isAuth();
-      allow create, update, delete: if isTrainer();
+      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if isTrainer() && (
+        !('trainerId' in resource.data) || resource.data.trainerId == request.auth.uid
+      );
     }
   }
 }

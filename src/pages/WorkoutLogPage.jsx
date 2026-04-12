@@ -175,7 +175,6 @@ export default function WorkoutLogPage() {
                   </div>
                   {l.entries.map((entry, i) => {
                     const hadPR = wasPRAtTime(l, entry);
-                    const exercise = getExercise(entry.exerciseId);
                     return (
                     <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''}`}>
                       <span className="plan-exercise-name">
@@ -183,7 +182,7 @@ export default function WorkoutLogPage() {
                         {getExerciseName(entry.exerciseId)}
                       </span>
                       <span className="plan-exercise-detail">
-                        {entry.sets.map((s, j) => `${s.weight}kg x ${s.reps}`).join(' | ')}
+                        {entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
                       </span>
                       {hadPR && <span className="tag tag-warning" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>PR</span>}
                     </div>

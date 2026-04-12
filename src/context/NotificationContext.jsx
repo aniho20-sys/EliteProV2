@@ -12,13 +12,14 @@ import { useToast } from './ToastContext';
 const VAPID_KEY = '';
 
 const NotificationContext = createContext();
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotifications = () => useContext(NotificationContext);
 
 export function NotificationProvider({ children }) {
   const { currentUser } = useApp();
   const toast = useToast();
   const toastRef = useRef(toast);
-  toastRef.current = toast;
+  useEffect(() => { toastRef.current = toast; });
 
   const [permission, setPermission] = useState('default');
   const [supported, setSupported] = useState(false);
@@ -34,13 +35,7 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
-  // Auto-register token if permission already granted
-  useEffect(() => {
-    if (!supported || permission !== 'granted' || !currentUser || !VAPID_KEY) return;
-    setupMessaging(currentUser.id);
-  }, [supported, permission, currentUser]);
-
-  const setupMessaging = async (userId) => {
+  const setupMessaging = useCallback(async (userId) => {
     try {
       const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
       const messaging = getMessaging(app);
@@ -57,7 +52,14 @@ export function NotificationProvider({ children }) {
     } catch (err) {
       console.error('FCM setup failed:', err);
     }
-  };
+  }, []);
+
+  // Auto-register token if permission already granted
+  useEffect(() => {
+    if (!supported || permission !== 'granted' || !currentUser || !VAPID_KEY) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setupMessaging(currentUser.id);
+  }, [supported, permission, currentUser, setupMessaging]);
 
   // Request notification permission
   const requestPermission = useCallback(async (userId) => {
@@ -87,7 +89,7 @@ export function NotificationProvider({ children }) {
       toastRef.current('Failed to enable notifications', 'error');
       return null;
     }
-  }, [supported, token]);
+  }, [supported, token, setupMessaging]);
 
   // Listen for foreground messages → show toast + browser notification
   useEffect(() => {

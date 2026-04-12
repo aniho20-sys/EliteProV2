@@ -20,6 +20,7 @@ export default function ExerciseLibraryPage() {
   const urlInputRef = useRef(null);
 
   const isYouTube = (url) => /youtu\.?be/i.test(url);
+  const isSafeUrl = (url) => /^https?:\/\//i.test(url.trim());
 
   useEffect(() => {
     if (showModal && focusUrl && urlInputRef.current) {
@@ -116,7 +117,7 @@ export default function ExerciseLibraryPage() {
             </div>
             <div className="exercise-desc">{ex.description}</div>
             <div className="exercise-actions mt-8">
-              {ex.videoUrl && (
+              {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
                 isYouTube(ex.videoUrl) ? (
                   <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video">
                     <Play size={14} /> Watch Demo
@@ -196,7 +197,7 @@ export default function ExerciseLibraryPage() {
                   onChange={e => setForm({ ...form, videoUrl: e.target.value })}
                   placeholder="YouTube, Instagram, article link…"
                 />
-                {form.videoUrl && (
+                {form.videoUrl && isSafeUrl(form.videoUrl) && (
                   <a href={form.videoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
                     {isYouTube(form.videoUrl) ? <Play size={12} /> : <ExternalLink size={12} />}
                     {isYouTube(form.videoUrl) ? 'Preview YouTube link' : 'Preview link'}
