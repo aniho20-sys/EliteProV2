@@ -27,11 +27,15 @@ ElitePro is a web-based fitness training platform for personal trainers and thei
 ```
 src/
 ├── components/
+│   ├── EmptyState.jsx      # Reusable empty state (icon + title + desc + CTA action)
 │   ├── ErrorBoundary.jsx   # React class error boundary (wraps entire app)
 │   ├── GlobalSearch.jsx    # Search bar: clients, exercises, plans
-│   └── Navigation.jsx      # Sidebar (desktop) + top header + bottom nav (mobile)
+│   ├── Navigation.jsx      # Sidebar (desktop) + top header + bottom nav (mobile)
+│   ├── NotesSection.jsx    # Client notes section component
+│   └── Skeleton.jsx        # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
 ├── context/
 │   ├── AppContext.jsx       # Global state + all Firestore/Auth operations
+│   ├── NotificationContext.jsx # FCM push notifications (code ready, needs Blaze deploy)
 │   ├── ThemeContext.jsx     # Light/dark theme toggle (persisted to localStorage)
 │   └── ToastContext.jsx     # Toast notification system (3s auto-dismiss)
 ├── data/
@@ -53,14 +57,22 @@ src/
 │   ├── ProgressPage.jsx        # Client: body stats tracking + charts
 │   └── ProfilePage.jsx         # User profile, invite code, account management
 ├── styles/
-│   └── index.css           # Global styles (CSS variables, all component styles)
+│   └── index.css           # Global styles (CSS variables, skeleton, empty states)
 ├── firebase.js             # Firebase init (db, auth exports)
 ├── App.jsx                 # Root: provider tree + routing
 └── main.jsx                # Entry point
+
+functions/                  # Cloud Functions (needs Blaze plan to deploy)
+├── index.js                # sendNotificationOnMessage + sendNotificationOnSchedule
+└── package.json
+
+public/
+├── firebase-messaging-sw.js # FCM background notification Service Worker
+└── manifest.json            # PWA manifest (needs proper icons)
 ```
 
 Top-level config files:
-- `firebase.json` — Firebase Hosting + Firestore rules config
+- `firebase.json` — Firebase Hosting + Firestore rules + Functions config
 - `firestore.rules` — Firestore security rules
 - `.github/workflows/firebase-hosting.yml` — CI deploy on push to `claude/fitness-app-features-LbxtG`
 - `vite.config.js` — Vite config with `base` path logic
@@ -69,7 +81,7 @@ Top-level config files:
 ## Firebase Configuration
 - **Project ID**: `elitepro-16718`
 - **Config**: hardcoded in `src/firebase.js` (public API key — safe for client-side apps)
-- **Services used**: Firestore (database), Firebase Auth (authentication)
+- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (code ready, not deployed), Cloud Functions (code ready, needs Blaze plan)
 - **Offline**: IndexedDB persistence enabled; app works without internet after first load
 
 ## Authentication Flow
@@ -277,6 +289,7 @@ data                         // raw { users, bodyStats, workoutPlans, workoutLog
 ### Other contexts
 - **ThemeContext**: `{ theme, toggleTheme }` — `'light'` | `'dark'`, persisted to `localStorage` key `elitepro_theme`, applied via `data-theme` attribute on `<html>`
 - **ToastContext**: `addToast(message, type?)` — `type` is `'success'` (default), `'error'`, or `'info'`; auto-dismisses after 3s
+- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready but requires Blaze plan + VAPID key to activate
 
 ## Routing
 Uses `HashRouter` (required for Firebase Hosting SPA + GitHub Pages compatibility).
@@ -312,6 +325,8 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - CSS variables defined on `:root` and overridden for `[data-theme="dark"]`
 - Key variables: `--bg`, `--surface`, `--border`, `--text`, `--text-muted`, `--primary`, `--accent`, `--danger`
 - Utility classes: `card`, `btn`, `btn-primary`, `btn-outline`, `btn-danger`, `btn-sm`, `btn-icon`, `form-input`, `form-textarea`, `form-label`, `form-group`, `form-row`, `tag`, `tag-primary`, `tag-accent`, `modal`, `modal-overlay`, `modal-actions`, `page-header`, `page-title`
+- Empty state classes: `empty-state`, `empty-state-compact`, `empty-state-icon-wrap`, `empty-state-title`, `empty-state-desc`, `empty-state-action`
+- Skeleton classes: `skeleton-line`, `skeleton-circle`, `skeleton-card` (uses `skeleton-shimmer` keyframe animation)
 - Layout: `.app-layout` (sidebar + main), `.sidebar`, `.mobile-header`, `.bottom-nav`
 - No CSS-in-JS, no Tailwind — extend `index.css` for new styles
 
@@ -320,8 +335,12 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - State: local `useState` for UI state, `useApp()` for data
 - Always call `useApp()` to access data and actions — never import `db` or `auth` directly in pages
 - Async operations in event handlers: `setLoading(true)` → `try/catch` → `setLoading(false)` in `finally`
+- **All Firestore writes MUST be awaited** with try/catch — never fire-and-forget (audited in Phase 1 Step 8)
+- **Double-submit protection**: use `saving`/`sending` state to disable buttons during async ops
 - Errors shown inline (not thrown) in forms; use `useToast()` for non-form feedback
 - `useNavigate` from react-router-dom for programmatic navigation
+- **Empty states**: use `<EmptyState icon={...} title="..." description="..." action={{...}} />` — never inline empty markup
+- **Loading states**: use `<SkeletonCard />`, `<SkeletonList />`, `<SkeletonStatGrid />` from `Skeleton.jsx`
 
 ## Invite Code System
 - Trainers have a unique 6-char uppercase alphanumeric invite code (stored on their Firestore profile)
@@ -353,6 +372,11 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 8. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
 9. **No localStorage for app data** — only `ThemeContext` uses localStorage; all app state lives in Firestore
 10. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
+11. **Always await Firestore writes** — wrap in try/catch with error toast; never fire-and-forget
+12. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
+13. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
+14. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
+15. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists but needs Blaze plan + VAPID key before deployment
 
 ## Team Structure & Working Rules
 
