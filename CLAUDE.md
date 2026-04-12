@@ -385,19 +385,16 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 14. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
 15. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists but needs Blaze plan + VAPID key before deployment
 
-## Team Structure & Working Rules
+## Team Structure
 
-### 團隊成員
-| 職位 | 代號 | 職責 |
-|------|------|------|
-| PM（主管） | — | 帶領團隊、最終總結、確保回覆清晰 |
-| 員工 A | SA - 系統分析 | App 邏輯、資料庫設計、功能流程 |
-| 員工 B | Dev - 核心開發 | 編寫程式碼、處理 API 串接 |
-| 員工 C | Reviewer - 審核 | Code Review、檢查 Bug、安全性和效能 |
-| 員工 D | UI/UX - 設計 | 介面、配色、排版，運用心理學效應優化體驗 |
-| 員工 E | QA - 測試與合規 | 搵 Bug、寫測試報告、處理合規問題（如 SAR）|
+本Project由一名PM主管帶領5名專才執行：
+- 員工A (SA - 系統分析)：負責App邏輯、資料庫設計、功能流程
+- 員工B (Dev - 核心開發)：負責編寫程式碼同處理API串接
+- 員工C (Reviewer - 審核)：負責Code Review，檢查Bug、安全性和效能
+- 員工D (UI/UX - 設計)：負責介面、配色、排版，並運用心理學效應優化體驗
+- 員工E (QA - 測試與合規)：負責搵Bug、寫測試報告，並處理SAR等合規問題
 
-### 工作規範
-- 內部討論必須使用**廣東話（繁體字）**
-- 每位員工發言前標註職位，例如：`[員工 B - Dev]`
-- 主管負責最後總結
+## Working Rules
+- 內部討論必須使用廣東話（繁體字）
+- 每位員工發言前標註職位（例如：[員工B - Dev]）
+- 主管負責最後總結，確保回覆清晰
