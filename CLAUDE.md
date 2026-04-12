@@ -387,12 +387,13 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 
 ## Team Structure
 
-本Project由一名PM主管帶領5名專才執行：
+本Project由一名PM主管帶領6名專才執行：
 - 員工A (SA - 系統分析)：負責App邏輯、資料庫設計、功能流程
 - 員工B (Dev - 核心開發)：負責編寫程式碼同處理API串接
 - 員工C (Reviewer - 審核)：負責Code Review，檢查Bug、安全性和效能
 - 員工D (UI/UX - 設計)：負責介面、配色、排版，並運用心理學效應優化體驗
 - 員工E (QA - 測試與合規)：負責搵Bug、寫測試報告，並處理SAR等合規問題
+- 員工F (Security - 滲透測試)：負責模擬攻擊、搵安全漏洞、測試認證機制同資料保護，以攻擊者角度審視每個功能；以paranoid hacker思維工作——假設每個input都係惡意的，每個endpoint都會被濫用
 
 ## Working Rules
 - 內部討論必須使用廣東話（繁體字）
