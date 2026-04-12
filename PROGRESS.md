@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-12
+> 最後更新：2026-04-12（Session 2）
 
 ---
 
@@ -17,12 +17,12 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] Trainer / Client 雙角色系統
 - [x] Trainer Dashboard（stats overview + weekly sessions chart + client activity）
 - [x] Client Dashboard（workout summary + body stats）
-- [x] Client 管理頁（搜尋、detail view、body stats、plans、logs）
-- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises）
+- [x] Client 管理頁（搜尋、detail view、body stats、plans、logs、**Remove Client with confirmation**）
+- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**）
 - [x] Workout Log（auto-fill last session、PR tracking）
 - [x] Schedule 日曆（date picker、conflict check、booking）
 - [x] In-app Messaging（unread badges、real-time sync）
-- [x] Exercise Library（search、filter by muscle/equipment、video links）
+- [x] Exercise Library（search、filter by muscle/equipment、**YouTube + 任意 URL 連結、+ Add Link 快速入口**）
 - [x] Body Stats / Progress 頁（SVG trend charts、chest/waist/hips/arms/legs）
 - [x] Profile 頁（edit profile、invite code、connect to trainer）
 - [x] Global Search（clients、plans、exercises）
@@ -75,7 +75,25 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 
 ---
 
-## 最近 Session 完成嘅工作（2026-04-12）
+## 最近 Session 完成嘅工作（2026-04-12 Session 2）
+
+### UI Bug Fixes（D + B）
+
+| # | 問題 | 修復 |
+|---|------|------|
+| 1 | iOS Safari 滑動體驗差，頁面難以拉到底 | `#root` 改用 `overflow-x: clip`（避免 scroll container BFC）；body 加 `-webkit-overflow-scrolling: touch`；modal 加 `overscroll-behavior: contain` |
+| 2 | Trainer 無法移除 Client | AppContext 新增 `removeClient()`（`updateDoc` 設 `trainerId: null`，繞過 Firestore 不能 delete user doc 限制）；ClientDetailPage 加確認 modal + `removing` double-submit 保護 |
+| 3 | Exercise Library 連結功能不易發現 | Card 無 URL 時顯示虛線「+ Add Link」按鈕（`btn-add-link` CSS）；點擊開 Edit modal 並 auto-focus URL 欄位（`useRef` + 150ms timeout）；非 YouTube URL 顯示藍色「Open Link」按鈕（`btn-link-ref` CSS）|
+| 4 | Workout Plans 頁完全無加連結入口 | 每條 exercise row 顯示「+ Add Link」按鈕（trainer only）；點擊彈出 mini modal 直接儲存；YouTube 顯示紅 Play icon，其他 URL 顯示藍 ExternalLink icon |
+
+### CLAUDE.md 更新（SA + PM）
+- 新增 `## Deployment` 詳細說明（CI branch、auto-deploy）
+- 新增 `## Git Workflow Rules`（禁止開新 branch、直接 work on CI branch）
+- 更新 `## Team Structure` + `## Working Rules`（按指定格式重寫）
+
+---
+
+## 最近 Session 完成嘅工作（2026-04-12 Session 1）
 
 ### Step 7：Loading Skeleton / Empty States（D + B）
 **新檔案：**
@@ -253,6 +271,10 @@ public/
 
 ### Git Commit History（最近）
 ```
+d866fd8 docs: update CLAUDE.md Team Structure & Working Rules sections
+d35dcd3 feat: Add "+ Add Link" button to exercises in Workout Plans view
+2cf9804 feat: Exercise Library — add link discoverability + non-YouTube URL support
+[prev]  fix: remove client feature + iOS scroll fix + CLAUDE.md deployment rules
 012ab02 feat: empty states with icons + schedule/message write audit fixes
 36f8190 feat: push notifications via FCM + Cloud Functions
 f83b6b2 refactor: per-set UX redesign with +New Set button
