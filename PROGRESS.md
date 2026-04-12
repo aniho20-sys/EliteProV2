@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-12（Session 2）
+> 最後更新：2026-04-12（Session 3）
 
 ---
 
@@ -351,11 +351,11 @@ Build time： 1.81s                  ✅
 ### 即時修（會議後新增）⚡
 | # | 任務 | 狀態 | 負責 |
 |---|------|------|------|
-| 1 | XSS：videoUrl 加 `javascript:` scheme 過濾 | 未開始 | F + B |
-| 2 | Firestore rules：exercises 加 trainer ownership check | 未開始 | F + A |
-| 3 | `deleteWorkoutPlan` 補 async/await + try/catch | 未開始 | C + B |
-| 4 | 清 22 個 lint errors | 未開始 | C + B |
-| 5 | Delete Plan 加確認 modal | 未開始 | D + B |
+| 1 | XSS：videoUrl whitelist `https?://` scheme | ✅ 完成 | F + B |
+| 2 | Firestore rules：exercises 加 trainer ownership check | ✅ 完成 | F + A |
+| 3 | `deleteWorkoutPlan` 補 async/await + try/catch | ✅ 完成 | C + B |
+| 4 | 清 22 個 lint errors | ✅ 完成（0 errors, 2 warnings） | C + B |
+| 5 | Delete Plan 加確認 modal | ✅ 完成 | D + B |
 
 ### Phase 2 — 品質提升
 | # | 任務 | 狀態 | 負責 |
