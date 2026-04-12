@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-12（Session 3）
+> 最後更新：2026-04-12（Session 4）
 
 ---
 
@@ -72,6 +72,20 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — Firebase Hosting 自動部署
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## 最近 Session 完成嘅工作（2026-04-12 Session 4）
+
+### Phase 2 任務（F + A + B）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | Firestore rules：messages read 收緊 | `allow read` 改為只有 sender/recipient（`from == uid \|\| to == uid`）；關閉 F1 漏洞 |
+| 2 | Firestore rules：bodyStats read 收緊 | `allow read` 改為 `isOwner(clientId) \|\| isTrainerOf(clientId)`；關閉 F2 漏洞 |
+| 3 | Bundle code-splitting（React.lazy） | App.jsx 14 個 pages 全改 lazy import + Suspense；主 bundle 809KB → **258KB**（gzip 238KB → **82KB**） |
+| 4 | Invite code 改 `crypto.getRandomValues()` | 取代 `Math.random()`，cryptographically secure；關閉 F5 漏洞 |
+| 5 | Schedule delete 功能 | AppContext 加 `deleteScheduleItem()`；SchedulePage 每個 session 加 Trash2 刪除鈕 + confirm modal + deleting state |
 
 ---
 
@@ -375,14 +389,14 @@ Build time： 1.81s                  ✅
 ### Phase 2 — 品質提升
 | # | 任務 | 狀態 | 負責 |
 |---|------|------|------|
-| 1 | Firestore rules：messages / bodyStats read 收緊 | 未開始 | F + A |
-| 2 | Bundle code-splitting（React.lazy per page）| 未開始 | B |
+| 1 | Firestore rules：messages / bodyStats read 收緊 | ✅ 完成 | F + A |
+| 2 | Bundle code-splitting（React.lazy per page）| ✅ 完成 | B |
 | 3 | Messages scroll-to-bottom | ✅ 完成 | D + B |
-| 4 | GDPR cascaded delete via Cloud Functions | 未開始 | E + B |
-| 5 | Invite code 改用 `crypto.getRandomValues()` | 未開始 | F + B |
-| 6 | 真機 QA：iPhone Safari + Android Chrome | 未開始 | E |
-| 7 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| 未開始 | B |
-| 8 | Schedule delete 功能 | 未開始 | B |
+| 4 | GDPR cascaded delete via Cloud Functions | ⏸️ 需 Blaze plan | E + B |
+| 5 | Invite code 改用 `crypto.getRandomValues()` | ✅ 完成 | F + B |
+| 6 | 真機 QA：iPhone Safari + Android Chrome | ⏸️ 需真機 | E |
+| 7 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| ⏸️ 需 Blaze plan | B |
+| 8 | Schedule delete 功能 | ✅ 完成 | B |
 
 ### Phase 3 — 加分項
 | # | 任務 | 狀態 |
