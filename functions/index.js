@@ -1,5 +1,6 @@
 /* global require, exports */
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onUserDeleted } = require('firebase-functions/v2/identity');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -44,6 +45,38 @@ async function sendPush(userId, tokens, notification, data) {
     });
   }
 }
+
+// ─── GDPR: Cascaded delete when Firebase Auth user is deleted ───
+// Triggered AFTER client-side deleteAccount() removes users/{uid} + bodyStats/{uid} + Auth user.
+// Admin SDK bypasses Firestore security rules, so it can delete messages + workoutLogs.
+exports.onAccountDelete = onUserDeleted(async (event) => {
+  const uid = event.data.uid;
+  const batch = db.batch();
+
+  // Collect all docs to delete (Admin SDK ignores security rules)
+  const [msgFrom, msgTo, logs, schedTrainer, schedClient, plans] = await Promise.all([
+    db.collection('messages').where('from', '==', uid).get(),
+    db.collection('messages').where('to', '==', uid).get(),
+    db.collection('workoutLogs').where('clientId', '==', uid).get(),
+    db.collection('schedule').where('trainerId', '==', uid).get(),
+    db.collection('schedule').where('clientId', '==', uid).get(),
+    db.collection('workoutPlans').where('trainerId', '==', uid).get(),
+  ]);
+
+  msgFrom.docs.forEach(d => batch.delete(d.ref));
+  msgTo.docs.forEach(d => batch.delete(d.ref));
+  logs.docs.forEach(d => batch.delete(d.ref));
+  schedTrainer.docs.forEach(d => batch.delete(d.ref));
+  schedClient.docs.forEach(d => batch.delete(d.ref));
+  plans.docs.forEach(d => batch.delete(d.ref));
+
+  // exercises owned by this trainer
+  const exercises = await db.collection('exercises').where('trainerId', '==', uid).get();
+  exercises.docs.forEach(d => batch.delete(d.ref));
+
+  await batch.commit();
+  console.log(`[GDPR] Deleted all data for uid=${uid}`);
+});
 
 // ─── New Message → Push to recipient ───
 exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) => {
