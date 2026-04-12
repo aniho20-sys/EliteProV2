@@ -1,16 +1,17 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, muscleGroups } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, muscleGroups } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
+  const isYouTube = (url) => /youtu\.?be/i.test(url);
   const clients = isTrainer ? getClients(currentUser.id) : [];
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
 
@@ -20,6 +21,9 @@ export default function WorkoutPlansPage() {
   const exFilterRef = useRef('');
   const [dragIdx, setDragIdx] = useState(null);
   const [creatingCustom, setCreatingCustom] = useState(false);
+  const [addLinkModal, setAddLinkModal] = useState(null); // { exerciseId, name }
+  const [addLinkUrl, setAddLinkUrl] = useState('');
+  const [savingLink, setSavingLink] = useState(false);
 
   // Custom exercise form state
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -236,6 +240,22 @@ export default function WorkoutPlansPage() {
     setShowCreate(true);
   };
 
+  const handleSaveLink = async (e) => {
+    e.preventDefault();
+    if (!addLinkModal) return;
+    setSavingLink(true);
+    try {
+      await updateExercise(addLinkModal.exerciseId, { videoUrl: addLinkUrl });
+      toast('Link saved');
+      setAddLinkModal(null);
+      setAddLinkUrl('');
+    } catch {
+      toast('Failed to save link', 'error');
+    } finally {
+      setSavingLink(false);
+    }
+  };
+
   const filteredExercises = exerciseLibrary.filter(e =>
     e.name.toLowerCase().includes(exFilter.toLowerCase()) || e.muscle.toLowerCase().includes(exFilter.toLowerCase())
   );
@@ -290,17 +310,60 @@ export default function WorkoutPlansPage() {
                   {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                   <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
-                  {exData?.videoUrl && (
-                    <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
-                      <Play size={14} />
-                    </a>
-                  )}
+                  {exData?.videoUrl ? (
+                    isYouTube(exData.videoUrl) ? (
+                      <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
+                        <Play size={14} />
+                      </a>
+                    ) : (
+                      <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
+                        <ExternalLink size={14} />
+                      </a>
+                    )
+                  ) : (isTrainer && exData && (
+                    <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}>
+                      <Link2 size={13} /> Add Link
+                    </button>
+                  ))}
                 </div>
                 );
               })}
             </div>
           );
         })
+      )}
+
+      {addLinkModal && (
+        <div className="modal-overlay" onClick={() => setAddLinkModal(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Add Demo Link</h3>
+            <p className="text-sm text-muted mb-16">{addLinkModal.name}</p>
+            <form onSubmit={handleSaveLink}>
+              <div className="form-group">
+                <label className="form-label">Video / Demo URL</label>
+                <input
+                  className="form-input"
+                  autoFocus
+                  value={addLinkUrl}
+                  onChange={e => setAddLinkUrl(e.target.value)}
+                  placeholder="YouTube, Instagram, article link…"
+                />
+                {addLinkUrl && (
+                  <a href={addLinkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
+                    {isYouTube(addLinkUrl) ? <Play size={12} /> : <ExternalLink size={12} />}
+                    {isYouTube(addLinkUrl) ? 'Preview YouTube link' : 'Preview link'}
+                  </a>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setAddLinkModal(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={!addLinkUrl.trim() || savingLink}>
+                  {savingLink ? 'Saving…' : 'Save Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {showCreate && (
