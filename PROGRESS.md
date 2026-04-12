@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-12（Session 5）
+> 最後更新：2026-04-12（Session 6）
 
 ---
 
@@ -79,6 +79,142 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Phase 3 前全員會議（2026-04-12 Session 6）
+
+> Phase 3 執行前，全隊對 app 現況進行評估。每位員工列出 3 個好嘅地方、3 個唔好嘅地方、2 個有問題嘅地方，PM 最後總結解決方案。
+
+---
+
+### [員工A - SA] 系統架構評估
+
+**👍 3個好：**
+1. **實時同步** — Firestore `onSnapshot` 做得好，多裝置即時更新，trainer 同 client 睇到一樣嘅資料
+2. **離線支援** — IndexedDB persistence 設計正確，網絡斷咗照用
+3. **身份驗證完整** — Google 登入、Email 登入、Demo 模式三路齊備，Auth flow 清晰
+
+**👎 3個唔好：**
+1. **Firestore listener 冇 filter** — 訂閱整個 collection，用戶多咗會讀取大量無關數據，scalability 差
+2. **Exercise Library 無隔離** — 所有 trainer 睇同一堆 exercises，互相混雜
+3. **冇 pagination** — workout logs、messages 唔限數量全部 load，長遠會卡
+
+**⚠️ 2個有問題：**
+1. `workoutLogs` 同 `messages` **無法刪除**（Firestore rules 設定），GDPR 刪帳戶時靠 Cloud Function 繞過，但日常清理做唔到
+2. **Schedule 冇驗證 clientId owner**，理論上可以 assign 任何人做 client
+
+---
+
+### [員工B - Dev] 程式碼實作評估
+
+**👍 3個好：**
+1. **Code splitting 成功** — 809KB → 258KB，lazy loading 做得正，初次載入快咗 3 倍
+2. **AppContext 架構統一** — 所有 Firestore 操作集中管理，唔洗係 component 直接 import db
+3. **Toast + EmptyState + Skeleton** — UI feedback 系統完整，用戶體驗一致
+
+**👎 3個唔好：**
+1. **IDs 用 `Date.now()`** — 高並發下有碰撞風險，應改用 `crypto.randomUUID()`
+2. **`functions/index.js` 批次 delete 冇限制** — `onAccountDelete` 用 batch 但 Firebase batch 上限 500 docs，大帳戶會 crash
+3. **Push notification 只有 new message trigger** — schedule 提醒本來有寫 Cloud Function 但未部署
+
+**⚠️ 2個有問題：**
+1. **Demo reset 流程殘缺** — `resetData()` 無法刪 workoutLogs/messages，demo 數據越積越多
+2. **`markLoaded` 硬編碼 count=7** — 新增 collection listener 時容易忘記改呢個數字，靜默 bug
+
+---
+
+### [員工C - Reviewer] Code Review 評估
+
+**👍 3個好：**
+1. **Error boundary 存在** — React class ErrorBoundary 包住整個 app，crash 唔會白頁
+2. **Double-submit protection** — 所有 async 操作都有 `saving`/`sending` state，冇重複提交問題
+3. **Firestore rules 有基本保護** — auth required、role check、ownership check 都有
+
+**👎 3個唔好：**
+1. **Firestore rules 讀取太寬鬆** — `bodyStats`、`workoutLogs`、`schedule` 全部 `any auth can read`，A 的 trainer 可以讀 B client 的數據
+2. **`connectToTrainer` 無 race condition 保護** — 兩個人同時用同一 invite code 可能出問題
+3. **`deleteAccount()` 冇等 Cloud Function 完成** — 前端刪 Auth user，但後端 GDPR Function 係 async trigger，時序問題
+
+**⚠️ 2個有問題：**
+1. **exercises collection 寫入規則剛加 `trainerId` check**，但舊數據冇 `trainerId` 字段，update/delete 會被 block
+2. **`loadedRef` 唔係 React state**，某些 edge case 下 `loading` 可能唔會更新 UI
+
+---
+
+### [員工D - UI/UX] 介面體驗評估
+
+**👍 3個好：**
+1. **Light/dark theme** — CSS variables 設計優雅，切換流暢，持久化到 localStorage
+2. **Mobile navigation** — bottom nav + sidebar 雙佈局，手機電腦都適配
+3. **Skeleton loading** — 有 loading state 唔係白頁，體驗專業
+
+**👎 3個唔好：**
+1. **Progress 圖表太簡陋** — 用原生 `<canvas>` 手寫，缺 interactivity，對比 Fitbit/MyFitnessPal 差好遠
+2. **唔支援中文/廣東話** — 所有介面英文，目標用戶係廣東話用家
+3. **PWA icon 係純色方塊** — 192×192 純藍色，冇品牌感，App Store / Home Screen 睇落業餘
+
+**⚠️ 2個有問題：**
+1. **Messages 頁面冇顯示 timestamp** — 唔知幾時發嘅訊息，用戶體驗差
+2. **Workout log 入面 exercise name 要查 library** — 顯示 `exerciseId` 而唔係 name，用戶睇唔明
+
+---
+
+### [員工E - QA] 測試與合規評估
+
+**👍 3個好：**
+1. **Demo coach 功能** — 一鍵試用，seed 數據齊全，新用戶 onboarding 順暢
+2. **Invite code 系統** — 6 位英數字母，cryptographically secure（已修復），trainer-client 連接簡單
+3. **CI/CD 完整** — push 到 branch 自動 deploy hosting + functions，唔使手動操作
+
+**👎 3個唔好：**
+1. **冇任何 automated tests** — 零 unit tests、零 integration tests，改一樣嘢唔知有冇 break 其他
+2. **錯誤訊息唔夠 friendly** — Firebase error codes 直接 show 出來（如 `auth/wrong-password`），用戶唔明
+3. **Session 過期冇 graceful 處理** — Firebase token expire 後某些操作會 silent fail
+
+**⚠️ 2個有問題：**
+1. **Trainer 刪帳戶後，佢嘅 clients 變成孤兒** — `trainerId` 指向唔存在嘅 user，clients 頁面可能 crash
+2. **`bodyStats` 用 entries array** — 無限增長，Firestore doc limit 1MB，積累幾年 stats 會超限
+
+---
+
+### [員工F - Security] 滲透測試評估
+
+**👍 3個好：**
+1. **XSS 防護已加** — videoUrl 用 `isSafeUrl()` whitelist `https?://`，防止 `javascript:`/`data:`/`vbscript:` 注入
+2. **Invite code 已改用 `crypto.getRandomValues()`** — 唔可以被預測
+3. **Firebase Auth 做 authentication** — 唔係自己管密碼，delegated 到 Google，安全性有保障
+
+**👎 3個唔好：**
+1. **Firebase config hardcoded 係 client-side** — API key 雖然係 public 設計，但 Project ID / Sender ID 全部 exposed，Firestore rules 係唯一防線，一旦 rules 有漏洞就係大問題
+2. **Firestore rules 讀取太鬆** — 任何登入用戶可以讀所有人嘅 schedule、workoutLogs，privacy 問題
+3. **Cloud Functions 冇 rate limiting** — `sendNotificationOnMessage` 可被濫用，每條 message 觸發一次 FCM call
+
+**⚠️ 2個有問題：**
+1. **`findTrainerByCode(code)` 全表掃描** — 攻擊者可以暴力枚舉所有 invite codes，搵出所有 trainer
+2. **Demo 帳戶 `coach@elitepro.com` 係固定密碼 `demo123`** — 任何人都可以登入 demo，如果 rules 有漏洞就可以讀真實數據
+
+---
+
+### [PM 總結] Phase 3 解決方案優先排序
+
+| 優先級 | 問題 | 解決方案 |
+|--------|------|----------|
+| 🔴 高 | Firestore rules 讀取太鬆 | 收緊 rules：只有本人/trainer 可讀自己數據 |
+| 🔴 高 | Exercise Library 冇隔離 | 加 trainerId filter，每個 trainer 獨立 |
+| 🔴 高 | Firestore listeners 冇 filter | 加 query filter，只讀相關數據 |
+| 🟡 中 | Schedule clientId ownership | Firestore rules 加驗證 |
+| 🟡 中 | bodyStats entries array 上限 | 遷移到 subcollection（長遠方案）|
+| 🟡 中 | Progress 圖表簡陋 | 換 Recharts，加互動 |
+| 🟢 低 | 中文 i18n | 加語言切換 |
+| 🟢 低 | PWA icon 優化 | 加真實 logo |
+
+**Phase 3 執行順序：**
+1. Firestore rules 收緊（安全問題，優先）
+2. Exercise isolation + listener query filter（架構改動，影響其他功能）
+3. Schedule ownership validation（安全）
+4. Recharts 進度頁（用戶體驗）
+5. i18n（如有時間）
 
 ---
 
