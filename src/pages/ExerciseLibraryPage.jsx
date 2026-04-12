@@ -17,6 +17,8 @@ export default function ExerciseLibraryPage() {
   const [editingEx, setEditingEx] = useState(null);
   const [form, setForm] = useState({ name: '', muscle: '', equipment: '', description: '', videoUrl: '' });
 
+  const isYouTube = (url) => /youtu\.?be/i.test(url);
+
   const filtered = exercises.filter(e => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (muscleFilter && e.muscle !== muscleFilter) return false;
@@ -95,9 +97,15 @@ export default function ExerciseLibraryPage() {
             <div className="exercise-desc">{ex.description}</div>
             <div className="exercise-actions mt-8">
               {ex.videoUrl && (
-                <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video">
-                  <Play size={14} /> Watch Demo
-                </a>
+                isYouTube(ex.videoUrl) ? (
+                  <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video">
+                    <Play size={14} /> Watch Demo
+                  </a>
+                ) : (
+                  <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link-ref">
+                    <ExternalLink size={14} /> Open Link
+                  </a>
+                )
               )}
               {isTrainer && (
                 <div className="exercise-trainer-actions">
@@ -153,13 +161,19 @@ export default function ExerciseLibraryPage() {
               <div className="form-group">
                 <label className="form-label">
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    YouTube Video URL <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
+                    Video / Demo URL <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
                   </span>
                 </label>
-                <input className="form-input" value={form.videoUrl} onChange={e => setForm({ ...form, videoUrl: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." />
+                <input
+                  className="form-input"
+                  value={form.videoUrl}
+                  onChange={e => setForm({ ...form, videoUrl: e.target.value })}
+                  placeholder="YouTube, Instagram, article link…"
+                />
                 {form.videoUrl && (
-                  <a href={form.videoUrl} target="_blank" rel="noopener noreferrer" className="text-sm" style={{ color: 'var(--primary)', marginTop: 4, display: 'inline-block' }}>
-                    Preview link <ExternalLink size={10} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                  <a href={form.videoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
+                    {isYouTube(form.videoUrl) ? <Play size={12} /> : <ExternalLink size={12} />}
+                    {isYouTube(form.videoUrl) ? 'Preview YouTube link' : 'Preview link'}
                   </a>
                 )}
               </div>
