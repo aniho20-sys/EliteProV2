@@ -131,38 +131,193 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 
 ---
 
+## 全員會議紀錄（2026-04-12）
+
+> 針對 app 所有面向嘅全隊狀況匯報，共 6 名員工 + PM 參與。
+
+### [員工A - SA] 系統架構
+
+| 項目 | 狀況 | 備註 |
+|------|------|------|
+| Firestore 7 collections + onSnapshot | ✅ 穩健 | AppContext 係唯一入口，冇頁面直接碰 `db` |
+| Collection 監聽冇 query filter | ⚠️ 風險 | 監聽整個 collection，所有資料落晒 client 記憶體，scale 後係瓶頸 |
+| Exercises 所有 trainer 共享 | ⚠️ 設計缺陷 | A trainer 改動作名，B trainer 都受影響 |
+| `markLoaded` 靜默失敗處理 | ℹ️ 可接受 | 失敗當 loaded，user 唔知成功定失敗，但防止 stuck loading |
+| `Date.now()` ID collision | ℹ️ 極低風險 | 同一毫秒兩個寫操作理論上會 collision |
+
+整體評級：**B+**，可以上線，規模化前需要 query-level filtering。
+
+---
+
+### [員工B - Dev] 程式碼實作
+
+**Build 狀況：**
+```
+JS bundle：807 KB（gzip 238 KB）  ⚠️ 超標（Vite 警告 >500KB）
+CSS：        42 KB（gzip   8 KB）  ✅ 正常
+Build time： 1.81s                  ✅
+```
+
+14 頁面全部 eager-loaded，冇任何 `React.lazy`。
+
+**發現問題：**
+- `WorkoutPlansPage.jsx:280` — `deleteWorkoutPlan(p.id)` **fire-and-forget**，冇 `await`，冇 `try/catch`，toast 無論成功定失敗都出（Phase 1 Step 8 審計漏咗）
+- `useRef` + 150ms auto-focus 係 workaround，modal CSS transition 超過 150ms 就會 fail
+
+---
+
+### [員工C - Reviewer] Code Review
+
+**Lint 現狀：22 errors，2 warnings**（預計 30 分鐘可全部清）
+
+| 嚴重度 | 位置 | 問題 |
+|--------|------|------|
+| Medium | `WorkoutPlansPage.jsx:280` | `deleteWorkoutPlan` fire-and-forget |
+| Low | `ClientDetailPage.jsx:270` | `j` unused variable |
+| Low | `WorkoutLogPage.jsx:178,186` | `exercise` + `j` unused variables |
+| Low | `RoleSelectPage.jsx:23` | `err` unused in catch block |
+| Low | `vite.config.js:7` | `process` not defined（加 `/* eslint-env node */` 即修）|
+| Info | `ThemeContext` / `ToastContext` | Fast-refresh warning（export non-component）|
+| Info | `NotificationContext` | Fast-refresh + immutability warnings |
+| Info | `AppContext` | setState-in-effect warning（currentUser sync）|
+
+---
+
+### [員工D - UI/UX] 介面體驗
+
+**已完成：** iOS scroll 修復、empty states、skeleton、+ Add Link 兩個頁面一致
+
+**待改善：**
+| 優先 | 問題 |
+|------|------|
+| 高 | Delete Plan 冇確認 modal（Remove Client 有，行為不一致，易誤刪）|
+| 高 | Messages 頁冇 scroll-to-bottom（新訊息唔會自動捲落底）|
+| 中 | ClientDetailPage tab 切換冇 loading indicator |
+| 中 | Mobile Plan Builder modal 太長，需要大量滑動 |
+| 低 | 進度頁純 CSS/SVG 圖表，視覺質素可以更好 |
+
+---
+
+### [員工E - QA] 測試與合規
+
+**本 Session 已驗證：**
+- ✅ iOS scroll 修復
+- ✅ Remove Client → confirmation → orphan → navigate
+- ✅ Exercise Library + Add Link → auto-focus
+- ✅ Workout Plans + Add Link → updateExercise
+
+**未測試 / 風險：**
+| 優先 | 問題 |
+|------|------|
+| 高 | GDPR `deleteAccount` 不完整 — `messages`、`workoutLogs`、`schedule` 殘留（rules 禁刪）|
+| 高 | Demo `resetData` 同樣問題 — logs + messages 刪唔到，reset 後殘留舊資料 |
+| 中 | 真實 multi-user test 未做（兩個 trainer 同時用 exercise 共享）|
+| 中 | 238KB gzip，3G 網絡約需 3-4 秒首次載入 |
+
+合規評級：**符合基本要求，GDPR delete 係唯一未解決嘅合規缺口。**
+
+---
+
+### [員工F - Security] 滲透測試
+
+**🔴 高風險（需即時修）**
+
+| # | 漏洞 | 位置 | 攻擊方式 |
+|---|------|------|---------|
+| F1 | 任何登入用戶可讀取**所有人私訊** | `firestore.rules` messages read | `getDocs(collection(db, 'messages'))` dump 全部對話 |
+| F2 | 任何登入用戶可讀取**所有人體測數據** | `firestore.rules` bodyStats read | 體重、體脂、三圍全部外洩 |
+| F3 | **XSS via `javascript:` URL** | `ExerciseLibraryPage`、`WorkoutPlansPage` videoUrl href | 輸入 `javascript:alert(1)` 做 videoUrl，trainer/client 點擊即執行 |
+
+**🟡 中風險**
+
+| # | 漏洞 | 位置 | 說明 |
+|---|------|------|------|
+| F4 | **Exercise 冇 ownership check** | `firestore.rules` exercises update/delete | 任何 trainer 可改刪其他 trainer 嘅整個動作庫 |
+| F5 | Invite code 用 `Math.random()` | `AppContext.jsx generateInviteCode()` | 非 cryptographically secure，Firestore 冇 rate limiting，理論上可暴力破解 |
+| F6 | Schedule `clientId` 冇驗證係 trainer 自己嘅 client | `firestore.rules` schedule create | 任何 trainer 可將任何用戶加入自己日程表 |
+
+**🟢 低風險 / 設計限制**
+
+| # | 說明 |
+|---|------|
+| F7 | Firebase config hardcoded public key — 正常設計，配合 Firestore rules 可接受 |
+| F8 | Demo `coach@elitepro.com` / `demo123` 係已知帳號，任何人可用 demo coach 登入 |
+
+---
+
+### [PM 總結] 行動優先級
+
+**即時修（下次 session）：**
+| # | 問題 | 負責 |
+|---|------|------|
+| 1 | XSS：videoUrl 加 `javascript:` scheme 過濾 | F + B |
+| 2 | Firestore rules：exercises 加 ownership check | F + A |
+| 3 | `deleteWorkoutPlan` 補 async/await + try/catch | C + B |
+| 4 | 清 22 個 lint errors | C + B |
+| 5 | Delete Plan 加確認 modal | D + B |
+
+**Phase 2 新增項目：**
+| # | 問題 | 負責 |
+|---|------|------|
+| 6 | Firestore rules：messages / bodyStats read 收緊至 owner + trainer only | F + A |
+| 7 | Bundle code-splitting（React.lazy per page）| B |
+| 8 | Messages scroll-to-bottom | D + B |
+| 9 | GDPR cascaded delete via Cloud Functions | E + B |
+| 10 | Invite code 改用 `crypto.getRandomValues()` | F + B |
+
+**Phase 3 新增項目：**
+| # | 問題 |
+|---|------|
+| 11 | Exercises per-trainer 隔離 |
+| 12 | Collection listeners 加 query filter（限制讀取量）|
+| 13 | Schedule clientId ownership validation |
+
+---
+
 ## 已知問題 / 遺留事項
 
+### 🔴 安全（會議後新增）
+1. **XSS via javascript: URL** — videoUrl input 冇 scheme 驗證，`<a href>` 可執行任意 JS
+2. **Messages + bodyStats 任何登入用戶可讀** — Firestore rules `allow read: if isAuth()` 過於寬鬆
+3. **Exercise 冇 ownership check** — 任何 trainer 可改刪其他 trainer 嘅動作
+
 ### 嚴重
-1. **Bundle size 過大**（~760KB gzip ~225KB）— Vite 已警告，首次載入慢
+4. **Bundle size 過大**（807KB / gzip 238KB）— Vite 已警告，首次載入慢
    - 建議：React.lazy code-splitting per page
-2. **Firebase Service Account secret 未確認**
+5. **Firebase Service Account secret 未確認**
    - 需要用戶去 Firebase Console 生成 + 加入 GitHub Secrets (`FIREBASE_SERVICE_ACCOUNT`)
    - 未確認 GitHub Actions 首次部署是否成功
-3. **Firestore Rules 未經 production 真機驗證**
+6. **Firestore Rules 未經 production 真機驗證**
    - Rules 寫好但需要真實 multi-user test 確認權限正確
 
 ### 中度
-4. **Push Notifications 未完成部署**（代碼已寫好，需要以下步驟）
+7. **Push Notifications 未完成部署**（代碼已寫好，需要以下步驟）
    - 升級 Firebase 到 Blaze plan（需綁 credit card，免費 quota 內唔收費）
    - 從 Firebase Console 攞 VAPID key → 貼入 `src/context/NotificationContext.jsx`
    - 執行 `firebase deploy --only functions` 部署 Cloud Functions
    - 需要生成正式 PNG icons（192x192、512x512）替代 manifest.json placeholder
-5. **iOS Safari Google Sign-In 未做真機 full regression**
-6. **Schedule 時間衝突檢查**只係本地比較，multi-device 可能 race condition
-7. **Exercise Library 權限**
-   - 所有 trainer 共享同一個 exercise collection，互相可以改刪
+8. **GDPR deleteAccount 不完整** — messages / workoutLogs / schedule 殘留（rules 禁刪），需要 Cloud Functions cascaded delete
+9. **iOS Safari Google Sign-In 未做真機 full regression**
+10. **Schedule 時間衝突檢查**只係本地比較，multi-device 可能 race condition
+11. **Delete Plan 冇確認 modal** — 容易誤刪，與 Remove Client 行為不一致
+12. **Messages 頁冇 scroll-to-bottom** — 新訊息唔會自動捲落底
 
 ### 輕微 / Nice-to-have
-8. 無 i18n — 純英文 UI（主要用戶係廣東話）
-9. 進度頁圖表純 CSS/SVG — 可以用 Recharts 美化
-10. 舊 sample data 用 `rest` field，新 plan 用 `weight` — 混合 data 可能喺 display 上出現空白
+13. 無 i18n — 純英文 UI（主要用戶係廣東話）
+14. 進度頁圖表純 CSS/SVG — 可以用 Recharts 美化
+15. 舊 sample data 用 `rest` field，新 plan 用 `weight` — 混合 data 可能喺 display 上出現空白
+16. Invite code 用 `Math.random()`（非 cryptographically secure）
+17. Schedule create 冇驗證 clientId 係 trainer 自己嘅 client
 
-### Pre-existing Lint Errors（22 errors, 3 warnings — 非本次引入）
-- `functions/index.js`：require/exports 未定義（需要 eslint CommonJS config）
+### Pre-existing Lint Errors（22 errors, 2 warnings）
+- `WorkoutPlansPage.jsx:280`：`deleteWorkoutPlan` fire-and-forget（**新發現**）
+- `ClientDetailPage.jsx:270`：unused `j` variable
+- `WorkoutLogPage.jsx:178,186`：unused `exercise` + `j`
+- `RoleSelectPage.jsx:23`：unused `err`
+- `vite.config.js:7`：`process` not defined（加 `/* eslint-env node */` 即修）
 - `context/AppContext.jsx`：setState-in-effect warnings
 - `context/NotificationContext.jsx`：fast-refresh warnings
-- `pages/ClientDetailPage.jsx:248`：unused `j` variable
+- `context/ThemeContext.jsx` / `ToastContext.jsx`：fast-refresh warnings
 
 ---
 
@@ -193,22 +348,36 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | 7 | Loading skeleton / empty states | ✅ 完成 | D + B |
 | 8 | 全 app 寫操作 re-audit | ✅ 完成 | A + E |
 
+### 即時修（會議後新增）⚡
+| # | 任務 | 狀態 | 負責 |
+|---|------|------|------|
+| 1 | XSS：videoUrl 加 `javascript:` scheme 過濾 | 未開始 | F + B |
+| 2 | Firestore rules：exercises 加 trainer ownership check | 未開始 | F + A |
+| 3 | `deleteWorkoutPlan` 補 async/await + try/catch | 未開始 | C + B |
+| 4 | 清 22 個 lint errors | 未開始 | C + B |
+| 5 | Delete Plan 加確認 modal | 未開始 | D + B |
+
 ### Phase 2 — 品質提升
-| # | 任務 | 狀態 |
-|---|------|------|
-| 1 | Bundle code-splitting（React.lazy per page）| 未開始 |
-| 2 | 真機 QA：iPhone Safari + Android Chrome | 未開始 |
-| 3 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| 未開始 |
-| 4 | Schedule delete 功能 | 未開始 |
-| 5 | Fix pre-existing lint errors（22 errors）| 未開始 |
+| # | 任務 | 狀態 | 負責 |
+|---|------|------|------|
+| 1 | Firestore rules：messages / bodyStats read 收緊 | 未開始 | F + A |
+| 2 | Bundle code-splitting（React.lazy per page）| 未開始 | B |
+| 3 | Messages scroll-to-bottom | 未開始 | D + B |
+| 4 | GDPR cascaded delete via Cloud Functions | 未開始 | E + B |
+| 5 | Invite code 改用 `crypto.getRandomValues()` | 未開始 | F + B |
+| 6 | 真機 QA：iPhone Safari + Android Chrome | 未開始 | E |
+| 7 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| 未開始 | B |
+| 8 | Schedule delete 功能 | 未開始 | B |
 
 ### Phase 3 — 加分項
 | # | 任務 | 狀態 |
 |---|------|------|
-| 1 | PWA icons 正式版（192 + 512 PNG）| 未開始 |
-| 2 | Recharts 美化進度頁 | 未開始 |
-| 3 | 中文 / 廣東話 i18n | 未開始 |
-| 4 | Exercise Library per-trainer 隔離 | 未開始 |
+| 1 | Exercise Library per-trainer 隔離 | 未開始 |
+| 2 | Collection listeners 加 query filter（限制讀取量）| 未開始 |
+| 3 | Schedule clientId ownership validation | 未開始 |
+| 4 | PWA icons 正式版（192 + 512 PNG）| 未開始 |
+| 5 | Recharts 美化進度頁 | 未開始 |
+| 6 | 中文 / 廣東話 i18n | 未開始 |
 
 ---
 
@@ -271,6 +440,8 @@ public/
 
 ### Git Commit History（最近）
 ```
+0cbc2cc docs: update PROGRESS.md for Session 2 (2026-04-12)
+b563cf5 docs: add Employee F (Security) to Team Structure in CLAUDE.md
 d866fd8 docs: update CLAUDE.md Team Structure & Working Rules sections
 d35dcd3 feat: Add "+ Add Link" button to exercises in Workout Plans view
 2cf9804 feat: Exercise Library — add link discoverability + non-YouTube URL support
@@ -292,3 +463,4 @@ c5a4316 feat: per-set weight support for workout plans
 | C - Reviewer | Code Review、Bug 檢查、安全性 |
 | D - UI/UX | 介面設計、配色、用戶體驗 |
 | E - QA | 測試、Bug 報告、合規（GDPR 等）|
+| F - Security | 滲透測試、漏洞審查、認證機制、資料保護（paranoid hacker 思維）|
