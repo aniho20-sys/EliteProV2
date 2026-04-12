@@ -450,6 +450,10 @@ export function AppProvider({ children }) {
     await updateDoc(doc(db, 'schedule', itemId), updates);
   };
 
+  const deleteScheduleItem = async (itemId) => {
+    await deleteDoc(doc(db, 'schedule', itemId));
+  };
+
   // ========== Messages ==========
   const getMessages = (userId) => messages.filter(m => m.from === userId || m.to === userId);
 
@@ -568,7 +572,7 @@ export function AppProvider({ children }) {
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog,
-    getSchedule, addScheduleItem, updateScheduleItem,
+    getSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,

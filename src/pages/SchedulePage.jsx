@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getClients, getClient, addScheduleItem, updateScheduleItem } = useApp();
+  const { currentUser, getSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem } = useApp();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
@@ -13,6 +13,8 @@ export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(null); // schedId
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
 
   // For client: find their trainer
@@ -80,6 +82,20 @@ export default function SchedulePage() {
       toast(`Failed to book session: ${err?.message || 'unknown error'}`, 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal) return;
+    setDeleting(true);
+    try {
+      await deleteScheduleItem(deleteModal);
+      toast('Session deleted', 'error');
+      setDeleteModal(null);
+    } catch (err) {
+      toast(`Failed to delete: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -163,22 +179,38 @@ export default function SchedulePage() {
                   </div>
                 </div>
                 <div className="schedule-item-bottom">
-                  <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
-                  {isTrainer && s.status === 'pending' && (
-                    <div className="flex gap-8">
-                      <button className="btn-icon" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                      <button className="btn-icon" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
-                    </div>
-                  )}
-                  {!isTrainer && s.status === 'pending' && (
-                    <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
-                  )}
+                  <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : s.status === 'cancelled' ? 'tag' : 'tag-warning'}`}>{s.status}</span>
+                  <div className="flex gap-8">
+                    {isTrainer && s.status === 'pending' && (
+                      <>
+                        <button className="btn-icon" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
+                        <button className="btn-icon" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                      </>
+                    )}
+                    {!isTrainer && s.status === 'pending' && (
+                      <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
+                    )}
+                    <button className="btn-icon" onClick={() => setDeleteModal(s.id)} title="Delete session" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                  </div>
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      {deleteModal && (
+        <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
+          <div className="modal" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Delete Session</h3>
+            <p className="text-sm text-muted mb-16">This will permanently remove this session. This cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setDeleteModal(null)} disabled={deleting}>Cancel</button>
+              <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAdd && (
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
