@@ -375,6 +375,12 @@ export function AppProvider({ children }) {
     await updateDoc(doc(db, 'users', clientId), updates);
   };
 
+  // Removes client from trainer's roster by clearing trainerId.
+  // Cannot delete user docs per Firestore rules — orphan instead.
+  const removeClient = async (clientId) => {
+    await updateDoc(doc(db, 'users', clientId), { trainerId: null });
+  };
+
   // ========== Body Stats ==========
   const getBodyStats = (clientId) => bodyStatsMap[clientId] || [];
 
@@ -556,7 +562,7 @@ export function AppProvider({ children }) {
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
-    getClients, getClient, updateClient,
+    getClients, getClient, updateClient, removeClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog,

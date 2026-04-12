@@ -1,13 +1,16 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2 } from 'lucide-react';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
+import { useToast } from '../context/ToastContext';
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
-  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, getExercises } = useApp();
+  const navigate = useNavigate();
+  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, getExercises, removeClient } = useApp();
+  const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
   const stats = getBodyStats(clientId);
@@ -16,6 +19,8 @@ export default function ClientDetailPage() {
   const [tab, setTab] = useState('overview');
   const [showAddStat, setShowAddStat] = useState(false);
   const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   if (!client) {
     return (
@@ -43,6 +48,18 @@ export default function ClientDetailPage() {
     } catch { /* error handled by Firestore listener */ }
   };
 
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await removeClient(clientId);
+      toast(`${client.name} removed from your clients`, 'info');
+      navigate('/clients');
+    } catch {
+      toast('Failed to remove client', 'error');
+      setRemoving(false);
+    }
+  };
+
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
 
   const normalizeSets = (ex) => {
@@ -54,7 +71,12 @@ export default function ClientDetailPage() {
 
   return (
     <div>
-      <Link to="/clients" className="btn btn-outline btn-sm mb-16"><ArrowLeft size={16} /> Back to Clients</Link>
+      <div className="flex-between mb-16" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <Link to="/clients" className="btn btn-outline btn-sm"><ArrowLeft size={16} /> Back to Clients</Link>
+        <button className="btn btn-sm" style={{ color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
+          <Trash2 size={15} /> Remove Client
+        </button>
+      </div>
 
       <div className="page-header">
         <h1 className="page-title">{client.name}</h1>
@@ -260,6 +282,26 @@ export default function ClientDetailPage() {
       {tab === 'notes' && (
         <div className="card">
           <NotesSection clientId={clientId} />
+        </div>
+      )}
+
+      {showRemoveConfirm && (
+        <div className="modal-overlay" onClick={() => setShowRemoveConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <h3 className="modal-title" style={{ color: 'var(--danger)' }}>Remove Client?</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
+              This will remove <strong>{client.name}</strong> from your client list.
+            </p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Their account and training history are kept — they can reconnect with your invite code.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setShowRemoveConfirm(false)} disabled={removing}>Cancel</button>
+              <button className="btn btn-danger" onClick={handleRemove} disabled={removing}>
+                <Trash2 size={15} /> {removing ? 'Removing…' : 'Yes, Remove'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

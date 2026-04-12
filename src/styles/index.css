@@ -109,9 +109,10 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-overflow-scrolling: touch;
 }
 
-#root { min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+#root { min-height: 100vh; display: flex; flex-direction: column; overflow-x: clip; }
 
 /* ===== LAYOUT ===== */
 .app-layout { display: flex; min-height: 100vh; }
@@ -646,6 +647,8 @@ tr:hover { background: var(--bg-card-hover); }
   max-width: 500px;
   max-height: 85vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
   animation: slideUp 0.2s var(--ease);
 }

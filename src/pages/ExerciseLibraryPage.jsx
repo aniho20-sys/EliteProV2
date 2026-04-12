@@ -151,22 +151,21 @@ export default function ExerciseLibraryPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Description</label>
-                <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="How to perform this exercise..." />
-              </div>
-              <div className="form-group">
                 <label className="form-label">
-                  <span className="flex gap-8" style={{ alignItems: 'center' }}>
-                    YouTube Video URL
-                    <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    YouTube Video URL <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
                   </span>
                 </label>
                 <input className="form-input" value={form.videoUrl} onChange={e => setForm({ ...form, videoUrl: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." />
                 {form.videoUrl && (
                   <a href={form.videoUrl} target="_blank" rel="noopener noreferrer" className="text-sm" style={{ color: 'var(--primary)', marginTop: 4, display: 'inline-block' }}>
-                    Preview link
+                    Preview link <ExternalLink size={10} style={{ display: 'inline', verticalAlign: 'middle' }} />
                   </a>
                 )}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="How to perform this exercise..." />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
