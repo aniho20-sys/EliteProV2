@@ -9,7 +9,7 @@ import { useToast } from './ToastContext';
 // ⚠️ VAPID Key — generate from Firebase Console:
 // Project Settings → Cloud Messaging → Web Push certificates → Generate key pair
 // Then paste the public key below:
-const VAPID_KEY = '';
+const VAPID_KEY = 'BF620v_ocN6QLjXAdubM36xUxnS1K1EfiUKOZO0WSdlnjBAaoJI4h0r_Pdj0KhM9dHUvm7d4WIUFhJtmSaIMjl4';
 
 const NotificationContext = createContext();
 // eslint-disable-next-line react-refresh/only-export-components
