@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-12（Session 4）
+> 最後更新：2026-04-12（Session 5）
 
 ---
 
@@ -60,18 +60,38 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] MessagesPage：`markMessagesRead` useEffect 包 `.catch()` 防 unhandled rejection
 - [x] MessagesPage：Send 按鈕 disabled 邏輯（sending || empty text）
 
-### Push Notifications 基礎建設（已寫好，未部署）
-- [x] `NotificationContext.jsx`：FCM token 管理 + 前景訊息處理
-- [x] `functions/index.js`：Cloud Functions（sendNotificationOnMessage、sendNotificationOnSchedule）
+### Push Notifications（✅ 完整部署）
+- [x] `NotificationContext.jsx`：FCM token 管理 + 前景訊息處理（VAPID key 已設定）
+- [x] `functions/index.js`：Cloud Functions（onNewMessage、onNewSchedule、onScheduleUpdate、**onAccountDelete GDPR**）
 - [x] `public/firebase-messaging-sw.js`：Service Worker 處理背景通知
-- [x] `public/manifest.json`：PWA manifest 基礎結構
-- [x] `firebase.json`：Functions config 已加入
+- [x] `public/manifest.json`：PWA manifest（SVG + PNG 192/512 圖示）
+- [x] Firebase Blaze plan 已升級
+
+### PWA（iOS Home Screen 支援）
+- [x] `public/icon-192.png` + `icon-512.png`（純 Node.js 生成，無外部依賴）
+- [x] `index.html`：`apple-touch-icon`、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`
+- [x] Android Chrome：無需放桌面，直接收通知
+- [x] iOS Safari：需 Add to Home Screen（iOS 16.4+）
 
 ### DevOps
 - [x] Firebase Hosting config（`firebase.json`、`.firebaserc`）
 - [x] GitHub Actions — Firebase Hosting 自動部署
+- [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## 最近 Session 完成嘅工作（2026-04-12 Session 5）
+
+### Blaze Plan 升級後任務（F + A + B）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | GDPR cascaded delete Cloud Function | `onAccountDelete`（onUserDeleted trigger）用 Admin SDK 刪除 messages、workoutLogs、schedule、workoutPlans、exercises；繞過 Firestore rules |
+| 2 | CI 加 Functions 自動部署 | GitHub Actions workflow 加 `google-github-actions/auth` + `npx firebase-tools deploy --only functions`；唔需要本機 Firebase CLI |
+| 3 | Push Notifications VAPID key 啟動 | `NotificationContext.jsx` 填入正式 VAPID key；FCM token 註冊 + 推播全線啟用 |
+| 4 | PWA icons + iOS meta tags | 純 Node.js 生成 icon-192.png / icon-512.png；index.html 加 apple-mobile-web-app 系列 meta tags；iOS Add to Home Screen 體驗完整 |
 
 ---
 
@@ -392,10 +412,10 @@ Build time： 1.81s                  ✅
 | 1 | Firestore rules：messages / bodyStats read 收緊 | ✅ 完成 | F + A |
 | 2 | Bundle code-splitting（React.lazy per page）| ✅ 完成 | B |
 | 3 | Messages scroll-to-bottom | ✅ 完成 | D + B |
-| 4 | GDPR cascaded delete via Cloud Functions | ⏸️ 需 Blaze plan | E + B |
+| 4 | GDPR cascaded delete via Cloud Functions | ✅ 完成 | E + B |
 | 5 | Invite code 改用 `crypto.getRandomValues()` | ✅ 完成 | F + B |
 | 6 | 真機 QA：iPhone Safari + Android Chrome | ⏸️ 需真機 | E |
-| 7 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| ⏸️ 需 Blaze plan | B |
+| 7 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| ✅ 完成 | B |
 | 8 | Schedule delete 功能 | ✅ 完成 | B |
 
 ### Phase 3 — 加分項
