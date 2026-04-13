@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-13（Session 7）
+> 最後更新：2026-04-13（Session 8）
 
 ---
 
@@ -79,6 +79,23 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Session 8 完成嘅工作（2026-04-13）
+
+### Progress 圖表升級 + 品牌樣本（D + B）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | Progress 圖表升級（Recharts） | 安裝 recharts；ProgressPage 換 AreaChart；stat tiles 點擊切換圖表；pill tabs；互動 tooltip；YAxis 自動對齊數據範圍；趨勢指示（↑↓→） |
+| 2 | ClientDetailPage Body Stats 圖表 | Body Stats tab 嘅靜態 progress bar 換成同 ProgressPage 一樣嘅 Recharts 圖表；Trainer 可以睇客戶進度趨勢 |
+| 3 | 品牌設計樣本 | 獨立 HTML mockup（`/brand-sample.html`）展示活力橙 + 健康青綠配色、Inter 字體、Sidebar、Stat cards、按鈕風格、色彩系統 |
+| 4 | CI branch 完整 merge | Session 7 安全改動（rules + query filters）merge 去 CI branch，所有改動齊全 |
+
+### ⚠️ 發現問題：Deploy 從未成功
+
+GitHub Actions CI 一直有問題——用戶從未見過任何改動部署到 Firebase Hosting。需要檢查 `FIREBASE_SERVICE_ACCOUNT` secret 或重新設置 deploy 流程。
 
 ---
 
