@@ -94,10 +94,9 @@ service cloud.firestore {
     }
 
     // ── Exercises ──
-    // Any authed can read; trainer can create their own; update/delete only by owner.
-    // Legacy exercises without trainerId can be updated/deleted by any trainer.
+    // Trainer reads own; client reads their trainer's. Defaults served from static JS.
     match /exercises/{exId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || userDoc().trainerId == resource.data.trainerId);
       allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
       allow update, delete: if isTrainer() && (
         !('trainerId' in resource.data) || resource.data.trainerId == request.auth.uid

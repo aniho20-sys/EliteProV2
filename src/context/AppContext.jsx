@@ -112,17 +112,23 @@ export function AppProvider({ children }) {
       markLoaded('messages');
     }, () => markLoaded('messages')));
 
-    unsubs.push(onSnapshot(collection(db, 'exercises'), (snap) => {
-      const firestoreList = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      // Merge: keep Firestore items first, then fill in any default exercises not already stored
-      const firestoreIds = new Set(firestoreList.map(e => e.id));
-      const merged = [...firestoreList, ...defaultExercises.filter(e => !firestoreIds.has(e.id))];
-      setExercises(merged.length > 0 ? merged : defaultExercises);
-      markLoaded('exercises');
-    }, () => markLoaded('exercises')));
+    markLoaded('exercises'); // exercises handled separately below
 
     return () => unsubs.forEach(fn => fn());
   }, [firebaseUser, markLoaded]);
+
+  // --- Exercises: role-aware listener (trainer sees own; client sees trainer's) ---
+  useEffect(() => {
+    if (!currentUser) return;
+    const targetTrainerId = currentUser.role === 'trainer' ? currentUser.id : currentUser.trainerId;
+    if (!targetTrainerId) { setExercises(defaultExercises); return; }
+    const unsub = onSnapshot(
+      query(collection(db, 'exercises'), where('trainerId', '==', targetTrainerId)),
+      (snap) => setExercises([...snap.docs.map(d => ({ ...d.data(), id: d.id })), ...defaultExercises]),
+      () => setExercises(defaultExercises),
+    );
+    return () => unsub();
+  }, [currentUser?.id]);
 
   // --- Sync currentUser when users list or firebaseUser changes ---
   useEffect(() => {
@@ -217,20 +223,7 @@ export function AppProvider({ children }) {
     await batch.commit();
   };
 
-  // Seed global exercise library (idempotent — only if empty)
-  const seedExercisesIfEmpty = async () => {
-    try {
-      const snap = await getDocs(collection(db, 'exercises'));
-      if (!snap.empty) return;
-      const batch = writeBatch(db);
-      defaultExercises.forEach(e => batch.set(doc(db, 'exercises', e.id), e));
-      await batch.commit();
-    } catch (err) {
-      console.warn('Exercise seed skipped:', err.message);
-    }
-  };
-
-  // ========== Auth ==========
+// ========== Auth ==========
 
   // Firebase Auth: Google Sign-In (popup + redirect fallback)
   const signInWithGoogle = async () => {
@@ -296,7 +289,6 @@ export function AppProvider({ children }) {
       await setDoc(doc(db, 'users', fbUser.uid), profile);
       try {
         await seedDemoDataForCoach(fbUser.uid);
-        await seedExercisesIfEmpty();
       } catch (err) {
         console.warn('Demo seed partial failure:', err.message);
       }
@@ -330,8 +322,6 @@ export function AppProvider({ children }) {
       ),
     };
     await setDoc(doc(db, 'users', profile.id), profile);
-    // Seed exercise library on first trainer sign-up
-    if (role === 'trainer') await seedExercisesIfEmpty();
     setCurrentUser(profile);
     return profile;
   };
