@@ -89,13 +89,50 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | # | 任務 | 詳情 |
 |---|------|------|
 | 1 | Progress 圖表升級（Recharts） | 安裝 recharts；ProgressPage 換 AreaChart；stat tiles 點擊切換圖表；pill tabs；互動 tooltip；YAxis 自動對齊數據範圍；趨勢指示（↑↓→） |
-| 2 | ClientDetailPage Body Stats 圖表 | Body Stats tab 嘅靜態 progress bar 換成同 ProgressPage 一樣嘅 Recharts 圖表；Trainer 可以睇客戶進度趨勢 |
+| 2 | ClientDetailPage Body Stats 圖表 | Body Stats tab 嘅靜態 progress bar 換成同 ProgressPage 一樣嘅 Recharts 圖表；Trainer 可以睇客戶進度趨勢；metric tiles 可點擊切換 |
 | 3 | 品牌設計樣本 | 獨立 HTML mockup（`/brand-sample.html`）展示活力橙 + 健康青綠配色、Inter 字體、Sidebar、Stat cards、按鈕風格、色彩系統 |
 | 4 | CI branch 完整 merge | Session 7 安全改動（rules + query filters）merge 去 CI branch，所有改動齊全 |
 
-### ⚠️ 發現問題：Deploy 從未成功
+---
 
-GitHub Actions CI 一直有問題——用戶從未見過任何改動部署到 Firebase Hosting。需要檢查 `FIREBASE_SERVICE_ACCOUNT` secret 或重新設置 deploy 流程。
+## ⚠️ 重要：Firebase Deploy 問題（未解決）
+
+### 問題現象
+- Firebase Hosting 從未成功部署（用戶從未見過任何程式改動）
+- GitHub Actions CI 每次 push 都 fail（10-25 秒內死）
+- GitHub Pages deploy（另一個 workflow）**正常運行** ✅
+
+### 根本原因
+`FIREBASE_SERVICE_ACCOUNT` GitHub Secret **未正確設置**（空白或無效）
+
+### 已嘗試嘅修復
+1. 將 `FirebaseExtended/action-hosting-deploy@v0`（已棄用）換成 `npx firebase-tools` ✅
+2. 移除 `google-github-actions/auth@v2`，改用 `GOOGLE_APPLICATION_CREDENTIALS` temp file ✅
+3. CI workflow 現在係最簡潔版本，只等 secret 正確就能運作 ✅
+
+### 下一個 Session 必須先做
+> **在做任何功能開發前，先完成以下步驟（需要用電腦）：**
+
+**Step 1：生成 Firebase Service Account Key**
+1. 去 `console.firebase.google.com` → elitepro-16718
+2. ⚙️ Project Settings → **Service accounts** tab
+3. 撳 **「Generate new private key」** → 下載 `.json` 檔
+
+**Step 2：設置 GitHub Secret**
+1. 去 `github.com/aniho20-sys/EliteProV2/settings/secrets/actions`
+2. 撳 **「New repository secret」**
+3. Name: `FIREBASE_SERVICE_ACCOUNT`
+4. Value: 貼入整個 JSON 檔內容（包括 `{ }` 括號）
+5. 儲存
+
+**Step 3：觸發重新部署**
+- GitHub Actions 頁撳 **「Re-run jobs」**，或者 push 任何 commit
+- 成功後用戶手機即可見到所有積壓嘅改動
+
+### 注意事項
+- `AIzaSy...` Web API Key 係 public 設計，唔需要 rotate，唔係問題
+- Service Account JSON 格式：`{ "type": "service_account", "private_key": "...", ... }`
+- CI branch：`claude/fitness-app-features-LbxtG`（所有改動已在此 branch）
 
 ---
 
