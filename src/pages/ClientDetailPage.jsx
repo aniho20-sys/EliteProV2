@@ -1,10 +1,30 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const METRICS = [
+  { key: 'weight',  label: 'Weight',   unit: 'kg', color: '#FF6B35' },
+  { key: 'bodyFat', label: 'Body Fat', unit: '%',  color: '#ef476f' },
+  { key: 'chest',   label: 'Chest',    unit: 'cm', color: '#06d6a0' },
+  { key: 'waist',   label: 'Waist',    unit: 'cm', color: '#ffd166' },
+  { key: 'arms',    label: 'Arms',     unit: 'cm', color: '#118ab2' },
+  { key: 'legs',    label: 'Legs',     unit: 'cm', color: '#8338ec' },
+];
+
+function ChartTooltip({ active, payload, unit }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="progress-tooltip">
+      <div className="progress-tooltip-date">{payload[0]?.payload?.fullDate}</div>
+      <div className="progress-tooltip-val">{payload[0]?.value}<span>{unit}</span></div>
+    </div>
+  );
+}
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
@@ -21,6 +41,7 @@ export default function ClientDetailPage() {
   const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [activeMetric, setActiveMetric] = useState('weight');
 
   if (!client) {
     return (
@@ -132,31 +153,69 @@ export default function ClientDetailPage() {
             />
           ) : (
             <>
-              {/* Simple progress bars for latest vs first */}
-              {stats.length > 1 && (
-                <div className="card mb-16">
-                  <h4 className="card-title mb-16">Progress Overview</h4>
-                  {['weight', 'bodyFat', 'chest', 'waist', 'hips', 'arms', 'legs'].map(key => {
-                    const first = stats[0][key];
-                    const last = stats[stats.length - 1][key];
-                    const change = last - first;
-                    const pct = Math.min(100, Math.max(5, (last / (first * 1.3)) * 100));
-                    const unit = key === 'bodyFat' ? '%' : key === 'weight' ? 'kg' : 'cm';
-                    const label = key === 'bodyFat' ? 'Body Fat' : key === 'hips' ? 'Hips' : key.charAt(0).toUpperCase() + key.slice(1);
-                    return (
-                      <div key={key} className="chart-bar-group">
-                        <div className="chart-bar-label">
-                          <span>{label}</span>
-                          <span>{last}{unit} <span style={{ color: change > 0 ? 'var(--accent)' : 'var(--danger)', fontSize: '0.75rem' }}>({change > 0 ? '+' : ''}{change.toFixed(1)})</span></span>
+              {/* Recharts progress chart */}
+              {stats.length > 0 && (() => {
+                const metric = METRICS.find(m => m.key === activeMetric);
+                const chartData = stats.filter(s => s[activeMetric] != null).map(s => ({ date: s.date.slice(5), fullDate: s.date, value: Number(s[activeMetric]) }));
+                const vals = chartData.map(d => d.value);
+                const yMin = vals.length ? Math.floor(Math.min(...vals) * 0.97) : 0;
+                const yMax = vals.length ? Math.ceil(Math.max(...vals) * 1.03) : 100;
+                const change = stats.length > 1 ? stats[stats.length - 1][activeMetric] - stats[0][activeMetric] : null;
+                return (
+                  <div className="card mb-16">
+                    <div className="progress-stats-grid" style={{ marginBottom: 16 }}>
+                      {METRICS.map(m => {
+                        const val = latestStat?.[m.key];
+                        const diff = stats.length > 1 ? stats[stats.length - 1][m.key] - stats[0][m.key] : null;
+                        return (
+                          <button key={m.key} className={`progress-stat-tile${activeMetric === m.key ? ' active' : ''}`} style={{ '--tile-color': m.color }} onClick={() => setActiveMetric(m.key)}>
+                            <div className="progress-stat-label">{m.label}</div>
+                            <div className="progress-stat-val">{val ?? '—'}<span className="progress-stat-unit">{m.unit}</span></div>
+                            {diff !== null && (
+                              <div className={`progress-stat-diff ${diff < 0 ? 'down' : diff > 0 ? 'up' : 'flat'}`}>
+                                {diff > 0 ? <TrendingUp size={10} /> : diff < 0 ? <TrendingDown size={10} /> : <Minus size={10} />}
+                                {diff > 0 ? '+' : ''}{diff.toFixed(1)}{m.unit}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {chartData.length > 1 && (
+                      <>
+                        <div className="progress-chart-header">
+                          <div>
+                            <div className="progress-chart-title">{metric.label} Trend</div>
+                            {change !== null && <div className={`progress-chart-change ${change < 0 ? 'down' : change > 0 ? 'up' : 'flat'}`}>{change > 0 ? '↑' : change < 0 ? '↓' : '→'} {Math.abs(change).toFixed(1)}{metric.unit} since start</div>}
+                          </div>
+                          <div className="progress-metric-pills">
+                            {METRICS.map(m => (
+                              <button key={m.key} className={`progress-metric-pill${activeMetric === m.key ? ' active' : ''}`} style={activeMetric === m.key ? { background: m.color, borderColor: m.color } : {}} onClick={() => setActiveMetric(m.key)}>{m.label}</button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="chart-bar-track">
-                          <div className="chart-bar-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg, var(--primary), var(--accent))` }} />
+                        <div className="progress-chart-wrap">
+                          <ResponsiveContainer width="100%" height={200}>
+                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id={`grad-client-${activeMetric}`} x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%"  stopColor={metric.color} stopOpacity={0.25} />
+                                  <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                              <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                              <YAxis domain={[yMin, yMax]} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={v => `${v}${metric.unit}`} />
+                              <Tooltip content={<ChartTooltip unit={metric.unit} />} />
+                              <Area type="monotone" dataKey="value" stroke={metric.color} strokeWidth={2.5} fill={`url(#grad-client-${activeMetric})`} dot={{ r: 3, fill: metric.color, strokeWidth: 0 }} activeDot={{ r: 5, fill: metric.color, strokeWidth: 2, stroke: 'var(--surface)' }} />
+                            </AreaChart>
+                          </ResponsiveContainer>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="card table-wrapper">
                 <table>
