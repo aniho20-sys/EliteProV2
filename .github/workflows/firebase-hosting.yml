@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting + Functions
+name: Deploy to Firebase Hosting
 
 on:
   push:
@@ -21,10 +21,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Functions dependencies
-        run: npm ci
-        working-directory: functions
-
       - name: Build
         run: npm run build
 
@@ -33,10 +29,5 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools@latest deploy --only hosting --project elitepro-16718 --non-interactive
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
-
-      - name: Deploy Cloud Functions
-        run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
