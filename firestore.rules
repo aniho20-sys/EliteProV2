@@ -70,8 +70,12 @@ service cloud.firestore {
     match /schedule/{schedId} {
       allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
       allow create: if isAuth() && (
-        request.resource.data.trainerId == request.auth.uid ||
-        request.resource.data.clientId == request.auth.uid
+        // Trainer books for their own client only
+        (request.resource.data.trainerId == request.auth.uid &&
+         get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.trainerId == request.auth.uid) ||
+        // Client books with their own trainer only
+        (request.resource.data.clientId == request.auth.uid &&
+         userDoc().trainerId == request.resource.data.trainerId)
       );
       allow update: if isAuth() && (
         resource.data.trainerId == request.auth.uid ||
