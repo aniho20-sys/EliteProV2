@@ -1,0 +1,23 @@
+const AUTH_ERRORS = {
+  'auth/user-not-found': 'No account found with this email.',
+  'auth/wrong-password': 'Incorrect password. Please try again.',
+  'auth/invalid-credential': 'Invalid email or password.',
+  'auth/invalid-login-credentials': 'Invalid email or password.',
+  'auth/email-already-in-use': 'This email is already registered. Try signing in instead.',
+  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/invalid-email': 'Please enter a valid email address.',
+  'auth/missing-email': 'Please enter your email address.',
+  'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+  'auth/network-request-failed': 'Network error. Please check your connection and try again.',
+  'auth/requires-recent-login': 'For security, please sign out and sign in again before doing this.',
+  'auth/user-disabled': 'This account has been disabled. Please contact support.',
+  'auth/operation-not-allowed': 'This sign-in method is not enabled.',
+  'auth/popup-closed-by-user': null, // silent — user closed popup intentionally
+  'auth/cancelled-popup-request': null,
+};
+
+export function friendlyAuthError(err, fallback = 'Something went wrong. Please try again.') {
+  const mapped = AUTH_ERRORS[err?.code];
+  if (mapped === null) return null; // intentionally silent
+  return mapped || fallback;
+}

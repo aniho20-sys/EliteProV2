@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
+import { friendlyAuthError } from '../utils/authErrors';
 
 export default function LoginPage() {
   const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset } = useApp();
@@ -22,7 +23,7 @@ export default function LoginPage() {
     try {
       await loginDemoCoach();
     } catch (err) {
-      setError(err.message || 'Demo login failed');
+      setError(friendlyAuthError(err) || 'Demo login failed. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -35,9 +36,8 @@ export default function LoginPage() {
       const user = await signInWithGoogle();
       if (!user) return; // redirect flow
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message || 'Google sign-in failed');
-      }
+      const msg = friendlyAuthError(err);
+      if (msg) setError(msg);
     } finally {
       setAuthLoading(false);
     }
@@ -58,12 +58,7 @@ export default function LoginPage() {
       setShowForgot(false);
       setForgotEmail('');
     } catch (err) {
-      const messages = {
-        'auth/user-not-found': 'No account found with this email',
-        'auth/invalid-email': 'Please enter a valid email',
-        'auth/missing-email': 'Please enter your email',
-      };
-      setError(messages[err.code] || err.message || 'Failed to send reset email');
+      setError(friendlyAuthError(err) || 'Failed to send reset email. Please try again.');
     } finally {
       setForgotLoading(false);
     }
@@ -85,15 +80,7 @@ export default function LoginPage() {
         await signInEmail(email, password);
       }
     } catch (err) {
-      const messages = {
-        'auth/user-not-found': 'No account found with this email',
-        'auth/wrong-password': 'Incorrect password',
-        'auth/invalid-credential': 'Invalid email or password',
-        'auth/email-already-in-use': 'This email is already registered',
-        'auth/weak-password': 'Password must be at least 6 characters',
-        'auth/invalid-email': 'Please enter a valid email',
-      };
-      setError(messages[err.code] || err.message || 'Authentication failed');
+      setError(friendlyAuthError(err) || 'Authentication failed. Please try again.');
     } finally {
       setAuthLoading(false);
     }

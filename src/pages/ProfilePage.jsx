@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
+import { friendlyAuthError } from '../utils/authErrors';
 
 // Detect auth provider from Firebase user object
 function getAuthProvider(firebaseUser) {
@@ -82,7 +83,7 @@ export default function ProfilePage() {
       await sendPasswordReset(currentUser.email);
       toast(`Password reset email sent to ${currentUser.email}`);
     } catch (err) {
-      toast(err.message || 'Failed to send reset email', 'error');
+      toast(friendlyAuthError(err) || 'Failed to send reset email. Please try again.', 'error');
     }
   };
 
@@ -131,11 +132,7 @@ export default function ProfilePage() {
       toast('Account deleted', 'info');
       navigate('/');
     } catch (err) {
-      if (err.code === 'auth/requires-recent-login') {
-        toast('For security, please log out and sign in again before deleting your account', 'error');
-      } else {
-        toast(err.message || 'Failed to delete account', 'error');
-      }
+      toast(friendlyAuthError(err) || 'Failed to delete account. Please try again.', 'error');
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
