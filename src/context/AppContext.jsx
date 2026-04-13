@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { db, auth } from '../firebase';
 import {
   collection, doc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs,
+  onSnapshot, writeBatch, getDocs, query, where, or,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -90,37 +90,45 @@ export function AppProvider({ children }) {
       markLoaded('bodyStats');
     }, () => markLoaded('bodyStats')));
 
-    unsubs.push(onSnapshot(collection(db, 'workoutPlans'), (snap) => {
+    const uid = firebaseUser.uid;
+
+    unsubs.push(onSnapshot(query(collection(db, 'workoutPlans'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setWorkoutPlans(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutPlans');
     }, () => markLoaded('workoutPlans')));
 
-    unsubs.push(onSnapshot(collection(db, 'workoutLogs'), (snap) => {
+    unsubs.push(onSnapshot(query(collection(db, 'workoutLogs'), or(where('clientId', '==', uid), where('trainerId', '==', uid))), (snap) => {
       setWorkoutLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutLogs');
     }, () => markLoaded('workoutLogs')));
 
-    unsubs.push(onSnapshot(collection(db, 'schedule'), (snap) => {
+    unsubs.push(onSnapshot(query(collection(db, 'schedule'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('schedule');
     }, () => markLoaded('schedule')));
 
-    unsubs.push(onSnapshot(collection(db, 'messages'), (snap) => {
+    unsubs.push(onSnapshot(query(collection(db, 'messages'), or(where('from', '==', uid), where('to', '==', uid))), (snap) => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('messages');
     }, () => markLoaded('messages')));
 
-    unsubs.push(onSnapshot(collection(db, 'exercises'), (snap) => {
-      const firestoreList = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      // Merge: keep Firestore items first, then fill in any default exercises not already stored
-      const firestoreIds = new Set(firestoreList.map(e => e.id));
-      const merged = [...firestoreList, ...defaultExercises.filter(e => !firestoreIds.has(e.id))];
-      setExercises(merged.length > 0 ? merged : defaultExercises);
-      markLoaded('exercises');
-    }, () => markLoaded('exercises')));
+    markLoaded('exercises'); // exercises handled separately below
 
     return () => unsubs.forEach(fn => fn());
   }, [firebaseUser, markLoaded]);
+
+  // --- Exercises: role-aware listener (trainer sees own; client sees trainer's) ---
+  useEffect(() => {
+    if (!currentUser) return;
+    const targetTrainerId = currentUser.role === 'trainer' ? currentUser.id : currentUser.trainerId;
+    if (!targetTrainerId) { setExercises(defaultExercises); return; }
+    const unsub = onSnapshot(
+      query(collection(db, 'exercises'), where('trainerId', '==', targetTrainerId)),
+      (snap) => setExercises([...snap.docs.map(d => ({ ...d.data(), id: d.id })), ...defaultExercises]),
+      () => setExercises(defaultExercises),
+    );
+    return () => unsub();
+  }, [currentUser?.id]);
 
   // --- Sync currentUser when users list or firebaseUser changes ---
   useEffect(() => {
@@ -188,6 +196,7 @@ export function AppProvider({ children }) {
       batch.set(doc(db, 'workoutLogs', newId), {
         ...l, id: newId,
         clientId: idMap[l.clientId] || l.clientId,
+        trainerId: trainerUid,
       });
     });
 
@@ -214,20 +223,7 @@ export function AppProvider({ children }) {
     await batch.commit();
   };
 
-  // Seed global exercise library (idempotent — only if empty)
-  const seedExercisesIfEmpty = async () => {
-    try {
-      const snap = await getDocs(collection(db, 'exercises'));
-      if (!snap.empty) return;
-      const batch = writeBatch(db);
-      defaultExercises.forEach(e => batch.set(doc(db, 'exercises', e.id), e));
-      await batch.commit();
-    } catch (err) {
-      console.warn('Exercise seed skipped:', err.message);
-    }
-  };
-
-  // ========== Auth ==========
+// ========== Auth ==========
 
   // Firebase Auth: Google Sign-In (popup + redirect fallback)
   const signInWithGoogle = async () => {
@@ -293,7 +289,6 @@ export function AppProvider({ children }) {
       await setDoc(doc(db, 'users', fbUser.uid), profile);
       try {
         await seedDemoDataForCoach(fbUser.uid);
-        await seedExercisesIfEmpty();
       } catch (err) {
         console.warn('Demo seed partial failure:', err.message);
       }
@@ -327,8 +322,6 @@ export function AppProvider({ children }) {
       ),
     };
     await setDoc(doc(db, 'users', profile.id), profile);
-    // Seed exercise library on first trainer sign-up
-    if (role === 'trainer') await seedExercisesIfEmpty();
     setCurrentUser(profile);
     return profile;
   };
@@ -425,7 +418,7 @@ export function AppProvider({ children }) {
   const getWorkoutLogs = (clientId) => workoutLogs.filter(l => l.clientId === clientId);
 
   const addWorkoutLog = async (log) => {
-    const newLog = { ...log, id: `log-${Date.now()}`, clientId: currentUser?.id || log.clientId };
+    const newLog = { ...log, id: `log-${Date.now()}`, clientId: currentUser?.id || log.clientId, trainerId: currentUser?.trainerId || null };
     await setDoc(doc(db, 'workoutLogs', newLog.id), newLog);
     return newLog;
   };
