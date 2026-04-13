@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { db, auth } from '../firebase';
 import {
   collection, doc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs,
+  onSnapshot, writeBatch, getDocs, query, where, or,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -90,22 +90,24 @@ export function AppProvider({ children }) {
       markLoaded('bodyStats');
     }, () => markLoaded('bodyStats')));
 
-    unsubs.push(onSnapshot(collection(db, 'workoutPlans'), (snap) => {
+    const uid = firebaseUser.uid;
+
+    unsubs.push(onSnapshot(query(collection(db, 'workoutPlans'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setWorkoutPlans(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutPlans');
     }, () => markLoaded('workoutPlans')));
 
-    unsubs.push(onSnapshot(collection(db, 'workoutLogs'), (snap) => {
+    unsubs.push(onSnapshot(query(collection(db, 'workoutLogs'), or(where('clientId', '==', uid), where('trainerId', '==', uid))), (snap) => {
       setWorkoutLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutLogs');
     }, () => markLoaded('workoutLogs')));
 
-    unsubs.push(onSnapshot(collection(db, 'schedule'), (snap) => {
+    unsubs.push(onSnapshot(query(collection(db, 'schedule'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('schedule');
     }, () => markLoaded('schedule')));
 
-    unsubs.push(onSnapshot(collection(db, 'messages'), (snap) => {
+    unsubs.push(onSnapshot(query(collection(db, 'messages'), or(where('from', '==', uid), where('to', '==', uid))), (snap) => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('messages');
     }, () => markLoaded('messages')));
@@ -188,6 +190,7 @@ export function AppProvider({ children }) {
       batch.set(doc(db, 'workoutLogs', newId), {
         ...l, id: newId,
         clientId: idMap[l.clientId] || l.clientId,
+        trainerId: trainerUid,
       });
     });
 
@@ -425,7 +428,7 @@ export function AppProvider({ children }) {
   const getWorkoutLogs = (clientId) => workoutLogs.filter(l => l.clientId === clientId);
 
   const addWorkoutLog = async (log) => {
-    const newLog = { ...log, id: `log-${Date.now()}`, clientId: currentUser?.id || log.clientId };
+    const newLog = { ...log, id: `log-${Date.now()}`, clientId: currentUser?.id || log.clientId, trainerId: currentUser?.trainerId || null };
     await setDoc(doc(db, 'workoutLogs', newLog.id), newLog);
     return newLog;
   };
