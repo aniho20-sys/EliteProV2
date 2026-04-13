@@ -1,60 +1,27 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, LineChart } from 'lucide-react';
+import { Plus, Trash2, LineChart, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 
-function TrendChart({ stats, metricKey, label, unit, color }) {
-  if (stats.length < 2) return null;
-  const values = stats.map(s => s[metricKey]);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
+const METRICS = [
+  { key: 'weight',  label: 'Weight',   unit: 'kg', color: '#FF6B35' },
+  { key: 'bodyFat', label: 'Body Fat', unit: '%',  color: '#ef476f' },
+  { key: 'chest',   label: 'Chest',    unit: 'cm', color: '#06d6a0' },
+  { key: 'waist',   label: 'Waist',    unit: 'cm', color: '#ffd166' },
+  { key: 'arms',    label: 'Arms',     unit: 'cm', color: '#118ab2' },
+  { key: 'legs',    label: 'Legs',     unit: 'cm', color: '#8338ec' },
+];
 
-  const w = 280, h = 100, padX = 8, padY = 12;
-  const chartW = w - padX * 2;
-  const chartH = h - padY * 2;
-
-  const points = values.map((v, i) => ({
-    x: padX + (i / (values.length - 1)) * chartW,
-    y: padY + chartH - ((v - min) / range) * chartH,
-  }));
-
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-  const area = `${line} L${points[points.length - 1].x},${h - padY} L${points[0].x},${h - padY} Z`;
-
-  const first = values[0];
-  const last = values[values.length - 1];
-  const change = last - first;
-
+function ChartTooltip({ active, payload, unit }) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="trend-chart-card">
-      <div className="trend-chart-header">
-        <span className="trend-chart-label">{label}</span>
-        <span className="trend-chart-value">
-          {last}{unit}
-          <span className={`trend-chart-change ${change >= 0 ? 'positive' : 'negative'}`}>
-            {change >= 0 ? '+' : ''}{change.toFixed(1)}
-          </span>
-        </span>
-      </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="trend-chart-svg">
-        <defs>
-          <linearGradient id={`grad-${metricKey}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        <path d={area} fill={`url(#grad-${metricKey})`} />
-        <path d={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={i === points.length - 1 ? 4 : 2.5} fill={i === points.length - 1 ? color : 'var(--bg-card)'} stroke={color} strokeWidth="1.5" />
-        ))}
-      </svg>
-      <div className="trend-chart-dates">
-        <span>{stats[0].date.slice(5)}</span>
-        <span>{stats[stats.length - 1].date.slice(5)}</span>
-      </div>
+    <div className="progress-tooltip">
+      <div className="progress-tooltip-date">{payload[0]?.payload?.fullDate}</div>
+      <div className="progress-tooltip-val">{payload[0]?.value}<span>{unit}</span></div>
     </div>
   );
 }
@@ -64,135 +31,229 @@ export default function ProgressPage() {
   const stats = getBodyStats(currentUser.id);
   const toast = useToast();
   const [showAdd, setShowAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activeMetric, setActiveMetric] = useState('weight');
   const [form, setForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
 
+  const metric = METRICS.find(m => m.key === activeMetric);
   const latestStat = stats[stats.length - 1];
   const firstStat = stats[0];
 
+  const chartData = stats
+    .filter(s => s[activeMetric] != null && s[activeMetric] !== '')
+    .map(s => ({ date: s.date.slice(5), fullDate: s.date, value: Number(s[activeMetric]) }));
+
+  const chartVals = chartData.map(d => d.value);
+  const yMin = chartVals.length ? Math.floor(Math.min(...chartVals) * 0.97) : 0;
+  const yMax = chartVals.length ? Math.ceil(Math.max(...chartVals) * 1.03) : 100;
+
+  const change = latestStat && firstStat && stats.length > 1
+    ? (latestStat[activeMetric] - firstStat[activeMetric])
+    : null;
+
   const handleAdd = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       await addBodyStat(currentUser.id, {
-        weight: Number(form.weight), bodyFat: Number(form.bodyFat),
-        chest: Number(form.chest), waist: Number(form.waist), hips: Number(form.hips),
-        arms: Number(form.arms), legs: Number(form.legs),
+        date: new Date().toISOString().split('T')[0],
+        weight: Number(form.weight) || 0,
+        bodyFat: Number(form.bodyFat) || 0,
+        chest: Number(form.chest) || 0,
+        waist: Number(form.waist) || 0,
+        hips: Number(form.hips) || 0,
+        arms: Number(form.arms) || 0,
+        legs: Number(form.legs) || 0,
       });
       setForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
       setShowAdd(false);
       toast('Measurement saved');
     } catch { toast('Failed to save', 'error'); }
-  };
-
-  const metrics = ['weight', 'bodyFat', 'chest', 'waist', 'hips', 'arms', 'legs'];
-  const labels = { weight: 'Weight', bodyFat: 'Body Fat', chest: 'Chest', waist: 'Waist', hips: 'Hips', arms: 'Arms', legs: 'Legs' };
-  const units = { weight: 'kg', bodyFat: '%', chest: 'cm', waist: 'cm', hips: 'cm', arms: 'cm', legs: 'cm' };
-  const colors = {
-    weight: '#4361ee', bodyFat: '#ef476f', chest: '#06d6a0',
-    waist: '#ffd166', hips: '#ff6b6b', arms: '#118ab2', legs: '#8338ec',
+    finally { setSaving(false); }
   };
 
   return (
     <div>
-      <div className="page-header progress-header">
+      <div className="page-header">
         <div>
           <h1 className="page-title">My Progress</h1>
-          <p className="page-subtitle">{stats.length} measurements recorded</p>
+          <p className="page-subtitle">{stats.length} measurement{stats.length !== 1 ? 's' : ''} recorded</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={18} /> Add Measurement</button>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+          <Plus size={16} /> Add Measurement
+        </button>
       </div>
 
-      {/* Current stats - left aligned */}
-      {latestStat && (
-        <div className="card mb-16">
-          <h3 className="card-title mb-16">Current Stats</h3>
-          <div className="body-stats-grid">
-            {metrics.map(key => {
-              const change = firstStat && stats.length > 1 ? (latestStat[key] - firstStat[key]).toFixed(1) : null;
-              return (
-                <div key={key} className="body-stat-row">
-                  <span className="body-stat-label">{labels[key]}</span>
-                  <span className="body-stat-value">{latestStat[key]}{units[key]}</span>
-                  {change !== null && (
-                    <span className={`body-stat-change ${parseFloat(change) > 0 ? 'positive' : 'negative'}`}>
-                      {parseFloat(change) > 0 ? '+' : ''}{change}{units[key]}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Trend charts */}
-      {stats.length > 1 && (
-        <div className="card mb-16">
-          <h3 className="card-title mb-16">Trend Charts</h3>
-          <div className="trend-charts-grid">
-            {metrics.map(key => (
-              <TrendChart key={key} stats={stats} metricKey={key} label={labels[key]} unit={units[key]} color={colors[key]} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* History - table on desktop, cards on mobile */}
-      {stats.length > 0 ? (
-        <div className="card">
-          <h3 className="card-title mb-16">Measurement History</h3>
-          {/* Desktop table */}
-          <div className="table-wrapper history-table-desktop">
-            <table>
-              <thead>
-                <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th></th></tr>
-              </thead>
-              <tbody>
-                {[...stats].reverse().map((s, i) => {
-                  const origIdx = stats.length - 1 - i;
-                  return (
-                    <tr key={i}>
-                      <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
-                      <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
-                      <td><button className="btn-icon" onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Measurement deleted', 'error'); }} title="Delete"><Trash2 size={14} /></button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {/* Mobile cards */}
-          <div className="history-cards-mobile">
-            {[...stats].reverse().map((s, i) => {
-              const origIdx = stats.length - 1 - i;
-              return (
-                <div key={i} className="history-card">
-                  <div className="flex-between">
-                    <div className="history-card-date">{s.date}</div>
-                    <button className="btn-icon" onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Measurement deleted', 'error'); }} title="Delete"><Trash2 size={14} /></button>
-                  </div>
-                  <div className="body-stats-grid">
-                    <div className="body-stat-item"><span className="body-stat-label">Weight</span><span className="body-stat-value">{s.weight}kg</span></div>
-                    <div className="body-stat-item"><span className="body-stat-label">Body Fat</span><span className="body-stat-value">{s.bodyFat}%</span></div>
-                    <div className="body-stat-item"><span className="body-stat-label">Chest</span><span className="body-stat-value">{s.chest}cm</span></div>
-                    <div className="body-stat-item"><span className="body-stat-label">Waist</span><span className="body-stat-value">{s.waist}cm</span></div>
-                    <div className="body-stat-item"><span className="body-stat-label">Hips</span><span className="body-stat-value">{s.hips ? `${s.hips}cm` : '—'}</span></div>
-                    <div className="body-stat-item"><span className="body-stat-label">Arms</span><span className="body-stat-value">{s.arms}cm</span></div>
-                    <div className="body-stat-item"><span className="body-stat-label">Legs</span><span className="body-stat-value">{s.legs}cm</span></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
+      {stats.length === 0 ? (
         <EmptyState
           icon={LineChart}
           title="No measurements yet"
           description="Track your first measurement to start seeing progress trends over time."
           action={{ label: 'Add Measurement', onClick: () => setShowAdd(true) }}
         />
+      ) : (
+        <>
+          {/* Current Stats */}
+          {latestStat && (
+            <div className="card mb-16">
+              <h3 className="card-title mb-16">Current Stats</h3>
+              <div className="progress-stats-grid">
+                {METRICS.map(m => {
+                  const val = latestStat[m.key];
+                  const diff = firstStat && stats.length > 1
+                    ? (latestStat[m.key] - firstStat[m.key])
+                    : null;
+                  return (
+                    <button
+                      key={m.key}
+                      className={`progress-stat-tile${activeMetric === m.key ? ' active' : ''}`}
+                      style={{ '--tile-color': m.color }}
+                      onClick={() => setActiveMetric(m.key)}
+                    >
+                      <div className="progress-stat-label">{m.label}</div>
+                      <div className="progress-stat-val">{val ?? '—'}<span className="progress-stat-unit">{m.unit}</span></div>
+                      {diff !== null && (
+                        <div className={`progress-stat-diff ${diff < 0 ? 'down' : diff > 0 ? 'up' : 'flat'}`}>
+                          {diff > 0 ? <TrendingUp size={10} /> : diff < 0 ? <TrendingDown size={10} /> : <Minus size={10} />}
+                          {diff > 0 ? '+' : ''}{diff.toFixed(1)}{m.unit}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Chart */}
+          {chartData.length > 1 && (
+            <div className="card mb-16">
+              <div className="progress-chart-header">
+                <div>
+                  <div className="progress-chart-title">{metric.label} Trend</div>
+                  {change !== null && (
+                    <div className={`progress-chart-change ${change < 0 ? 'down' : change > 0 ? 'up' : 'flat'}`}>
+                      {change > 0 ? '↑' : change < 0 ? '↓' : '→'}
+                      {' '}{Math.abs(change).toFixed(1)}{metric.unit} since start
+                    </div>
+                  )}
+                </div>
+                <div className="progress-metric-pills">
+                  {METRICS.map(m => (
+                    <button
+                      key={m.key}
+                      className={`progress-metric-pill${activeMetric === m.key ? ' active' : ''}`}
+                      style={activeMetric === m.key ? { background: m.color, borderColor: m.color } : {}}
+                      onClick={() => setActiveMetric(m.key)}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="progress-chart-wrap">
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={metric.color} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      domain={[yMin, yMax]}
+                      tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={v => `${v}${metric.unit}`}
+                    />
+                    <Tooltip content={<ChartTooltip unit={metric.unit} />} />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke={metric.color}
+                      strokeWidth={2.5}
+                      fill="url(#chartGrad)"
+                      dot={{ r: 3, fill: metric.color, strokeWidth: 0 }}
+                      activeDot={{ r: 5, fill: metric.color, strokeWidth: 2, stroke: 'var(--surface)' }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* History */}
+          <div className="card">
+            <h3 className="card-title mb-16">Measurement History</h3>
+            {/* Desktop table */}
+            <div className="table-wrapper history-table-desktop">
+              <table>
+                <thead>
+                  <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {[...stats].reverse().map((s, i) => {
+                    const origIdx = stats.length - 1 - i;
+                    return (
+                      <tr key={i}>
+                        <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
+                        <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
+                        <td>
+                          <button className="btn-icon" title="Delete"
+                            onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Deleted', 'error'); }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {/* Mobile cards */}
+            <div className="history-cards-mobile">
+              {[...stats].reverse().map((s, i) => {
+                const origIdx = stats.length - 1 - i;
+                return (
+                  <div key={i} className="history-card">
+                    <div className="flex-between">
+                      <div className="history-card-date">{s.date}</div>
+                      <button className="btn-icon" title="Delete"
+                        onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Deleted', 'error'); }}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div className="body-stats-grid">
+                      {METRICS.map(m => (
+                        <div key={m.key} className="body-stat-item">
+                          <span className="body-stat-label">{m.label}</span>
+                          <span className="body-stat-value">{s[m.key] ? `${s[m.key]}${m.unit}` : '—'}</span>
+                        </div>
+                      ))}
+                      <div className="body-stat-item">
+                        <span className="body-stat-label">Hips</span>
+                        <span className="body-stat-value">{s.hips ? `${s.hips}cm` : '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
 
+      {/* Add Modal */}
       {showAdd && (
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -203,19 +264,19 @@ export default function ProgressPage() {
                 <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={form.bodyFat} onChange={e => setForm({ ...form, bodyFat: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" min="50" max="200" value={form.chest} onChange={e => setForm({ ...form, chest: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" min="40" max="200" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" value={form.chest} onChange={e => setForm({ ...form, chest: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" min="50" max="200" value={form.hips} onChange={e => setForm({ ...form, hips: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" min="15" max="60" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" value={form.hips} onChange={e => setForm({ ...form, hips: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" min="30" max="100" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
               </div>
             </form>
           </div>

@@ -1015,59 +1015,90 @@ tr:hover { background: var(--bg-card-hover); }
 .client-meta { color: var(--text-secondary); font-size: 0.8rem; }
 .client-goals { margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }
 
-/* ===== TREND CHARTS ===== */
-.trend-charts-grid {
+/* ===== PROGRESS PAGE (RECHARTS) ===== */
+.progress-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
-.trend-chart-card {
+.progress-stat-tile {
   background: var(--bg-card-hover);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 14px;
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .18s ease;
+  font-family: inherit;
+}
+.progress-stat-tile:hover { border-color: var(--tile-color); }
+.progress-stat-tile.active {
+  border-color: var(--tile-color);
+  background: color-mix(in srgb, var(--tile-color) 8%, var(--surface));
+}
+.progress-stat-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.progress-stat-val   { font-size: 1.2rem; font-weight: 800; line-height: 1; }
+.progress-stat-unit  { font-size: 0.7rem; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+.progress-stat-diff  {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.68rem; font-weight: 600;
+  margin-top: 5px;
+  padding: 2px 6px;
+  border-radius: 99px;
+}
+.progress-stat-diff.up   { background: color-mix(in srgb, #06d6a0 12%, transparent); color: #06d6a0; }
+.progress-stat-diff.down { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
+.progress-stat-diff.flat { background: var(--bg-card-hover); color: var(--text-muted); }
+
+.progress-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.progress-chart-title  { font-size: 1rem; font-weight: 700; }
+.progress-chart-change { font-size: 0.8rem; font-weight: 600; margin-top: 2px; }
+.progress-chart-change.up   { color: #06d6a0; }
+.progress-chart-change.down { color: var(--danger); }
+.progress-chart-change.flat { color: var(--text-muted); }
+
+.progress-metric-pills {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.progress-metric-pill {
+  font-size: 0.72rem; font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s ease;
+  font-family: inherit;
+}
+.progress-metric-pill:hover { border-color: var(--primary); color: var(--primary); }
+.progress-metric-pill.active { color: #fff; }
+
+.progress-chart-wrap { margin: 0 -4px; }
+
+.progress-tooltip {
+  background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  box-shadow: var(--shadow);
 }
-.trend-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.trend-chart-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-.trend-chart-value {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-.trend-chart-change {
-  font-size: 0.7rem;
-  font-weight: 600;
-  margin-left: 6px;
-}
-.trend-chart-change.positive { color: var(--accent); }
-.trend-chart-change.negative { color: var(--danger); }
-.trend-chart-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.trend-chart-dates {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
+.progress-tooltip-date { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+.progress-tooltip-val  { font-size: 1rem; font-weight: 800; }
+.progress-tooltip-val span { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+
 @media (max-width: 640px) {
-  .trend-charts-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .trend-chart-card { padding: 10px; }
-  .trend-chart-value { font-size: 0.85rem; }
-}
-@media (max-width: 380px) {
-  .trend-charts-grid { grid-template-columns: 1fr; }
+  .progress-stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .progress-stat-val { font-size: 1rem; }
+  .progress-chart-header { flex-direction: column; gap: 10px; }
+  .progress-metric-pills { gap: 5px; }
 }
 
 /* ===== SCHEDULE ===== */
