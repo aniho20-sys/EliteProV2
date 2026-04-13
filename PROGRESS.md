@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-12（Session 6）
+> 最後更新：2026-04-13（Session 7）
 
 ---
 
@@ -79,6 +79,29 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Session 7 完成嘅工作（2026-04-13）
+
+### Phase 3 安全任務（F + A + C + B）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | Firestore rules 讀取收緊 | `workoutPlans`、`workoutLogs`、`schedule` read 由 `isAuth()` 改為只有 `trainerId`/`clientId` 係自己先可讀；AppContext 4 個 listeners 加 `or()` query filter（`workoutPlans`、`workoutLogs`、`schedule`、`messages`）；`addWorkoutLog` + seed data 加 `trainerId` 字段 |
+| 2 | Exercise Library trainerId 隔離 | Exercises listener 移到 `currentUser` effect：trainer 讀自己嘅 exercises，client 讀 trainer 嘅 exercises；default exercises 純靜態 JS，唔再入 Firestore；刪除 `seedExercisesIfEmpty()`；rule 改為 `trainerId == uid || userDoc().trainerId == trainerId` |
+| 3 | Schedule clientId ownership 驗證 | `allow create` 加兩層驗證：trainer 只能為自己 client 預約（`get(users/clientId).trainerId == uid`）；client 只能預約自己嘅 trainer（`userDoc().trainerId == trainerId`） |
+
+### Phase 3 剩餘任務
+
+| 優先級 | 任務 | 狀態 |
+|--------|------|------|
+| ✅ 完成 | Firestore rules 讀取收緊 | 完成 |
+| ✅ 完成 | Exercise Library trainerId 隔離 | 完成 |
+| ✅ 完成 | Schedule clientId ownership 驗證 | 完成 |
+| 🟡 中 | Progress 圖表升級（Recharts） | 待做 |
+| 🟡 中 | bodyStats 遷移 subcollection | 待做（長遠）|
+| 🟢 低 | i18n 中文支援 | 待做 |
 
 ---
 
