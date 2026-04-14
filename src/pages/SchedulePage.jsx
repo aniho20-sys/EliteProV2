@@ -228,7 +228,7 @@ export default function SchedulePage() {
                   <div className="schedule-time">{s.time}</div>
                   <div className="schedule-info">
                     <div className="schedule-client">{isTrainer ? client?.name : s.type}</div>
-                    <div className="schedule-type">{s.type} - {s.duration}min</div>
+                    <div className="schedule-type">{s.type} - 60 min</div>
                   </div>
                 </div>
                 <div className="schedule-item-bottom">
@@ -302,24 +302,9 @@ export default function SchedulePage() {
                   </select>
                 </div>
               </div>
-              <div className="book-form-row">
-                <div className="form-group book-form-duration">
-                  <label className="form-label">Duration</label>
-                  <select className="form-select" value={form.duration} onChange={e => {
-                    const dur = Number(e.target.value);
-                    const slots = availableBookingSlots(dur, form.date);
-                    setForm(f => ({ ...f, duration: dur, time: slots.includes(f.time) ? f.time : (slots[0] || '09:00') }));
-                  }}>
-                    <option value={30}>30 min</option>
-                    <option value={45}>45 min</option>
-                    <option value={60}>60 min</option>
-                    <option value={90}>90 min</option>
-                  </select>
-                </div>
-                <div className="form-group book-form-type">
-                  <label className="form-label">Type</label>
-                  <input className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
-                </div>
+              <div className="form-group">
+                <label className="form-label">Type</label>
+                <input className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)} disabled={saving}>Cancel</button>
