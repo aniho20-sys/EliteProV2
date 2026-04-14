@@ -37,6 +37,7 @@ export default function WorkoutLogPage() {
       const planSets = normalizeSets(ex);
       return {
         exerciseId: ex.exerciseId,
+        name: ex.name || getExerciseName(ex.exerciseId),
         sets: planSets.map((ps, i) => {
           const prev = lastEntry?.sets?.[i];
           if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
@@ -82,6 +83,7 @@ export default function WorkoutLogPage() {
   const handleSave = async () => {
     const logEntries = entries.map(e => ({
       exerciseId: e.exerciseId,
+      name: getExerciseName(e.exerciseId),
       sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
     })).filter(e => e.sets.length > 0);
 
@@ -179,7 +181,7 @@ export default function WorkoutLogPage() {
                     <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''}`}>
                       <span className="plan-exercise-name">
                         {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                        {getExerciseName(entry.exerciseId)}
+                        {entry.name || getExerciseName(entry.exerciseId)}
                       </span>
                       <span className="plan-exercise-detail">
                         {entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
@@ -217,7 +219,7 @@ export default function WorkoutLogPage() {
                   <div className="log-card-title">
                     <h3 className="card-title">
                       {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                      {getExerciseName(entry.exerciseId)}
+                      {entry.name || getExerciseName(entry.exerciseId)}
                     </h3>
                     <div className="log-card-tags">
                       {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}

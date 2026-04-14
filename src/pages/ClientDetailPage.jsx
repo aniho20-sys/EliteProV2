@@ -324,7 +324,7 @@ export default function ClientDetailPage() {
                   </div>
                   {l.entries.map((entry, i) => (
                     <div key={i} className="plan-exercise">
-                      <span className="plan-exercise-name">{getExerciseName(entry.exerciseId)}</span>
+                      <span className="plan-exercise-name">{entry.name || getExerciseName(entry.exerciseId)}</span>
                       <span className="plan-exercise-detail">
                         {entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
                       </span>
