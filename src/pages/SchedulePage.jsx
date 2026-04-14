@@ -4,6 +4,16 @@ import { Plus, Check, X, CalendarOff, Trash2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
+// Booking window: 09:00–16:00, 30-min slots
+const BOOKING_SLOTS = [
+  '09:00','09:30','10:00','10:30','11:00','11:30',
+  '12:00','12:30','13:00','13:30','14:00','14:30',
+  '15:00','15:30',
+];
+// Hourly bubbles for the availability display
+const DISPLAY_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00'];
+const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
+
 export default function SchedulePage() {
   const { currentUser, getSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem } = useApp();
   const toast = useToast();
@@ -38,16 +48,30 @@ export default function SchedulePage() {
     isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id }
   );
 
-  const hasConflict = (date, time, duration) => {
-    const newStart = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    const newEnd = newStart + Number(duration);
-    return allSchedule.some(s => {
-      if (s.date !== date || s.status === 'cancelled') return false;
-      const sStart = parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]);
-      const sEnd = sStart + (s.duration || 60);
-      return newStart < sEnd && newEnd > sStart;
-    });
+  const sessionOverlaps = (s, startMin, endMin) => {
+    if (s.status === 'cancelled') return false;
+    const sStart = toMin(s.time);
+    const sEnd = sStart + (s.duration || 60);
+    return startMin < sEnd && endMin > sStart;
   };
+
+  const hasConflict = (date, time, duration) => {
+    const startMin = toMin(time);
+    const endMin = startMin + Number(duration);
+    if (startMin < 9 * 60 || endMin > 16 * 60) return true;
+    return allSchedule.some(s => s.date === date && sessionOverlaps(s, startMin, endMin));
+  };
+
+  // Is a display-slot hour occupied on a given date?
+  const isSlotOccupied = (date, slot) => {
+    const slotStart = toMin(slot);
+    const slotEnd = slotStart + 60;
+    return allSchedule.some(s => s.date === date && sessionOverlaps(s, slotStart, slotEnd));
+  };
+
+  // Available booking slots for the form given current duration
+  const availableBookingSlots = (duration) =>
+    BOOKING_SLOTS.filter(s => toMin(s) + duration <= 16 * 60);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -156,7 +180,29 @@ export default function SchedulePage() {
 
       {/* Schedule list */}
       <div className="card">
-        <h3 className="card-title mb-16">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+        <div className="schedule-day-header mb-16">
+          <h3 className="card-title">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+          {(() => {
+            const freeCount = DISPLAY_SLOTS.filter(s => !isSlotOccupied(selectedDate, s)).length;
+            return <span className="text-sm text-muted">{freeCount} slot{freeCount !== 1 ? 's' : ''} free</span>;
+          })()}
+        </div>
+        <div className="slot-row mb-16">
+          {DISPLAY_SLOTS.map(slot => {
+            const occupied = isSlotOccupied(selectedDate, slot);
+            return (
+              <button
+                key={slot}
+                className={`slot-bubble ${occupied ? 'booked' : 'free'}`}
+                disabled={occupied}
+                title={occupied ? 'Booked' : `Book ${slot}`}
+                onClick={() => { setForm(f => ({ ...f, date: selectedDate, time: slot })); setShowAdd(true); }}
+              >
+                {parseInt(slot)}
+              </button>
+            );
+          })}
+        </div>
         {schedule.length === 0 ? (
           <EmptyState
             inCard={false}
@@ -238,7 +284,11 @@ export default function SchedulePage() {
                 </div>
                 <div className="form-group book-form-time">
                   <label className="form-label">Time</label>
-                  <input className="form-input" type="time" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} />
+                  <select className="form-select" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}>
+                    {availableBookingSlots(form.duration).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="book-form-row">
