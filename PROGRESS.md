@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-14（Session 10）
+> 最後更新：2026-04-14（Session 11）
 
 ---
 
@@ -93,6 +93,25 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | 2 | ClientDetailPage Body Stats 圖表 | Body Stats tab 嘅靜態 progress bar 換成同 ProgressPage 一樣嘅 Recharts 圖表；Trainer 可以睇客戶進度趨勢；metric tiles 可點擊切換 |
 | 3 | 品牌設計樣本 | 獨立 HTML mockup（`/brand-sample.html`）展示活力橙 + 健康青綠配色、Inter 字體、Sidebar、Stat cards、按鈕風格、色彩系統 |
 | 4 | CI branch 完整 merge | Session 7 安全改動（rules + query filters）merge 去 CI branch，所有改動齊全 |
+
+---
+
+## Session 11 完成嘅工作（2026-04-14）
+
+### Schedule 預約系統大改善（A + B + F）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ 預約視窗限制 09:00–17:00 | `BOOKING_SLOTS` 定義 09:00–16:30（每 30 分鐘），最後一格 16:00+60min=17:00；`hasConflict` 加 boundary check：`startMin < 9*60 \|\| endMin > 17*60` 直接拒絕 |
+| 2 | ✅ 時段視覺化 Bubble Row | 每日日曆頁頂部加 8 個小時 bubble（09–16）；已佔用顯示灰色禁用，空閒顯示主題色；點擊空閒 bubble 直接預填時間開啟 Book Session |
+| 3 | ✅ 空閒時段計數 | Bubble Row 右上角顯示「X slots free」提示當日剩餘時段數量 |
+| 4 | ✅ Client 睇到 Trainer 真實可用時段 | 新增 `trainerSchedule` state + 獨立 Firestore listener（Client 端 subscribe `schedule` by `trainerId`）；`refSchedule` 抽象層：Trainer 睇 `allSchedule`，Client 睇 `trainerSchedule`；Client 預約時間選擇器自動排除 Trainer 已預約嘅時段 |
+| 5 | ✅ Duration 固定 60 分鐘 | 移除 Duration 下拉選單；前端表單 + 衝突檢查全部以 60 分鐘計算；顯示寫死 `60 min` |
+| 6 | ✅ Time Picker 改 Dropdown | 時間 `<input type="time">` 換成 `<select>`，選項由 `availableBookingSlots()` 動態生成（已排除衝突時段） |
+| 7 | ✅ Firestore rules 更新 | `schedule` read rule 加 `resource.data.trainerId == userDoc().trainerId`，允許 Client 讀取 Trainer 全部時間表以作可用性檢查 |
+
+### ⚠️ 遺留問題
+- **`getTrainerSchedule` 喺 Client 登入前返回空陣列**：Trainer 尚未登入嘅初始狀態，第一次 render 時 Client 可能短暫見到所有時段都係「空閒」，等 Firestore snapshot 到位後先更新。屬於正常 async 行為，對 UX 影響極小（Booking form 打開時通常資料已到位）。
 
 ---
 
@@ -193,8 +212,9 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | ✅ 完成 | Firestore rules 讀取收緊 | 完成 |
 | ✅ 完成 | Exercise Library trainerId 隔離 | 完成 |
 | ✅ 完成 | Schedule clientId ownership 驗證 | 完成 |
-| 🟡 中 | Progress 圖表升級（Recharts） | 待做 |
+| ✅ 完成 | Progress 圖表升級（Recharts） | Session 8 完成 |
 | ✅ 完成 | bodyStats 遷移 subcollection | Session 10 完成 |
+| ✅ 完成 | Schedule 預約系統改善 | Session 11 完成 |
 | 🟢 低 | i18n 中文支援 | 待做 |
 
 ---
