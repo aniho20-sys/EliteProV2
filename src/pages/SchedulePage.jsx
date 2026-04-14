@@ -4,14 +4,14 @@ import { Plus, Check, X, CalendarOff, Trash2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
-// Booking window: 09:00–16:00, 30-min slots
+// Booking window: 09:00–17:00, 30-min slots
 const BOOKING_SLOTS = [
   '09:00','09:30','10:00','10:30','11:00','11:30',
   '12:00','12:30','13:00','13:30','14:00','14:30',
-  '15:00','15:30',
+  '15:00','15:30','16:00','16:30',
 ];
 // Hourly bubbles for the availability display
-const DISPLAY_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00'];
+const DISPLAY_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
 
 export default function SchedulePage() {
@@ -60,7 +60,7 @@ export default function SchedulePage() {
   const hasConflict = (date, time, duration) => {
     const startMin = toMin(time);
     const endMin = startMin + Number(duration);
-    if (startMin < 9 * 60 || endMin > 16 * 60) return true;
+    if (startMin < 9 * 60 || endMin > 17 * 60) return true;
     return refSchedule.some(s => s.date === date && sessionOverlaps(s, startMin, endMin));
   };
 
@@ -75,7 +75,7 @@ export default function SchedulePage() {
   const availableBookingSlots = (duration, date) =>
     BOOKING_SLOTS.filter(s => {
       const slotMin = toMin(s);
-      if (slotMin + duration > 16 * 60) return false;
+      if (slotMin + duration > 17 * 60) return false;
       if (!date) return true;
       return !refSchedule.some(existing => existing.date === date && sessionOverlaps(existing, slotMin, slotMin + duration));
     });
