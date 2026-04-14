@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-14（Session 9）
+> 最後更新：2026-04-14（Session 10）
 
 ---
 
@@ -96,6 +96,22 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 
 ---
 
+## Session 10 完成嘅工作（2026-04-14）
+
+### Workout Log Exercise Name Fix + bodyStats Subcollection Migration（B + A）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ Workout log exercise name 修復 | 自訂 exercises（`ex-XXXXX` IDs）喺 Firestore listener 未 fire 前顯示原始 ID。三層修復：(1) `startLog()` 從 plan exercise 帶入 `name` 欄位；(2) `handleSave()` 將 `name` 連同 `exerciseId` 一起存入 Firestore log entries；(3) 顯示邏輯改為 `entry.name \|\| getExerciseName(id)` fallback chain。向後兼容：舊 logs 無 `name` field 仍靠 lookup 解析 |
+| 2 | ✅ bodyStats subcollection 遷移 | 舊結構：`bodyStats/{clientId}` 單一 doc with `entries: [...]` array（1MB 上限風險）。新結構：`bodyStats/{clientId}/entries/{auto-id}` subcollection。改動：(a) AppContext 移除全域 bodyStats listener，改為 reactive per-client subcollection listeners（依 `users` state 動態訂閱）；(b) `addBodyStat` 改用 `addDoc`；(c) `deleteBodyStat` 改用 doc ID 而非 array index；(d) Demo data seeding 改為 subcollection writes；(e) `deleteAccount` 改為 batch delete subcollection entries；(f) Firestore rules 加 `entries` subcollection rules；(g) ProgressPage delete 改用 `s.id`（doc ID）|
+
+### ⚠️ 遷移注意事項
+- **現有 bodyStats 資料**（舊格式 array）遷移後**不會自動出現**——舊 doc 仍在 Firestore 但新 listener 唔讀佢
+- Demo 帳號：`resetData()` 會重新 seed 新格式，重置後正常
+- 實際用戶（如有）：舊 measurements 需重新輸入，或手動 Firestore migration
+
+---
+
 ## Session 9 完成嘅工作（2026-04-14）
 
 ### CI/CD 修復 + Web App 完善開始（B + E）
@@ -178,7 +194,7 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | ✅ 完成 | Exercise Library trainerId 隔離 | 完成 |
 | ✅ 完成 | Schedule clientId ownership 驗證 | 完成 |
 | 🟡 中 | Progress 圖表升級（Recharts） | 待做 |
-| 🟡 中 | bodyStats 遷移 subcollection | 待做（長遠）|
+| ✅ 完成 | bodyStats 遷移 subcollection | Session 10 完成 |
 | 🟢 低 | i18n 中文支援 | 待做 |
 
 ---

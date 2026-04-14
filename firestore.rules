@@ -41,11 +41,18 @@ service cloud.firestore {
     }
 
     // ── Body Stats ──
-    // Doc ID = clientId; only the client themselves or their trainer can read/write
+    // Subcollection: bodyStats/{clientId}/entries/{entryId}
+    // Only the client themselves or their trainer can read/write entries
     match /bodyStats/{clientId} {
       allow read: if isOwner(clientId) || isTrainerOf(clientId);
       allow write: if isOwner(clientId) || isTrainerOf(clientId);
       allow delete: if isOwner(clientId);
+      match /entries/{entryId} {
+        allow read: if isOwner(clientId) || isTrainerOf(clientId);
+        allow create: if isOwner(clientId) || isTrainerOf(clientId);
+        allow update: if false;
+        allow delete: if isOwner(clientId);
+      }
     }
 
     // ── Workout Plans ──

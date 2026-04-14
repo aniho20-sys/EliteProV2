@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { db, auth } from '../firebase';
 import {
-  collection, doc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs, query, where, or,
+  collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, writeBatch, getDocs, query, where, or, orderBy,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -83,12 +83,7 @@ export function AppProvider({ children }) {
       markLoaded('users');
     }, () => markLoaded('users')));
 
-    unsubs.push(onSnapshot(collection(db, 'bodyStats'), (snap) => {
-      const map = {};
-      snap.docs.forEach(d => { map[d.id] = d.data().entries || []; });
-      setBodyStatsMap(map);
-      markLoaded('bodyStats');
-    }, () => markLoaded('bodyStats')));
+    markLoaded('bodyStats'); // bodyStats handled via per-client subcollection listeners below
 
     const uid = firebaseUser.uid;
 
@@ -129,6 +124,23 @@ export function AppProvider({ children }) {
     );
     return () => unsub();
   }, [currentUser?.id]);
+
+  // --- Body Stats: per-client subcollection listeners (reactive on users list) ---
+  useEffect(() => {
+    if (!currentUser) return;
+    const clientIds = currentUser.role === 'trainer'
+      ? users.filter(u => u.trainerId === currentUser.id).map(u => u.id)
+      : [currentUser.id];
+    if (clientIds.length === 0) return;
+    const unsubs = clientIds.map(cid =>
+      onSnapshot(
+        query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'asc')),
+        (snap) => setBodyStatsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
+        () => {},
+      )
+    );
+    return () => unsubs.forEach(u => u());
+  }, [currentUser?.id, currentUser?.role, currentUser?.trainerId, users]);
 
   // --- Sync currentUser when users list or firebaseUser changes ---
   useEffect(() => {
@@ -174,10 +186,12 @@ export function AppProvider({ children }) {
       joinDate: '2026-02-20', isDemo: true,
     });
 
-    // Body stats — doc id = clientId
+    // Body stats — subcollection: bodyStats/{clientId}/entries/{auto-id}
     Object.entries(sampleBodyStats).forEach(([origId, entries]) => {
       const cid = idMap[origId];
-      if (cid) batch.set(doc(db, 'bodyStats', cid), { entries });
+      if (cid) entries.forEach(entry =>
+        batch.set(doc(collection(db, 'bodyStats', cid, 'entries')), entry)
+      );
     });
 
     // Workout plans
@@ -340,8 +354,15 @@ export function AppProvider({ children }) {
     if (!fbUser || !currentUser) throw new Error('Not signed in');
     const uid = currentUser.id;
 
-    // 1. Delete bodyStats doc (best-effort; only clients have one)
-    try { await deleteDoc(doc(db, 'bodyStats', uid)); } catch { /* may not exist */ }
+    // 1. Delete bodyStats entries subcollection (best-effort; only clients have entries)
+    try {
+      const snap = await getDocs(collection(db, 'bodyStats', uid, 'entries'));
+      if (snap.size > 0) {
+        const delBatch = writeBatch(db);
+        snap.docs.forEach(d => delBatch.delete(d.ref));
+        await delBatch.commit();
+      }
+    } catch { /* may not exist */ }
 
     // 2. If trainer, orphan ghost clients (clear trainerId so they're not "owned")
     if (currentUser.role === 'trainer') {
@@ -381,14 +402,11 @@ export function AppProvider({ children }) {
 
   const addBodyStat = async (clientId, stat) => {
     const entry = { ...stat, date: stat.date || new Date().toISOString().split('T')[0] };
-    const current = bodyStatsMap[clientId] || [];
-    await setDoc(doc(db, 'bodyStats', clientId), { entries: [...current, entry] });
+    await addDoc(collection(db, 'bodyStats', clientId, 'entries'), entry);
   };
 
-  const deleteBodyStat = async (clientId, index) => {
-    const current = bodyStatsMap[clientId] || [];
-    const updated = current.filter((_, i) => i !== index);
-    await setDoc(doc(db, 'bodyStats', clientId), { entries: updated });
+  const deleteBodyStat = async (clientId, entryId) => {
+    await deleteDoc(doc(db, 'bodyStats', clientId, 'entries', entryId));
   };
 
   // ========== Workout Plans ==========

@@ -202,34 +202,29 @@ export default function ProgressPage() {
                   <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {[...stats].reverse().map((s, i) => {
-                    const origIdx = stats.length - 1 - i;
-                    return (
-                      <tr key={i}>
-                        <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
-                        <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
-                        <td>
-                          <button className="btn-icon" title="Delete"
-                            onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Deleted', 'error'); }}>
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {[...stats].reverse().map((s) => (
+                    <tr key={s.id}>
+                      <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
+                      <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
+                      <td>
+                        <button className="btn-icon" title="Delete"
+                          onClick={() => { deleteBodyStat(currentUser.id, s.id); toast('Deleted', 'error'); }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
             {/* Mobile cards */}
             <div className="history-cards-mobile">
-              {[...stats].reverse().map((s, i) => {
-                const origIdx = stats.length - 1 - i;
-                return (
-                  <div key={i} className="history-card">
+              {[...stats].reverse().map((s) => (
+                  <div key={s.id} className="history-card">
                     <div className="flex-between">
                       <div className="history-card-date">{s.date}</div>
                       <button className="btn-icon" title="Delete"
-                        onClick={() => { deleteBodyStat(currentUser.id, origIdx); toast('Deleted', 'error'); }}>
+                        onClick={() => { deleteBodyStat(currentUser.id, s.id); toast('Deleted', 'error'); }}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -246,8 +241,7 @@ export default function ProgressPage() {
                       </div>
                     </div>
                   </div>
-                );
-              })}
+              ))}
             </div>
           </div>
         </>
