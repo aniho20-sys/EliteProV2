@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-13（Session 8）
+> 最後更新：2026-04-14（Session 9）
 
 ---
 
@@ -23,7 +23,7 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] Schedule 日曆（date picker、conflict check、booking）
 - [x] In-app Messaging（unread badges、real-time sync）
 - [x] Exercise Library（search、filter by muscle/equipment、**YouTube + 任意 URL 連結、+ Add Link 快速入口**）
-- [x] Body Stats / Progress 頁（SVG trend charts、chest/waist/hips/arms/legs）
+- [x] Body Stats / Progress 頁（**Recharts** AreaChart、互動 tooltip、metric tiles、趨勢指示）
 - [x] Profile 頁（edit profile、invite code、connect to trainer）
 - [x] Global Search（clients、plans、exercises）
 - [x] Toast notification system
@@ -39,7 +39,8 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] Demo Coach 帳號（自動 Firebase Auth signup + seed ghost clients）
 - [x] Trainer-Client 邀請碼系統（6-char code、connect flow）
 - [x] Delete Account 功能（GDPR right to erasure）
-- [x] Firestore Security Rules（pragmatic model：authed read、per-doc write）
+- [x] Firestore Security Rules（Phase 3 收緊：per-doc ownership read、trainerId isolation、schedule ownership validation）
+- [x] Firebase Auth 錯誤訊息 friendly 化（`src/utils/authErrors.js` 集中管理）
 
 ### UI/UX（Phase 1 Step 7 新增）
 - [x] Light / Dark 主題（CSS variables、localStorage persist）
@@ -95,7 +96,30 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 
 ---
 
-## ⚠️ 重要：Firebase Deploy 問題（未解決）
+## Session 9 完成嘅工作（2026-04-14）
+
+### CI/CD 修復 + Web App 完善開始（B + E）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ CI/CD 正式修復 | `FIREBASE_SERVICE_ACCOUNT` secret 已由用戶填入；workflow 移除 `Install Functions dependencies`（`functions/` 冇 `package-lock.json` 導致 `npm ci` 失敗）；Firebase Hosting 首次成功部署 |
+| 2 | ✅ Firebase 錯誤訊息 friendly 化 | 新增 `src/utils/authErrors.js` 集中管理所有 Firebase auth error code → 用戶可讀訊息；修復 LoginPage（Google 登入、Demo Coach、忘記密碼、Email 登入）；修復 ProfilePage（重設密碼、刪除帳號）；新增 `too-many-requests`、`network-request-failed`、`user-disabled` 等覆蓋 |
+
+### 🎯 重要決策：5月上架計劃
+
+- **目標**：2026年5月正式上架
+- **平台**：Apple App Store（優先）
+- **方案**：Capacitor 包裝現有 React app（唔需重寫）
+- **策略**：先完善 web app，借到 Mac 後做 Capacitor + App Store 提交
+
+### Capacitor iOS 上架前置要求（用戶待辦）
+1. **借 Mac**（Xcode 強制需要）
+2. **Apple Developer 帳號**：$99 USD/年，需提前幾日申請（Apple 審核身份）
+3. **借到 Mac 後**：安裝 Xcode → 執行 Capacitor build → 解決 iOS 特有問題 → 提交 App Store
+
+---
+
+## ⚠️ 已解決：Firebase Deploy 問題（Session 9 修復）
 
 ### 問題現象
 - Firebase Hosting 從未成功部署（用戶從未見過任何程式改動）
