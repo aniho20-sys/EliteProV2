@@ -73,9 +73,14 @@ service cloud.firestore {
     }
 
     // ── Schedule ──
-    // Only the trainer or client involved can read.
+    // Trainer or client involved can read; clients can also read trainer's full schedule
+    // to check real availability (so they don't see already-booked slots when booking).
     match /schedule/{schedId} {
-      allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow read: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        resource.data.clientId == request.auth.uid ||
+        resource.data.trainerId == userDoc().trainerId
+      );
       allow create: if isAuth() && (
         // Trainer books for their own client only
         (request.resource.data.trainerId == request.auth.uid &&

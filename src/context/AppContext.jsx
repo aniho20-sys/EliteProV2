@@ -38,6 +38,7 @@ export function AppProvider({ children }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [workoutLogs, setWorkoutLogs] = useState([]);
   const [schedule, setSchedule] = useState([]);
+  const [trainerSchedule, setTrainerSchedule] = useState([]);
   const [messages, setMessages] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +69,7 @@ export function AppProvider({ children }) {
       // Not authed: reset state and mark as non-loading
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
-      setWorkoutLogs([]); setSchedule([]); setMessages([]); setExercises([]);
+      setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]);
       loadedRef.current = new Set();
       setLoading(false);
       return;
@@ -124,6 +125,17 @@ export function AppProvider({ children }) {
     );
     return () => unsub();
   }, [currentUser?.id]);
+
+  // --- Trainer schedule for clients: load trainer's full schedule so clients see real availability ---
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'client' || !currentUser.trainerId) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'schedule'), where('trainerId', '==', currentUser.trainerId)),
+      (snap) => setTrainerSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+      () => {},
+    );
+    return () => unsub();
+  }, [currentUser?.id, currentUser?.trainerId]);
 
   // --- Body Stats: per-client subcollection listeners (reactive on users list) ---
   useEffect(() => {
@@ -451,6 +463,9 @@ export function AppProvider({ children }) {
     });
   };
 
+  // Returns the trainer's full schedule (for clients to check real availability)
+  const getTrainerSchedule = () => trainerSchedule;
+
   const addScheduleItem = async (item) => {
     const newItem = { ...item, id: `sched-${Date.now()}`, status: item.status || 'pending' };
     await setDoc(doc(db, 'schedule', newItem.id), newItem);
@@ -583,7 +598,7 @@ export function AppProvider({ children }) {
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog,
-    getSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,
+    getSchedule, getTrainerSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
