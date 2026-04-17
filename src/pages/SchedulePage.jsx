@@ -222,27 +222,29 @@ export default function SchedulePage() {
       <div className="card">
         <div className="schedule-day-header mb-16">
           <h3 className="card-title">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-          {(() => {
+          {isTrainer && (() => {
             const freeCount = DISPLAY_SLOTS.filter(s => !isSlotOccupied(selectedDate, s)).length;
             return <span className="text-sm text-muted">{freeCount} slot{freeCount !== 1 ? 's' : ''} free</span>;
           })()}
         </div>
-        <div className="slot-row mb-16">
-          {DISPLAY_SLOTS.map(slot => {
-            const occupied = isSlotOccupied(selectedDate, slot);
-            return (
-              <button
-                key={slot}
-                className={`slot-bubble ${occupied ? 'booked' : 'free'}`}
-                disabled={occupied}
-                title={occupied ? 'Booked' : `Book ${slot}`}
-                onClick={() => { setForm(f => ({ ...f, date: selectedDate, time: slot })); setShowAdd(true); }}
-              >
-                {parseInt(slot)}
-              </button>
-            );
-          })}
-        </div>
+        {isTrainer && (
+          <div className="slot-row mb-16">
+            {DISPLAY_SLOTS.map(slot => {
+              const occupied = isSlotOccupied(selectedDate, slot);
+              return (
+                <button
+                  key={slot}
+                  className={`slot-bubble ${occupied ? 'booked' : 'free'}`}
+                  disabled={occupied}
+                  title={occupied ? 'Booked' : `Book ${slot}`}
+                  onClick={() => { setForm(f => ({ ...f, date: selectedDate, time: slot })); setShowAdd(true); }}
+                >
+                  {parseInt(slot)}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {schedule.length === 0 ? (
           <EmptyState
             inCard={false}
