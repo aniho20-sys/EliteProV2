@@ -93,11 +93,12 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | 1 | ✅ iOS Safari Google Sign-In 強化 | 加入 `auth/web-storage-unsupported` redirect 觸發（iOS 私人模式）；`getRedirectResult` 錯誤改為透過 `redirectAuthError` context state 傳至 LoginPage 顯示；移除 `finally` block，redirect 期間 spinner 持續顯示（唔閃爍）|
 | 2 | ✅ Email 表單 iOS autocomplete 修復 | 主表單加 `autoComplete="on"`；email input 加 `name="email"` + `autoComplete="email"`；password input 依登入/注冊動態切換 `autoComplete="current-password"` / `"new-password"`；Forgot Password modal email 同步補上屬性；確保 iCloud Keychain / Face ID 自動填入正常觸發 |
 | 3 | ✅ `authErrors.js` 補充 | 加入 `auth/web-storage-unsupported` 友好訊息（作 redirect 同樣失敗時嘅 fallback 顯示）|
+| 4 | ✅ Forgot Password modal 錯誤顯示 Bug 修復 | 原本 `setError()` 係更新 modal 背後嘅主 card 錯誤欄，modal 蓋住導致用戶完全睇唔到；新增獨立 `forgotError` state，錯誤訊息直接顯示喺 modal 內部；移除 `autoFocus`（iOS modal 彈出鍵盤會頂起 modal 超出可視範圍）；Cancel / overlay 點擊同時清除 `forgotError` |
 
 **真機測試清單進度（iOS Safari）：**
 - [x] Google Sign-In redirect flow 代碼強化（待真機驗證）
 - [x] Email 登入 / 註冊 autocomplete 修復（待真機驗證）
-- [ ] Forgot Password — Firebase reset email 收到
+- [x] Forgot Password modal 錯誤顯示修復（待真機驗證）
 - [ ] Demo Coach 登入正常
 - [ ] PWA Add to Home Screen
 - [ ] Push Notifications（iOS 16.4+）

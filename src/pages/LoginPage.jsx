@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   useEffect(() => {
     if (redirectAuthError) setError(redirectAuthError);
@@ -49,10 +50,9 @@ export default function LoginPage() {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    setError('');
-    setInfo('');
+    setForgotError('');
     if (!forgotEmail.trim()) {
-      setError('Please enter your email');
+      setForgotError('Please enter your email');
       return;
     }
     setForgotLoading(true);
@@ -61,8 +61,9 @@ export default function LoginPage() {
       setInfo(`Password reset email sent to ${forgotEmail.trim()}. Check your inbox (and spam folder).`);
       setShowForgot(false);
       setForgotEmail('');
+      setForgotError('');
     } catch (err) {
-      setError(friendlyAuthError(err) || 'Failed to send reset email. Please try again.');
+      setForgotError(friendlyAuthError(err) || 'Failed to send reset email. Please try again.');
     } finally {
       setForgotLoading(false);
     }
@@ -184,7 +185,7 @@ export default function LoginPage() {
 
       {/* Forgot Password Modal */}
       {showForgot && (
-        <div className="modal-overlay" onClick={() => !forgotLoading && setShowForgot(false)}>
+        <div className="modal-overlay" onClick={() => !forgotLoading && (setShowForgot(false), setForgotError(''))}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">
               <KeyRound size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} />
@@ -193,6 +194,7 @@ export default function LoginPage() {
             <p className="text-sm text-muted">
               Enter the email you signed up with. We'll send you a link to reset your password.
             </p>
+            {forgotError && <div className="login-error" style={{ marginBottom: 8 }}>{forgotError}</div>}
             <form onSubmit={handleForgotPassword}>
               <div className="form-group mt-8">
                 <label className="form-label">Email</label>
@@ -203,7 +205,6 @@ export default function LoginPage() {
                   onChange={e => setForgotEmail(e.target.value)}
                   placeholder="you@example.com"
                   name="email" autoComplete="email"
-                  autoFocus
                   required
                 />
               </div>
@@ -211,7 +212,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="btn btn-outline"
-                  onClick={() => { setShowForgot(false); setForgotEmail(''); }}
+                  onClick={() => { setShowForgot(false); setForgotEmail(''); setForgotError(''); }}
                   disabled={forgotLoading}
                 >
                   Cancel
