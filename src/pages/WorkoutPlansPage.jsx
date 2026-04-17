@@ -3,12 +3,13 @@ import { useApp } from '../context/AppContext';
 import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets } from '../utils/workoutUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, muscleGroups } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -109,15 +110,6 @@ export default function WorkoutPlansPage() {
   const updateExFilter = (val) => {
     exFilterRef.current = val;
     setExFilter(val);
-  };
-
-  const toggleMuscle = (muscle) => {
-    setCustomForm(prev => ({
-      ...prev,
-      muscles: prev.muscles.includes(muscle)
-        ? prev.muscles.filter(m => m !== muscle)
-        : [...prev.muscles, muscle],
-    }));
   };
 
   const handleAddCustom = async () => {
@@ -466,21 +458,12 @@ export default function WorkoutPlansPage() {
                       />
                     </div>
 
-                    <div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ marginBottom: 8 }}>Muscle Groups <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {muscleGroups.map(m => (
-                          <button
-                            key={m}
-                            type="button"
-                            className={`tag${customForm.muscles.includes(m) ? ' tag-primary' : ''}`}
-                            style={{ cursor: 'pointer', padding: '5px 12px', fontSize: 13, border: customForm.muscles.includes(m) ? 'none' : '1px solid var(--border)' }}
-                            onClick={() => toggleMuscle(m)}
-                          >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
+                      <MuscleSelector
+                        selected={customForm.muscles}
+                        onChange={muscles => setCustomForm(p => ({ ...p, muscles }))}
+                      />
                     </div>
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>

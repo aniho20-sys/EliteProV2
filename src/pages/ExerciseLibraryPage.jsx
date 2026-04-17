@@ -3,9 +3,11 @@ import { useApp } from '../context/AppContext';
 import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX, Link2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import MuscleSelector from '../components/MuscleSelector';
 
 export default function ExerciseLibraryPage() {
   const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
+  const parseMuscles = (str) => str ? str.split(', ').filter(Boolean) : [];
   const toast = useToast();
   const isTrainer = currentUser?.role === 'trainer';
   const exercises = getExercises();
@@ -15,7 +17,7 @@ export default function ExerciseLibraryPage() {
   const [equipFilter, setEquipFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingEx, setEditingEx] = useState(null);
-  const [form, setForm] = useState({ name: '', muscle: '', equipment: '', description: '', videoUrl: '' });
+  const [form, setForm] = useState({ name: '', muscles: [], equipment: '', description: '', videoUrl: '' });
   const [focusUrl, setFocusUrl] = useState(false);
   const urlInputRef = useRef(null);
 
@@ -32,7 +34,7 @@ export default function ExerciseLibraryPage() {
 
   const filtered = exercises.filter(e => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (muscleFilter && e.muscle !== muscleFilter) return false;
+    if (muscleFilter && !parseMuscles(e.muscle).includes(muscleFilter)) return false;
     if (equipFilter && e.equipment !== equipFilter) return false;
     return true;
   });
@@ -40,33 +42,35 @@ export default function ExerciseLibraryPage() {
   const openAdd = () => {
     setFocusUrl(false);
     setEditingEx(null);
-    setForm({ name: '', muscle: muscleGroups[0], equipment: equipmentTypes[0], description: '', videoUrl: '' });
+    setForm({ name: '', muscles: [], equipment: equipmentTypes[0], description: '', videoUrl: '' });
     setShowModal(true);
   };
 
   const openEdit = (ex) => {
     setFocusUrl(false);
     setEditingEx(ex);
-    setForm({ name: ex.name, muscle: ex.muscle, equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
+    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
     setShowModal(true);
   };
 
   // Opens edit modal with URL field auto-focused
   const openEditAtUrl = (ex) => {
     setEditingEx(ex);
-    setForm({ name: ex.name, muscle: ex.muscle, equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
+    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
     setFocusUrl(true);
     setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const { muscles, ...rest } = form;
+    const exData = { ...rest, muscle: muscles.join(', ') };
     try {
       if (editingEx) {
-        await updateExercise(editingEx.id, form);
+        await updateExercise(editingEx.id, exData);
         toast('Exercise updated');
       } else {
-        await addExercise(form);
+        await addExercise(exData);
         toast('Exercise added');
       }
       setShowModal(false);
@@ -170,19 +174,18 @@ export default function ExerciseLibraryPage() {
                 <label className="form-label">Exercise Name</label>
                 <input className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Bulgarian Split Squat" />
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Muscle Group</label>
-                  <select className="form-select" value={form.muscle} onChange={e => setForm({ ...form, muscle: e.target.value })}>
-                    {muscleGroups.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Equipment</label>
-                  <select className="form-select" value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
-                    {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
-                  </select>
-                </div>
+              <div className="form-group">
+                <label className="form-label">Muscle Groups</label>
+                <MuscleSelector
+                  selected={form.muscles}
+                  onChange={muscles => setForm({ ...form, muscles })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Equipment</label>
+                <select className="form-select" value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
+                  {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">
