@@ -10,13 +10,12 @@ ElitePro is a web-based fitness training platform for personal trainers and thei
 - **Backend**: Firebase (Firestore + Firebase Auth)
 - **Offline**: IndexedDB persistence via `enableIndexedDbPersistence`
 - **Styling**: Custom CSS with CSS variables (light/dark theme)
-- **Deployment**: Firebase Hosting (primary), GitHub Pages (alternate via `DEPLOY_TARGET=gh-pages`)
+- **Deployment**: Firebase Hosting via GitHub Actions CI
 
 ## Commands
 - `npm install` — Install dependencies
 - `npm run dev` — Start dev server (port 5173)
 - `npm run build` — Production build to `dist/`
-- `npm run build:gh` — Build for GitHub Pages (`DEPLOY_TARGET=gh-pages`)
 - `npm run preview` — Preview production build
 - `npm run lint` — Run ESLint
 - `npm run deploy` — Build + `firebase deploy` (all services)
@@ -30,6 +29,7 @@ src/
 │   ├── EmptyState.jsx      # Reusable empty state (icon + title + desc + CTA action)
 │   ├── ErrorBoundary.jsx   # React class error boundary (wraps entire app)
 │   ├── GlobalSearch.jsx    # Search bar: clients, exercises, plans
+│   ├── MuscleSelector.jsx  # Interactive SVG muscle body model for exercise targeting
 │   ├── Navigation.jsx      # Sidebar (desktop) + top header + bottom nav (mobile)
 │   ├── NotesSection.jsx    # Client notes section component
 │   └── Skeleton.jsx        # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
@@ -58,8 +58,12 @@ src/
 │   └── ProfilePage.jsx         # User profile, invite code, account management
 ├── styles/
 │   └── index.css           # Global styles (CSS variables, skeleton, empty states)
+├── utils/
+│   ├── authErrors.js       # Firebase Auth error code → friendly message map
+│   ├── sessionUtils.js     # Session colour/label helpers
+│   └── workoutUtils.js     # Workout set normalisation helpers
 ├── firebase.js             # Firebase init (db, auth exports)
-├── App.jsx                 # Root: provider tree + routing
+├── App.jsx                 # Root: provider tree + routing + invite code URL parsing
 └── main.jsx                # Entry point
 
 functions/                  # Cloud Functions (needs Blaze plan to deploy)
@@ -75,7 +79,7 @@ Top-level config files:
 - `firebase.json` — Firebase Hosting + Firestore rules + Functions config
 - `firestore.rules` — Firestore security rules
 - `.github/workflows/firebase-hosting.yml` — CI deploy on push to `claude/fitness-app-features-LbxtG`
-- `vite.config.js` — Vite config with `base` path logic
+- `vite.config.js` — Vite config
 - `eslint.config.js` — ESLint flat config
 
 ## Firebase Configuration
@@ -292,7 +296,7 @@ data                         // raw { users, bodyStats, workoutPlans, workoutLog
 - **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready but requires Blaze plan + VAPID key to activate
 
 ## Routing
-Uses `HashRouter` (required for Firebase Hosting SPA + GitHub Pages compatibility).
+Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 
 | Route | Trainer | Client |
 |-------|---------|--------|
@@ -346,6 +350,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - Trainers have a unique 6-char uppercase alphanumeric invite code (stored on their Firestore profile)
 - Clients enter the code during registration (RoleSelectPage) or later (ProfilePage)
 - `connectToTrainer(clientId, code)` sets `trainerId` on the client's profile
+- **Shareable link**: `https://elitepro-16718.web.app/#/?invite=XXXXXX` — App.jsx parses `?invite=` from hash on startup and saves to `sessionStorage`; RoleSelectPage reads it on mount to auto-fill the code and pre-select the client role
 
 ## Demo Data
 - `loginDemoCoach()` creates a real Firebase Auth account (`coach@elitepro.com`) on first use
@@ -358,7 +363,6 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **Primary**: Firebase Hosting at `https://elitepro-16718.web.app`
 - **CI branch**: `claude/fitness-app-features-LbxtG` — this is the single source of truth
 - **Auto-deploy**: GitHub Actions (`.github/workflows/firebase-hosting.yml`) triggers on every push to `claude/fitness-app-features-LbxtG` → builds + deploys to Firebase Hosting
-- **GitHub Pages**: `npm run build:gh` sets `base: '/EliteProV2/'`
 - **Firestore rules**: deploy with `npm run deploy:rules`
 - **Required secrets** (GitHub): `FIREBASE_SERVICE_ACCOUNT`
 
