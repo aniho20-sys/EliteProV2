@@ -151,11 +151,23 @@ export const sampleWorkoutLogs = [
 ];
 
 export const sampleSchedule = [
-  { id: 'sched-1', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-03', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
-  { id: 'sched-2', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-03', time: '10:30', duration: 60, type: 'PT Session', status: 'confirmed' },
-  { id: 'sched-3', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-04-04', time: '14:00', duration: 90, type: 'Competition Prep', status: 'pending' },
-  { id: 'sched-4', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-07', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
-  { id: 'sched-5', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-07', time: '10:30', duration: 60, type: 'PT Session', status: 'pending' },
+  { id: 'sched-1', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-03-10', time: '09:00', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-2', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-03-10', time: '10:30', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-3', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-03-17', time: '09:00', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-4', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-03-17', time: '10:30', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-5', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-03-20', time: '14:00', duration: 60, type: 'Competition Prep', status: 'completed' },
+  { id: 'sched-6', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-03-24', time: '09:00', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-7', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-03-27', time: '14:00', duration: 60, type: 'Competition Prep', status: 'completed' },
+  { id: 'sched-8', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-03-31', time: '09:00', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-9', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-03-31', time: '10:30', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-10', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-04-03', time: '14:00', duration: 60, type: 'Competition Prep', status: 'completed' },
+  { id: 'sched-11', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-07', time: '09:00', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-12', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-07', time: '10:30', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-13', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-14', time: '09:00', duration: 60, type: 'PT Session', status: 'completed' },
+  { id: 'sched-14', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-04-14', time: '14:00', duration: 60, type: 'Competition Prep', status: 'completed' },
+  { id: 'sched-15', trainerId: 'trainer-1', clientId: 'client-1', date: '2026-04-21', time: '09:00', duration: 60, type: 'PT Session', status: 'confirmed' },
+  { id: 'sched-16', trainerId: 'trainer-1', clientId: 'client-2', date: '2026-04-21', time: '10:30', duration: 60, type: 'PT Session', status: 'pending' },
+  { id: 'sched-17', trainerId: 'trainer-1', clientId: 'client-3', date: '2026-04-24', time: '14:00', duration: 60, type: 'Competition Prep', status: 'pending' },
 ];
 
 export const sampleMessages = [

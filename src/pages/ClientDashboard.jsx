@@ -1,11 +1,11 @@
 import { useApp } from '../context/AppContext';
-import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList } from 'lucide-react';
+import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 
 export default function ClientDashboard() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
@@ -18,6 +18,9 @@ export default function ClientDashboard() {
   const latestStat = stats[stats.length - 1];
   const prevStat = stats[stats.length - 2];
   const weightChange = latestStat && prevStat ? (latestStat.weight - prevStat.weight).toFixed(1) : null;
+
+  const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
+  const sessColor = sessRemaining === null ? 'var(--text-muted)' : sessRemaining >= 5 ? '#06d6a0' : sessRemaining >= 3 ? 'var(--warning)' : 'var(--danger)';
 
   const totalWorkouts = logs.length;
   const thisWeekLogs = logs.filter(l => {
@@ -77,6 +80,27 @@ export default function ClientDashboard() {
           {weightChange && <div className={`stat-change ${parseFloat(weightChange) > 0 ? 'positive' : 'negative'}`}>{weightChange > 0 ? '+' : ''}{weightChange}kg</div>}
         </div>
       </div>
+
+      {sessTotal !== null && (
+        <div className="card mb-16">
+          <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
+            <div className="flex gap-8" style={{ alignItems: 'center' }}>
+              <Layers size={18} style={{ color: sessColor }} />
+              <h3 className="card-title" style={{ margin: 0 }}>Sessions</h3>
+            </div>
+            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: sessColor, lineHeight: 1 }}>
+              {sessUsed}<span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '1rem' }}> / {sessTotal}</span>
+            </span>
+          </div>
+          <div className="session-progress-bar mb-8">
+            <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessColor }} />
+          </div>
+          <div className="flex-between">
+            <span className="text-sm text-muted">{sessUsed} sessions completed</span>
+            <span className="text-sm" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid-2">
         <div className="card">

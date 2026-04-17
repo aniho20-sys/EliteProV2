@@ -182,20 +182,20 @@ export function AppProvider({ children }) {
       trainerId: trainerUid, age: 28, height: 175,
       goals: 'Build muscle, improve strength',
       notes: 'Previous shoulder injury - avoid heavy overhead pressing',
-      joinDate: '2026-01-15', isDemo: true,
+      joinDate: '2026-01-15', isDemo: true, totalSessions: 20,
     });
     batch.set(doc(db, 'users', c2), {
       id: c2, name: 'Sarah Wong', email: 'sarah@demo.local', role: 'client',
       trainerId: trainerUid, age: 32, height: 163,
       goals: 'Fat loss, toning', notes: 'Beginner - focus on form',
-      joinDate: '2026-02-01', isDemo: true,
+      joinDate: '2026-02-01', isDemo: true, totalSessions: 6,
     });
     batch.set(doc(db, 'users', c3), {
       id: c3, name: 'Michael Lee', email: 'michael@demo.local', role: 'client',
       trainerId: trainerUid, age: 24, height: 180,
       goals: 'Powerlifting competition prep',
       notes: 'Advanced lifter, targets: S:200kg B:140kg D:240kg',
-      joinDate: '2026-02-20', isDemo: true,
+      joinDate: '2026-02-20', isDemo: true, totalSessions: 15,
     });
 
     // Body stats — subcollection: bodyStats/{clientId}/entries/{auto-id}
@@ -499,6 +499,15 @@ export function AppProvider({ children }) {
     await batch.commit();
   };
 
+  // ========== Session Stats ==========
+  const getSessionStats = (clientId) => {
+    const client = users.find(u => u.id === clientId);
+    const total = client?.totalSessions ?? null;
+    const used = schedule.filter(s => s.clientId === clientId && s.status === 'completed').length;
+    const remaining = total !== null ? total - used : null;
+    return { used, total, remaining };
+  };
+
   // ========== Personal Records ==========
   const getPersonalRecords = (clientId) => {
     const logs = workoutLogs.filter(l => l.clientId === clientId);
@@ -600,6 +609,7 @@ export function AppProvider({ children }) {
     getWorkoutLogs, addWorkoutLog,
     getSchedule, getTrainerSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
+    getSessionStats,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
     getInviteCode, findTrainerByCode, connectToTrainer,

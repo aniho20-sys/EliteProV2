@@ -15,7 +15,7 @@ const DISPLAY_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem } = useApp();
+  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats } = useApp();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
@@ -284,6 +284,19 @@ export default function SchedulePage() {
                   <input className="form-input" disabled value={getClient(trainerId)?.name || 'Your Coach'} />
                 </div>
               )}
+              {(() => {
+                const cId = isTrainer ? form.clientId : currentUser.id;
+                if (!cId) return null;
+                const { used, total, remaining } = getSessionStats(cId);
+                if (total === null) return null;
+                const color = remaining >= 5 ? '#06d6a0' : remaining >= 3 ? 'var(--warning)' : 'var(--danger)';
+                return (
+                  <div className="session-info-banner" style={{ borderColor: color }}>
+                    <span className="text-sm">Sessions: <strong style={{ color }}>{used} / {total}</strong></span>
+                    <span className="text-sm" style={{ color, fontWeight: 600 }}>{remaining} remaining</span>
+                  </div>
+                );
+              })()}
               <div className="book-form-row">
                 <div className="form-group book-form-date">
                   <label className="form-label">Date</label>

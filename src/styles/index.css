@@ -2235,3 +2235,28 @@ tr:hover { background: var(--bg-card-hover); }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Session progress bar */
+.session-progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.session-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* Session info banner inside booking modal */
+.session-info-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 12px;
+}

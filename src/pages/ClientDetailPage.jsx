@@ -29,7 +29,7 @@ function ChartTooltip({ active, payload, unit }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, getExercises, removeClient } = useApp();
+  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, getExercises, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -42,6 +42,9 @@ export default function ClientDetailPage() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [activeMetric, setActiveMetric] = useState('weight');
+  const [editingSessions, setEditingSessions] = useState(false);
+  const [sessionsInput, setSessionsInput] = useState('');
+  const [savingSessions, setSavingSessions] = useState(false);
 
   if (!client) {
     return (
@@ -78,6 +81,22 @@ export default function ClientDetailPage() {
     } catch {
       toast('Failed to remove client', 'error');
       setRemoving(false);
+    }
+  };
+
+  const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(clientId);
+  const sessColor = sessRemaining === null ? 'var(--text-muted)' : sessRemaining >= 5 ? '#06d6a0' : sessRemaining >= 3 ? 'var(--warning)' : 'var(--danger)';
+
+  const handleSaveSessions = async () => {
+    setSavingSessions(true);
+    try {
+      await updateClient(clientId, { totalSessions: Number(sessionsInput) });
+      setEditingSessions(false);
+      toast('Sessions updated');
+    } catch {
+      toast('Failed to update sessions', 'error');
+    } finally {
+      setSavingSessions(false);
     }
   };
 
@@ -134,6 +153,37 @@ export default function ClientDetailPage() {
             <p className="text-sm mt-8">Completed Workouts: <strong>{logs.filter(l => l.completed).length}</strong></p>
             <p className="text-sm mt-8">Measurements: <strong>{stats.length} records</strong></p>
             <p className="text-sm mt-8">Member since: <strong>{client.joinDate}</strong></p>
+            <div className="mt-16">
+              <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
+                <span className="text-sm fw-bold">Sessions</span>
+                {!editingSessions && (
+                  <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setEditingSessions(true); }}>
+                    {sessTotal === null ? 'Set Total' : 'Edit'}
+                  </button>
+                )}
+              </div>
+              {editingSessions ? (
+                <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                  <span className="text-sm text-muted">Total sessions:</span>
+                  <input className="form-input" style={{ width: 72, padding: '4px 8px' }} type="number" min="0" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
+                  <button className="btn btn-primary btn-sm" onClick={handleSaveSessions} disabled={savingSessions}>{savingSessions ? 'Saving…' : 'Save'}</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => setEditingSessions(false)} disabled={savingSessions}>Cancel</button>
+                </div>
+              ) : sessTotal !== null ? (
+                <>
+                  <div className="flex-between mb-6">
+                    <span className="text-sm text-muted">{sessUsed} used</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: sessColor }}>{sessUsed} / {sessTotal}</span>
+                  </div>
+                  <div className="session-progress-bar">
+                    <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessColor }} />
+                  </div>
+                  <div className="text-sm mt-6" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</div>
+                </>
+              ) : (
+                <p className="text-sm text-muted">Not set — click &quot;Set Total&quot; to configure</p>
+              )}
+            </div>
           </div>
         </div>
       )}
