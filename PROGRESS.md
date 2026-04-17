@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-14（Session 11）
+> 最後更新：2026-04-17（Session 12）
 
 ---
 
@@ -93,6 +93,31 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | 2 | ClientDetailPage Body Stats 圖表 | Body Stats tab 嘅靜態 progress bar 換成同 ProgressPage 一樣嘅 Recharts 圖表；Trainer 可以睇客戶進度趨勢；metric tiles 可點擊切換 |
 | 3 | 品牌設計樣本 | 獨立 HTML mockup（`/brand-sample.html`）展示活力橙 + 健康青綠配色、Inter 字體、Sidebar、Stat cards、按鈕風格、色彩系統 |
 | 4 | CI branch 完整 merge | Session 7 安全改動（rules + query filters）merge 去 CI branch，所有改動齊全 |
+
+---
+
+## Session 12 完成嘅工作（2026-04-17）
+
+### 學生堂數查詢功能（A + B + D + F）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ AppContext `getSessionStats(clientId)` | 計算 `totalSessions`（trainer 設定）vs `schedule` 內 `status=='completed'` 嘅數量；返回 `{ used, total, remaining }` |
+| 2 | ✅ ClientDetailPage 堂數管理 | Summary card 新增 Sessions 區塊；Trainer 可 Set Total / Edit；顯示 used/total + 進度條 + 顏色編碼 |
+| 3 | ✅ ClientDashboard 堂數 Card | Client Dashboard 顯示 Sessions 卡（僅 totalSessions 已設定時）；大字顯示 used/total；進度條；剩餘堂數 |
+| 4 | ✅ SchedulePage 堂數 Banner | Book Session Modal 頂部顯示 session-info-banner（Trainer 選 client 後 / Client 自動顯示）；邊框顏色反映剩餘量 |
+| 5 | ✅ Demo 數據更新 | Ghost clients 加 `totalSessions`（David 20, Sarah 6, Michael 15）；sampleSchedule 加入 14 條 completed sessions（展示真實剩餘量）|
+| 6 | ✅ CSS 樣式 | 新增 `.session-progress-bar`、`.session-progress-fill`、`.session-info-banner` |
+
+**顏色邏輯（剩餘堂數）：**
+- 🟢 > 5 堂：`#06d6a0`（綠色）
+- 🟡 3–5 堂：`var(--warning)`（橙黃）
+- 🔴 < 3 堂：`var(--danger)`（紅色）
+
+**設計決定：**
+- 計算方式用 `schedule status=='completed'`（唔用 workout log）— PT 堂係 Trainer confirm 嘅預約，唔係 Client 自主訓練
+- `totalSessions` 只有 Trainer 可以 write（Firestore rules 現有 `trainer can update their clients` 已覆蓋）
+- `totalSessions` 未設定時唔顯示 widget（唔強制，Trainer 按需設定）
 
 ---
 
@@ -215,6 +240,7 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | ✅ 完成 | Progress 圖表升級（Recharts） | Session 8 完成 |
 | ✅ 完成 | bodyStats 遷移 subcollection | Session 10 完成 |
 | ✅ 完成 | Schedule 預約系統改善 | Session 11 完成 |
+| ✅ 完成 | 學生堂數查詢功能 | Session 12 完成 |
 | 🟢 低 | i18n 中文支援 | 待做 |
 
 ---
