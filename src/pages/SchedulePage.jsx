@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2 } from 'lucide-react';
+import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
@@ -289,7 +290,7 @@ export default function SchedulePage() {
                 if (!cId) return null;
                 const { used, total, remaining } = getSessionStats(cId);
                 if (total === null) return null;
-                const color = remaining >= 5 ? '#06d6a0' : remaining >= 3 ? 'var(--warning)' : 'var(--danger)';
+                const color = getSessionColor(remaining);
                 return (
                   <div className="session-info-banner" style={{ borderColor: color }}>
                     <span className="text-sm">Sessions: <strong style={{ color }}>{used} / {total}</strong></span>

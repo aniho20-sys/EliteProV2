@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { getSessionColor } from '../utils/sessionUtils';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
@@ -85,7 +86,7 @@ export default function ClientDetailPage() {
   };
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(clientId);
-  const sessColor = sessRemaining === null ? 'var(--text-muted)' : sessRemaining >= 5 ? '#06d6a0' : sessRemaining >= 3 ? 'var(--warning)' : 'var(--danger)';
+  const sessColor = getSessionColor(sessRemaining);
 
   const handleSaveSessions = async () => {
     setSavingSessions(true);

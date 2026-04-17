@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers } from 'lucide-react';
+import { getSessionColor } from '../utils/sessionUtils';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
@@ -20,7 +21,7 @@ export default function ClientDashboard() {
   const weightChange = latestStat && prevStat ? (latestStat.weight - prevStat.weight).toFixed(1) : null;
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
-  const sessColor = sessRemaining === null ? 'var(--text-muted)' : sessRemaining >= 5 ? '#06d6a0' : sessRemaining >= 3 ? 'var(--warning)' : 'var(--danger)';
+  const sessColor = getSessionColor(sessRemaining);
 
   const totalWorkouts = logs.length;
   const thisWeekLogs = logs.filter(l => {
