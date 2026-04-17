@@ -50,6 +50,13 @@ export default function ProfilePage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const INVITE_URL = `https://elitepro-16718.web.app/#/?invite=${inviteCode}`;
 
+  // Trainer: working hours
+  const [workHours, setWorkHours] = useState({
+    start: currentUser.workingHours?.start || '09:00',
+    end: currentUser.workingHours?.end || '17:00',
+  });
+  const [whSaving, setWhSaving] = useState(false);
+
   // Client: connect to trainer
   const [connectCode, setConnectCode] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -116,6 +123,22 @@ export default function ProfilePage() {
       }).catch(() => {});
     } else {
       handleCopyLink();
+    }
+  };
+
+  const handleSaveWorkHours = async () => {
+    if (workHours.start >= workHours.end) {
+      toast('End time must be after start time', 'error');
+      return;
+    }
+    setWhSaving(true);
+    try {
+      await updateClient(currentUser.id, { workingHours: workHours });
+      toast('Working hours saved');
+    } catch {
+      toast('Failed to save working hours', 'error');
+    } finally {
+      setWhSaving(false);
     }
   };
 
@@ -285,6 +308,29 @@ export default function ProfilePage() {
               <Share2 size={16} /> Share
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Trainer: Working Hours */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">Working Hours</h3>
+          <p className="invite-desc">Set your available hours so clients can only book within this window.</p>
+          <div className="form-row mt-8">
+            <div className="form-group">
+              <label className="form-label">Start</label>
+              <input type="time" className="form-input" value={workHours.start}
+                onChange={e => setWorkHours(h => ({ ...h, start: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">End</label>
+              <input type="time" className="form-input" value={workHours.end}
+                onChange={e => setWorkHours(h => ({ ...h, end: e.target.value }))} />
+            </div>
+          </div>
+          <button className="btn btn-primary mt-8" onClick={handleSaveWorkHours} disabled={whSaving}>
+            <Save size={16} /> {whSaving ? 'Saving...' : 'Save Hours'}
+          </button>
         </div>
       )}
 

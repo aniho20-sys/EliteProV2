@@ -2261,6 +2261,23 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 12px;
 }
 
+/* Working Hours Banner */
+.wh-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+.wh-banner span {
+  flex: 1;
+}
+
 /* Muscle Selector */
 .muscle-selector {
   border: 1px solid var(--border);

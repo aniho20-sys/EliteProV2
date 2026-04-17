@@ -1,23 +1,28 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff, Trash2 } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2, Clock } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
-// Booking window: 09:00–17:00, 30-min slots
-const BOOKING_SLOTS = [
-  '09:00','09:30','10:00','10:30','11:00','11:30',
-  '12:00','12:30','13:00','13:30','14:00','14:30',
-  '15:00','15:30','16:00','16:30',
-];
-// Hourly bubbles for the availability display
-const DISPLAY_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
+
+const generateSlots = (start, end, step) => {
+  const slots = [];
+  let cur = toMin(start);
+  const endMin = toMin(end);
+  while (cur < endMin) {
+    slots.push(`${Math.floor(cur / 60).toString().padStart(2, '0')}:${(cur % 60).toString().padStart(2, '0')}`);
+    cur += step;
+  }
+  return slots;
+};
 
 export default function SchedulePage() {
   const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats } = useApp();
   const toast = useToast();
+  const navigate = useNavigate();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
 
@@ -26,10 +31,25 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // schedId
   const [deleting, setDeleting] = useState(false);
-  const [form, setForm] = useState({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
+  const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
+
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => !!localStorage.getItem('elitepro_wh_banner_dismissed')
+  );
+  const dismissBanner = () => {
+    localStorage.setItem('elitepro_wh_banner_dismissed', '1');
+    setBannerDismissed(true);
+  };
 
   // For client: find their trainer
   const trainerId = isTrainer ? currentUser.id : currentUser.trainerId;
+
+  // Working hours: trainer's own settings, client reads their trainer's settings
+  const trainerUser = isTrainer ? currentUser : getClient(trainerId);
+  const whStart = trainerUser?.workingHours?.start || '09:00';
+  const whEnd = trainerUser?.workingHours?.end || '17:00';
+  const BOOKING_SLOTS = generateSlots(whStart, whEnd, 30);
+  const DISPLAY_SLOTS = generateSlots(whStart, whEnd, 60);
 
   // Get next 14 days
   const dates = Array.from({ length: 14 }, (_, i) => {
@@ -61,7 +81,7 @@ export default function SchedulePage() {
   const hasConflict = (date, time, duration) => {
     const startMin = toMin(time);
     const endMin = startMin + Number(duration);
-    if (startMin < 9 * 60 || endMin > 17 * 60) return true;
+    if (startMin < toMin(whStart) || endMin > toMin(whEnd)) return true;
     return refSchedule.some(s => s.date === date && sessionOverlaps(s, startMin, endMin));
   };
 
@@ -76,7 +96,7 @@ export default function SchedulePage() {
   const availableBookingSlots = (duration, date) =>
     BOOKING_SLOTS.filter(s => {
       const slotMin = toMin(s);
-      if (slotMin + duration > 17 * 60) return false;
+      if (slotMin + duration > toMin(whEnd)) return false;
       if (!date) return true;
       return !refSchedule.some(existing => existing.date === date && sessionOverlaps(existing, slotMin, slotMin + duration));
     });
@@ -107,7 +127,7 @@ export default function SchedulePage() {
         trainerId,
         clientId: isTrainer ? form.clientId : currentUser.id,
       });
-      setForm({ clientId: '', date: '', time: '09:00', duration: 60, type: 'PT Session' });
+      setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
       setShowAdd(false);
       toast('Session booked');
     } catch (err) {
@@ -165,6 +185,18 @@ export default function SchedulePage() {
           <Plus size={18} /> Book Session
         </button>
       </div>
+
+      {/* Working hours banner for trainers who haven't set theirs yet */}
+      {isTrainer && !currentUser.workingHours && !bannerDismissed && (
+        <div className="wh-banner">
+          <Clock size={16} style={{ flexShrink: 0 }} />
+          <span>Set your working hours so clients can only book within your availability.</span>
+          <div className="flex gap-8" style={{ flexShrink: 0 }}>
+            <button className="btn btn-sm btn-primary" onClick={() => navigate('/profile')}>Set Hours</button>
+            <button className="btn-icon" onClick={dismissBanner} title="Dismiss"><X size={16} /></button>
+          </div>
+        </div>
+      )}
 
       {/* Date selector */}
       <div className="date-selector-month">{selectedMonth}</div>
@@ -310,6 +342,7 @@ export default function SchedulePage() {
                 <div className="form-group book-form-time">
                   <label className="form-label">Time</label>
                   <select className="form-select" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}>
+                    {!form.time && <option value="">Select time</option>}
                     {availableBookingSlots(form.duration, form.date).map(s => (
                       <option key={s} value={s}>{s}</option>
                     ))}
