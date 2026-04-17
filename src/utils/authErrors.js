@@ -14,6 +14,7 @@ const AUTH_ERRORS = {
   'auth/operation-not-allowed': 'This sign-in method is not enabled.',
   'auth/popup-closed-by-user': null, // silent — user closed popup intentionally
   'auth/cancelled-popup-request': null,
+  'auth/web-storage-unsupported': 'Your browser blocks required storage. Try disabling private mode or use a different browser.',
 };
 
 export function friendlyAuthError(err, fallback = 'Something went wrong. Please try again.') {

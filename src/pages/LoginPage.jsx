@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
 import { friendlyAuthError } from '../utils/authErrors';
 
 export default function LoginPage() {
-  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset } = useApp();
+  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset, redirectAuthError } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +16,10 @@ export default function LoginPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+
+  useEffect(() => {
+    if (redirectAuthError) setError(redirectAuthError);
+  }, [redirectAuthError]);
 
   const handleDemoCoach = async () => {
     setError('');
@@ -34,11 +38,11 @@ export default function LoginPage() {
     setAuthLoading(true);
     try {
       const user = await signInWithGoogle();
-      if (!user) return; // redirect flow
+      if (!user) return; // redirect initiated — keep spinner, page will navigate away
+      // popup success — auth state change navigates away; spinner stays until unmount
     } catch (err) {
       const msg = friendlyAuthError(err);
       if (msg) setError(msg);
-    } finally {
       setAuthLoading(false);
     }
   };

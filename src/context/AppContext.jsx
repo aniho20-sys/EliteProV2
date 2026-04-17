@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { friendlyAuthError } from '../utils/authErrors';
 import { db, auth } from '../firebase';
 import {
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
@@ -45,6 +46,7 @@ export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
   const [firebaseUser, setFirebaseUser] = useState(undefined);
+  const [redirectAuthError, setRedirectAuthError] = useState(null);
 
   const loadedRef = useRef(new Set());
 
@@ -55,7 +57,10 @@ export function AppProvider({ children }) {
 
   // --- Firebase Auth listener + redirect result ---
   useEffect(() => {
-    getRedirectResult(auth).catch(() => { /* no redirect pending */ });
+    getRedirectResult(auth).catch(err => {
+      const msg = friendlyAuthError(err);
+      if (msg) setRedirectAuthError(msg);
+    });
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
@@ -256,6 +261,7 @@ export function AppProvider({ children }) {
     } catch (err) {
       if (err.code === 'auth/popup-blocked' ||
           err.code === 'auth/popup-closed-by-user' ||
+          err.code === 'auth/web-storage-unsupported' ||
           err.message?.includes('storage-partitioned') ||
           err.message?.includes('missing initial state')) {
         await signInWithRedirect(auth, googleProvider);
@@ -598,6 +604,7 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, logout, loading,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
+    redirectAuthError,
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
     getClients, getClient, updateClient, removeClient,
