@@ -162,9 +162,6 @@ export function AppProvider({ children }) {
     if (profile) setCurrentUser(profile);
   }, [users, firebaseUser]);
 
-  // Backward-compatible data object
-  const data = { users, bodyStats: bodyStatsMap, workoutPlans, workoutLogs, schedule, messages, exercises };
-
   // ========== Seeding demo data for the coach ==========
   // Creates ghost clients + plans/stats/logs/schedule/messages scoped to trainerUid
   const seedDemoDataForCoach = async (trainerUid) => {
@@ -613,7 +610,7 @@ export function AppProvider({ children }) {
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
     getInviteCode, findTrainerByCode, connectToTrainer,
-    resetData, data,
+    resetData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

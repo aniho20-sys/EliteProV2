@@ -5,7 +5,7 @@ import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 
 export default function MessagesPage() {
-  const { currentUser, getMessages, sendMessage, getClients, getClient, markMessagesRead, data } = useApp();
+  const { currentUser, getMessages, sendMessage, getClients, getClient, markMessagesRead } = useApp();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const [selectedContact, setSelectedContact] = useState(null);
@@ -19,7 +19,7 @@ export default function MessagesPage() {
   if (isTrainer) {
     contacts = getClients(currentUser.id);
   } else {
-    const trainer = data.users.find(u => u.id === currentUser.trainerId);
+    const trainer = getClient(currentUser.trainerId);
     contacts = trainer ? [trainer] : [];
   }
 
@@ -40,7 +40,7 @@ export default function MessagesPage() {
   };
 
   const contactMessages = selectedContact ? getContactMessages(selectedContact) : [];
-  const selectedContactUser = selectedContact ? (getClient(selectedContact) || data.users.find(u => u.id === selectedContact)) : null;
+  const selectedContactUser = selectedContact ? getClient(selectedContact) : null;
 
   useEffect(() => {
     if (!selectedContact) return;

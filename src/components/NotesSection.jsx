@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Send } from 'lucide-react';
 
 export default function NotesSection({ clientId }) {
-  const { currentUser, getMessages, sendMessage, markMessagesRead, data } = useApp();
+  const { currentUser, getMessages, sendMessage, markMessagesRead, getClient } = useApp();
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -29,10 +29,7 @@ export default function NotesSection({ clientId }) {
     setText('');
   };
 
-  const getName = (id) => {
-    const user = data.users.find(u => u.id === id);
-    return user?.name || 'Unknown';
-  };
+  const getName = (id) => getClient(id)?.name || 'Unknown';
 
   const formatTime = (ts) => new Date(ts).toLocaleString('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
