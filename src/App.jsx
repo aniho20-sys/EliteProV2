@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
@@ -70,6 +70,11 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const match = window.location.hash.match(/[?&]invite=([A-Z0-9]{6})/i);
+    if (match) sessionStorage.setItem('elitepro_invite_code', match[1].toUpperCase());
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
@@ -47,6 +47,8 @@ export default function ProfilePage() {
   // Trainer: invite code state
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
   const [codeCopied, setCodeCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const INVITE_URL = `https://elitepro-16718.web.app/#/?invite=${inviteCode}`;
 
   // Client: connect to trainer
   const [connectCode, setConnectCode] = useState('');
@@ -95,14 +97,25 @@ export default function ProfilePage() {
     }).catch(() => toast('Failed to copy', 'error'));
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(INVITE_URL)
+      .then(() => {
+        setLinkCopied(true);
+        toast('Invite link copied!');
+        setTimeout(() => setLinkCopied(false), 2000);
+      })
+      .catch(() => toast('Failed to copy', 'error'));
+  };
+
   const handleShareCode = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Join ElitePro',
-        text: `Join me on ElitePro! Use invite code: ${inviteCode}`,
+        title: 'Join me on ElitePro',
+        text: `Your trainer has invited you to ElitePro! Use invite code: ${inviteCode} or tap the link.`,
+        url: INVITE_URL,
       }).catch(() => {});
     } else {
-      handleCopyCode();
+      handleCopyLink();
     }
   };
 
@@ -259,10 +272,14 @@ export default function ProfilePage() {
           <div className="invite-code-display">
             <span className="invite-code-text">{inviteCode}</span>
           </div>
-          <div className="flex gap-8 mt-12">
+          <div className="flex gap-8 mt-12" style={{ flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={handleCopyCode}>
               {codeCopied ? <Check size={16} /> : <Copy size={16} />}
-              {codeCopied ? 'Copied!' : 'Copy'}
+              {codeCopied ? 'Copied!' : 'Copy Code'}
+            </button>
+            <button className="btn btn-outline" onClick={handleCopyLink}>
+              {linkCopied ? <Check size={16} /> : <Link2 size={16} />}
+              {linkCopied ? 'Copied!' : 'Copy Link'}
             </button>
             <button className="btn btn-outline" onClick={handleShareCode}>
               <Share2 size={16} /> Share

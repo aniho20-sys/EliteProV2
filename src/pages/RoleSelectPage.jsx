@@ -6,9 +6,14 @@ import { Dumbbell, Users, Moon, Sun, ArrowRight, LogOut } from 'lucide-react';
 export default function RoleSelectPage() {
   const { firebaseUser, completeProfile, logout } = useApp();
   const { theme, toggleTheme } = useTheme();
-  const [role, setRole] = useState(null);
+  const [prefilledCode] = useState(() => {
+    const code = sessionStorage.getItem('elitepro_invite_code') || '';
+    sessionStorage.removeItem('elitepro_invite_code');
+    return code;
+  });
+  const [role, setRole] = useState(prefilledCode ? 'client' : null);
   const [name, setName] = useState(firebaseUser?.displayName || '');
-  const [inviteCode, setInviteCode] = useState('');
+  const [inviteCode, setInviteCode] = useState(prefilledCode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -87,7 +92,10 @@ export default function RoleSelectPage() {
                 placeholder="e.g. AX7K2M"
                 maxLength={6}
               />
-              <small className="form-hint">Ask your trainer for their 6-digit code, or skip and connect later in Profile.</small>
+              {prefilledCode
+                ? <small className="form-hint" style={{ color: 'var(--primary)' }}>Pre-filled from your trainer's invite link</small>
+                : <small className="form-hint">Ask your trainer for their 6-digit code, or skip and connect later in Profile.</small>
+              }
             </div>
           )}
 
