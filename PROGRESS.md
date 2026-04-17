@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-17（Session 12）
+> 最後更新：2026-04-17（Session 13）
 
 ---
 
@@ -28,6 +28,77 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] Global Search（clients、plans、exercises）
 - [x] Toast notification system
 - [x] Error Boundary（防白畫面）
+- [x] **互動人體肌肉模型**（SVG 正面 + 背面、點選選擇肌肉群、chips 顯示已選）
+
+### Firebase Backend
+- [x] Firestore 作為 primary database（取代 localStorage）
+- [x] Real-time sync（onSnapshot listeners — 7 collections）
+- [x] IndexedDB offline persistence
+- [x] Firebase Auth：Google Sign-In（+ iOS Safari redirect fallback）
+- [x] Firebase Auth：Email / Password 註冊 + 登入
+- [x] Forgot Password 流程（LoginPage modal → Firebase reset email）
+- [x] Demo Coach 帳號（自動 Firebase Auth signup + seed ghost clients）
+- [x] Trainer-Client 邀請碼系統（6-char code、connect flow）
+- [x] Delete Account 功能（GDPR right to erasure）
+- [x] Firestore Security Rules（Phase 3 收緊：per-doc ownership read、trainerId isolation、schedule ownership validation）
+- [x] Firebase Auth 錯誤訊息 friendly 化（`src/utils/authErrors.js` 集中管理）
+
+### UI/UX（Phase 1 Step 7 新增）
+- [x] Light / Dark 主題（CSS variables、localStorage persist）
+- [x] 全 responsive（desktop sidebar + mobile bottom nav）
+- [x] Custom Exercise 建立（inline quick-add + structured form with muscle groups）
+- [x] Plan exercises 顯示 Sets x Reps + Weight(kg)
+- [x] **EmptyState 通用組件**（icon + title + description + action CTA）
+- [x] **Skeleton 載入組件**（SkeletonLine、SkeletonCard、SkeletonList、SkeletonStatGrid）
+- [x] **10 個頁面 empty state 升級**（每頁都有專屬 icon + 情境化描述 + CTA 按鈕）
+
+### 寫操作審計修復（Phase 1 Step 8 新增）
+- [x] SchedulePage：所有寫操作改為 async/await + try/catch + error toast
+- [x] SchedulePage：`saving` state 防 double-submit
+- [x] SchedulePage：Client 冇 trainer 時禁止 Book Session（button disabled + form guard）
+- [x] SchedulePage：`updateStatus` helper 統一狀態更新錯誤處理
+- [x] MessagesPage：`sending` state 防重複發送
+- [x] MessagesPage：2000 字元上限 + 空白訊息檢查
+- [x] MessagesPage：`markMessagesRead` useEffect 包 `.catch()` 防 unhandled rejection
+- [x] MessagesPage：Send 按鈕 disabled 邏輯（sending || empty text）
+
+### Push Notifications（✅ 完整部署）
+- [x] `NotificationContext.jsx`：FCM token 管理 + 前景訊息處理（VAPID key 已設定）
+- [x] `functions/index.js`：Cloud Functions（onNewMessage、onNewSchedule、onScheduleUpdate、**onAccountDelete GDPR**）
+- [x] `public/firebase-messaging-sw.js`：Service Worker 處理背景通知
+- [x] `public/manifest.json`：PWA manifest（SVG + PNG 192/512 圖示）
+- [x] Firebase Blaze plan 已升級
+
+### PWA（iOS Home Screen 支援）
+- [x] `public/icon-192.png` + `icon-512.png`（純 Node.js 生成，無外部依賴）
+- [x] `index.html`：`apple-touch-icon`、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`
+- [x] Android Chrome：無需放桌面，直接收通知
+- [x] iOS Safari：需 Add to Home Screen（iOS 16.4+）
+
+### DevOps
+- [x] Firebase Hosting config（`firebase.json`、`.firebaserc`）
+- [x] GitHub Actions — Firebase Hosting 自動部署
+- [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
+- [x] GitHub Actions — GitHub Pages 部署
+- [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Session 13 完成嘅工作（2026-04-17）
+
+### 死碼清理 + 邏輯抽取 + 人體肌肉模型（B + C + D）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ 死碼清理 | 移除 `sampleData.js` 內 `sampleTrainer`、`sampleClients` 死 exports（含明文 `password: 'demo123'`）；移除 `AppContext.jsx` 舊 `data` 物件；`MessagesPage` 同 `NotesSection` 改用 `getClient()` 取代 `data.users.find()` |
+| 2 | ✅ 抽取 `getSessionColor` utility | 新建 `src/utils/sessionUtils.js`；三個頁面（ClientDashboard、ClientDetailPage、SchedulePage）改 import，消除重複邏輯 |
+| 3 | ✅ 抽取 `normalizeSets` utility | 新建 `src/utils/workoutUtils.js`；四個頁面（WorkoutPlansPage、MyWorkoutsPage、WorkoutLogPage、ClientDetailPage）改 import，消除重複定義 |
+| 4 | ✅ 互動人體肌肉模型（MuscleSelector） | 新建 `src/components/MuscleSelector.jsx`；SVG 人體輪廓（正面 7 個區域、背面 10 個區域）；點選高亮、hover 提示標籤、已選 chips 可移除；Front/Back tab 切換 |
+| 5 | ✅ 肌肉群擴充至 14 個 | `exercises.js` 將 `muscleGroups` 從 6 個廣義名稱擴充到：Chest、Shoulders、Traps、Upper Back、Lats、Lower Back、Biceps、Triceps、Forearms、Core、Glutes、Quadriceps、Hamstrings、Calves |
+| 6 | ✅ 更新預設動作肌肉標籤 | 所有內建動作使用新具體名稱（e.g. Back → Lats/Upper Back/Lower Back；Legs → Quadriceps/Hamstrings/Calves；Arms → Biceps/Triceps） |
+| 7 | ✅ WorkoutPlansPage 整合 | Custom exercise form 的 tag 按鈕格替換為 `<MuscleSelector>`；移除 `toggleMuscle` function 及 `muscleGroups` import |
+| 8 | ✅ ExerciseLibraryPage 整合 | Add/Edit exercise modal 的 `<select>` 替換為 `<MuscleSelector>`；form 改用 `muscles[]` array，submit 時 join 為 string；filter 改用 `.split(', ').includes()` 支援多肌肉動作 |
+| 9 | ✅ CSS 樣式 | 新增 `.muscle-selector`、`.muscle-view-tabs`、`.muscle-tab`、`.muscle-hover-label`、`.muscle-selected-chips`、`.muscle-chip`、`.muscle-chip-remove` |
 
 ### Firebase Backend
 - [x] Firestore 作為 primary database（取代 localStorage）
@@ -746,6 +817,7 @@ Offline:  IndexedDB persistence via Firebase SDK
 src/
 ├── components/
 │   ├── EmptyState.jsx       # ⭐ 通用空狀態組件（icon + CTA）
+│   ├── MuscleSelector.jsx   # ⭐ SVG 互動人體肌肉模型（Front/Back）
 │   ├── Skeleton.jsx         # ⭐ 載入骨架動畫組件
 │   ├── NotesSection.jsx     # Client notes section
 │   ├── ErrorBoundary.jsx    # React class error boundary
