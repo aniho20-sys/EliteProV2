@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext';
 import { Play, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
+import { normalizeSets } from '../utils/workoutUtils';
 
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();
@@ -9,13 +10,6 @@ export default function MyWorkoutsPage() {
 
   const getExerciseName = (id, fallback) => exercises.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exercises.find(e => e.id === id);
-
-  const normalizeSets = (ex) => {
-    if (Array.isArray(ex.sets)) return ex.sets;
-    const count = ex.sets || 1;
-    const weights = ex.weights || Array(count).fill(ex.weight || 0);
-    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
-  };
 
   return (
     <div>

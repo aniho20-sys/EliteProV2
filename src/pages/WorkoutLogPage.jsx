@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Trophy, Play, NotebookPen } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { normalizeSets } from '../utils/workoutUtils';
 
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises, getPersonalRecords } = useApp();
@@ -20,13 +21,6 @@ export default function WorkoutLogPage() {
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
-  // Backward compat: convert old format to new
-  const normalizeSets = (ex) => {
-    if (Array.isArray(ex.sets)) return ex.sets;
-    const count = ex.sets || 1;
-    const weights = ex.weights || Array(count).fill(ex.weight || 0);
-    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
-  };
 
   const startLog = (plan) => {
     setSelectedPlan(plan);

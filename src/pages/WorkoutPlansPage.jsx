@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { normalizeSets } from '../utils/workoutUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
@@ -210,13 +211,6 @@ export default function WorkoutPlansPage() {
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
-  // Backward compat: convert old format { sets: 3, reps: '10', weight/weights } to new { sets: [{weight, reps}] }
-  const normalizeSets = (ex) => {
-    if (Array.isArray(ex.sets)) return ex.sets;
-    const count = ex.sets || 1;
-    const weights = ex.weights || Array(count).fill(ex.weight || 0);
-    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
-  };
 
   const formatExDetail = (ex) => {
     const sets = normalizeSets(ex);

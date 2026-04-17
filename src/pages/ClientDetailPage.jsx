@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
+import { normalizeSets } from '../utils/workoutUtils';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
@@ -103,12 +104,6 @@ export default function ClientDetailPage() {
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
 
-  const normalizeSets = (ex) => {
-    if (Array.isArray(ex.sets)) return ex.sets;
-    const count = ex.sets || 1;
-    const weights = ex.weights || Array(count).fill(ex.weight || 0);
-    return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
-  };
 
   return (
     <div>
