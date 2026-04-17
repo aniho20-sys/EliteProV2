@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-17（Session 13）
+> 最後更新：2026-04-17（Session 14）
 
 ---
 
@@ -81,6 +81,26 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Session 14 完成嘅工作（2026-04-17）
+
+### 真機 QA 前置修復 — iOS Safari Auth（B + F）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ iOS Safari Google Sign-In 強化 | 加入 `auth/web-storage-unsupported` redirect 觸發（iOS 私人模式）；`getRedirectResult` 錯誤改為透過 `redirectAuthError` context state 傳至 LoginPage 顯示；移除 `finally` block，redirect 期間 spinner 持續顯示（唔閃爍）|
+| 2 | ✅ Email 表單 iOS autocomplete 修復 | 主表單加 `autoComplete="on"`；email input 加 `name="email"` + `autoComplete="email"`；password input 依登入/注冊動態切換 `autoComplete="current-password"` / `"new-password"`；Forgot Password modal email 同步補上屬性；確保 iCloud Keychain / Face ID 自動填入正常觸發 |
+| 3 | ✅ `authErrors.js` 補充 | 加入 `auth/web-storage-unsupported` 友好訊息（作 redirect 同樣失敗時嘅 fallback 顯示）|
+
+**真機測試清單進度（iOS Safari）：**
+- [x] Google Sign-In redirect flow 代碼強化（待真機驗證）
+- [x] Email 登入 / 註冊 autocomplete 修復（待真機驗證）
+- [ ] Forgot Password — Firebase reset email 收到
+- [ ] Demo Coach 登入正常
+- [ ] PWA Add to Home Screen
+- [ ] Push Notifications（iOS 16.4+）
 
 ---
 

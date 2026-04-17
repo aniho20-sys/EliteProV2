@@ -125,13 +125,14 @@ export default function LoginPage() {
         </div>
 
         {/* Email/Password Auth */}
-        <form onSubmit={handleEmailAuth}>
+        <form onSubmit={handleEmailAuth} autoComplete="on">
           <div className="form-group">
             <label className="form-label">Email</label>
             <input
               type="email" className="form-input" value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="Enter your email" required
+              name="email" autoComplete="email"
             />
           </div>
           <div className="form-group">
@@ -140,6 +141,7 @@ export default function LoginPage() {
               type="password" className="form-input" value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder={isSignUp ? 'At least 6 characters' : 'Enter your password'} required
+              name="password" autoComplete={isSignUp ? 'new-password' : 'current-password'}
             />
           </div>
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={authLoading}>
@@ -200,6 +202,7 @@ export default function LoginPage() {
                   value={forgotEmail}
                   onChange={e => setForgotEmail(e.target.value)}
                   placeholder="you@example.com"
+                  name="email" autoComplete="email"
                   autoFocus
                   required
                 />
