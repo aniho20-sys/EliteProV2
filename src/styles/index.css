@@ -1547,6 +1547,14 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-add-set-btn { margin-top: 4px; align-self: flex-start; font-size: 0.75rem; padding: 4px 12px; gap: 4px; }
 .drag-handle { color: var(--text-muted); flex-shrink: 0; cursor: grab; }
 .plan-ex-no-results { font-size: 0.8rem; color: var(--text-muted); padding: 8px 12px; }
+.ex-search-results {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 4px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
 .plan-ex-custom-add {
   display: flex;
   align-items: center;
