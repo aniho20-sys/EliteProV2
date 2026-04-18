@@ -451,7 +451,14 @@ export function AppProvider({ children }) {
   const getWorkoutLogs = (clientId) => workoutLogs.filter(l => l.clientId === clientId);
 
   const addWorkoutLog = async (log) => {
-    const newLog = { ...log, id: `log-${Date.now()}`, clientId: currentUser?.id || log.clientId, trainerId: currentUser?.trainerId || null };
+    const isTrainerRole = currentUser?.role === 'trainer';
+    const newLog = {
+      ...log,
+      id: `log-${Date.now()}`,
+      clientId: log.clientId || currentUser?.id,
+      trainerId: isTrainerRole ? currentUser.id : (currentUser?.trainerId || null),
+      logType: log.logType || (isTrainerRole ? 'pt_session' : 'self_training'),
+    };
     await setDoc(doc(db, 'workoutLogs', newLog.id), newLog);
     return newLog;
   };

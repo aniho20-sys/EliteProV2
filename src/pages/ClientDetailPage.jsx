@@ -31,7 +31,7 @@ function ChartTooltip({ active, payload, unit }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
+  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -50,6 +50,14 @@ export default function ClientDetailPage() {
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
   const [savingNoteId, setSavingNoteId] = useState(null);
+  const today = new Date().toISOString().split('T')[0];
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logPlanId, setLogPlanId] = useState('');
+  const [logDate, setLogDate] = useState(today);
+  const [logEntries, setLogEntries] = useState([]);
+  const [logRpe, setLogRpe] = useState(7);
+  const [logNotes, setLogNotes] = useState('');
+  const [savingLog, setSavingLog] = useState(false);
 
   if (!client) {
     return (
@@ -103,6 +111,59 @@ export default function ClientDetailPage() {
     } finally {
       setSavingSessions(false);
     }
+  };
+
+  const initLogEntries = (planId) => {
+    setLogPlanId(planId);
+    if (!planId) { setLogEntries([]); return; }
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const lastLog = [...logs].reverse().find(l => l.planId === planId);
+    setLogEntries(plan.exercises.map(ex => {
+      const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
+      const planSets = normalizeSets(ex);
+      return {
+        exerciseId: ex.exerciseId,
+        name: ex.name || exerciseLibrary.find(e => e.id === ex.exerciseId)?.name || ex.exerciseId,
+        sets: planSets.map((ps, i) => {
+          const prev = lastEntry?.sets?.[i];
+          if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
+          return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+        }),
+      };
+    }));
+  };
+
+  const updateLogSet = (exIdx, setIdx, field, value) => {
+    setLogEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
+    ));
+  };
+
+  const handleSaveLog = async () => {
+    const entriesToSave = logEntries.map(e => ({
+      exerciseId: e.exerciseId,
+      name: e.name,
+      sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
+    })).filter(e => e.sets.length > 0);
+    if (entriesToSave.length === 0) { toast('Please enter at least one set', 'error'); return; }
+    setSavingLog(true);
+    try {
+      await addWorkoutLog({
+        clientId: client.id,
+        planId: logPlanId,
+        date: logDate,
+        completed: entriesToSave.length === logEntries.length,
+        entries: entriesToSave,
+        rpe: logRpe,
+        notes: logNotes,
+        logType: 'pt_session',
+      });
+      setShowLogModal(false);
+      setLogPlanId(''); setLogEntries([]); setLogRpe(7); setLogNotes('');
+      toast('Workout logged');
+    } catch { toast('Failed to save log', 'error'); }
+    finally { setSavingLog(false); }
   };
 
   const handleSaveTrainerNote = async (logId) => {
@@ -390,6 +451,12 @@ export default function ClientDetailPage() {
 
       {tab === 'workout logs' && (
         <div>
+          <div className="flex-between mb-16">
+            <span className="text-sm text-muted">{logs.length} session{logs.length !== 1 ? 's' : ''} logged</span>
+            <button className="btn btn-primary btn-sm" onClick={() => { setLogDate(today); setLogPlanId(''); setLogEntries([]); setLogRpe(7); setLogNotes(''); setShowLogModal(true); }}>
+              <Plus size={16} /> Log Workout
+            </button>
+          </div>
           {logs.length === 0 ? (
             <EmptyState
               icon={NotebookPen}
@@ -405,6 +472,7 @@ export default function ClientDetailPage() {
                   <div className="card-header">
                     <h3 className="card-title">{plan?.name || 'Workout'} - {l.date}</h3>
                     <div className="flex gap-8">
+                      {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
                     </div>
@@ -464,6 +532,59 @@ export default function ClientDetailPage() {
       {tab === 'notes' && (
         <div className="card">
           <NotesSection clientId={clientId} />
+        </div>
+      )}
+
+      {showLogModal && (
+        <div className="modal-overlay" onClick={() => setShowLogModal(false)}>
+          <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Log PT Session — {client.name}</h3>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Workout Plan</label>
+                <select className="form-select" value={logPlanId} onChange={e => initLogEntries(e.target.value)}>
+                  <option value="">Select a plan</option>
+                  {plans.map(p => <option key={p.id} value={p.id}>{p.name} ({p.day})</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Date</label>
+                <input className="form-input" type="date" value={logDate} onChange={e => setLogDate(e.target.value)} />
+              </div>
+            </div>
+            {logEntries.map((entry, exIdx) => (
+              <div key={exIdx} className="card mb-8" style={{ background: 'var(--bg-hover)', border: 'none', padding: 12 }}>
+                <div className="fw-bold mb-8">{entry.name}</div>
+                {entry.sets.map((set, setIdx) => (
+                  <div key={setIdx} className="log-set-row">
+                    <span className="log-set-num">Set {setIdx + 1}</span>
+                    <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateLogSet(exIdx, setIdx, 'weight', e.target.value)} />
+                    <span className="text-sm text-muted">kg ×</span>
+                    <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateLogSet(exIdx, setIdx, 'reps', e.target.value)} />
+                    <span className="text-sm text-muted">reps</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+            {logEntries.length > 0 && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">RPE — {logRpe}/10</label>
+                  <input type="range" min="1" max="10" value={logRpe} onChange={e => setLogRpe(Number(e.target.value))} style={{ width: '100%' }} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Session Notes</label>
+                  <textarea className="form-textarea" value={logNotes} onChange={e => setLogNotes(e.target.value)} placeholder="How did the session go?" />
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setShowLogModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveLog} disabled={!logPlanId || logEntries.length === 0 || savingLog}>
+                {savingLog ? 'Saving…' : 'Save PT Log'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

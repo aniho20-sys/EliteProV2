@@ -67,7 +67,10 @@ service cloud.firestore {
     // Only the client or their trainer can read.
     match /workoutLogs/{logId} {
       allow read: if isAuth() && (resource.data.clientId == request.auth.uid || resource.data.trainerId == request.auth.uid);
-      allow create: if isAuth() && request.resource.data.clientId == request.auth.uid;
+      allow create: if isAuth() && (
+        request.resource.data.clientId == request.auth.uid ||
+        isTrainerOf(request.resource.data.clientId)
+      );
       // Client can update their own log; trainer can only write trainerNotes field
       allow update: if isAuth() && (
         resource.data.clientId == request.auth.uid ||

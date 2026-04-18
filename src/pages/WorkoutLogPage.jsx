@@ -166,6 +166,7 @@ export default function WorkoutLogPage() {
                       <span className="text-sm text-muted">{l.date}</span>
                     </div>
                     <div className="flex gap-8">
+                      {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
                     </div>
