@@ -199,13 +199,14 @@ export default function ProgressPage() {
             <div className="table-wrapper history-table-desktop">
               <table>
                 <thead>
-                  <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th></th></tr>
+                  <tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th>Source</th><th></th></tr>
                 </thead>
                 <tbody>
                   {[...stats].reverse().map((s) => (
                     <tr key={s.id}>
                       <td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td>
                       <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
+                      <td>{s.addedBy === 'coach' ? <span className="tag tag-accent" style={{ fontSize: '0.65rem' }}>Coach</span> : s.addedBy === 'self' ? <span className="tag" style={{ fontSize: '0.65rem' }}>Self</span> : '—'}</td>
                       <td>
                         <button className="btn-icon" title="Delete"
                           onClick={() => { deleteBodyStat(currentUser.id, s.id); toast('Deleted', 'error'); }}>
@@ -222,7 +223,10 @@ export default function ProgressPage() {
               {[...stats].reverse().map((s) => (
                   <div key={s.id} className="history-card">
                     <div className="flex-between">
-                      <div className="history-card-date">{s.date}</div>
+                      <div className="history-card-date">
+                        {s.date}
+                        {s.addedBy === 'coach' && <span className="tag tag-accent" style={{ fontSize: '0.6rem', marginLeft: 6 }}>Coach</span>}
+                      </div>
                       <button className="btn-icon" title="Delete"
                         onClick={() => { deleteBodyStat(currentUser.id, s.id); toast('Deleted', 'error'); }}>
                         <Trash2 size={14} />

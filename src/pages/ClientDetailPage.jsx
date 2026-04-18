@@ -346,10 +346,10 @@ export default function ClientDetailPage() {
 
               <div className="card table-wrapper">
                 <table>
-                  <thead><tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th>Source</th></tr></thead>
                   <tbody>
                     {[...stats].reverse().map((s, i) => (
-                      <tr key={i}><td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td><td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips ? `${s.hips}cm` : '—'}</td><td>{s.arms}cm</td><td>{s.legs}cm</td></tr>
+                      <tr key={i}><td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td><td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips ? `${s.hips}cm` : '—'}</td><td>{s.arms}cm</td><td>{s.legs}cm</td><td>{s.addedBy === 'coach' ? <span className="tag tag-accent" style={{ fontSize: '0.65rem' }}>Coach</span> : s.addedBy === 'self' ? <span className="tag" style={{ fontSize: '0.65rem' }}>Self</span> : '—'}</td></tr>
                     ))}
                   </tbody>
                 </table>

@@ -416,7 +416,8 @@ export function AppProvider({ children }) {
   const getBodyStats = (clientId) => bodyStatsMap[clientId] || [];
 
   const addBodyStat = async (clientId, stat) => {
-    const entry = { ...stat, date: stat.date || new Date().toISOString().split('T')[0] };
+    const addedBy = currentUser?.role === 'trainer' ? 'coach' : 'self';
+    const entry = { ...stat, date: stat.date || new Date().toISOString().split('T')[0], addedBy };
     await addDoc(collection(db, 'bodyStats', clientId, 'entries'), entry);
   };
 
