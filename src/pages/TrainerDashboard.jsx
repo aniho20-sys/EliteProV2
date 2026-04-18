@@ -146,26 +146,26 @@ export default function TrainerDashboard() {
 
       {/* Stats */}
       <div className="grid-4 mb-16">
-        <div className="card stat-card">
+        <Link to="/clients" className="card stat-card stat-card-link">
           <Users size={24} style={{ color: 'var(--primary-light)', marginBottom: 8 }} />
           <div className="stat-value">{clients.length}</div>
           <div className="stat-label">Active Clients</div>
-        </div>
-        <div className="card stat-card">
+        </Link>
+        <Link to="/schedule" className="card stat-card stat-card-link">
           <Calendar size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} />
           <div className="stat-value">{todaySchedule.length}</div>
           <div className="stat-label">Sessions Today</div>
-        </div>
-        <div className="card stat-card">
+        </Link>
+        <Link to="/messages" className="card stat-card stat-card-link">
           <TrendingUp size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
           <div className="stat-value">{unread}</div>
           <div className="stat-label">Unread Messages</div>
-        </div>
-        <div className="card stat-card">
+        </Link>
+        <Link to="/plans" className="card stat-card stat-card-link">
           <Dumbbell size={24} style={{ color: 'var(--danger)', marginBottom: 8 }} />
           <div className="stat-value">{totalPlans}</div>
           <div className="stat-label">Workout Plans</div>
-        </div>
+        </Link>
       </div>
 
       {/* Today + Messages */}

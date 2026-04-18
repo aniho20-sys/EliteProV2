@@ -560,6 +560,16 @@ body {
 }
 
 /* ===== STAT CARDS ===== */
+.stat-card-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.stat-card-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
 .stat-card {
   text-align: center;
   padding: 24px 16px;
