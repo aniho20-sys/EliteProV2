@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-17（Session 14）
+> 最後更新：2026-04-18（Session 15）
 
 ---
 
@@ -20,11 +20,11 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] Client 管理頁（搜尋、detail view、body stats、plans、logs、**Remove Client with confirmation**）
 - [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**）
 - [x] Workout Log（auto-fill last session、PR tracking）
-- [x] Schedule 日曆（date picker、conflict check、booking）
+- [x] Schedule 日曆（date picker、conflict check、booking、**教練自訂營業時間**）
 - [x] In-app Messaging（unread badges、real-time sync）
 - [x] Exercise Library（search、filter by muscle/equipment、**YouTube + 任意 URL 連結、+ Add Link 快速入口**）
 - [x] Body Stats / Progress 頁（**Recharts** AreaChart、互動 tooltip、metric tiles、趨勢指示）
-- [x] Profile 頁（edit profile、invite code、connect to trainer）
+- [x] Profile 頁（edit profile、invite code、connect to trainer、**shareable invite link、working hours 設定**）
 - [x] Global Search（clients、plans、exercises）
 - [x] Toast notification system
 - [x] Error Boundary（防白畫面）
@@ -81,6 +81,19 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Session 15 完成嘅工作（2026-04-18）
+
+### 用戶體驗改善 + 邀請系統升級（A + B + D）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ Shareable Invite Link | ProfilePage 新增「Copy Link」按鈕，複製完整 URL `https://elitepro-16718.web.app/#/?invite=XXXXXX`；Share 按鈕透過 Web Share API 傳入 `url` 字段，iOS/Android 彈出原生 share sheet（WhatsApp、iMessage 等）；App 啟動時解析 hash URL 內 `?invite=` 參數存入 `sessionStorage`；RoleSelectPage mount 時自動讀取、預填 invite code、預選 client 角色並顯示提示 |
+| 2 | ✅ 教練自訂營業時間 | ProfilePage 新增 Working Hours card（start/end time picker）；`workingHours: { start, end }` 存入 Firestore；SchedulePage 動態生成 `BOOKING_SLOTS`（30 分鐘間隔）取代硬編碼 09:00–17:00；現有帳號無設定時 fallback 09:00–17:00；教練首次進入 Schedule 頁顯示可 dismiss 藍色 banner 提示設定 |
+| 3 | ✅ 隱藏空閒時段顯示 | 移除 slot bubble row 及「X slots free」計數——對教練及學生均隱藏，避免學生見到大量空閒時段影響對教練的觀感 |
+| 4 | ✅ CLAUDE.md 清理 | 移除 GitHub Pages 相關內容（`build:gh` 指令、GH Pages deployment 說明、`base` path 邏輯）；補充 `MuscleSelector.jsx`、`authErrors.js`、`sessionUtils.js`、`workoutUtils.js` 至 Project Structure；更新 Invite Code System 說明加入 shareable link |
 
 ---
 
