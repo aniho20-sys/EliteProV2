@@ -15,10 +15,10 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 ### Core Platform
 - [x] React 19 + Vite 8 SPA（HashRouter）
 - [x] Trainer / Client 雙角色系統
-- [x] Trainer Dashboard（stats overview + weekly sessions chart + client activity）
+- [x] Trainer Dashboard（stats overview + weekly sessions chart + client activity；**stat cards 可點擊導航、今日 sessions 可點擊入 client 詳情**）
 - [x] Client Dashboard（workout summary + body stats）
 - [x] Client 管理頁（搜尋、detail view、body stats、plans、logs、**Remove Client with confirmation**）
-- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**）
+- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**、**exercise 搜尋下拉 iOS 修復**）
 - [x] Workout Log（auto-fill last session、PR tracking）
 - [x] Schedule 日曆（date picker、conflict check、booking、**教練自訂營業時間**）
 - [x] In-app Messaging（unread badges、real-time sync）
@@ -94,6 +94,10 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | 2 | ✅ 教練自訂營業時間 | ProfilePage 新增 Working Hours card（start/end time picker）；`workingHours: { start, end }` 存入 Firestore；SchedulePage 動態生成 `BOOKING_SLOTS`（30 分鐘間隔）取代硬編碼 09:00–17:00；現有帳號無設定時 fallback 09:00–17:00；教練首次進入 Schedule 頁顯示可 dismiss 藍色 banner 提示設定 |
 | 3 | ✅ 隱藏空閒時段顯示 | 移除 slot bubble row 及「X slots free」計數——對教練及學生均隱藏，避免學生見到大量空閒時段影響對教練的觀感 |
 | 4 | ✅ CLAUDE.md 清理 | 移除 GitHub Pages 相關內容（`build:gh` 指令、GH Pages deployment 說明、`base` path 邏輯）；補充 `MuscleSelector.jsx`、`authErrors.js`、`sessionUtils.js`、`workoutUtils.js` 至 Project Structure；更新 Invite Code System 說明加入 shareable link |
+| 5 | ✅ Dashboard stat cards 可點擊 | 4 個 stat card（Active Clients、Sessions Today、Unread Messages、Workout Plans）改用 `<Link>` 包裹，分別導去 `/clients`、`/schedule`、`/messages`、`/plans`；新增 `.stat-card-link` CSS（hover lift `translateY(-2px)` + transition） |
+| 6 | ✅ Dashboard 今日 sessions 可點擊 | Today's Schedule 各行改用 `<Link to="/clients/${clientId}">` 直接跳去對應客戶詳情頁；加 `.schedule-item-link` CSS（去下劃線、繼承顏色）；並按時間排序 |
+| 7 | ✅ Workout Plan exercise 搜尋下拉修復 | 三次迭代：① z-index 500 + `isolation: isolate`（失敗，draggable opacity 建立 stacking context）；② React Portal + `position: fixed` + `getBoundingClientRect()`（失敗，iOS 鍵盤彈出後 viewport 座標錯位）；③ 最終方案：移除所有定位，`.ex-search-results` 以正常 document flow inline 插入 input 下方（完全跨平台有效，無 z-index 問題）|
+| 8 | ✅ Muscle tag 截斷修復 | 自訂肌肉標籤過長（如「CORE, QUADRICEPS, TRAPS…」）時溢出蓋住其他 UI；改為只顯示第一個肌肉群 + `…` ellipsis（`title` 屬性保留完整文字），防止 tag 雲浮動覆蓋 |
 
 ---
 
