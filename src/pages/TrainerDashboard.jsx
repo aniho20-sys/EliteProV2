@@ -185,17 +185,17 @@ export default function TrainerDashboard() {
               action={{ label: 'Open Schedule', to: '/schedule' }}
             />
           ) : (
-            todaySchedule.map(s => {
+            todaySchedule.sort((a, b) => a.time.localeCompare(b.time)).map(s => {
               const client = clients.find(c => c.id === s.clientId);
               return (
-                <div key={s.id} className="schedule-item">
+                <Link key={s.id} to={`/clients/${s.clientId}`} className="schedule-item schedule-item-link">
                   <div className="schedule-time">{s.time}</div>
                   <div className="schedule-info">
                     <div className="schedule-client">{client?.name || 'Unknown'}</div>
-                    <div className="schedule-type">{s.type} - {s.duration}min</div>
+                    <div className="schedule-type">{s.type} - 60min</div>
                   </div>
                   <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
-                </div>
+                </Link>
               );
             })
           )}
