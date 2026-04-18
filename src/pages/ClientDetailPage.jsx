@@ -1,10 +1,11 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2 } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets } from '../utils/workoutUtils';
 import NotesSection from '../components/NotesSection';
+import ProgressView from '../components/ProgressView';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -202,7 +203,7 @@ export default function ClientDetailPage() {
       </div>
 
       <div className="tabs">
-        {['overview', 'body stats', 'workout plans', 'workout logs', 'notes'].map(t => (
+        {['overview', 'body stats', 'progress', 'workout plans', 'workout logs', 'notes'].map(t => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -385,6 +386,23 @@ export default function ClientDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'progress' && (
+        <div>
+          <div className="flex-between mb-16">
+            <div>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BarChart2 size={18} style={{ color: 'var(--primary)' }} /> Progress Charts
+              </h3>
+              <p className="text-sm text-muted mt-4">{stats.length} measurement{stats.length !== 1 ? 's' : ''} recorded</p>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAddStat(true)}>
+              <Plus size={16} /> Add Measurement
+            </button>
+          </div>
+          <ProgressView clientId={clientId} canDelete={false} />
         </div>
       )}
 
