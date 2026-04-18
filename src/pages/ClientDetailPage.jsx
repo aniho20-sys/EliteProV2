@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets } from '../utils/workoutUtils';
 import NotesSection from '../components/NotesSection';
@@ -120,6 +120,9 @@ export default function ClientDetailPage() {
   };
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
+  const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
+  const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
+  const isYouTube = (url) => /youtu\.?be/i.test(url);
 
 
   return (
@@ -340,25 +343,45 @@ export default function ClientDetailPage() {
                   <h3 className="card-title">{p.name}</h3>
                   <span className="tag tag-primary">{p.day}</span>
                 </div>
-                {p.exercises.map((ex, i) => (
-                  <div key={i} className="plan-exercise">
-                    <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
-                    {(() => {
-                      const sets = normalizeSets(ex);
-                      const reps = sets.map(s => s.reps);
-                      const weights = sets.map(s => s.weight);
-                      const allSameReps = reps.every(r => r === reps[0]);
-                      const hasWeight = weights.some(w => w > 0);
-                      const allSameWeight = weights.every(w => w === weights[0]);
-                      return (
-                        <>
-                          <span className="plan-exercise-detail">{allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`}</span>
-                          {hasWeight && <span className="plan-exercise-detail">{allSameWeight ? `${weights[0]}kg` : weights.join('/') + 'kg'}</span>}
-                        </>
-                      );
-                    })()}
-                  </div>
-                ))}
+                {p.exercises.map((ex, i) => {
+                  const exData = getExercise(ex.exerciseId);
+                  const videoUrl = (ex.videoUrl && isSafeUrl(ex.videoUrl)) ? ex.videoUrl
+                                 : (exData?.videoUrl && isSafeUrl(exData.videoUrl)) ? exData.videoUrl
+                                 : null;
+                  return (
+                    <div key={i} className="plan-exercise" style={{ flexWrap: 'wrap', gap: '4px 8px' }}>
+                      <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                      {(() => {
+                        const sets = normalizeSets(ex);
+                        const reps = sets.map(s => s.reps);
+                        const weights = sets.map(s => s.weight);
+                        const allSameReps = reps.every(r => r === reps[0]);
+                        const hasWeight = weights.some(w => w > 0);
+                        const allSameWeight = weights.every(w => w === weights[0]);
+                        return (
+                          <>
+                            <span className="plan-exercise-detail">{allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`}</span>
+                            {hasWeight && <span className="plan-exercise-detail">{allSameWeight ? `${weights[0]}kg` : weights.join('/') + 'kg'}</span>}
+                          </>
+                        );
+                      })()}
+                      {videoUrl && (
+                        isYouTube(videoUrl) ? (
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
+                            <Play size={14} />
+                          </a>
+                        ) : (
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
+                            <ExternalLink size={14} />
+                          </a>
+                        )
+                      )}
+                      {ex.notes && (
+                        <span className="plan-exercise-detail" style={{ width: '100%', fontStyle: 'italic', color: 'var(--warning)' }}>{ex.notes}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))
           )}
