@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-18（Session 15）
+> 最後更新：2026-04-18（Session 16）
 
 ---
 
@@ -18,12 +18,13 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] Trainer Dashboard（stats overview + weekly sessions chart + client activity；**stat cards 可點擊導航、今日 sessions 可點擊入 client 詳情**）
 - [x] Client Dashboard（workout summary + body stats）
 - [x] Client 管理頁（搜尋、detail view、body stats、plans、logs、**Remove Client with confirmation**）
-- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**、**exercise 搜尋下拉 iOS 修復**）
+- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**、**exercise 搜尋下拉 iOS 修復**、**按 client 分組 + 可摺疊 cards**）
 - [x] Workout Log（auto-fill last session、PR tracking）
 - [x] Schedule 日曆（date picker、conflict check、booking、**教練自訂營業時間**）
 - [x] In-app Messaging（unread badges、real-time sync）
 - [x] Exercise Library（search、filter by muscle/equipment、**YouTube + 任意 URL 連結、+ Add Link 快速入口**）
-- [x] Body Stats / Progress 頁（**Recharts** AreaChart、互動 tooltip、metric tiles、趨勢指示）
+- [x] Body Stats / Progress 頁（**Recharts** AreaChart、互動 tooltip、metric tiles、趨勢指示、**addedBy Coach/Self 標記**）
+- [x] **ProgressView 通用組件**（trainer 在 ClientDetailPage Progress tab 可睇客戶進度圖表，`canDelete` prop 控制刪除權限）
 - [x] Profile 頁（edit profile、invite code、connect to trainer、**shareable invite link、working hours 設定**）
 - [x] Global Search（clients、plans、exercises）
 - [x] Toast notification system
@@ -81,6 +82,25 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 - [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
 - [x] GitHub Actions — GitHub Pages 部署
 - [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+
+---
+
+## Session 16 完成嘅工作（2026-04-18）
+
+### UX 改善：Plans 頁重構 + Progress 跨角色共用（A + B + D）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ Body stat `addedBy` marker | `AppContext.addBodyStat()` 自動依 `currentUser.role` stamp `addedBy: 'coach'` 或 `'self'`；ClientDetailPage Body Stats table 加 Source 欄；ProgressPage 桌面 table + mobile cards 同步顯示 Coach / Self tag；舊資料（無 `addedBy`）顯示 `—`，向後兼容 |
+| 2 | ✅ Workout Plans 按 client 分組 + 可摺疊 | Trainer 視角：plans 按 client 名分組，section header 顯示 client 名 + plan 數量 tag；所有 plan card 預設摺疊，只顯示 plan 名、exercises 數量、day tag，點擊展開；Duplicate / Delete 按鈕直接在 header row 可用（`e.stopPropagation()` 防觸發 toggle）；Client 視角：同樣摺疊式 flat list |
+| 3 | ✅ 抽取 `<ProgressView>` component | 新建 `src/components/ProgressView.jsx`，封裝 stat tiles、趨勢 chart、history table（desktop + mobile）；props：`clientId`、`canDelete`（預設 false）、`onAdd`（EmptyState CTA callback）；`canDelete={false}` 完全隱藏刪除按鈕，符合 Firestore rule（只有 `isOwner` 可刪）|
+| 4 | ✅ ProgressPage 精簡化 | 頁面只保留 page header、Add Measurement 按鈕、add modal；內容改用 `<ProgressView clientId={currentUser.id} canDelete onAdd={...} />`；代碼從 286 行縮至 ~70 行 |
+| 5 | ✅ ClientDetailPage Progress tab | 加入第 3 個 tab「Progress」；渲染 `<ProgressView clientId={clientId} canDelete={false} />`；tab header 有「Add Measurement」按鈕（重用現有 `showAddStat` modal）；Trainer 可直接在 client 詳情頁睇完整趨勢圖表，毋須另開頁面 |
+
+**CSS 新增：**
+- `.plan-card-toggle` — 可點擊 plan card header（button reset + hover opacity）
+- `.plan-client-section-header` — client 分組標題（primary border-bottom）
+- `.plan-client-name` — client 名字樣式
 
 ---
 
@@ -856,6 +876,7 @@ src/
 ├── components/
 │   ├── EmptyState.jsx       # ⭐ 通用空狀態組件（icon + CTA）
 │   ├── MuscleSelector.jsx   # ⭐ SVG 互動人體肌肉模型（Front/Back）
+│   ├── ProgressView.jsx     # ⭐ 進度圖表組件（stat tiles + chart + history；clientId + canDelete props）
 │   ├── Skeleton.jsx         # ⭐ 載入骨架動畫組件
 │   ├── NotesSection.jsx     # Client notes section
 │   ├── ErrorBoundary.jsx    # React class error boundary
