@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -22,6 +23,7 @@ export default function WorkoutPlansPage() {
   const [form, setForm] = useState({ name: '', clientId: '', day: 'Monday', exercises: [] });
   const [exFilter, setExFilter] = useState('');
   const exFilterRef = useRef('');
+  const exSearchRef = useRef(null);
   const [dragIdx, setDragIdx] = useState(null);
   const [creatingCustom, setCreatingCustom] = useState(false);
   const [addLinkModal, setAddLinkModal] = useState(null); // { exerciseId, name }
@@ -408,11 +410,13 @@ export default function WorkoutPlansPage() {
               </div>
 
               {/* Exercise search */}
-              <div className="form-group" style={{ position: 'relative', zIndex: 500, isolation: 'isolate' }}>
+              <div className="form-group" ref={exSearchRef}>
                 <label className="form-label">Add Exercises</label>
                 <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
-                {exFilter && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: 220, overflowY: 'auto', marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, zIndex: 500, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
+                {exFilter && exSearchRef.current && createPortal(
+                  (() => {
+                    const r = exSearchRef.current.getBoundingClientRect();
+                    return <div style={{ position: 'fixed', top: r.bottom + 4, left: r.left, width: r.width, maxHeight: 220, overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, zIndex: 2000, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
                     {filteredExercises.slice(0, 8).map(ex => (
                       <div key={ex.id} className="contact-item" onClick={() => { addExToForm(ex); updateExFilter(''); }}>
                         <span className="text-sm">{ex.name}</span>
@@ -430,7 +434,8 @@ export default function WorkoutPlansPage() {
                       <Plus size={14} />
                       <span>{creatingCustom ? 'Adding...' : `Add "${exFilter}" as custom exercise`}</span>
                     </div>
-                  </div>
+                  </div>;
+                  })(), document.body
                 )}
 
                 {/* Custom exercise toggle button */}
