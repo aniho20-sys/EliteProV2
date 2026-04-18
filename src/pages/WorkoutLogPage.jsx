@@ -18,6 +18,7 @@ export default function WorkoutLogPage() {
   const [rpe, setRpe] = useState(7);
   const [notes, setNotes] = useState('');
 
+  const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
@@ -238,11 +239,14 @@ export default function WorkoutLogPage() {
                   )}
                 </div>
                 {planEx.notes && <p className="text-sm text-muted mb-16" style={{ fontStyle: 'italic' }}>{planEx.notes}</p>}
-                {exercise?.videoUrl && (
-                  <a href={exercise.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
-                    <Play size={14} /> Watch Demo
-                  </a>
-                )}
+                {(() => {
+                  const url = planEx?.videoUrl || exercise?.videoUrl;
+                  return url && isSafeUrl(url) ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
+                      <Play size={14} /> Watch Demo
+                    </a>
+                  ) : null;
+                })()}
                 {entry.sets.map((set, setIdx) => (
                   <div key={setIdx} className="log-set-row">
                     <span className="log-set-num">Set {setIdx + 1}</span>

@@ -3,6 +3,8 @@ import { Play, ClipboardList } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
 
+const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
+
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
@@ -68,11 +70,14 @@ export default function MyWorkoutsPage() {
                   </div>
                   {exercise?.description && <p className="text-sm text-muted mt-8">{exercise.description}</p>}
                   {ex.notes && <p className="text-sm mt-8" style={{ color: 'var(--warning)', fontStyle: 'italic' }}>{ex.notes}</p>}
-                  {exercise?.videoUrl && (
-                    <a href={exercise.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mt-8">
-                      <Play size={14} /> Watch Demo
-                    </a>
-                  )}
+                  {(() => {
+                    const url = ex.videoUrl || exercise?.videoUrl;
+                    return url && isSafeUrl(url) ? (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mt-8">
+                        <Play size={14} /> Watch Demo
+                      </a>
+                    ) : null;
+                  })()}
                 </div>
               );
             })}

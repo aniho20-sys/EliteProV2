@@ -106,6 +106,13 @@ export default function WorkoutPlansPage() {
     }));
   };
 
+  const updateExVideoUrl = (exIndex, value) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => i === exIndex ? { ...ex, videoUrl: value } : ex),
+    }));
+  };
+
   // Sync ref + state to avoid closure staleness in handleCreate
   const updateExFilter = (val) => {
     exFilterRef.current = val;
@@ -313,21 +320,27 @@ export default function WorkoutPlansPage() {
                   {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
                   <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
                   {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
-                  {exData?.videoUrl && isSafeUrl(exData.videoUrl) ? (
-                    isYouTube(exData.videoUrl) ? (
-                      <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
-                        <Play size={14} />
-                      </a>
-                    ) : (
-                      <a href={exData.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
-                        <ExternalLink size={14} />
-                      </a>
-                    )
-                  ) : (isTrainer && exData && (
-                    <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}>
-                      <Link2 size={13} /> Add Link
-                    </button>
-                  ))}
+                  {(() => {
+                    const url = (ex.videoUrl && isSafeUrl(ex.videoUrl)) ? ex.videoUrl
+                               : (exData?.videoUrl && isSafeUrl(exData.videoUrl)) ? exData.videoUrl
+                               : null;
+                    if (url) {
+                      return isYouTube(url) ? (
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
+                          <Play size={14} />
+                        </a>
+                      ) : (
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
+                          <ExternalLink size={14} />
+                        </a>
+                      );
+                    }
+                    return isTrainer && exData ? (
+                      <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}>
+                        <Link2 size={13} /> Add Link
+                      </button>
+                    ) : null;
+                  })()}
                 </div>
                 );
               })}
@@ -537,6 +550,20 @@ export default function WorkoutPlansPage() {
                         <button type="button" className="btn btn-sm btn-outline plan-add-set-btn" onClick={() => addSet(i)}>
                           <Plus size={14} /> New Set
                         </button>
+                      </div>
+                      <div className="plan-video-input-row">
+                        <Link2 size={12} style={{ color: ex.videoUrl ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }} />
+                        <input
+                          className="form-input"
+                          placeholder="Custom video URL (overrides library default)"
+                          value={ex.videoUrl || ''}
+                          onChange={e => updateExVideoUrl(i, e.target.value)}
+                        />
+                        {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
+                          <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Preview link">
+                            {isYouTube(ex.videoUrl) ? <Play size={12} style={{ color: 'var(--danger)' }} /> : <ExternalLink size={12} style={{ color: 'var(--primary)' }} />}
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

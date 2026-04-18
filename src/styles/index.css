@@ -1545,6 +1545,8 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-set-row .btn-icon { opacity: 0.4; }
 .plan-set-row:hover .btn-icon { opacity: 1; }
 .plan-add-set-btn { margin-top: 4px; align-self: flex-start; font-size: 0.75rem; padding: 4px 12px; gap: 4px; }
+.plan-video-input-row { display: flex; align-items: center; gap: 8px; padding: 8px 0 4px 28px; }
+.plan-video-input-row .form-input { font-size: 0.75rem; padding: 5px 10px; color: var(--text-muted); }
 .drag-handle { color: var(--text-muted); flex-shrink: 0; cursor: grab; }
 .plan-ex-no-results { font-size: 0.8rem; color: var(--text-muted); padding: 8px 12px; }
 .ex-search-results {

@@ -59,27 +59,27 @@ export default function ClientDashboard() {
       )}
 
       <div className="grid-4 mb-16">
-        <div className="card stat-card">
+        <Link to="/my-workouts" className="card stat-card stat-card-link">
           <Dumbbell size={24} style={{ color: 'var(--primary-light)', marginBottom: 8 }} />
           <div className="stat-value">{plans.length}</div>
           <div className="stat-label">Workout Plans</div>
-        </div>
-        <div className="card stat-card">
+        </Link>
+        <Link to="/log" className="card stat-card stat-card-link">
           <Activity size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} />
           <div className="stat-value">{thisWeekLogs.length}</div>
           <div className="stat-label">Workouts This Week</div>
-        </div>
-        <div className="card stat-card">
+        </Link>
+        <Link to="/log" className="card stat-card stat-card-link">
           <TrendingUp size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
           <div className="stat-value">{totalWorkouts}</div>
           <div className="stat-label">Total Workouts</div>
-        </div>
-        <div className="card stat-card">
+        </Link>
+        <Link to="/progress" className="card stat-card stat-card-link">
           {weightChange && parseFloat(weightChange) > 0 ? <TrendingUp size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} /> : <TrendingDown size={24} style={{ color: 'var(--danger)', marginBottom: 8 }} />}
           <div className="stat-value">{latestStat ? `${latestStat.weight}kg` : '--'}</div>
           <div className="stat-label">Current Weight</div>
           {weightChange && <div className={`stat-change ${parseFloat(weightChange) > 0 ? 'positive' : 'negative'}`}>{weightChange > 0 ? '+' : ''}{weightChange}kg</div>}
-        </div>
+        </Link>
       </div>
 
       {sessTotal !== null && (
@@ -119,14 +119,14 @@ export default function ClientDashboard() {
             />
           ) : (
             todaySchedule.map(s => (
-              <div key={s.id} className="schedule-item">
+              <Link key={s.id} to="/schedule" className="schedule-item schedule-item-link">
                 <div className="schedule-time">{s.time}</div>
                 <div className="schedule-info">
                   <div className="schedule-client">{s.type}</div>
                   <div className="schedule-type">{s.duration}min</div>
                 </div>
                 <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
-              </div>
+              </Link>
             ))
           )}
         </div>
@@ -147,12 +147,12 @@ export default function ClientDashboard() {
             />
           ) : (
             plans.map(p => (
-              <div key={p.id} className="schedule-item">
+              <Link key={p.id} to="/my-workouts" className="schedule-item schedule-item-link">
                 <div className="schedule-info">
                   <div className="schedule-client">{p.name}</div>
                   <div className="schedule-type">{p.day} - {p.exercises.length} exercises</div>
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </div>
@@ -190,13 +190,13 @@ export default function ClientDashboard() {
             {logs.slice(-3).reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);
               return (
-                <div key={l.id} className="schedule-item">
+                <Link key={l.id} to="/log" className="schedule-item schedule-item-link">
                   <div className="schedule-info">
                     <div className="schedule-client">{plan?.name || 'Workout'}</div>
                     <div className="schedule-type">{l.date} - RPE: {l.rpe}/10</div>
                   </div>
                   <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Done' : 'Partial'}</span>
-                </div>
+                </Link>
               );
             })}
           </div>
