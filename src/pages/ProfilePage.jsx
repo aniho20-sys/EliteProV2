@@ -118,7 +118,7 @@ export default function ProfilePage() {
     if (navigator.share) {
       navigator.share({
         title: 'Join me on ElitePro',
-        text: `Your trainer has invited you to ElitePro! Use invite code: ${inviteCode} or tap the link.`,
+        text: `Your coach has invited you to ElitePro! Use invite code: ${inviteCode} or tap the link.`,
         url: INVITE_URL,
       }).catch(() => {});
     } else {
@@ -147,7 +147,7 @@ export default function ProfilePage() {
     setConnecting(true);
     const result = await connectToTrainer(currentUser.id, connectCode.trim());
     if (result.success) {
-      toast(`Connected to ${result.trainer.name}!`);
+      toast(`Connected to Coach ${result.trainer.name}!`);
       setConnectCode('');
     } else {
       toast(result.error, 'error');
@@ -334,11 +334,11 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Client: Connect to Trainer */}
+      {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (
         <div className="card mb-16">
-          <h3 className="card-title mb-8">Connect to Trainer</h3>
-          <p className="invite-desc">Enter your trainer's invite code to connect.</p>
+          <h3 className="card-title mb-8">Connect to Coach</h3>
+          <p className="invite-desc">Enter your coach&apos;s invite code to connect.</p>
           <div className="invite-connect-row">
             <input
               className="form-input invite-input"
@@ -446,7 +446,7 @@ export default function ProfilePage() {
 
         <p className="profile-danger-text">
           Permanently delete your account. Your profile and body stats will be removed.
-          Workout logs and message history will remain as orphan data for your trainer's records.
+          Workout logs and message history will remain as orphan data for your coach&apos;s records.
           <strong> This action cannot be undone.</strong>
         </p>
         <button className="btn btn-danger mt-8" onClick={() => setShowDeleteModal(true)}>

@@ -93,8 +93,8 @@ export default function RoleSelectPage() {
                 maxLength={6}
               />
               {prefilledCode
-                ? <small className="form-hint" style={{ color: 'var(--primary)' }}>Pre-filled from your trainer's invite link</small>
-                : <small className="form-hint">Ask your trainer for their 6-digit code, or skip and connect later in Profile.</small>
+                ? <small className="form-hint" style={{ color: 'var(--primary)' }}>Pre-filled from your coach&apos;s invite link</small>
+                : <small className="form-hint">Ask your coach for their 6-digit code, or skip and connect later in Profile.</small>
               }
             </div>
           )}
