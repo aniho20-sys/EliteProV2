@@ -29,6 +29,13 @@ export default function WorkoutPlansPage() {
   const [savingLink, setSavingLink] = useState(false);
   const [deletePlanModal, setDeletePlanModal] = useState(null); // planId
   const [deleting, setDeleting] = useState(false);
+  const [expandedPlans, setExpandedPlans] = useState(new Set());
+
+  const togglePlan = (planId) => setExpandedPlans(prev => {
+    const next = new Set(prev);
+    next.has(planId) ? next.delete(planId) : next.add(planId);
+    return next;
+  });
 
   // Custom exercise form state
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -292,62 +299,108 @@ export default function WorkoutPlansPage() {
             onClick: () => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }
           } : undefined}
         />
-      ) : (
-        plans.map(p => {
-          const client = clients.find(c => c.id === p.clientId);
+      ) : (() => {
+        if (!isTrainer) {
+          // Client view: flat list, all expanded
+          return plans.map(p => {
+            const expanded = expandedPlans.has(p.id);
+            return (
+              <div key={p.id} className="card mb-16">
+                <button className="plan-card-header plan-card-toggle" onClick={() => togglePlan(p.id)}>
+                  <div className="plan-card-info">
+                    <h3 className="card-title">{p.name}</h3>
+                    <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="plan-card-actions">
+                    <span className="tag tag-primary">{p.day}</span>
+                    {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                </button>
+                {expanded && p.exercises.map((ex, i) => {
+                  const exData = getExercise(ex.exerciseId);
+                  const url = (ex.videoUrl && isSafeUrl(ex.videoUrl)) ? ex.videoUrl
+                             : (exData?.videoUrl && isSafeUrl(exData.videoUrl)) ? exData.videoUrl : null;
+                  return (
+                    <div key={i} className="plan-exercise">
+                      <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                      {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
+                      <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
+                      {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
+                      {url && (isYouTube(url)
+                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
+                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          });
+        }
+
+        // Trainer view: group by client
+        const grouped = clients.map(c => ({
+          client: c,
+          plans: plans.filter(p => p.clientId === c.id),
+        })).filter(g => g.plans.length > 0);
+        const unassigned = plans.filter(p => !clients.find(c => c.id === p.clientId));
+
+        const renderPlanCard = (p) => {
+          const expanded = expandedPlans.has(p.id);
           return (
-            <div key={p.id} className="card mb-16">
-              <div className="plan-card-header">
+            <div key={p.id} className="card mb-8">
+              <button className="plan-card-header plan-card-toggle" onClick={() => togglePlan(p.id)}>
                 <div className="plan-card-info">
-                  <h3 className="card-title">{p.name}</h3>
-                  {client && <span className="text-sm text-muted">{client.name}</span>}
+                  <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{p.name}</h3>
+                  <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="plan-card-actions">
                   <span className="tag tag-primary">{p.day}</span>
-                  {isTrainer && (
-                    <>
-                      <button className="btn-icon" title="Duplicate" onClick={() => duplicatePlan(p)}><Copy size={16} /></button>
-                      <button className="btn-icon" onClick={() => setDeletePlanModal(p.id)} title="Delete" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
-                    </>
-                  )}
+                  <button className="btn-icon" title="Duplicate" onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
+                  <button className="btn-icon" title="Delete" style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
+                  {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
-              </div>
-              {p.exercises.map((ex, i) => {
+              </button>
+              {expanded && p.exercises.map((ex, i) => {
                 const exData = getExercise(ex.exerciseId);
+                const url = (ex.videoUrl && isSafeUrl(ex.videoUrl)) ? ex.videoUrl
+                           : (exData?.videoUrl && isSafeUrl(exData.videoUrl)) ? exData.videoUrl : null;
                 return (
-                <div key={i} className="plan-exercise">
-                  <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
-                  {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
-                  <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
-                  {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
-                  {(() => {
-                    const url = (ex.videoUrl && isSafeUrl(ex.videoUrl)) ? ex.videoUrl
-                               : (exData?.videoUrl && isSafeUrl(exData.videoUrl)) ? exData.videoUrl
-                               : null;
-                    if (url) {
-                      return isYouTube(url) ? (
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
-                          <Play size={14} />
-                        </a>
-                      ) : (
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
-                          <ExternalLink size={14} />
-                        </a>
-                      );
+                  <div key={i} className="plan-exercise">
+                    <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                    {ex.customMuscle && <span className="tag" style={{ fontSize: 11 }}>{ex.customMuscle}</span>}
+                    <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
+                    {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
+                    {url
+                      ? isYouTube(url)
+                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
+                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
+                      : exData
+                        ? <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}><Link2 size={13} /> Add Link</button>
+                        : null
                     }
-                    return isTrainer && exData ? (
-                      <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}>
-                        <Link2 size={13} /> Add Link
-                      </button>
-                    ) : null;
-                  })()}
-                </div>
+                  </div>
                 );
               })}
             </div>
           );
-        })
-      )}
+        };
+
+        return (
+          <>
+            {grouped.map(({ client, plans: cPlans }) => (
+              <div key={client.id} className="mb-24">
+                <div className="plan-client-section-header">
+                  <span className="plan-client-name">{client.name}</span>
+                  <span className="tag">{cPlans.length} plan{cPlans.length !== 1 ? 's' : ''}</span>
+                </div>
+                {cPlans.map(renderPlanCard)}
+              </div>
+            ))}
+            {unassigned.map(renderPlanCard)}
+          </>
+        );
+      })()}
 
       {deletePlanModal && (
         <div className="modal-overlay" onClick={() => setDeletePlanModal(null)}>

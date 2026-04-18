@@ -1516,6 +1516,29 @@ tr:hover { background: var(--bg-card-hover); }
   gap: 8px;
   flex-wrap: wrap;
 }
+.plan-card-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  margin-bottom: 0;
+}
+.plan-card-toggle:hover { opacity: 0.85; }
+.plan-client-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary);
+}
+.plan-client-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
 .plan-card-info { min-width: 0; }
 .plan-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .plan-exercise {
