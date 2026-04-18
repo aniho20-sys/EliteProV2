@@ -456,6 +456,10 @@ export function AppProvider({ children }) {
     return newLog;
   };
 
+  const updateWorkoutLog = async (logId, updates) => {
+    await updateDoc(doc(db, 'workoutLogs', logId), updates);
+  };
+
   // ========== Schedule ==========
   const getSchedule = (filter) => {
     return schedule.filter(s => {
@@ -610,7 +614,7 @@ export function AppProvider({ children }) {
     getClients, getClient, updateClient, removeClient,
     getBodyStats, addBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
-    getWorkoutLogs, addWorkoutLog,
+    getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
     getSchedule, getTrainerSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
     getSessionStats,

@@ -2300,6 +2300,41 @@ tr:hover { background: var(--bg-card-hover); }
   flex: 1;
 }
 
+/* Trainer Notes on Workout Logs */
+.trainer-note-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.trainer-note-display {
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-height: 36px;
+  background: var(--bg-hover);
+  transition: background 0.15s;
+}
+.trainer-note-display:hover { background: var(--border); }
+.trainer-note-text { font-size: 0.85rem; color: var(--text); line-height: 1.5; }
+.trainer-note-placeholder { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+.trainer-note-editor { display: flex; flex-direction: column; }
+.trainer-note-readonly {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 8px 8px 0;
+}
+.trainer-note-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.trainer-note-readonly .trainer-note-text { font-size: 0.85rem; line-height: 1.5; }
+
 /* Muscle Selector */
 .muscle-selector {
   border: 1px solid var(--border);

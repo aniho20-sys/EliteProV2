@@ -31,7 +31,7 @@ function ChartTooltip({ active, payload, unit }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, getExercises, removeClient, updateClient, getSessionStats } = useApp();
+  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -47,6 +47,9 @@ export default function ClientDetailPage() {
   const [editingSessions, setEditingSessions] = useState(false);
   const [sessionsInput, setSessionsInput] = useState('');
   const [savingSessions, setSavingSessions] = useState(false);
+  const [editingNoteLogId, setEditingNoteLogId] = useState(null);
+  const [noteText, setNoteText] = useState('');
+  const [savingNoteId, setSavingNoteId] = useState(null);
 
   if (!client) {
     return (
@@ -99,6 +102,20 @@ export default function ClientDetailPage() {
       toast('Failed to update sessions', 'error');
     } finally {
       setSavingSessions(false);
+    }
+  };
+
+  const handleSaveTrainerNote = async (logId) => {
+    setSavingNoteId(logId);
+    try {
+      await updateWorkoutLog(logId, { trainerNotes: noteText.trim() });
+      setEditingNoteLogId(null);
+      setNoteText('');
+      toast('Note saved');
+    } catch {
+      toast('Failed to save note', 'error');
+    } finally {
+      setSavingNoteId(null);
     }
   };
 
@@ -359,6 +376,7 @@ export default function ClientDetailPage() {
           ) : (
             [...logs].reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);
+              const isEditingNote = editingNoteLogId === l.id;
               return (
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">
@@ -376,7 +394,43 @@ export default function ClientDetailPage() {
                       </span>
                     </div>
                   ))}
-                  {l.notes && <p className="text-sm text-muted mt-8">{l.notes}</p>}
+                  {l.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{l.notes}</p>}
+                  <div className="trainer-note-section">
+                    {isEditingNote ? (
+                      <div className="trainer-note-editor">
+                        <textarea
+                          className="form-textarea"
+                          rows={3}
+                          autoFocus
+                          placeholder="Leave feedback for this session…"
+                          value={noteText}
+                          onChange={e => setNoteText(e.target.value)}
+                        />
+                        <div className="flex gap-8 mt-8">
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleSaveTrainerNote(l.id)}
+                            disabled={savingNoteId === l.id}
+                          >
+                            {savingNoteId === l.id ? 'Saving…' : 'Save Note'}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => { setEditingNoteLogId(null); setNoteText(''); }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="trainer-note-display" onClick={() => { setEditingNoteLogId(l.id); setNoteText(l.trainerNotes || ''); }}>
+                        {l.trainerNotes
+                          ? <span className="trainer-note-text">{l.trainerNotes}</span>
+                          : <span className="trainer-note-placeholder">+ Add coach feedback…</span>
+                        }
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })

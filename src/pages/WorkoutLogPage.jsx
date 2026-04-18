@@ -185,7 +185,13 @@ export default function WorkoutLogPage() {
                     </div>
                     );
                   })}
-                  {l.notes && <p className="text-sm text-muted mt-8">{l.notes}</p>}
+                  {l.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{l.notes}</p>}
+                  {l.trainerNotes && (
+                    <div className="trainer-note-readonly">
+                      <span className="trainer-note-label">Coach</span>
+                      <span className="trainer-note-text">{l.trainerNotes}</span>
+                    </div>
+                  )}
                 </div>
               );
             })
