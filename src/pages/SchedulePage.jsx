@@ -49,7 +49,6 @@ export default function SchedulePage() {
   const whStart = trainerUser?.workingHours?.start || '09:00';
   const whEnd = trainerUser?.workingHours?.end || '17:00';
   const BOOKING_SLOTS = generateSlots(whStart, whEnd, 30);
-  const DISPLAY_SLOTS = generateSlots(whStart, whEnd, 60);
 
   // Get next 14 days
   const dates = Array.from({ length: 14 }, (_, i) => {
@@ -83,13 +82,6 @@ export default function SchedulePage() {
     const endMin = startMin + Number(duration);
     if (startMin < toMin(whStart) || endMin > toMin(whEnd)) return true;
     return refSchedule.some(s => s.date === date && sessionOverlaps(s, startMin, endMin));
-  };
-
-  // Is a display-slot hour occupied on a given date?
-  const isSlotOccupied = (date, slot) => {
-    const slotStart = toMin(slot);
-    const slotEnd = slotStart + 60;
-    return refSchedule.some(s => s.date === date && sessionOverlaps(s, slotStart, slotEnd));
   };
 
   // Available booking slots: filter by duration boundary + already-booked slots on selected date
@@ -222,29 +214,7 @@ export default function SchedulePage() {
       <div className="card">
         <div className="schedule-day-header mb-16">
           <h3 className="card-title">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-          {isTrainer && (() => {
-            const freeCount = DISPLAY_SLOTS.filter(s => !isSlotOccupied(selectedDate, s)).length;
-            return <span className="text-sm text-muted">{freeCount} slot{freeCount !== 1 ? 's' : ''} free</span>;
-          })()}
         </div>
-        {isTrainer && (
-          <div className="slot-row mb-16">
-            {DISPLAY_SLOTS.map(slot => {
-              const occupied = isSlotOccupied(selectedDate, slot);
-              return (
-                <button
-                  key={slot}
-                  className={`slot-bubble ${occupied ? 'booked' : 'free'}`}
-                  disabled={occupied}
-                  title={occupied ? 'Booked' : `Book ${slot}`}
-                  onClick={() => { setForm(f => ({ ...f, date: selectedDate, time: slot })); setShowAdd(true); }}
-                >
-                  {parseInt(slot)}
-                </button>
-              );
-            })}
-          </div>
-        )}
         {schedule.length === 0 ? (
           <EmptyState
             inCard={false}
