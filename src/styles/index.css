@@ -2246,6 +2246,51 @@ tr:hover { background: var(--bg-card-hover); }
   margin-top: 2px;
 }
 .plan-exercise-skipped { opacity: 0.45; }
+
+/* ── Rest Timer Bar ── */
+.rest-timer-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 10;
+}
+.rest-timer-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+.rest-timer-left { flex: 1; min-width: 0; }
+.rest-timer-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.rest-timer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.rest-timer-display {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 72px;
+  text-align: right;
+  color: var(--text);
+  transition: color 0.3s;
+}
+.rest-timer-display.rest-timer-active { color: var(--accent); }
+.rest-timer-display.rest-timer-done { color: var(--warning); }
+
 .plan-exercise-pr {
   background: rgba(245, 158, 11, 0.06) !important;
   border-color: rgba(245, 158, 11, 0.2) !important;

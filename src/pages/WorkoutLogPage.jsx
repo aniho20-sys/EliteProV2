@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
+
+const REST_PRESETS = [45, 60, 90, 120, 180];
 
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises, getPersonalRecords } = useApp();
@@ -19,12 +21,17 @@ export default function WorkoutLogPage() {
   const [rpe, setRpe] = useState(7);
   const [notes, setNotes] = useState('');
 
+  // Rest timer state
+  const [restSeconds, setRestSeconds] = useState(90);
+  const [timeLeft, setTimeLeft] = useState(90);
+  const [timerActive, setTimerActive] = useState(false);
+  const timerRef = useRef(null);
+
   const location = useLocation();
 
   const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
-
 
   const autoStartedRef = useRef(false);
   useEffect(() => {
@@ -35,9 +42,63 @@ export default function WorkoutLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.planId, plans.length]);
 
+  // Stop timer when leaving workout view
+  useEffect(() => {
+    if (!showLog) {
+      setTimerActive(false);
+      clearInterval(timerRef.current);
+    }
+  }, [showLog]);
+
+  // Countdown tick
+  useEffect(() => {
+    if (!timerActive) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          setTimerActive(false);
+          playBeep();
+          if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [timerActive]);
+
+  const playBeep = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.35, 0.7].forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.25);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.25);
+      });
+    } catch {}
+  };
+
+  const setRestDuration = (s) => {
+    setRestSeconds(s);
+    if (!timerActive) setTimeLeft(s);
+  };
+
+  const toggleTimer = () => {
+    if (timeLeft === 0) { setTimeLeft(restSeconds); setTimerActive(true); return; }
+    setTimerActive(p => !p);
+  };
+
+  const resetTimer = () => { setTimerActive(false); setTimeLeft(restSeconds); };
+
   const startLog = (plan) => {
     setSelectedPlan(plan);
-    // Find the most recent log for this plan
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
     setEntries(plan.exercises.map(ex => {
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
@@ -54,6 +115,9 @@ export default function WorkoutLogPage() {
     }));
     setRpe(7);
     setNotes('');
+    setRestSeconds(90);
+    setTimeLeft(90);
+    setTimerActive(false);
     setShowLog(true);
   };
 
@@ -66,19 +130,16 @@ export default function WorkoutLogPage() {
     ));
   };
 
-  // Check if current entry has a new PR for this exercise
   const isNewPR = (entry) => {
     const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
     const currentPR = prs[entry.exerciseId]?.weight || 0;
     return maxWeight > 0 && maxWeight > currentPR;
   };
 
-  // Check if a specific log entry had a PR at time of logging
   const wasPRAtTime = (log, entry) => {
     const logDate = log.date;
     const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
     if (maxWeight <= 0) return false;
-    // Check all other logs before this date for same exercise
     const priorMax = logs
       .filter(l => l.id !== log.id && l.date <= logDate)
       .flatMap(l => (l.entries || []).filter(e => e.exerciseId === entry.exerciseId))
@@ -110,8 +171,10 @@ export default function WorkoutLogPage() {
     } catch { toast('Failed to save workout', 'error'); }
   };
 
-  // Count total PRs
   const prCount = Object.keys(prs).length;
+  const timerDisplay = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`;
+  const timerDone = timeLeft === 0;
+  const timerStarted = timeLeft < restSeconds || timerActive;
 
   return (
     <div>
@@ -122,7 +185,6 @@ export default function WorkoutLogPage() {
 
       {!showLog ? (
         <>
-          {/* PR Summary */}
           {prCount > 0 && (
             <div className="card mb-16 pr-summary-card">
               <div className="card-header">
@@ -143,7 +205,6 @@ export default function WorkoutLogPage() {
             </div>
           )}
 
-          {/* Quick start */}
           {plans.length > 0 && (
             <div className="card mb-16">
               <h3 className="card-title mb-16">Start a Workout</h3>
@@ -158,7 +219,6 @@ export default function WorkoutLogPage() {
             </div>
           )}
 
-          {/* Log history */}
           <h3 className="mb-16">History</h3>
           {logs.length === 0 ? (
             <EmptyState
@@ -199,16 +259,16 @@ export default function WorkoutLogPage() {
                     const hadPR = entry.sets?.length > 0 && wasPRAtTime(l, entry);
                     const skipped = !entry.sets || entry.sets.length === 0;
                     return (
-                    <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''} ${skipped ? 'plan-exercise-skipped' : ''}`}>
-                      <span className="plan-exercise-name">
-                        {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                        {entry.name || getExerciseName(entry.exerciseId)}
-                      </span>
-                      <span className="plan-exercise-detail">
-                        {skipped ? '—' : entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
-                      </span>
-                      {hadPR && <span className="tag tag-warning" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>PR</span>}
-                    </div>
+                      <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''} ${skipped ? 'plan-exercise-skipped' : ''}`}>
+                        <span className="plan-exercise-name">
+                          {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
+                          {entry.name || getExerciseName(entry.exerciseId)}
+                        </span>
+                        <span className="plan-exercise-detail">
+                          {skipped ? '—' : entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
+                        </span>
+                        {hadPR && <span className="tag tag-warning" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>PR</span>}
+                      </div>
                     );
                   })}
                   {l.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{l.notes}</p>}
@@ -291,6 +351,38 @@ export default function WorkoutLogPage() {
               </div>
             );
           })}
+
+          {/* Rest Timer */}
+          <div className="rest-timer-bar mb-16">
+            <div className="rest-timer-left">
+              <span className="rest-timer-label"><Timer size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Rest Timer</span>
+              <div className="rest-timer-presets">
+                {REST_PRESETS.map(s => (
+                  <button
+                    key={s}
+                    className={`btn btn-sm ${restSeconds === s && !timerStarted ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setRestDuration(s)}
+                  >
+                    {s < 60 ? `${s}s` : `${s / 60}m`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rest-timer-right">
+              <span className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}>
+                {timerDisplay}
+              </span>
+              <button
+                className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`}
+                onClick={toggleTimer}
+              >
+                {timerActive ? 'Pause' : timerDone ? 'Restart' : timerStarted ? 'Resume' : 'Start'}
+              </button>
+              {timerStarted && !timerActive && !timerDone && (
+                <button className="btn btn-outline btn-sm" onClick={resetTimer} title="Reset">↺</button>
+              )}
+            </div>
+          </div>
 
           <div className="card">
             <div className="form-group">
