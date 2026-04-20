@@ -1,6 +1,52 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-18（Session 16）
+> 最後更新：2026-04-20（Session 17）
+
+---
+
+## 🎯 產品策略：打敗 Hevy
+
+### 競爭分析（2026-04-20）
+
+ElitePro 目標係挑戰 **Hevy** 及其 **Hevy Coach** 版本。
+
+#### Hevy Coach 現有功能
+| 功能 | Hevy Coach | ElitePro |
+|------|-----------|---------|
+| Workout programming | ✅ | ✅ |
+| Client workout logs | ✅ | ✅ |
+| Client progress charts | ✅ | ✅ |
+| Messaging | ✅ | ✅ |
+| Built-in exercise GIFs | ✅ 大量 | ❌ 只有 URL links |
+| Mobile app（原生） | ✅ iOS + Android | ⚠️ PWA only |
+| Session booking | ❌ | ✅ ElitePro 獨有 |
+| 堂數管理 | ❌ | ✅ ElitePro 獨有 |
+| Body measurements（trainer） | ⚠️ 有限 | ✅ |
+| Working hours 設定 | ❌ | ✅ ElitePro 獨有 |
+| 收費 / Invoice 管理 | ❌ | ❌ 未做（機會） |
+| Client onboarding（PAR-Q） | ❌ | ❌ 未做（機會） |
+| Rest timer | ✅ | ❌ 未做 |
+| Volume analytics | ✅ | ❌ 未做 |
+| Workout calendar heatmap | ✅ | ❌ 未做 |
+| 收費 | $20–40 USD/月 | TBD |
+
+#### 戰略定位
+- **Hevy Coach** 定位：「Workout programming tool」
+- **ElitePro** 定位：「**完整 PT business 管理工具**」——唔只係訓練 programming，係整個教練生意
+
+#### 差異化優勢（ElitePro 獨有）
+1. **預約 + 堂數系統** — Trainer 管理客戶預約、追蹤剩餘堂數
+2. **Working hours 設定** — 教練自訂可預約時段
+3. **Body stats 完整管理** — 6 個 metrics + Coach/Self 標記 + 趨勢圖
+
+#### 下一步差異化功能優先排序
+| 優先 | 功能 | 原因 |
+|------|------|------|
+| 🔴 高 | **Rest Timer** | 每次訓練都用，Hevy 用家最常提 |
+| 🔴 高 | **收費 / Invoice 管理** | Hevy Coach 完全冇，教練最痛點 |
+| 🟡 中 | **Volume analytics** | 週訓練量圖表，進階用家需求 |
+| 🟡 中 | **Client onboarding（PAR-Q）** | Hevy Coach 冇，專業教練流程 |
+| 🟢 低 | **Workout calendar heatmap** | Consistency 可視化，engagement 功能 |
 
 ---
 
