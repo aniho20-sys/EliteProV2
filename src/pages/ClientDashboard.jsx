@@ -89,9 +89,12 @@ export default function ClientDashboard() {
               <Layers size={18} style={{ color: sessColor }} />
               <h3 className="card-title" style={{ margin: 0 }}>Sessions</h3>
             </div>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: sessColor, lineHeight: 1 }}>
-              {sessUsed}<span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '1rem' }}> / {sessTotal}</span>
-            </span>
+            <div className="flex gap-8" style={{ alignItems: 'center' }}>
+              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: sessColor, lineHeight: 1 }}>
+                {sessUsed}<span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '1rem' }}> / {sessTotal}</span>
+              </span>
+              <Link to="/schedule" className="btn btn-sm btn-primary">Book Session</Link>
+            </div>
           </div>
           <div className="session-progress-bar mb-8">
             <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessColor }} />
