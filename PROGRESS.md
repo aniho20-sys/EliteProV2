@@ -138,7 +138,16 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 | # | 任務 | 詳情 |
 |---|------|------|
 | 1 | ✅ **Session「Mark Complete」修復** | `SchedulePage` 加入 `CheckCircle` 按鈕（Trainer only），`confirmed` 狀態下可標為 `completed`；修復 `getSessionStats()` 永遠返回 `used=0` 嘅核心 Bug；status tag 顏色更新：`completed`→綠色 `tag-accent`、`confirmed`→藍色 `tag-primary`；toast 顯示「Session marked as complete」 |
-| 2 | ✅ **MyWorkoutsPage「Start Workout」入口** | 每個 Plan card header 加入「Start Workout」按鈕（`Dumbbell` icon）；click 後 `navigate('/log', { state: { planId } })`；`WorkoutLogPage` 加 `useEffect` 讀取 `location.state.planId`，自動調用 `startLog(plan)`；`autoStartedRef` 防重複觸發；學生無需再手動去 Log 頁再揀 plan，直接一鍵開始 |
+| 2 | ✅ **MyWorkoutsPage「Start Workout」入口** | 每個 Plan card header 加入「Start Workout」按鈕（`Dumbbell` icon）；click 後 `navigate('/log', { state: { planId } })`；`WorkoutLogPage` 加 `useEffect` 讀取 `location.state.planId`，自動調用 `startLog(plan)`；`autoStartedRef` 防重複觸發 |
+| 3 | ✅ **Session quota card 加 Book Session CTA** | ClientDashboard Sessions card header 加入「Book Session」按鈕，直接導去 `/schedule` |
+| 4 | ✅ **TrainerDashboard 快速 Mark Complete** | Today's Schedule 每個 `confirmed` session 加 `CheckCircle` 按鈕；`completing` Set 防 double-submit；`e.stopPropagation()` 防觸發 Link 導航；同步修正 hardcoded `60min` → 讀 `s.duration` |
+| 5 | ✅ **#2、#6 誤判確認** | ClientsPage client cards 已有 onClick navigate（CSS hover 效果亦在）；PT Log modal 已按 `clientId` 篩選 plans——兩項均係 Explore agent 誤判，無需改動 |
+
+### ⚠️ 待議事項（爭議）
+
+| 議題 | 狀態 | 摘要 |
+|------|------|------|
+| **學生改期次數限制** | 🟡 擱置待議 | 提案：每次 booking 只能改一次時間。反對理由：(1) Cancel-rebook 漏洞令次數限制無效；(2) 時間限制（24/48hr 截止）比次數限制更合理；(3) 冇真實用戶痛點驗證；(4) 做到位需要 Cloud Function，成本相對高。決定：暫擱置，收集真實教練反饋後再決定。備選方案：改做「距離 session 24小時前截止改期」前端 check |
 
 ---
 
