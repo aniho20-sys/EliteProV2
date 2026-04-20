@@ -107,6 +107,11 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 | **Stripe 收費整合（Phase 2）** | Invoice Phase 1 穩定後才做 |
 | **App Store 上架（Capacitor）** | PWA 先行，穩定後考慮 |
 
+### 🎯 獲客工具（推廣前置後做）
+| 功能 | 說明 |
+|------|------|
+| **Hevy CSV Import** | 吸引 Hevy 用戶轉移；純前端實現（FileReader + fuzzy exercise matching）；需要 3-step preview UI（上載 → 預覽匹配 → 確認 import）；注意 duplicate detection + CSV sanitization |
+
 ### 🔧 架構加固
 | 任務 | 類型 |
 |------|------|
