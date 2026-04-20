@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
-import { Play, ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, ClipboardList, Dumbbell } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
 
@@ -7,6 +8,7 @@ const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
 
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();
+  const navigate = useNavigate();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const exercises = getExercises();
 
@@ -33,8 +35,16 @@ export default function MyWorkoutsPage() {
         plans.map(p => (
           <div key={p.id} className="card mb-16">
             <div className="card-header">
-              <h3 className="card-title">{p.name}</h3>
-              <span className="tag tag-primary">{p.day}</span>
+              <div>
+                <h3 className="card-title">{p.name}</h3>
+                <span className="tag tag-primary">{p.day}</span>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => navigate('/log', { state: { planId: p.id } })}
+              >
+                <Dumbbell size={14} /> Start Workout
+              </button>
             </div>
             {p.exercises.map((ex, i) => {
               const exercise = getExercise(ex.exerciseId);

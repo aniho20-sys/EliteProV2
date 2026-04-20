@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Trophy, Play, NotebookPen } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -18,10 +19,21 @@ export default function WorkoutLogPage() {
   const [rpe, setRpe] = useState(7);
   const [notes, setNotes] = useState('');
 
+  const location = useLocation();
+
   const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
+
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    const planId = location.state?.planId;
+    if (!planId || plans.length === 0 || autoStartedRef.current) return;
+    const plan = plans.find(p => p.id === planId);
+    if (plan) { autoStartedRef.current = true; startLog(plan); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.planId, plans.length]);
 
   const startLog = (plan) => {
     setSelectedPlan(plan);

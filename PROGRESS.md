@@ -131,6 +131,17 @@ Phase 1（上線前必做）所有 8 個步驟已全部完成。
 
 ---
 
+## Session 17 完成嘅工作（2026-04-20）
+
+### Bug Fix + 學生端 UX 改善（A + B + C + D）
+
+| # | 任務 | 詳情 |
+|---|------|------|
+| 1 | ✅ **Session「Mark Complete」修復** | `SchedulePage` 加入 `CheckCircle` 按鈕（Trainer only），`confirmed` 狀態下可標為 `completed`；修復 `getSessionStats()` 永遠返回 `used=0` 嘅核心 Bug；status tag 顏色更新：`completed`→綠色 `tag-accent`、`confirmed`→藍色 `tag-primary`；toast 顯示「Session marked as complete」 |
+| 2 | ✅ **MyWorkoutsPage「Start Workout」入口** | 每個 Plan card header 加入「Start Workout」按鈕（`Dumbbell` icon）；click 後 `navigate('/log', { state: { planId } })`；`WorkoutLogPage` 加 `useEffect` 讀取 `location.state.planId`，自動調用 `startLog(plan)`；`autoStartedRef` 防重複觸發；學生無需再手動去 Log 頁再揀 plan，直接一鍵開始 |
+
+---
+
 ## Session 16 完成嘅工作（2026-04-18）
 
 ### UX 改善：Plans 頁重構 + Progress 跨角色共用（A + B + D）
