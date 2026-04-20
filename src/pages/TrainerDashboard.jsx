@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -102,7 +104,23 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
 
 export default function TrainerDashboard() {
   const navigate = useNavigate();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs } = useApp();
+  const toast = useToast();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem } = useApp();
+  const [completing, setCompleting] = useState(new Set());
+
+  const handleComplete = async (e, itemId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCompleting(prev => new Set(prev).add(itemId));
+    try {
+      await updateScheduleItem(itemId, { status: 'completed' });
+      toast('Session marked as complete');
+    } catch {
+      toast('Failed to update session', 'error');
+    } finally {
+      setCompleting(prev => { const s = new Set(prev); s.delete(itemId); return s; });
+    }
+  };
   const clients = getClients(currentUser.id);
   const totalPlans = getWorkoutPlans({ trainerId: currentUser.id }).length;
   const today = new Date().toISOString().split('T')[0];
@@ -192,9 +210,21 @@ export default function TrainerDashboard() {
                   <div className="schedule-time">{s.time}</div>
                   <div className="schedule-info">
                     <div className="schedule-client">{client?.name || 'Unknown'}</div>
-                    <div className="schedule-type">{s.type} - 60min</div>
+                    <div className="schedule-type">{s.type} - {s.duration || 60}min</div>
                   </div>
-                  <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
+                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <span className={`tag ${s.status === 'completed' ? 'tag-accent' : s.status === 'confirmed' ? 'tag-primary' : 'tag-warning'}`}>{s.status}</span>
+                    {s.status === 'confirmed' && (
+                      <button
+                        className="btn-icon"
+                        onClick={(e) => handleComplete(e, s.id)}
+                        disabled={completing.has(s.id)}
+                        title="Mark as complete"
+                      >
+                        <CheckCircle size={16} style={{ color: 'var(--accent)' }} />
+                      </button>
+                    )}
+                  </div>
                 </Link>
               );
             })
