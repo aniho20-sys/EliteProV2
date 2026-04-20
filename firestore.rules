@@ -126,5 +126,13 @@ service cloud.firestore {
         !('trainerId' in resource.data) || resource.data.trainerId == request.auth.uid
       );
     }
+
+    // ── Templates ──
+    // Trainer-only: personal reusable plan blueprints.
+    match /templates/{templateId} {
+      allow read: if isTrainer() && resource.data.trainerId == request.auth.uid;
+      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if isTrainer() && resource.data.trainerId == request.auth.uid;
+    }
   }
 }

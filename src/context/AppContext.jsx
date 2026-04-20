@@ -42,6 +42,7 @@ export function AppProvider({ children }) {
   const [trainerSchedule, setTrainerSchedule] = useState([]);
   const [messages, setMessages] = useState([]);
   const [exercises, setExercises] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
@@ -74,7 +75,7 @@ export function AppProvider({ children }) {
       // Not authed: reset state and mark as non-loading
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
-      setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]);
+      setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]); setTemplates([]);
       loadedRef.current = new Set();
       setLoading(false);
       return;
@@ -130,6 +131,17 @@ export function AppProvider({ children }) {
     );
     return () => unsub();
   }, [currentUser?.id]);
+
+  // --- Templates: trainer-only reusable plan blueprints ---
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'trainer') return;
+    const unsub = onSnapshot(
+      query(collection(db, 'templates'), where('trainerId', '==', currentUser.id)),
+      (snap) => setTemplates(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+      () => {},
+    );
+    return () => unsub();
+  }, [currentUser?.id, currentUser?.role]);
 
   // --- Trainer schedule for clients: load trainer's full schedule so clients see real availability ---
   useEffect(() => {
@@ -583,6 +595,26 @@ export function AppProvider({ children }) {
     await deleteDoc(doc(db, 'exercises', exerciseId));
   };
 
+  // ========== Templates ==========
+  const getTemplates = () => templates;
+
+  const saveAsTemplate = async (plan) => {
+    const template = {
+      id: `tmpl-${Date.now()}`,
+      trainerId: currentUser.id,
+      name: plan.name,
+      day: plan.day,
+      exercises: plan.exercises,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    await setDoc(doc(db, 'templates', template.id), template);
+    return template;
+  };
+
+  const deleteTemplate = async (templateId) => {
+    await deleteDoc(doc(db, 'templates', templateId));
+  };
+
   // ========== Reset (demo only) ==========
   // Wipes only the current user's demo-scoped data, then re-seeds
   const resetData = async () => {
@@ -632,6 +664,7 @@ export function AppProvider({ children }) {
     getSessionStats,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
+    getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, findTrainerByCode, connectToTrainer,
     resetData,
   };
