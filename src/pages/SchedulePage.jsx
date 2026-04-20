@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff, Trash2, Clock } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -147,6 +147,7 @@ export default function SchedulePage() {
     try {
       await updateScheduleItem(itemId, { status });
       if (status === 'confirmed') toast('Session confirmed');
+      else if (status === 'completed') toast('Session marked as complete');
       else if (status === 'cancelled') toast('Session cancelled', 'error');
       else toast(`Session ${status}`);
     } catch (err) {
@@ -237,13 +238,16 @@ export default function SchedulePage() {
                   </div>
                 </div>
                 <div className="schedule-item-bottom">
-                  <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : s.status === 'cancelled' ? 'tag' : 'tag-warning'}`}>{s.status}</span>
+                  <span className={`tag ${s.status === 'completed' ? 'tag-accent' : s.status === 'confirmed' ? 'tag-primary' : s.status === 'cancelled' ? 'tag' : 'tag-warning'}`}>{s.status}</span>
                   <div className="flex gap-8">
                     {isTrainer && s.status === 'pending' && (
                       <>
                         <button className="btn-icon" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
                         <button className="btn-icon" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
                       </>
+                    )}
+                    {isTrainer && s.status === 'confirmed' && (
+                      <button className="btn-icon" onClick={() => updateStatus(s.id, 'completed')} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
                     )}
                     {!isTrainer && s.status === 'pending' && (
                       <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
