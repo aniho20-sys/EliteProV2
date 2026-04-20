@@ -2245,6 +2245,7 @@ tr:hover { background: var(--bg-card-hover); }
   color: var(--text-muted);
   margin-top: 2px;
 }
+.plan-exercise-skipped { opacity: 0.45; }
 .plan-exercise-pr {
   background: rgba(245, 158, 11, 0.06) !important;
   border-color: rgba(245, 158, 11, 0.2) !important;

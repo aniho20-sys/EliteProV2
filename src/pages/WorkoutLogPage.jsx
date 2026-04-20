@@ -92,14 +92,15 @@ export default function WorkoutLogPage() {
       exerciseId: e.exerciseId,
       name: getExerciseName(e.exerciseId),
       sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
-    })).filter(e => e.sets.length > 0);
+    }));
+    const completedCount = logEntries.filter(e => e.sets.length > 0).length;
 
     try {
       await addWorkoutLog({
         clientId: currentUser.id,
         planId: selectedPlan.id,
         date: new Date().toISOString().split('T')[0],
-        completed: logEntries.length === entries.length,
+        completed: completedCount === entries.length,
         entries: logEntries,
         rpe,
         notes,
@@ -195,15 +196,16 @@ export default function WorkoutLogPage() {
                     </div>
                   </div>
                   {l.entries.map((entry, i) => {
-                    const hadPR = wasPRAtTime(l, entry);
+                    const hadPR = entry.sets?.length > 0 && wasPRAtTime(l, entry);
+                    const skipped = !entry.sets || entry.sets.length === 0;
                     return (
-                    <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''}`}>
+                    <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''} ${skipped ? 'plan-exercise-skipped' : ''}`}>
                       <span className="plan-exercise-name">
                         {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                         {entry.name || getExerciseName(entry.exerciseId)}
                       </span>
                       <span className="plan-exercise-detail">
-                        {entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
+                        {skipped ? '—' : entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
                       </span>
                       {hadPR && <span className="tag tag-warning" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>PR</span>}
                     </div>
