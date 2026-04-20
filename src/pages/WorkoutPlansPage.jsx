@@ -428,37 +428,40 @@ export default function WorkoutPlansPage() {
 
         return (
           <>
-            {templates.length > 0 && (
-              <div className="mb-24">
-                <div className="plan-client-section-header">
-                  <span className="plan-client-name">Templates</span>
-                  <span className="tag">{templates.length} template{templates.length !== 1 ? 's' : ''}</span>
+            <div className="mb-24">
+              <div className="plan-client-section-header">
+                <span className="plan-client-name">Templates</span>
+                {templates.length > 0 && <span className="tag">{templates.length} template{templates.length !== 1 ? 's' : ''}</span>}
+              </div>
+              {templates.length === 0 ? (
+                <div className="card mb-8" style={{ color: 'var(--text-muted)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
+                  <Bookmark size={14} style={{ flexShrink: 0 }} />
+                  Click the bookmark icon on any plan to save it as a reusable template.
                 </div>
-                {templates.map(t => (
-                  <div key={t.id} className="card mb-8">
-                    <div className="plan-card-header">
-                      <div className="plan-card-info">
-                        <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{t.name}</h3>
-                        <span className="text-sm text-muted">{t.exercises.length} exercise{t.exercises.length !== 1 ? 's' : ''} · {t.day}</span>
-                      </div>
-                      <div className="plan-card-actions">
-                        <button
-                          className="btn btn-sm btn-outline"
-                          onClick={() => {
-                            setForm({ name: t.name, clientId: '', day: t.day, exercises: t.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })) });
-                            setSelectedTemplate('');
-                            setShowCustomForm(false);
-                            setCustomForm(EMPTY_CUSTOM);
-                            setShowCreate(true);
-                          }}
-                        >Use</button>
-                        <button className="btn-icon" title="Delete template" style={{ color: 'var(--danger)' }} onClick={() => handleDeleteTemplate(t.id)}><Trash2 size={15} /></button>
-                      </div>
+              ) : templates.map(t => (
+                <div key={t.id} className="card mb-8">
+                  <div className="plan-card-header">
+                    <div className="plan-card-info">
+                      <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{t.name}</h3>
+                      <span className="text-sm text-muted">{t.exercises.length} exercise{t.exercises.length !== 1 ? 's' : ''} · {t.day}</span>
+                    </div>
+                    <div className="plan-card-actions">
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={() => {
+                          setForm({ name: t.name, clientId: '', day: t.day, exercises: t.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })) });
+                          setSelectedTemplate('');
+                          setShowCustomForm(false);
+                          setCustomForm(EMPTY_CUSTOM);
+                          setShowCreate(true);
+                        }}
+                      >Use</button>
+                      <button className="btn-icon" title="Delete template" style={{ color: 'var(--danger)' }} onClick={() => handleDeleteTemplate(t.id)}><Trash2 size={15} /></button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
             {grouped.map(({ client, plans: cPlans }) => (
               <div key={client.id} className="mb-24">
                 <div className="plan-client-section-header">
