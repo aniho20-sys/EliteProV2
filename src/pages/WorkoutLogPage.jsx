@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
@@ -161,11 +161,22 @@ export default function WorkoutLogPage() {
           <h3 className="mb-16">History</h3>
           {logs.length === 0 ? (
             <EmptyState
-              icon={NotebookPen}
+              icon={plans.length === 0 && !currentUser.trainerId ? UserPlus : NotebookPen}
               title="No workouts logged yet"
-              description={plans.length > 0
-                ? 'Select a plan above to start logging your first session.'
-                : 'Once your coach assigns a plan, you can log workouts here.'}
+              description={
+                !currentUser.trainerId
+                  ? 'Connect to a coach first — they will assign workout plans for you to follow.'
+                  : plans.length > 0
+                    ? 'Select a plan above to start logging your first session.'
+                    : 'Your coach hasn\'t assigned any plans yet. Message them to get started.'
+              }
+              action={
+                !currentUser.trainerId
+                  ? { label: 'Connect to a Coach', to: '/profile' }
+                  : plans.length === 0
+                    ? { label: 'Message Your Coach', to: '/messages' }
+                    : undefined
+              }
             />
           ) : (
             [...logs].reverse().map(l => {

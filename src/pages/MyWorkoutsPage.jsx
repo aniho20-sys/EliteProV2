@@ -27,9 +27,13 @@ export default function MyWorkoutsPage() {
           icon={ClipboardList}
           title="No workout plans assigned yet"
           description={currentUser.trainerId
-            ? 'Your coach will create plans for you soon. Check back in a bit.'
-            : 'Connect to a coach first, then they can assign plans to you.'}
-          action={!currentUser.trainerId ? { label: 'Connect Coach', to: '/profile' } : undefined}
+            ? 'Your coach hasn\'t assigned any plans yet. Message them to get started.'
+            : 'Connect to a coach first — they will assign workout plans for you.'}
+          action={
+            !currentUser.trainerId
+              ? { label: 'Connect to a Coach', to: '/profile' }
+              : { label: 'Message Your Coach', to: '/messages' }
+          }
         />
       ) : (
         plans.map(p => (
