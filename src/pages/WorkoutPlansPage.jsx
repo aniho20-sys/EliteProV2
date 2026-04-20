@@ -20,7 +20,7 @@ export default function WorkoutPlansPage() {
   const templates = isTrainer ? getTemplates() : [];
 
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: '', clientId: '', day: 'Monday', exercises: [] });
+  const [form, setForm] = useState({ name: '', clientId: '', day: '', exercises: [] });
   const [exFilter, setExFilter] = useState('');
   const exFilterRef = useRef('');
   const [dragIdx, setDragIdx] = useState(null);
@@ -44,8 +44,6 @@ export default function WorkoutPlansPage() {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customForm, setCustomForm] = useState(EMPTY_CUSTOM);
   const [customSaving, setCustomSaving] = useState(false);
-
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   const defaultSets = () => [{ weight: 0, reps: '10' }, { weight: 0, reps: '10' }, { weight: 0, reps: '10' }];
 
@@ -206,7 +204,7 @@ export default function WorkoutPlansPage() {
 
     try {
       await addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id });
-      setForm({ name: '', clientId: '', day: 'Monday', exercises: [] });
+      setForm({ name: '', clientId: '', day: '', exercises: [] });
       updateExFilter('');
       setShowCreate(false);
       setShowCustomForm(false);
@@ -323,7 +321,7 @@ export default function WorkoutPlansPage() {
           <h1 className="page-title">Workout Plans</h1>
           <p className="page-subtitle">{plans.length} plans</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
+        {isTrainer && <button className="btn btn-primary" onClick={() => { setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
       </div>
 
       {plans.length === 0 ? (
@@ -335,7 +333,7 @@ export default function WorkoutPlansPage() {
             : 'Your coach will create plans for you soon.'}
           action={isTrainer ? {
             label: 'Create Plan',
-            onClick: () => { setForm({ name: '', clientId: '', day: 'Monday', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }
+            onClick: () => { setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }
           } : undefined}
         />
       ) : (() => {
@@ -351,7 +349,7 @@ export default function WorkoutPlansPage() {
                     <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className="plan-card-actions">
-                    <span className="tag tag-primary">{p.day}</span>
+                    {p.day && <span className="tag tag-primary">{p.day}</span>}
                     {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
                 </button>
@@ -394,7 +392,7 @@ export default function WorkoutPlansPage() {
                   <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="plan-card-actions">
-                  <span className="tag tag-primary">{p.day}</span>
+                  {p.day && <span className="tag tag-primary">{p.day}</span>}
                   <button className="btn-icon" title="Save as Template" onClick={e => { e.stopPropagation(); handleSaveAsTemplate(p.id); }} disabled={savingTemplate === p.id}><Bookmark size={15} style={savingTemplate === p.id ? { opacity: 0.4 } : {}} /></button>
                   <button className="btn-icon" title="Duplicate" onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
                   <button className="btn-icon" title="Delete" style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
@@ -553,10 +551,8 @@ export default function WorkoutPlansPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Day</label>
-                  <select className="form-select" value={form.day} onChange={e => setForm({ ...form, day: e.target.value })}>
-                    {days.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                  <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                  <input className="form-input" value={form.day} onChange={e => setForm({ ...form, day: e.target.value })} placeholder="e.g. Monday, Push, Day 1" />
                 </div>
               </div>
 

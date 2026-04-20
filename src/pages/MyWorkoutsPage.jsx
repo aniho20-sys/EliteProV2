@@ -41,7 +41,7 @@ export default function MyWorkoutsPage() {
             <div className="card-header">
               <div>
                 <h3 className="card-title">{p.name}</h3>
-                <span className="tag tag-primary">{p.day}</span>
+                {p.day && <span className="tag tag-primary">{p.day}</span>}
               </div>
               <button
                 className="btn btn-primary btn-sm"

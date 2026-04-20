@@ -212,7 +212,7 @@ export default function WorkoutLogPage() {
                 {plans.map(p => (
                   <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
                     <div className="fw-bold">{p.name}</div>
-                    <div className="text-sm text-muted">{p.day} - {p.exercises.length} exercises</div>
+                    <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
                   </button>
                 ))}
               </div>
