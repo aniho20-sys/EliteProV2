@@ -4,1008 +4,122 @@
 
 ---
 
-## 🎯 產品策略：打敗 Hevy
+## 🎯 產品策略：打敗 Hevy Coach
 
-### 競爭分析（2026-04-20）
+ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout programming。
 
-ElitePro 目標係挑戰 **Hevy** 及其 **Hevy Coach** 版本。
+### 差異化優勢（ElitePro 獨有）
+- 預約 + 堂數系統（Hevy Coach 冇）
+- Working hours 設定（Hevy Coach 冇）
+- Body stats 完整管理 + Coach/Self 標記
+- 收費 / Invoice 管理（未做，機會）
 
-#### Hevy Coach 現有功能
+### 主要競品
 | 功能 | Hevy Coach | ElitePro |
 |------|-----------|---------|
 | Workout programming | ✅ | ✅ |
-| Client workout logs | ✅ | ✅ |
 | Client progress charts | ✅ | ✅ |
 | Messaging | ✅ | ✅ |
-| Built-in exercise GIFs | ✅ 大量 | ❌ 只有 URL links |
-| Mobile app（原生） | ✅ iOS + Android | ⚠️ PWA only |
-| Session booking | ❌ | ✅ ElitePro 獨有 |
-| 堂數管理 | ❌ | ✅ ElitePro 獨有 |
-| Body measurements（trainer） | ⚠️ 有限 | ✅ |
-| Working hours 設定 | ❌ | ✅ ElitePro 獨有 |
-| 收費 / Invoice 管理 | ❌ | ❌ 未做（機會） |
-| Client onboarding（PAR-Q） | ❌ | ❌ 未做（機會） |
-| Rest timer | ✅ | ❌ 未做 |
-| Volume analytics | ✅ | ❌ 未做 |
-| Workout calendar heatmap | ✅ | ❌ 未做 |
-| 收費 | $20–40 USD/月 | TBD |
-
-#### 戰略定位
-- **Hevy Coach** 定位：「Workout programming tool」
-- **ElitePro** 定位：「**完整 PT business 管理工具**」——唔只係訓練 programming，係整個教練生意
-
-#### 差異化優勢（ElitePro 獨有）
-1. **預約 + 堂數系統** — Trainer 管理客戶預約、追蹤剩餘堂數
-2. **Working hours 設定** — 教練自訂可預約時段
-3. **Body stats 完整管理** — 6 個 metrics + Coach/Self 標記 + 趨勢圖
-
-#### 下一步差異化功能優先排序
-| 優先 | 功能 | 原因 |
-|------|------|------|
-| 🔴 高 | **Rest Timer** | 每次訓練都用，Hevy 用家最常提 |
-| 🔴 高 | **收費 / Invoice 管理** | Hevy Coach 完全冇，教練最痛點 |
-| 🟡 中 | **Volume analytics** | 週訓練量圖表，進階用家需求 |
-| 🟡 中 | **Client onboarding（PAR-Q）** | Hevy Coach 冇，專業教練流程 |
-| 🟢 低 | **Workout calendar heatmap** | Consistency 可視化，engagement 功能 |
+| Session booking | ❌ | ✅ |
+| 堂數管理 | ❌ | ✅ |
+| Working hours | ❌ | ✅ |
+| Built-in exercise GIFs | ✅ | ❌ URL only |
+| 收費 / Invoice | ❌ | ❌ 未做 |
+| Native mobile app | ✅ | ⚠️ PWA only |
+| 收費 | $20–40/月 | TBD |
 
 ---
 
-## Phase 1 狀態：✅ 已完成
-
-Phase 1（上線前必做）所有 8 個步驟已全部完成。
-
----
-
-## 已完成功能
+## ✅ 已完成功能概覽
 
 ### Core Platform
-- [x] React 19 + Vite 8 SPA（HashRouter）
-- [x] Trainer / Client 雙角色系統
-- [x] Trainer Dashboard（stats overview + weekly sessions chart + client activity；**stat cards 可點擊導航、今日 sessions 可點擊入 client 詳情**）
-- [x] Client Dashboard（workout summary + body stats）
-- [x] Client 管理頁（搜尋、detail view、body stats、plans、logs、**Remove Client with confirmation**）
-- [x] Workout Plan Builder（drag reorder、duplicate、custom exercises、**Add Link per exercise**、**exercise 搜尋下拉 iOS 修復**、**按 client 分組 + 可摺疊 cards**）
-- [x] Workout Log（auto-fill last session、PR tracking）
-- [x] Schedule 日曆（date picker、conflict check、booking、**教練自訂營業時間**）
-- [x] In-app Messaging（unread badges、real-time sync）
-- [x] Exercise Library（search、filter by muscle/equipment、**YouTube + 任意 URL 連結、+ Add Link 快速入口**）
-- [x] Body Stats / Progress 頁（**Recharts** AreaChart、互動 tooltip、metric tiles、趨勢指示、**addedBy Coach/Self 標記**）
-- [x] **ProgressView 通用組件**（trainer 在 ClientDetailPage Progress tab 可睇客戶進度圖表，`canDelete` prop 控制刪除權限）
-- [x] Profile 頁（edit profile、invite code、connect to trainer、**shareable invite link、working hours 設定**）
-- [x] Global Search（clients、plans、exercises）
-- [x] Toast notification system
-- [x] Error Boundary（防白畫面）
-- [x] **互動人體肌肉模型**（SVG 正面 + 背面、點選選擇肌肉群、chips 顯示已選）
+- React 19 + Vite 8 SPA（HashRouter）、Trainer / Client 雙角色
+- Trainer Dashboard（stats + weekly chart + client activity，stat cards 可點擊）
+- Client Dashboard（stats + sessions quota card + Book Session CTA）
+- Client 管理（搜尋、detail view、Remove Client）
+- Workout Plan Builder（drag reorder、duplicate、custom exercises、exercise 搜尋、按 client 分組 + 可摺疊）
+- Workout Log（auto-fill last session、PR tracking、Start Workout 一鍵入口from MyWorkoutsPage）
+- Schedule 日曆（conflict check、booking、教練自訂營業時間、**Mark Complete 堂數追蹤**）
+- In-app Messaging（unread badges、real-time sync、scroll-to-bottom）
+- Exercise Library（search、filter、YouTube + URL links、+ Add Link 快速入口）
+- Body Stats / Progress（Recharts AreaChart、metric tiles、趨勢指示、Coach/Self 標記、**edit measurement**）
+- ProgressView 通用組件（clientId + canDelete + onEdit props）
+- Profile（edit、invite code、shareable link、working hours、connect to trainer）
+- Global Search（clients、plans、exercises）
+- EmptyState + Skeleton 通用組件（全頁面覆蓋，CTA 導向清晰）
+- Toast notifications、Error Boundary
+- 互動人體肌肉模型（SVG 正面 + 背面）
 
 ### Firebase Backend
-- [x] Firestore 作為 primary database（取代 localStorage）
-- [x] Real-time sync（onSnapshot listeners — 7 collections）
-- [x] IndexedDB offline persistence
-- [x] Firebase Auth：Google Sign-In（+ iOS Safari redirect fallback）
-- [x] Firebase Auth：Email / Password 註冊 + 登入
-- [x] Forgot Password 流程（LoginPage modal → Firebase reset email）
-- [x] Demo Coach 帳號（自動 Firebase Auth signup + seed ghost clients）
-- [x] Trainer-Client 邀請碼系統（6-char code、connect flow）
-- [x] Delete Account 功能（GDPR right to erasure）
-- [x] Firestore Security Rules（Phase 3 收緊：per-doc ownership read、trainerId isolation、schedule ownership validation）
-- [x] Firebase Auth 錯誤訊息 friendly 化（`src/utils/authErrors.js` 集中管理）
+- Firestore real-time sync（7 collections，onSnapshot + query filter）
+- IndexedDB offline persistence
+- Firebase Auth：Google Sign-In（iOS Safari redirect fallback）、Email/Password、Forgot Password
+- Demo Coach（auto seed ghost clients）
+- Trainer-Client 邀請碼系統（6-char、shareable link、auto-fill on signup）
+- Delete Account（GDPR，Cloud Function cascaded delete）
+- Firestore Security Rules（per-doc ownership、trainerId isolation、schedule ownership）
+- Firebase Auth 錯誤訊息 friendly 化
+- bodyStats subcollection（取代 array，避免 1MB 上限）
 
-### UI/UX（Phase 1 Step 7 新增）
-- [x] Light / Dark 主題（CSS variables、localStorage persist）
-- [x] 全 responsive（desktop sidebar + mobile bottom nav）
-- [x] Custom Exercise 建立（inline quick-add + structured form with muscle groups）
-- [x] Plan exercises 顯示 Sets x Reps + Weight(kg)
-- [x] **EmptyState 通用組件**（icon + title + description + action CTA）
-- [x] **Skeleton 載入組件**（SkeletonLine、SkeletonCard、SkeletonList、SkeletonStatGrid）
-- [x] **10 個頁面 empty state 升級**（每頁都有專屬 icon + 情境化描述 + CTA 按鈕）
-
-### 寫操作審計修復（Phase 1 Step 8 新增）
-- [x] SchedulePage：所有寫操作改為 async/await + try/catch + error toast
-- [x] SchedulePage：`saving` state 防 double-submit
-- [x] SchedulePage：Client 冇 trainer 時禁止 Book Session（button disabled + form guard）
-- [x] SchedulePage：`updateStatus` helper 統一狀態更新錯誤處理
-- [x] MessagesPage：`sending` state 防重複發送
-- [x] MessagesPage：2000 字元上限 + 空白訊息檢查
-- [x] MessagesPage：`markMessagesRead` useEffect 包 `.catch()` 防 unhandled rejection
-- [x] MessagesPage：Send 按鈕 disabled 邏輯（sending || empty text）
-
-### Push Notifications（✅ 完整部署）
-- [x] `NotificationContext.jsx`：FCM token 管理 + 前景訊息處理（VAPID key 已設定）
-- [x] `functions/index.js`：Cloud Functions（onNewMessage、onNewSchedule、onScheduleUpdate、**onAccountDelete GDPR**）
-- [x] `public/firebase-messaging-sw.js`：Service Worker 處理背景通知
-- [x] `public/manifest.json`：PWA manifest（SVG + PNG 192/512 圖示）
-- [x] Firebase Blaze plan 已升級
-
-### PWA（iOS Home Screen 支援）
-- [x] `public/icon-192.png` + `icon-512.png`（純 Node.js 生成，無外部依賴）
-- [x] `index.html`：`apple-touch-icon`、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`
-- [x] Android Chrome：無需放桌面，直接收通知
-- [x] iOS Safari：需 Add to Home Screen（iOS 16.4+）
+### Push Notifications & PWA
+- FCM push notifications（NotificationContext + Cloud Functions + Service Worker）
+- Firebase Blaze plan 已升級
+- PWA manifest + icons（192 + 512 PNG）、iOS Add to Home Screen meta tags
 
 ### DevOps
-- [x] Firebase Hosting config（`firebase.json`、`.firebaserc`）
-- [x] GitHub Actions — Firebase Hosting 自動部署
-- [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
-- [x] GitHub Actions — GitHub Pages 部署
-- [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
+- Firebase Hosting + GitHub Actions CI（push to `claude/fitness-app-features-LbxtG` 自動部署）
+- Cloud Functions 自動部署
 
 ---
 
-## Session 17 完成嘅工作（2026-04-20）
+## 🔴 重要技術決定紀錄
 
-### Bug Fix + 學生端 UX 改善（A + B + C + D）
+| 決定 | 原因 |
+|------|------|
+| `workoutLogs` + `messages` 禁止 delete | 保護訓練紀錄完整性；GDPR delete 靠 Cloud Function Admin SDK 繞過 |
+| bodyStats 改 subcollection | 舊 array 結構有 1MB Firestore doc 上限風險 |
+| HashRouter | Firebase Hosting SPA 需要，唔可改 BrowserRouter |
+| `Date.now()` IDs | 簡單，低並發下碰撞風險極低；將來可換 `crypto.randomUUID()` |
+| `markLoaded` count = 7 | 新增 collection listener 時記得更新此數字 |
+| Demo data 用 trainerId prefix | 多個 demo 用戶間資料隔離 |
+| Session 完成狀態 | `getSessionStats()` 只 count `status === 'completed'`，Trainer 需手動 Mark Complete |
+| Exercise Library 靜態 defaults | 唔入 Firestore，避免跨 trainer 污染；每個 trainer 有獨立 custom exercises |
 
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ **Session「Mark Complete」修復** | `SchedulePage` 加入 `CheckCircle` 按鈕（Trainer only），`confirmed` 狀態下可標為 `completed`；修復 `getSessionStats()` 永遠返回 `used=0` 嘅核心 Bug；status tag 顏色更新：`completed`→綠色 `tag-accent`、`confirmed`→藍色 `tag-primary`；toast 顯示「Session marked as complete」 |
-| 2 | ✅ **MyWorkoutsPage「Start Workout」入口** | 每個 Plan card header 加入「Start Workout」按鈕（`Dumbbell` icon）；click 後 `navigate('/log', { state: { planId } })`；`WorkoutLogPage` 加 `useEffect` 讀取 `location.state.planId`，自動調用 `startLog(plan)`；`autoStartedRef` 防重複觸發 |
-| 3 | ✅ **Session quota card 加 Book Session CTA** | ClientDashboard Sessions card header 加入「Book Session」按鈕，直接導去 `/schedule` |
-| 4 | ✅ **TrainerDashboard 快速 Mark Complete** | Today's Schedule 每個 `confirmed` session 加 `CheckCircle` 按鈕；`completing` Set 防 double-submit；`e.stopPropagation()` 防觸發 Link 導航；同步修正 hardcoded `60min` → 讀 `s.duration` |
-| 5 | ✅ **#2、#6 誤判確認** | ClientsPage client cards 已有 onClick navigate（CSS hover 效果亦在）；PT Log modal 已按 `clientId` 篩選 plans——兩項均係 Explore agent 誤判，無需改動 |
+---
 
-### ⚠️ 待議事項（爭議）
+## ⚠️ 待議事項
 
 | 議題 | 狀態 | 摘要 |
 |------|------|------|
-| **學生改期次數限制** | 🟡 擱置待議 | 提案：每次 booking 只能改一次時間。反對理由：(1) Cancel-rebook 漏洞令次數限制無效；(2) 時間限制（24/48hr 截止）比次數限制更合理；(3) 冇真實用戶痛點驗證；(4) 做到位需要 Cloud Function，成本相對高。決定：暫擱置，收集真實教練反饋後再決定。備選方案：改做「距離 session 24小時前截止改期」前端 check |
+| **學生改期次數限制** | 🟡 擱置 | Cancel-rebook 漏洞令次數限制無效；時間限制（24hr截止）更合理；待真實用戶反饋。備選：距 session 24hr 前截止改期（前端 check）|
 
 ---
 
-## Session 16 完成嘅工作（2026-04-18）
+## 📋 Roadmap
 
-### UX 改善：Plans 頁重構 + Progress 跨角色共用（A + B + D）
-
-| # | 任務 | 詳情 |
+### Phase 3 — 架構加固（未開始）
+| # | 任務 | 類型 |
 |---|------|------|
-| 1 | ✅ Body stat `addedBy` marker | `AppContext.addBodyStat()` 自動依 `currentUser.role` stamp `addedBy: 'coach'` 或 `'self'`；ClientDetailPage Body Stats table 加 Source 欄；ProgressPage 桌面 table + mobile cards 同步顯示 Coach / Self tag；舊資料（無 `addedBy`）顯示 `—`，向後兼容 |
-| 2 | ✅ Workout Plans 按 client 分組 + 可摺疊 | Trainer 視角：plans 按 client 名分組，section header 顯示 client 名 + plan 數量 tag；所有 plan card 預設摺疊，只顯示 plan 名、exercises 數量、day tag，點擊展開；Duplicate / Delete 按鈕直接在 header row 可用（`e.stopPropagation()` 防觸發 toggle）；Client 視角：同樣摺疊式 flat list |
-| 3 | ✅ 抽取 `<ProgressView>` component | 新建 `src/components/ProgressView.jsx`，封裝 stat tiles、趨勢 chart、history table（desktop + mobile）；props：`clientId`、`canDelete`（預設 false）、`onAdd`（EmptyState CTA callback）；`canDelete={false}` 完全隱藏刪除按鈕，符合 Firestore rule（只有 `isOwner` 可刪）|
-| 4 | ✅ ProgressPage 精簡化 | 頁面只保留 page header、Add Measurement 按鈕、add modal；內容改用 `<ProgressView clientId={currentUser.id} canDelete onAdd={...} />`；代碼從 286 行縮至 ~70 行 |
-| 5 | ✅ ClientDetailPage Progress tab | 加入第 3 個 tab「Progress」；渲染 `<ProgressView clientId={clientId} canDelete={false} />`；tab header 有「Add Measurement」按鈕（重用現有 `showAddStat` modal）；Trainer 可直接在 client 詳情頁睇完整趨勢圖表，毋須另開頁面 |
-
-**CSS 新增：**
-- `.plan-card-toggle` — 可點擊 plan card header（button reset + hover opacity）
-- `.plan-client-section-header` — client 分組標題（primary border-bottom）
-- `.plan-client-name` — client 名字樣式
-
----
-
-## Session 15 完成嘅工作（2026-04-18）
-
-### 用戶體驗改善 + 邀請系統升級（A + B + D）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ Shareable Invite Link | ProfilePage 新增「Copy Link」按鈕，複製完整 URL `https://elitepro-16718.web.app/#/?invite=XXXXXX`；Share 按鈕透過 Web Share API 傳入 `url` 字段，iOS/Android 彈出原生 share sheet（WhatsApp、iMessage 等）；App 啟動時解析 hash URL 內 `?invite=` 參數存入 `sessionStorage`；RoleSelectPage mount 時自動讀取、預填 invite code、預選 client 角色並顯示提示 |
-| 2 | ✅ 教練自訂營業時間 | ProfilePage 新增 Working Hours card（start/end time picker）；`workingHours: { start, end }` 存入 Firestore；SchedulePage 動態生成 `BOOKING_SLOTS`（30 分鐘間隔）取代硬編碼 09:00–17:00；現有帳號無設定時 fallback 09:00–17:00；教練首次進入 Schedule 頁顯示可 dismiss 藍色 banner 提示設定 |
-| 3 | ✅ 隱藏空閒時段顯示 | 移除 slot bubble row 及「X slots free」計數——對教練及學生均隱藏，避免學生見到大量空閒時段影響對教練的觀感 |
-| 4 | ✅ CLAUDE.md 清理 | 移除 GitHub Pages 相關內容（`build:gh` 指令、GH Pages deployment 說明、`base` path 邏輯）；補充 `MuscleSelector.jsx`、`authErrors.js`、`sessionUtils.js`、`workoutUtils.js` 至 Project Structure；更新 Invite Code System 說明加入 shareable link |
-| 5 | ✅ Dashboard stat cards 可點擊 | 4 個 stat card（Active Clients、Sessions Today、Unread Messages、Workout Plans）改用 `<Link>` 包裹，分別導去 `/clients`、`/schedule`、`/messages`、`/plans`；新增 `.stat-card-link` CSS（hover lift `translateY(-2px)` + transition） |
-| 6 | ✅ Dashboard 今日 sessions 可點擊 | Today's Schedule 各行改用 `<Link to="/clients/${clientId}">` 直接跳去對應客戶詳情頁；加 `.schedule-item-link` CSS（去下劃線、繼承顏色）；並按時間排序 |
-| 7 | ✅ Workout Plan exercise 搜尋下拉修復 | 三次迭代：① z-index 500 + `isolation: isolate`（失敗，draggable opacity 建立 stacking context）；② React Portal + `position: fixed` + `getBoundingClientRect()`（失敗，iOS 鍵盤彈出後 viewport 座標錯位）；③ 最終方案：移除所有定位，`.ex-search-results` 以正常 document flow inline 插入 input 下方（完全跨平台有效，無 z-index 問題）|
-| 8 | ✅ Muscle tag 截斷修復 | 自訂肌肉標籤過長（如「CORE, QUADRICEPS, TRAPS…」）時溢出蓋住其他 UI；改為只顯示第一個肌肉群 + `…` ellipsis（`title` 屬性保留完整文字），防止 tag 雲浮動覆蓋 |
-
----
-
-## Session 14 完成嘅工作（2026-04-17）
-
-### 真機 QA 前置修復 — iOS Safari Auth（B + F）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ iOS Safari Google Sign-In 強化 | 加入 `auth/web-storage-unsupported` redirect 觸發（iOS 私人模式）；`getRedirectResult` 錯誤改為透過 `redirectAuthError` context state 傳至 LoginPage 顯示；移除 `finally` block，redirect 期間 spinner 持續顯示（唔閃爍）|
-| 2 | ✅ Email 表單 iOS autocomplete 修復 | 主表單加 `autoComplete="on"`；email input 加 `name="email"` + `autoComplete="email"`；password input 依登入/注冊動態切換 `autoComplete="current-password"` / `"new-password"`；Forgot Password modal email 同步補上屬性；確保 iCloud Keychain / Face ID 自動填入正常觸發 |
-| 3 | ✅ `authErrors.js` 補充 | 加入 `auth/web-storage-unsupported` 友好訊息（作 redirect 同樣失敗時嘅 fallback 顯示）|
-| 4 | ✅ Forgot Password modal 錯誤顯示 Bug 修復 | 原本 `setError()` 係更新 modal 背後嘅主 card 錯誤欄，modal 蓋住導致用戶完全睇唔到；新增獨立 `forgotError` state，錯誤訊息直接顯示喺 modal 內部；移除 `autoFocus`（iOS modal 彈出鍵盤會頂起 modal 超出可視範圍）；Cancel / overlay 點擊同時清除 `forgotError` |
-
-**真機測試清單進度（iOS Safari）：**
-- [x] Google Sign-In redirect flow 代碼強化（待真機驗證）
-- [x] Email 登入 / 註冊 autocomplete 修復（待真機驗證）
-- [x] Forgot Password modal 錯誤顯示修復（待真機驗證）
-- [ ] Demo Coach 登入正常
-- [ ] PWA Add to Home Screen
-- [ ] Push Notifications（iOS 16.4+）
-
----
-
-## Session 13 完成嘅工作（2026-04-17）
-
-### 死碼清理 + 邏輯抽取 + 人體肌肉模型（B + C + D）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ 死碼清理 | 移除 `sampleData.js` 內 `sampleTrainer`、`sampleClients` 死 exports（含明文 `password: 'demo123'`）；移除 `AppContext.jsx` 舊 `data` 物件；`MessagesPage` 同 `NotesSection` 改用 `getClient()` 取代 `data.users.find()` |
-| 2 | ✅ 抽取 `getSessionColor` utility | 新建 `src/utils/sessionUtils.js`；三個頁面（ClientDashboard、ClientDetailPage、SchedulePage）改 import，消除重複邏輯 |
-| 3 | ✅ 抽取 `normalizeSets` utility | 新建 `src/utils/workoutUtils.js`；四個頁面（WorkoutPlansPage、MyWorkoutsPage、WorkoutLogPage、ClientDetailPage）改 import，消除重複定義 |
-| 4 | ✅ 互動人體肌肉模型（MuscleSelector） | 新建 `src/components/MuscleSelector.jsx`；SVG 人體輪廓（正面 7 個區域、背面 10 個區域）；點選高亮、hover 提示標籤、已選 chips 可移除；Front/Back tab 切換 |
-| 5 | ✅ 肌肉群擴充至 14 個 | `exercises.js` 將 `muscleGroups` 從 6 個廣義名稱擴充到：Chest、Shoulders、Traps、Upper Back、Lats、Lower Back、Biceps、Triceps、Forearms、Core、Glutes、Quadriceps、Hamstrings、Calves |
-| 6 | ✅ 更新預設動作肌肉標籤 | 所有內建動作使用新具體名稱（e.g. Back → Lats/Upper Back/Lower Back；Legs → Quadriceps/Hamstrings/Calves；Arms → Biceps/Triceps） |
-| 7 | ✅ WorkoutPlansPage 整合 | Custom exercise form 的 tag 按鈕格替換為 `<MuscleSelector>`；移除 `toggleMuscle` function 及 `muscleGroups` import |
-| 8 | ✅ ExerciseLibraryPage 整合 | Add/Edit exercise modal 的 `<select>` 替換為 `<MuscleSelector>`；form 改用 `muscles[]` array，submit 時 join 為 string；filter 改用 `.split(', ').includes()` 支援多肌肉動作 |
-| 9 | ✅ CSS 樣式 | 新增 `.muscle-selector`、`.muscle-view-tabs`、`.muscle-tab`、`.muscle-hover-label`、`.muscle-selected-chips`、`.muscle-chip`、`.muscle-chip-remove` |
-
-### Firebase Backend
-- [x] Firestore 作為 primary database（取代 localStorage）
-- [x] Real-time sync（onSnapshot listeners — 7 collections）
-- [x] IndexedDB offline persistence
-- [x] Firebase Auth：Google Sign-In（+ iOS Safari redirect fallback）
-- [x] Firebase Auth：Email / Password 註冊 + 登入
-- [x] Forgot Password 流程（LoginPage modal → Firebase reset email）
-- [x] Demo Coach 帳號（自動 Firebase Auth signup + seed ghost clients）
-- [x] Trainer-Client 邀請碼系統（6-char code、connect flow）
-- [x] Delete Account 功能（GDPR right to erasure）
-- [x] Firestore Security Rules（Phase 3 收緊：per-doc ownership read、trainerId isolation、schedule ownership validation）
-- [x] Firebase Auth 錯誤訊息 friendly 化（`src/utils/authErrors.js` 集中管理）
-
-### UI/UX（Phase 1 Step 7 新增）
-- [x] Light / Dark 主題（CSS variables、localStorage persist）
-- [x] 全 responsive（desktop sidebar + mobile bottom nav）
-- [x] Custom Exercise 建立（inline quick-add + structured form with muscle groups）
-- [x] Plan exercises 顯示 Sets x Reps + Weight(kg)
-- [x] **EmptyState 通用組件**（icon + title + description + action CTA）
-- [x] **Skeleton 載入組件**（SkeletonLine、SkeletonCard、SkeletonList、SkeletonStatGrid）
-- [x] **10 個頁面 empty state 升級**（每頁都有專屬 icon + 情境化描述 + CTA 按鈕）
-
-### 寫操作審計修復（Phase 1 Step 8 新增）
-- [x] SchedulePage：所有寫操作改為 async/await + try/catch + error toast
-- [x] SchedulePage：`saving` state 防 double-submit
-- [x] SchedulePage：Client 冇 trainer 時禁止 Book Session（button disabled + form guard）
-- [x] SchedulePage：`updateStatus` helper 統一狀態更新錯誤處理
-- [x] MessagesPage：`sending` state 防重複發送
-- [x] MessagesPage：2000 字元上限 + 空白訊息檢查
-- [x] MessagesPage：`markMessagesRead` useEffect 包 `.catch()` 防 unhandled rejection
-- [x] MessagesPage：Send 按鈕 disabled 邏輯（sending || empty text）
-
-### Push Notifications（✅ 完整部署）
-- [x] `NotificationContext.jsx`：FCM token 管理 + 前景訊息處理（VAPID key 已設定）
-- [x] `functions/index.js`：Cloud Functions（onNewMessage、onNewSchedule、onScheduleUpdate、**onAccountDelete GDPR**）
-- [x] `public/firebase-messaging-sw.js`：Service Worker 處理背景通知
-- [x] `public/manifest.json`：PWA manifest（SVG + PNG 192/512 圖示）
-- [x] Firebase Blaze plan 已升級
-
-### PWA（iOS Home Screen 支援）
-- [x] `public/icon-192.png` + `icon-512.png`（純 Node.js 生成，無外部依賴）
-- [x] `index.html`：`apple-touch-icon`、`apple-mobile-web-app-capable`、`apple-mobile-web-app-title`
-- [x] Android Chrome：無需放桌面，直接收通知
-- [x] iOS Safari：需 Add to Home Screen（iOS 16.4+）
-
-### DevOps
-- [x] Firebase Hosting config（`firebase.json`、`.firebaserc`）
-- [x] GitHub Actions — Firebase Hosting 自動部署
-- [x] GitHub Actions — **Cloud Functions 自動部署**（新增）
-- [x] GitHub Actions — GitHub Pages 部署
-- [x] Vite base path 切換（`DEPLOY_TARGET=gh-pages`）
-
----
-
-## Session 8 完成嘅工作（2026-04-13）
-
-### Progress 圖表升級 + 品牌樣本（D + B）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | Progress 圖表升級（Recharts） | 安裝 recharts；ProgressPage 換 AreaChart；stat tiles 點擊切換圖表；pill tabs；互動 tooltip；YAxis 自動對齊數據範圍；趨勢指示（↑↓→） |
-| 2 | ClientDetailPage Body Stats 圖表 | Body Stats tab 嘅靜態 progress bar 換成同 ProgressPage 一樣嘅 Recharts 圖表；Trainer 可以睇客戶進度趨勢；metric tiles 可點擊切換 |
-| 3 | 品牌設計樣本 | 獨立 HTML mockup（`/brand-sample.html`）展示活力橙 + 健康青綠配色、Inter 字體、Sidebar、Stat cards、按鈕風格、色彩系統 |
-| 4 | CI branch 完整 merge | Session 7 安全改動（rules + query filters）merge 去 CI branch，所有改動齊全 |
-
----
-
-## Session 12 完成嘅工作（2026-04-17）
-
-### 學生堂數查詢功能（A + B + D + F）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ AppContext `getSessionStats(clientId)` | 計算 `totalSessions`（trainer 設定）vs `schedule` 內 `status=='completed'` 嘅數量；返回 `{ used, total, remaining }` |
-| 2 | ✅ ClientDetailPage 堂數管理 | Summary card 新增 Sessions 區塊；Trainer 可 Set Total / Edit；顯示 used/total + 進度條 + 顏色編碼 |
-| 3 | ✅ ClientDashboard 堂數 Card | Client Dashboard 顯示 Sessions 卡（僅 totalSessions 已設定時）；大字顯示 used/total；進度條；剩餘堂數 |
-| 4 | ✅ SchedulePage 堂數 Banner | Book Session Modal 頂部顯示 session-info-banner（Trainer 選 client 後 / Client 自動顯示）；邊框顏色反映剩餘量 |
-| 5 | ✅ Demo 數據更新 | Ghost clients 加 `totalSessions`（David 20, Sarah 6, Michael 15）；sampleSchedule 加入 14 條 completed sessions（展示真實剩餘量）|
-| 6 | ✅ CSS 樣式 | 新增 `.session-progress-bar`、`.session-progress-fill`、`.session-info-banner` |
-
-**顏色邏輯（剩餘堂數）：**
-- 🟢 > 5 堂：`#06d6a0`（綠色）
-- 🟡 3–5 堂：`var(--warning)`（橙黃）
-- 🔴 < 3 堂：`var(--danger)`（紅色）
-
-**設計決定：**
-- 計算方式用 `schedule status=='completed'`（唔用 workout log）— PT 堂係 Trainer confirm 嘅預約，唔係 Client 自主訓練
-- `totalSessions` 只有 Trainer 可以 write（Firestore rules 現有 `trainer can update their clients` 已覆蓋）
-- `totalSessions` 未設定時唔顯示 widget（唔強制，Trainer 按需設定）
-
----
-
-## Session 11 完成嘅工作（2026-04-14）
-
-### Schedule 預約系統大改善（A + B + F）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ 預約視窗限制 09:00–17:00 | `BOOKING_SLOTS` 定義 09:00–16:30（每 30 分鐘），最後一格 16:00+60min=17:00；`hasConflict` 加 boundary check：`startMin < 9*60 \|\| endMin > 17*60` 直接拒絕 |
-| 2 | ✅ 時段視覺化 Bubble Row | 每日日曆頁頂部加 8 個小時 bubble（09–16）；已佔用顯示灰色禁用，空閒顯示主題色；點擊空閒 bubble 直接預填時間開啟 Book Session |
-| 3 | ✅ 空閒時段計數 | Bubble Row 右上角顯示「X slots free」提示當日剩餘時段數量 |
-| 4 | ✅ Client 睇到 Trainer 真實可用時段 | 新增 `trainerSchedule` state + 獨立 Firestore listener（Client 端 subscribe `schedule` by `trainerId`）；`refSchedule` 抽象層：Trainer 睇 `allSchedule`，Client 睇 `trainerSchedule`；Client 預約時間選擇器自動排除 Trainer 已預約嘅時段 |
-| 5 | ✅ Duration 固定 60 分鐘 | 移除 Duration 下拉選單；前端表單 + 衝突檢查全部以 60 分鐘計算；顯示寫死 `60 min` |
-| 6 | ✅ Time Picker 改 Dropdown | 時間 `<input type="time">` 換成 `<select>`，選項由 `availableBookingSlots()` 動態生成（已排除衝突時段） |
-| 7 | ✅ Firestore rules 更新 | `schedule` read rule 加 `resource.data.trainerId == userDoc().trainerId`，允許 Client 讀取 Trainer 全部時間表以作可用性檢查 |
-
-### ⚠️ 遺留問題
-- **`getTrainerSchedule` 喺 Client 登入前返回空陣列**：Trainer 尚未登入嘅初始狀態，第一次 render 時 Client 可能短暫見到所有時段都係「空閒」，等 Firestore snapshot 到位後先更新。屬於正常 async 行為，對 UX 影響極小（Booking form 打開時通常資料已到位）。
-
----
-
-## Session 10 完成嘅工作（2026-04-14）
-
-### Workout Log Exercise Name Fix + bodyStats Subcollection Migration（B + A）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ Workout log exercise name 修復 | 自訂 exercises（`ex-XXXXX` IDs）喺 Firestore listener 未 fire 前顯示原始 ID。三層修復：(1) `startLog()` 從 plan exercise 帶入 `name` 欄位；(2) `handleSave()` 將 `name` 連同 `exerciseId` 一起存入 Firestore log entries；(3) 顯示邏輯改為 `entry.name \|\| getExerciseName(id)` fallback chain。向後兼容：舊 logs 無 `name` field 仍靠 lookup 解析 |
-| 2 | ✅ bodyStats subcollection 遷移 | 舊結構：`bodyStats/{clientId}` 單一 doc with `entries: [...]` array（1MB 上限風險）。新結構：`bodyStats/{clientId}/entries/{auto-id}` subcollection。改動：(a) AppContext 移除全域 bodyStats listener，改為 reactive per-client subcollection listeners（依 `users` state 動態訂閱）；(b) `addBodyStat` 改用 `addDoc`；(c) `deleteBodyStat` 改用 doc ID 而非 array index；(d) Demo data seeding 改為 subcollection writes；(e) `deleteAccount` 改為 batch delete subcollection entries；(f) Firestore rules 加 `entries` subcollection rules；(g) ProgressPage delete 改用 `s.id`（doc ID）|
-
-### ⚠️ 遷移注意事項
-- **現有 bodyStats 資料**（舊格式 array）遷移後**不會自動出現**——舊 doc 仍在 Firestore 但新 listener 唔讀佢
-- Demo 帳號：`resetData()` 會重新 seed 新格式，重置後正常
-- 實際用戶（如有）：舊 measurements 需重新輸入，或手動 Firestore migration
-
----
-
-## Session 9 完成嘅工作（2026-04-14）
-
-### CI/CD 修復 + Web App 完善開始（B + E）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | ✅ CI/CD 正式修復 | `FIREBASE_SERVICE_ACCOUNT` secret 已由用戶填入；workflow 移除 `Install Functions dependencies`（`functions/` 冇 `package-lock.json` 導致 `npm ci` 失敗）；Firebase Hosting 首次成功部署 |
-| 2 | ✅ Firebase 錯誤訊息 friendly 化 | 新增 `src/utils/authErrors.js` 集中管理所有 Firebase auth error code → 用戶可讀訊息；修復 LoginPage（Google 登入、Demo Coach、忘記密碼、Email 登入）；修復 ProfilePage（重設密碼、刪除帳號）；新增 `too-many-requests`、`network-request-failed`、`user-disabled` 等覆蓋 |
-
-### 🎯 重要決策：5月上架計劃
-
-- **目標**：2026年5月正式上架
-- **平台**：Apple App Store（優先）
-- **方案**：Capacitor 包裝現有 React app（唔需重寫）
-- **策略**：先完善 web app，借到 Mac 後做 Capacitor + App Store 提交
-
-### Capacitor iOS 上架前置要求（用戶待辦）
-1. **借 Mac**（Xcode 強制需要）
-2. **Apple Developer 帳號**：$99 USD/年，需提前幾日申請（Apple 審核身份）
-3. **借到 Mac 後**：安裝 Xcode → 執行 Capacitor build → 解決 iOS 特有問題 → 提交 App Store
-
----
-
-## ⚠️ 已解決：Firebase Deploy 問題（Session 9 修復）
-
-### 問題現象
-- Firebase Hosting 從未成功部署（用戶從未見過任何程式改動）
-- GitHub Actions CI 每次 push 都 fail（10-25 秒內死）
-- GitHub Pages deploy（另一個 workflow）**正常運行** ✅
-
-### 根本原因
-`FIREBASE_SERVICE_ACCOUNT` GitHub Secret **未正確設置**（空白或無效）
-
-### 已嘗試嘅修復
-1. 將 `FirebaseExtended/action-hosting-deploy@v0`（已棄用）換成 `npx firebase-tools` ✅
-2. 移除 `google-github-actions/auth@v2`，改用 `GOOGLE_APPLICATION_CREDENTIALS` temp file ✅
-3. CI workflow 現在係最簡潔版本，只等 secret 正確就能運作 ✅
-
-### 下一個 Session 必須先做
-> **在做任何功能開發前，先完成以下步驟（需要用電腦）：**
-
-**Step 1：生成 Firebase Service Account Key**
-1. 去 `console.firebase.google.com` → elitepro-16718
-2. ⚙️ Project Settings → **Service accounts** tab
-3. 撳 **「Generate new private key」** → 下載 `.json` 檔
-
-**Step 2：設置 GitHub Secret**
-1. 去 `github.com/aniho20-sys/EliteProV2/settings/secrets/actions`
-2. 撳 **「New repository secret」**
-3. Name: `FIREBASE_SERVICE_ACCOUNT`
-4. Value: 貼入整個 JSON 檔內容（包括 `{ }` 括號）
-5. 儲存
-
-**Step 3：觸發重新部署**
-- GitHub Actions 頁撳 **「Re-run jobs」**，或者 push 任何 commit
-- 成功後用戶手機即可見到所有積壓嘅改動
-
-### 注意事項
-- `AIzaSy...` Web API Key 係 public 設計，唔需要 rotate，唔係問題
-- Service Account JSON 格式：`{ "type": "service_account", "private_key": "...", ... }`
-- CI branch：`claude/fitness-app-features-LbxtG`（所有改動已在此 branch）
-
----
-
-## Session 7 完成嘅工作（2026-04-13）
-
-### Phase 3 安全任務（F + A + C + B）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | Firestore rules 讀取收緊 | `workoutPlans`、`workoutLogs`、`schedule` read 由 `isAuth()` 改為只有 `trainerId`/`clientId` 係自己先可讀；AppContext 4 個 listeners 加 `or()` query filter（`workoutPlans`、`workoutLogs`、`schedule`、`messages`）；`addWorkoutLog` + seed data 加 `trainerId` 字段 |
-| 2 | Exercise Library trainerId 隔離 | Exercises listener 移到 `currentUser` effect：trainer 讀自己嘅 exercises，client 讀 trainer 嘅 exercises；default exercises 純靜態 JS，唔再入 Firestore；刪除 `seedExercisesIfEmpty()`；rule 改為 `trainerId == uid || userDoc().trainerId == trainerId` |
-| 3 | Schedule clientId ownership 驗證 | `allow create` 加兩層驗證：trainer 只能為自己 client 預約（`get(users/clientId).trainerId == uid`）；client 只能預約自己嘅 trainer（`userDoc().trainerId == trainerId`） |
-
-### Phase 3 剩餘任務
-
-| 優先級 | 任務 | 狀態 |
-|--------|------|------|
-| ✅ 完成 | Firestore rules 讀取收緊 | 完成 |
-| ✅ 完成 | Exercise Library trainerId 隔離 | 完成 |
-| ✅ 完成 | Schedule clientId ownership 驗證 | 完成 |
-| ✅ 完成 | Progress 圖表升級（Recharts） | Session 8 完成 |
-| ✅ 完成 | bodyStats 遷移 subcollection | Session 10 完成 |
-| ✅ 完成 | Schedule 預約系統改善 | Session 11 完成 |
-| ✅ 完成 | 學生堂數查詢功能 | Session 12 完成 |
-| 🟢 低 | i18n 中文支援 | 待做 |
-
----
-
-## Phase 3 前全員會議（2026-04-12 Session 6）
-
-> Phase 3 執行前，全隊對 app 現況進行評估。每位員工列出 3 個好嘅地方、3 個唔好嘅地方、2 個有問題嘅地方，PM 最後總結解決方案。
-
----
-
-### [員工A - SA] 系統架構評估
-
-**👍 3個好：**
-1. **實時同步** — Firestore `onSnapshot` 做得好，多裝置即時更新，trainer 同 client 睇到一樣嘅資料
-2. **離線支援** — IndexedDB persistence 設計正確，網絡斷咗照用
-3. **身份驗證完整** — Google 登入、Email 登入、Demo 模式三路齊備，Auth flow 清晰
-
-**👎 3個唔好：**
-1. **Firestore listener 冇 filter** — 訂閱整個 collection，用戶多咗會讀取大量無關數據，scalability 差
-2. **Exercise Library 無隔離** — 所有 trainer 睇同一堆 exercises，互相混雜
-3. **冇 pagination** — workout logs、messages 唔限數量全部 load，長遠會卡
-
-**⚠️ 2個有問題：**
-1. `workoutLogs` 同 `messages` **無法刪除**（Firestore rules 設定），GDPR 刪帳戶時靠 Cloud Function 繞過，但日常清理做唔到
-2. **Schedule 冇驗證 clientId owner**，理論上可以 assign 任何人做 client
-
----
-
-### [員工B - Dev] 程式碼實作評估
-
-**👍 3個好：**
-1. **Code splitting 成功** — 809KB → 258KB，lazy loading 做得正，初次載入快咗 3 倍
-2. **AppContext 架構統一** — 所有 Firestore 操作集中管理，唔洗係 component 直接 import db
-3. **Toast + EmptyState + Skeleton** — UI feedback 系統完整，用戶體驗一致
-
-**👎 3個唔好：**
-1. **IDs 用 `Date.now()`** — 高並發下有碰撞風險，應改用 `crypto.randomUUID()`
-2. **`functions/index.js` 批次 delete 冇限制** — `onAccountDelete` 用 batch 但 Firebase batch 上限 500 docs，大帳戶會 crash
-3. **Push notification 只有 new message trigger** — schedule 提醒本來有寫 Cloud Function 但未部署
-
-**⚠️ 2個有問題：**
-1. **Demo reset 流程殘缺** — `resetData()` 無法刪 workoutLogs/messages，demo 數據越積越多
-2. **`markLoaded` 硬編碼 count=7** — 新增 collection listener 時容易忘記改呢個數字，靜默 bug
-
----
-
-### [員工C - Reviewer] Code Review 評估
-
-**👍 3個好：**
-1. **Error boundary 存在** — React class ErrorBoundary 包住整個 app，crash 唔會白頁
-2. **Double-submit protection** — 所有 async 操作都有 `saving`/`sending` state，冇重複提交問題
-3. **Firestore rules 有基本保護** — auth required、role check、ownership check 都有
-
-**👎 3個唔好：**
-1. **Firestore rules 讀取太寬鬆** — `bodyStats`、`workoutLogs`、`schedule` 全部 `any auth can read`，A 的 trainer 可以讀 B client 的數據
-2. **`connectToTrainer` 無 race condition 保護** — 兩個人同時用同一 invite code 可能出問題
-3. **`deleteAccount()` 冇等 Cloud Function 完成** — 前端刪 Auth user，但後端 GDPR Function 係 async trigger，時序問題
-
-**⚠️ 2個有問題：**
-1. **exercises collection 寫入規則剛加 `trainerId` check**，但舊數據冇 `trainerId` 字段，update/delete 會被 block
-2. **`loadedRef` 唔係 React state**，某些 edge case 下 `loading` 可能唔會更新 UI
-
----
-
-### [員工D - UI/UX] 介面體驗評估
-
-**👍 3個好：**
-1. **Light/dark theme** — CSS variables 設計優雅，切換流暢，持久化到 localStorage
-2. **Mobile navigation** — bottom nav + sidebar 雙佈局，手機電腦都適配
-3. **Skeleton loading** — 有 loading state 唔係白頁，體驗專業
-
-**👎 3個唔好：**
-1. **Progress 圖表太簡陋** — 用原生 `<canvas>` 手寫，缺 interactivity，對比 Fitbit/MyFitnessPal 差好遠
-2. **唔支援中文/廣東話** — 所有介面英文，目標用戶係廣東話用家
-3. **PWA icon 係純色方塊** — 192×192 純藍色，冇品牌感，App Store / Home Screen 睇落業餘
-
-**⚠️ 2個有問題：**
-1. **Messages 頁面冇顯示 timestamp** — 唔知幾時發嘅訊息，用戶體驗差
-2. **Workout log 入面 exercise name 要查 library** — 顯示 `exerciseId` 而唔係 name，用戶睇唔明
-
----
-
-### [員工E - QA] 測試與合規評估
-
-**👍 3個好：**
-1. **Demo coach 功能** — 一鍵試用，seed 數據齊全，新用戶 onboarding 順暢
-2. **Invite code 系統** — 6 位英數字母，cryptographically secure（已修復），trainer-client 連接簡單
-3. **CI/CD 完整** — push 到 branch 自動 deploy hosting + functions，唔使手動操作
-
-**👎 3個唔好：**
-1. **冇任何 automated tests** — 零 unit tests、零 integration tests，改一樣嘢唔知有冇 break 其他
-2. **錯誤訊息唔夠 friendly** — Firebase error codes 直接 show 出來（如 `auth/wrong-password`），用戶唔明
-3. **Session 過期冇 graceful 處理** — Firebase token expire 後某些操作會 silent fail
-
-**⚠️ 2個有問題：**
-1. **Trainer 刪帳戶後，佢嘅 clients 變成孤兒** — `trainerId` 指向唔存在嘅 user，clients 頁面可能 crash
-2. **`bodyStats` 用 entries array** — 無限增長，Firestore doc limit 1MB，積累幾年 stats 會超限
-
----
-
-### [員工F - Security] 滲透測試評估
-
-**👍 3個好：**
-1. **XSS 防護已加** — videoUrl 用 `isSafeUrl()` whitelist `https?://`，防止 `javascript:`/`data:`/`vbscript:` 注入
-2. **Invite code 已改用 `crypto.getRandomValues()`** — 唔可以被預測
-3. **Firebase Auth 做 authentication** — 唔係自己管密碼，delegated 到 Google，安全性有保障
-
-**👎 3個唔好：**
-1. **Firebase config hardcoded 係 client-side** — API key 雖然係 public 設計，但 Project ID / Sender ID 全部 exposed，Firestore rules 係唯一防線，一旦 rules 有漏洞就係大問題
-2. **Firestore rules 讀取太鬆** — 任何登入用戶可以讀所有人嘅 schedule、workoutLogs，privacy 問題
-3. **Cloud Functions 冇 rate limiting** — `sendNotificationOnMessage` 可被濫用，每條 message 觸發一次 FCM call
-
-**⚠️ 2個有問題：**
-1. **`findTrainerByCode(code)` 全表掃描** — 攻擊者可以暴力枚舉所有 invite codes，搵出所有 trainer
-2. **Demo 帳戶 `coach@elitepro.com` 係固定密碼 `demo123`** — 任何人都可以登入 demo，如果 rules 有漏洞就可以讀真實數據
-
----
-
-### [PM 總結] Phase 3 解決方案優先排序
-
-| 優先級 | 問題 | 解決方案 |
-|--------|------|----------|
-| 🔴 高 | Firestore rules 讀取太鬆 | 收緊 rules：只有本人/trainer 可讀自己數據 |
-| 🔴 高 | Exercise Library 冇隔離 | 加 trainerId filter，每個 trainer 獨立 |
-| 🔴 高 | Firestore listeners 冇 filter | 加 query filter，只讀相關數據 |
-| 🟡 中 | Schedule clientId ownership | Firestore rules 加驗證 |
-| 🟡 中 | bodyStats entries array 上限 | 遷移到 subcollection（長遠方案）|
-| 🟡 中 | Progress 圖表簡陋 | 換 Recharts，加互動 |
-| 🟢 低 | 中文 i18n | 加語言切換 |
-| 🟢 低 | PWA icon 優化 | 加真實 logo |
-
-**Phase 3 執行順序：**
-1. Firestore rules 收緊（安全問題，優先）
-2. Exercise isolation + listener query filter（架構改動，影響其他功能）
-3. Schedule ownership validation（安全）
-4. Recharts 進度頁（用戶體驗）
-5. i18n（如有時間）
-
----
-
-## 最近 Session 完成嘅工作（2026-04-12 Session 5）
-
-### Blaze Plan 升級後任務（F + A + B）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | GDPR cascaded delete Cloud Function | `onAccountDelete`（onUserDeleted trigger）用 Admin SDK 刪除 messages、workoutLogs、schedule、workoutPlans、exercises；繞過 Firestore rules |
-| 2 | CI 加 Functions 自動部署 | GitHub Actions workflow 加 `google-github-actions/auth` + `npx firebase-tools deploy --only functions`；唔需要本機 Firebase CLI |
-| 3 | Push Notifications VAPID key 啟動 | `NotificationContext.jsx` 填入正式 VAPID key；FCM token 註冊 + 推播全線啟用 |
-| 4 | PWA icons + iOS meta tags | 純 Node.js 生成 icon-192.png / icon-512.png；index.html 加 apple-mobile-web-app 系列 meta tags；iOS Add to Home Screen 體驗完整 |
-
----
-
-## 最近 Session 完成嘅工作（2026-04-12 Session 4）
-
-### Phase 2 任務（F + A + B）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | Firestore rules：messages read 收緊 | `allow read` 改為只有 sender/recipient（`from == uid \|\| to == uid`）；關閉 F1 漏洞 |
-| 2 | Firestore rules：bodyStats read 收緊 | `allow read` 改為 `isOwner(clientId) \|\| isTrainerOf(clientId)`；關閉 F2 漏洞 |
-| 3 | Bundle code-splitting（React.lazy） | App.jsx 14 個 pages 全改 lazy import + Suspense；主 bundle 809KB → **258KB**（gzip 238KB → **82KB**） |
-| 4 | Invite code 改 `crypto.getRandomValues()` | 取代 `Math.random()`，cryptographically secure；關閉 F5 漏洞 |
-| 5 | Schedule delete 功能 | AppContext 加 `deleteScheduleItem()`；SchedulePage 每個 session 加 Trash2 刪除鈕 + confirm modal + deleting state |
-
----
-
-## 最近 Session 完成嘅工作（2026-04-12 Session 3）
-
-### 即時修 + Phase 2 先行項（F + A + C + D + B）
-
-| # | 任務 | 詳情 |
-|---|------|------|
-| 1 | XSS：videoUrl scheme 過濾 | `isSafeUrl()` whitelist `https?://`；擋住 `javascript:`/`data:`/`vbscript:` 等；ExerciseLibraryPage + WorkoutPlansPage 兩處 `<a href>` + preview link 全部修正 |
-| 2 | Firestore rules：exercises ownership | create 要求 `trainerId == uid`；update/delete 要求 owner 或 legacy（無 `trainerId` field）；`addExercise` 自動寫入 `trainerId: currentUser.id` |
-| 3 | `deleteWorkoutPlan` async/await | 補 `await` + try/catch + `deleting` state 防 double-submit（原為 fire-and-forget） |
-| 4 | 清 lint errors | 22 errors → **0 errors**, 2 warnings（pre-existing）；修項包括 unused vars、setState-in-effect、fast-refresh、globals、NotificationContext TDZ + ref-in-render |
-| 5 | Delete Plan 確認 modal | 新增確認 modal，行為與 Remove Client 一致；Cancel + Delete(disabled on deleting) |
-| 6 | Messages scroll-to-bottom | `prevContactRef` 追蹤前一個 contact；contact 切換 → `instant` 跳底；新訊息到達 → `smooth` 捲底；依賴 `contactMessages.length` 觸發 |
-
----
-
-## 最近 Session 完成嘅工作（2026-04-12 Session 2）
-
-### UI Bug Fixes（D + B）
-
-| # | 問題 | 修復 |
-|---|------|------|
-| 1 | iOS Safari 滑動體驗差，頁面難以拉到底 | `#root` 改用 `overflow-x: clip`（避免 scroll container BFC）；body 加 `-webkit-overflow-scrolling: touch`；modal 加 `overscroll-behavior: contain` |
-| 2 | Trainer 無法移除 Client | AppContext 新增 `removeClient()`（`updateDoc` 設 `trainerId: null`，繞過 Firestore 不能 delete user doc 限制）；ClientDetailPage 加確認 modal + `removing` double-submit 保護 |
-| 3 | Exercise Library 連結功能不易發現 | Card 無 URL 時顯示虛線「+ Add Link」按鈕（`btn-add-link` CSS）；點擊開 Edit modal 並 auto-focus URL 欄位（`useRef` + 150ms timeout）；非 YouTube URL 顯示藍色「Open Link」按鈕（`btn-link-ref` CSS）|
-| 4 | Workout Plans 頁完全無加連結入口 | 每條 exercise row 顯示「+ Add Link」按鈕（trainer only）；點擊彈出 mini modal 直接儲存；YouTube 顯示紅 Play icon，其他 URL 顯示藍 ExternalLink icon |
-
-### CLAUDE.md 更新（SA + PM）
-- 新增 `## Deployment` 詳細說明（CI branch、auto-deploy）
-- 新增 `## Git Workflow Rules`（禁止開新 branch、直接 work on CI branch）
-- 更新 `## Team Structure` + `## Working Rules`（按指定格式重寫）
-
----
-
-## 最近 Session 完成嘅工作（2026-04-12 Session 1）
-
-### Step 7：Loading Skeleton / Empty States（D + B）
-**新檔案：**
-- `src/components/EmptyState.jsx` — 可重用 empty state 組件，支援 icon、title、description、action（Link 或 button）、compact mode、inCard wrapper
-- `src/components/Skeleton.jsx` — Skeleton 載入動畫組件（shimmer effect）
-
-**更新咗嘅頁面（10 個）：**
-| 頁面 | Empty State Icon | CTA |
-|------|-----------------|-----|
-| TrainerDashboard | CalendarOff / MailCheck / Users | 各自導航 |
-| ClientDashboard | CalendarOff / ClipboardList | Connect Coach |
-| ClientsPage | UserPlus | Copy Invite Code |
-| ClientDetailPage | UserX / LineChart / ClipboardList / NotebookPen | 對應操作 |
-| WorkoutPlansPage | Dumbbell | Create Plan（trainer only）|
-| WorkoutLogPage | NotebookPen | 睇 plan 先 |
-| MyWorkoutsPage | ClipboardList | Connect Coach |
-| ProgressPage | LineChart | Add Measurement |
-| ExerciseLibraryPage | SearchX | Clear Filters |
-
-**CSS 新增：**
-- `.empty-state` 系列樣式（icon-wrap、compact、action）
-- `@keyframes skeleton-shimmer` 動畫
-- `.skeleton-line`、`.skeleton-circle`、`.skeleton-card` 樣式
-
-### Step 8：Schedule / Message 寫操作審計（A + E）
-**發現並修復 5 個問題：**
-
-| # | Bug | 位置 | 修復方式 |
-|---|-----|------|---------|
-| 1 | Fire-and-forget write — 成功 toast 喺 Firestore 失敗時都會出 | SchedulePage `handleAdd` | 改用 async/await + try/catch |
-| 2 | 冇 double-submit 保護 — 用戶快速撳兩次可以 book 兩個 session | SchedulePage | 加 `saving` state + button disabled |
-| 3 | Client 冇 trainer 可以開 booking form → `trainerId: undefined` 寫入 Firestore | SchedulePage | Form guard + header button disabled |
-| 4 | Fire-and-forget message send — 同上問題 | MessagesPage `handleSend` | async/await + `sending` state |
-| 5 | `markMessagesRead` 喺 useEffect 入面可能 unhandled rejection | MessagesPage useEffect | `Promise.resolve(...).catch(() => {})` |
-
----
-
-## 全員會議紀錄（2026-04-12）
-
-> 針對 app 所有面向嘅全隊狀況匯報，共 6 名員工 + PM 參與。
-
-### [員工A - SA] 系統架構
-
-| 項目 | 狀況 | 備註 |
+| 1 | Exercise Library per-trainer Firestore 隔離 | 架構 |
+| 2 | Collection listeners 加 query filter（限制讀取量） | 效能 |
+| 3 | Timezone bug 修復（跨時區預約） | Bug |
+| 4 | Firebase App Check（防 abuse） | 安全 |
+
+### 差異化新功能
+| 優先 | 功能 | 說明 |
 |------|------|------|
-| Firestore 7 collections + onSnapshot | ✅ 穩健 | AppContext 係唯一入口，冇頁面直接碰 `db` |
-| Collection 監聽冇 query filter | ⚠️ 風險 | 監聽整個 collection，所有資料落晒 client 記憶體，scale 後係瓶頸 |
-| Exercises 所有 trainer 共享 | ⚠️ 設計缺陷 | A trainer 改動作名，B trainer 都受影響 |
-| `markLoaded` 靜默失敗處理 | ℹ️ 可接受 | 失敗當 loaded，user 唔知成功定失敗，但防止 stuck loading |
-| `Date.now()` ID collision | ℹ️ 極低風險 | 同一毫秒兩個寫操作理論上會 collision |
+| 🔴 高 | **Rest Timer** | 訓練必備，Hevy 強項 |
+| 🔴 高 | **收費 / Invoice 管理** | Hevy Coach 完全冇，教練最大痛點 |
+| 🟡 中 | **Volume analytics** | 週訓練量圖表 |
+| 🟡 中 | **Client onboarding（PAR-Q）** | 專業教練流程 |
+| 🟢 低 | **Workout calendar heatmap** | Consistency 可視化 |
 
-整體評級：**B+**，可以上線，規模化前需要 query-level filtering。
-
----
-
-### [員工B - Dev] 程式碼實作
-
-**Build 狀況：**
-```
-JS bundle：807 KB（gzip 238 KB）  ⚠️ 超標（Vite 警告 >500KB）
-CSS：        42 KB（gzip   8 KB）  ✅ 正常
-Build time： 1.81s                  ✅
-```
-
-14 頁面全部 eager-loaded，冇任何 `React.lazy`。
-
-**發現問題：**
-- `WorkoutPlansPage.jsx:280` — `deleteWorkoutPlan(p.id)` **fire-and-forget**，冇 `await`，冇 `try/catch`，toast 無論成功定失敗都出（Phase 1 Step 8 審計漏咗）
-- `useRef` + 150ms auto-focus 係 workaround，modal CSS transition 超過 150ms 就會 fail
-
----
-
-### [員工C - Reviewer] Code Review
-
-**Lint 現狀：22 errors，2 warnings**（預計 30 分鐘可全部清）
-
-| 嚴重度 | 位置 | 問題 |
-|--------|------|------|
-| Medium | `WorkoutPlansPage.jsx:280` | `deleteWorkoutPlan` fire-and-forget |
-| Low | `ClientDetailPage.jsx:270` | `j` unused variable |
-| Low | `WorkoutLogPage.jsx:178,186` | `exercise` + `j` unused variables |
-| Low | `RoleSelectPage.jsx:23` | `err` unused in catch block |
-| Low | `vite.config.js:7` | `process` not defined（加 `/* eslint-env node */` 即修）|
-| Info | `ThemeContext` / `ToastContext` | Fast-refresh warning（export non-component）|
-| Info | `NotificationContext` | Fast-refresh + immutability warnings |
-| Info | `AppContext` | setState-in-effect warning（currentUser sync）|
-
----
-
-### [員工D - UI/UX] 介面體驗
-
-**已完成：** iOS scroll 修復、empty states、skeleton、+ Add Link 兩個頁面一致
-
-**待改善：**
-| 優先 | 問題 |
+### 全球推廣前置
+| 優先 | 任務 |
 |------|------|
-| 高 | Delete Plan 冇確認 modal（Remove Client 有，行為不一致，易誤刪）|
-| 高 | Messages 頁冇 scroll-to-bottom（新訊息唔會自動捲落底）|
-| 中 | ClientDetailPage tab 切換冇 loading indicator |
-| 中 | Mobile Plan Builder modal 太長，需要大量滑動 |
-| 低 | 進度頁純 CSS/SVG 圖表，視覺質素可以更好 |
-
----
-
-### [員工E - QA] 測試與合規
-
-**本 Session 已驗證：**
-- ✅ iOS scroll 修復
-- ✅ Remove Client → confirmation → orphan → navigate
-- ✅ Exercise Library + Add Link → auto-focus
-- ✅ Workout Plans + Add Link → updateExercise
-
-**未測試 / 風險：**
-| 優先 | 問題 |
-|------|------|
-| 高 | GDPR `deleteAccount` 不完整 — `messages`、`workoutLogs`、`schedule` 殘留（rules 禁刪）|
-| 高 | Demo `resetData` 同樣問題 — logs + messages 刪唔到，reset 後殘留舊資料 |
-| 中 | 真實 multi-user test 未做（兩個 trainer 同時用 exercise 共享）|
-| 中 | 238KB gzip，3G 網絡約需 3-4 秒首次載入 |
-
-合規評級：**符合基本要求，GDPR delete 係唯一未解決嘅合規缺口。**
-
----
-
-### [員工F - Security] 滲透測試
-
-**🔴 高風險（需即時修）**
-
-| # | 漏洞 | 位置 | 攻擊方式 |
-|---|------|------|---------|
-| F1 | 任何登入用戶可讀取**所有人私訊** | `firestore.rules` messages read | `getDocs(collection(db, 'messages'))` dump 全部對話 |
-| F2 | 任何登入用戶可讀取**所有人體測數據** | `firestore.rules` bodyStats read | 體重、體脂、三圍全部外洩 |
-| F3 | **XSS via `javascript:` URL** | `ExerciseLibraryPage`、`WorkoutPlansPage` videoUrl href | 輸入 `javascript:alert(1)` 做 videoUrl，trainer/client 點擊即執行 |
-
-**🟡 中風險**
-
-| # | 漏洞 | 位置 | 說明 |
-|---|------|------|------|
-| F4 | **Exercise 冇 ownership check** | `firestore.rules` exercises update/delete | 任何 trainer 可改刪其他 trainer 嘅整個動作庫 |
-| F5 | Invite code 用 `Math.random()` | `AppContext.jsx generateInviteCode()` | 非 cryptographically secure，Firestore 冇 rate limiting，理論上可暴力破解 |
-| F6 | Schedule `clientId` 冇驗證係 trainer 自己嘅 client | `firestore.rules` schedule create | 任何 trainer 可將任何用戶加入自己日程表 |
-
-**🟢 低風險 / 設計限制**
-
-| # | 說明 |
-|---|------|
-| F7 | Firebase config hardcoded public key — 正常設計，配合 Firestore rules 可接受 |
-| F8 | Demo `coach@elitepro.com` / `demo123` 係已知帳號，任何人可用 demo coach 登入 |
-
----
-
-### [PM 總結] 行動優先級
-
-**即時修（下次 session）：**
-| # | 問題 | 負責 |
-|---|------|------|
-| 1 | XSS：videoUrl 加 `javascript:` scheme 過濾 | F + B |
-| 2 | Firestore rules：exercises 加 ownership check | F + A |
-| 3 | `deleteWorkoutPlan` 補 async/await + try/catch | C + B |
-| 4 | 清 22 個 lint errors | C + B |
-| 5 | Delete Plan 加確認 modal | D + B |
-
-**Phase 2 新增項目：**
-| # | 問題 | 負責 |
-|---|------|------|
-| 6 | Firestore rules：messages / bodyStats read 收緊至 owner + trainer only | F + A |
-| 7 | Bundle code-splitting（React.lazy per page）| B |
-| 8 | Messages scroll-to-bottom | D + B |
-| 9 | GDPR cascaded delete via Cloud Functions | E + B |
-| 10 | Invite code 改用 `crypto.getRandomValues()` | F + B |
-
-**Phase 3 新增項目：**
-| # | 問題 |
-|---|------|
-| 11 | Exercises per-trainer 隔離 |
-| 12 | Collection listeners 加 query filter（限制讀取量）|
-| 13 | Schedule clientId ownership validation |
-
----
-
-## 已知問題 / 遺留事項
-
-### 🔴 安全（會議後新增）
-1. **XSS via javascript: URL** — videoUrl input 冇 scheme 驗證，`<a href>` 可執行任意 JS
-2. **Messages + bodyStats 任何登入用戶可讀** — Firestore rules `allow read: if isAuth()` 過於寬鬆
-3. **Exercise 冇 ownership check** — 任何 trainer 可改刪其他 trainer 嘅動作
-
-### 嚴重
-4. **Bundle size 過大**（807KB / gzip 238KB）— Vite 已警告，首次載入慢
-   - 建議：React.lazy code-splitting per page
-5. **Firebase Service Account secret 未確認**
-   - 需要用戶去 Firebase Console 生成 + 加入 GitHub Secrets (`FIREBASE_SERVICE_ACCOUNT`)
-   - 未確認 GitHub Actions 首次部署是否成功
-6. **Firestore Rules 未經 production 真機驗證**
-   - Rules 寫好但需要真實 multi-user test 確認權限正確
-
-### 中度
-7. **Push Notifications 未完成部署**（代碼已寫好，需要以下步驟）
-   - 升級 Firebase 到 Blaze plan（需綁 credit card，免費 quota 內唔收費）
-   - 從 Firebase Console 攞 VAPID key → 貼入 `src/context/NotificationContext.jsx`
-   - 執行 `firebase deploy --only functions` 部署 Cloud Functions
-   - 需要生成正式 PNG icons（192x192、512x512）替代 manifest.json placeholder
-8. **GDPR deleteAccount 不完整** — messages / workoutLogs / schedule 殘留（rules 禁刪），需要 Cloud Functions cascaded delete
-9. **iOS Safari Google Sign-In 未做真機 full regression**
-10. **Schedule 時間衝突檢查**只係本地比較，multi-device 可能 race condition
-11. **Delete Plan 冇確認 modal** — 容易誤刪，與 Remove Client 行為不一致
-12. **Messages 頁冇 scroll-to-bottom** — 新訊息唔會自動捲落底
-
-### 輕微 / Nice-to-have
-13. 無 i18n — 純英文 UI（主要用戶係廣東話）
-14. 進度頁圖表純 CSS/SVG — 可以用 Recharts 美化
-15. 舊 sample data 用 `rest` field，新 plan 用 `weight` — 混合 data 可能喺 display 上出現空白
-16. Invite code 用 `Math.random()`（非 cryptographically secure）
-17. Schedule create 冇驗證 clientId 係 trainer 自己嘅 client
-
-### Pre-existing Lint Errors（22 errors, 2 warnings）
-- `WorkoutPlansPage.jsx:280`：`deleteWorkoutPlan` fire-and-forget（**新發現**）
-- `ClientDetailPage.jsx:270`：unused `j` variable
-- `WorkoutLogPage.jsx:178,186`：unused `exercise` + `j`
-- `RoleSelectPage.jsx:23`：unused `err`
-- `vite.config.js:7`：`process` not defined（加 `/* eslint-env node */` 即修）
-- `context/AppContext.jsx`：setState-in-effect warnings
-- `context/NotificationContext.jsx`：fast-refresh warnings
-- `context/ThemeContext.jsx` / `ToastContext.jsx`：fast-refresh warnings
-
----
-
-## 重要決定紀錄
-
-| 日期 | 決定 | 原因 |
-|------|------|------|
-| 2026-04-09 | Firestore Rules 用 pragmatic model（authed read all） | 簡單 fitness app 唔需要 row-level read security |
-| 2026-04-09 | workoutLogs + messages 禁止 delete | 保護訓練紀錄完整性 |
-| 2026-04-10 | Per-set weight 取代 per-exercise weight | 用戶需要逐 set 記錄唔同重量（e.g. pyramids） |
-| 2026-04-12 | EmptyState 做成通用組件而非每頁 inline | 10 個頁面共用，減少重複代碼 |
-| 2026-04-12 | 所有寫操作必須 await + try/catch | Fire-and-forget 會導致錯誤 toast 誤導用戶 |
-| 2026-04-12 | Phase 1 做完先諗 Blaze upgrade | 用戶明確指示：「做哂 phase 1 野先再諗 blaze」 |
-
----
-
-## 開發階段 Roadmap
-
-### Phase 1 — 上線前必做 ✅ 全部完成
-| # | 任務 | 狀態 | 負責 |
-|---|------|------|------|
-| 1 | Firestore Rules + code alignment | ✅ 完成 | C + B |
-| 2 | Demo 帳號改用 Firebase Auth | ✅ 完成 | B |
-| 3 | Delete Account (GDPR) | ✅ 完成 | B + D |
-| 4 | Forgot Password 流程 | ✅ 完成 | B + D |
-| 5 | Merge 其他 session 嘅 bug fixes | ✅ 完成 | C |
-| 6 | Plan exercises 改用 weight(kg) | ✅ 完成 | B |
-| 7 | Loading skeleton / empty states | ✅ 完成 | D + B |
-| 8 | 全 app 寫操作 re-audit | ✅ 完成 | A + E |
-
-### 即時修（會議後新增）⚡
-| # | 任務 | 狀態 | 負責 |
-|---|------|------|------|
-| 1 | XSS：videoUrl whitelist `https?://` scheme | ✅ 完成 | F + B |
-| 2 | Firestore rules：exercises 加 trainer ownership check | ✅ 完成 | F + A |
-| 3 | `deleteWorkoutPlan` 補 async/await + try/catch | ✅ 完成 | C + B |
-| 4 | 清 22 個 lint errors | ✅ 完成（0 errors, 2 warnings） | C + B |
-| 5 | Delete Plan 加確認 modal | ✅ 完成 | D + B |
-
-### Phase 2 — 品質提升
-| # | 任務 | 狀態 | 負責 |
-|---|------|------|------|
-| 1 | Firestore rules：messages / bodyStats read 收緊 | ✅ 完成 | F + A |
-| 2 | Bundle code-splitting（React.lazy per page）| ✅ 完成 | B |
-| 3 | Messages scroll-to-bottom | ✅ 完成 | D + B |
-| 4 | GDPR cascaded delete via Cloud Functions | ✅ 完成 | E + B |
-| 5 | Invite code 改用 `crypto.getRandomValues()` | ✅ 完成 | F + B |
-| 6 | 真機 QA：iPhone Safari + Android Chrome | ⏸️ 需真機 | E |
-| 7 | Push notifications 完成部署（Blaze + VAPID + Functions deploy）| ✅ 完成 | B |
-| 8 | Schedule delete 功能 | ✅ 完成 | B |
-
-### Phase 3 — 加分項
-| # | 任務 | 狀態 |
-|---|------|------|
-| 1 | Exercise Library per-trainer 隔離 | 未開始 |
-| 2 | Collection listeners 加 query filter（限制讀取量）| 未開始 |
-| 3 | Schedule clientId ownership validation | 未開始 |
-| 4 | PWA icons 正式版（192 + 512 PNG）| 未開始 |
-| 5 | Recharts 美化進度頁 | 未開始 |
-| 6 | 中文 / 廣東話 i18n | 未開始 |
-
----
-
-## 技術架構摘要
-
-```
-Frontend: React 19 + Vite 8 + React Router v7 (HashRouter)
-Backend:  Firebase Firestore (real-time) + Firebase Auth
-Notify:   FCM + Cloud Functions (code ready, not deployed)
-Styling:  Custom CSS + CSS Variables (light/dark theme)
-Hosting:  Firebase Hosting (primary) / GitHub Pages (alt)
-CI/CD:    GitHub Actions (auto-deploy on push)
-Offline:  IndexedDB persistence via Firebase SDK
-```
-
-### 檔案架構（最新）
-```
-src/
-├── components/
-│   ├── EmptyState.jsx       # ⭐ 通用空狀態組件（icon + CTA）
-│   ├── MuscleSelector.jsx   # ⭐ SVG 互動人體肌肉模型（Front/Back）
-│   ├── ProgressView.jsx     # ⭐ 進度圖表組件（stat tiles + chart + history；clientId + canDelete props）
-│   ├── Skeleton.jsx         # ⭐ 載入骨架動畫組件
-│   ├── NotesSection.jsx     # Client notes section
-│   ├── ErrorBoundary.jsx    # React class error boundary
-│   ├── GlobalSearch.jsx     # Search bar
-│   └── Navigation.jsx       # Sidebar + header + bottom nav
-├── context/
-│   ├── AppContext.jsx        # Global state + Firestore ops
-│   ├── NotificationContext.jsx # ⭐ FCM push notification（待部署）
-│   ├── ThemeContext.jsx      # Light/dark theme
-│   └── ToastContext.jsx      # Toast notifications
-├── data/
-│   ├── exercises.js
-│   └── sampleData.js
-├── pages/                    # 14 pages（全部有 empty states）
-├── styles/
-│   └── index.css             # 含 skeleton shimmer + empty state 樣式
-├── firebase.js
-├── App.jsx
-└── main.jsx
-
-functions/                    # ⭐ Cloud Functions（待部署到 Blaze）
-├── index.js                  # sendNotificationOnMessage + sendNotificationOnSchedule
-└── package.json
-
-public/
-├── firebase-messaging-sw.js  # ⭐ FCM Service Worker
-└── manifest.json             # ⭐ PWA manifest（需要正式 icons）
-```
-
-### Firestore Collections
-| Collection | Doc ID | 用途 |
-|---|---|---|
-| users | Firebase Auth UID | 用戶 profile（trainer / client）|
-| bodyStats | clientId | 體重、體脂、圍度紀錄 |
-| workoutPlans | plan-{timestamp} | 訓練計劃模板 |
-| workoutLogs | log-{timestamp} | 訓練紀錄（不可刪除）|
-| schedule | sched-{timestamp} | 預約時間表 |
-| messages | msg-{timestamp} | 對話訊息（不可刪除）|
-| exercises | exercise ID | 動作庫 |
-
-### Git Commit History（最近）
-```
-0cbc2cc docs: update PROGRESS.md for Session 2 (2026-04-12)
-b563cf5 docs: add Employee F (Security) to Team Structure in CLAUDE.md
-d866fd8 docs: update CLAUDE.md Team Structure & Working Rules sections
-d35dcd3 feat: Add "+ Add Link" button to exercises in Workout Plans view
-2cf9804 feat: Exercise Library — add link discoverability + non-YouTube URL support
-[prev]  fix: remove client feature + iOS scroll fix + CLAUDE.md deployment rules
-012ab02 feat: empty states with icons + schedule/message write audit fixes
-36f8190 feat: push notifications via FCM + Cloud Functions
-f83b6b2 refactor: per-set UX redesign with +New Set button
-c5a4316 feat: per-set weight support for workout plans
-6553d69 fix: 5 audit issues — async/await, CSS vars, race condition, error handling
-5857d6e docs: add PROGRESS.md tracking development status and roadmap
-```
-
-### 團隊分工
-| 代號 | 職責 |
-|------|------|
-| PM | 帶領團隊、排優先、最終決策 |
-| A - SA | 系統分析、資料庫設計、功能流程 |
-| B - Dev | 核心開發、API 串接 |
-| C - Reviewer | Code Review、Bug 檢查、安全性 |
-| D - UI/UX | 介面設計、配色、用戶體驗 |
-| E - QA | 測試、Bug 報告、合規（GDPR 等）|
-| F - Security | 滲透測試、漏洞審查、認證機制、資料保護（paranoid hacker 思維）|
+| 🔴 必做 | Privacy Policy + Terms of Service |
+| 🔴 必做 | Landing page（獨立網址） |
+| 🔴 必做 | GA4 / Firebase Analytics 整合 |
+| 🟡 | Product Hunt 準備 |
+| 🟢 | Stripe 收費整合 |
+| 🟢 | App Store 上架（Capacitor） |

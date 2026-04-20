@@ -425,6 +425,10 @@ export function AppProvider({ children }) {
     await deleteDoc(doc(db, 'bodyStats', clientId, 'entries', entryId));
   };
 
+  const updateBodyStat = async (clientId, entryId, updates) => {
+    await updateDoc(doc(db, 'bodyStats', clientId, 'entries', entryId), updates);
+  };
+
   // ========== Workout Plans ==========
   const getWorkoutPlans = (filter) => {
     return workoutPlans.filter(p => {
@@ -620,7 +624,7 @@ export function AppProvider({ children }) {
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
     getClients, getClient, updateClient, removeClient,
-    getBodyStats, addBodyStat, deleteBodyStat,
+    getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
     getSchedule, getTrainerSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,

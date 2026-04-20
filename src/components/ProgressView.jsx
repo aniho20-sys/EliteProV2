@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { LineChart, TrendingDown, TrendingUp, Minus, Trash2 } from 'lucide-react';
+import { LineChart, TrendingDown, TrendingUp, Minus, Trash2, Pencil } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from './EmptyState';
 import {
@@ -26,7 +26,7 @@ function ChartTooltip({ active, payload, unit }) {
   );
 }
 
-export default function ProgressView({ clientId, canDelete = false, onAdd }) {
+export default function ProgressView({ clientId, canDelete = false, onAdd, onEdit }) {
   const { getBodyStats, deleteBodyStat } = useApp();
   const stats = getBodyStats(clientId);
   const toast = useToast();
@@ -147,6 +147,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd }) {
               <tr>
                 <th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th>Source</th>
                 {canDelete && <th></th>}
+                {onEdit && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -161,11 +162,18 @@ export default function ProgressView({ clientId, canDelete = false, onAdd }) {
                         ? <span className="tag" style={{ fontSize: '0.65rem' }}>Self</span>
                         : '—'}
                   </td>
+                  {onEdit && (
+                    <td>
+                      <button className="btn-icon" title="Edit" onClick={() => onEdit(s)}>
+                        <Pencil size={14} />
+                      </button>
+                    </td>
+                  )}
                   {canDelete && (
                     <td>
                       <button className="btn-icon" title="Delete"
                         onClick={() => { deleteBodyStat(clientId, s.id); toast('Deleted', 'error'); }}>
-                        <Trash2 size={14} />
+                        <Trash2 size={14} style={{ color: 'var(--danger)' }} />
                       </button>
                     </td>
                   )}
@@ -183,12 +191,19 @@ export default function ProgressView({ clientId, canDelete = false, onAdd }) {
                   {s.date}
                   {s.addedBy === 'coach' && <span className="tag tag-accent" style={{ fontSize: '0.6rem', marginLeft: 6 }}>Coach</span>}
                 </div>
-                {canDelete && (
-                  <button className="btn-icon" title="Delete"
-                    onClick={() => { deleteBodyStat(clientId, s.id); toast('Deleted', 'error'); }}>
-                    <Trash2 size={14} />
-                  </button>
-                )}
+                <div className="flex gap-8">
+                  {onEdit && (
+                    <button className="btn-icon" title="Edit" onClick={() => onEdit(s)}>
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button className="btn-icon" title="Delete"
+                      onClick={() => { deleteBodyStat(clientId, s.id); toast('Deleted', 'error'); }}>
+                      <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="body-stats-grid">
                 {METRICS.map(m => (
