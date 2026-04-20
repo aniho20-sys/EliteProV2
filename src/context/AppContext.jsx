@@ -534,7 +534,9 @@ export function AppProvider({ children }) {
   const getSessionStats = (clientId) => {
     const client = users.find(u => u.id === clientId);
     const total = client?.totalSessions ?? null;
-    const used = schedule.filter(s => s.clientId === clientId && s.status === 'completed').length;
+    const offset = client?.sessionOffset ?? 0;
+    const autoUsed = schedule.filter(s => s.clientId === clientId && s.status === 'completed').length;
+    const used = offset + autoUsed;
     const remaining = total !== null ? total - used : null;
     return { used, total, remaining };
   };

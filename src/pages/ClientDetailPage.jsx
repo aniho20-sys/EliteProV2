@@ -47,6 +47,7 @@ export default function ClientDetailPage() {
   const [activeMetric, setActiveMetric] = useState('weight');
   const [editingSessions, setEditingSessions] = useState(false);
   const [sessionsInput, setSessionsInput] = useState('');
+  const [offsetInput, setOffsetInput] = useState('');
   const [savingSessions, setSavingSessions] = useState(false);
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
@@ -104,7 +105,10 @@ export default function ClientDetailPage() {
   const handleSaveSessions = async () => {
     setSavingSessions(true);
     try {
-      await updateClient(clientId, { totalSessions: Number(sessionsInput) });
+      await updateClient(clientId, {
+        totalSessions: Number(sessionsInput) || 0,
+        sessionOffset: Number(offsetInput) || 0,
+      });
       setEditingSessions(false);
       toast('Sessions updated');
     } catch {
@@ -235,17 +239,27 @@ export default function ClientDetailPage() {
               <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
                 <span className="text-sm fw-bold">Sessions</span>
                 {!editingSessions && (
-                  <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setEditingSessions(true); }}>
+                  <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setOffsetInput(client?.sessionOffset ?? ''); setEditingSessions(true); }}>
                     {sessTotal === null ? 'Set Total' : 'Edit'}
                   </button>
                 )}
               </div>
               {editingSessions ? (
-                <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                  <span className="text-sm text-muted">Total sessions:</span>
-                  <input className="form-input" style={{ width: 72, padding: '4px 8px' }} type="number" min="0" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
-                  <button className="btn btn-primary btn-sm" onClick={handleSaveSessions} disabled={savingSessions}>{savingSessions ? 'Saving…' : 'Save'}</button>
-                  <button className="btn btn-outline btn-sm" onClick={() => setEditingSessions(false)} disabled={savingSessions}>Cancel</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <span className="text-sm text-muted" style={{ minWidth: 148 }}>Total purchased:</span>
+                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
+                    <span className="text-sm text-muted">sessions</span>
+                  </div>
+                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <span className="text-sm text-muted" style={{ minWidth: 148 }}>Used before app:</span>
+                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" value={offsetInput} onChange={e => setOffsetInput(e.target.value)} />
+                    <span className="text-sm text-muted">sessions</span>
+                  </div>
+                  <div className="flex gap-8">
+                    <button className="btn btn-primary btn-sm" onClick={handleSaveSessions} disabled={savingSessions}>{savingSessions ? 'Saving…' : 'Save'}</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => setEditingSessions(false)} disabled={savingSessions}>Cancel</button>
+                  </div>
                 </div>
               ) : sessTotal !== null ? (
                 <>
