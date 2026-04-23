@@ -84,6 +84,7 @@ export function AppProvider({ children }) {
     setLoading(true);
     loadedRef.current = new Set();
     const unsubs = [];
+    const uid = firebaseUser.uid;
 
     unsubs.push(onSnapshot(
       query(collection(db, 'users'), or(where('id', '==', uid), where('trainerId', '==', uid))),
@@ -92,8 +93,6 @@ export function AppProvider({ children }) {
     ));
 
     markLoaded('bodyStats'); // bodyStats handled via per-client subcollection listeners below
-
-    const uid = firebaseUser.uid;
 
     unsubs.push(onSnapshot(query(collection(db, 'workoutPlans'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setWorkoutPlans(snap.docs.map(d => ({ ...d.data(), id: d.id })));
