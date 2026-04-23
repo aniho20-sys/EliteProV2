@@ -43,6 +43,7 @@ export function AppProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
@@ -53,7 +54,7 @@ export function AppProvider({ children }) {
 
   const markLoaded = useCallback((name) => {
     loadedRef.current.add(name);
-    if (loadedRef.current.size >= 7) setLoading(false);
+    if (loadedRef.current.size >= 8) setLoading(false);
   }, []);
 
   // --- Firebase Auth listener + redirect result ---
@@ -115,6 +116,12 @@ export function AppProvider({ children }) {
     }, () => markLoaded('messages')));
 
     markLoaded('exercises'); // exercises handled separately below
+
+    unsubs.push(onSnapshot(
+      query(collection(db, 'invoices'), or(where('trainerId', '==', uid), where('clientId', '==', uid))),
+      (snap) => { setInvoices(snap.docs.map(d => ({ ...d.data(), id: d.id }))); markLoaded('invoices'); },
+      () => markLoaded('invoices'),
+    ));
 
     return () => unsubs.forEach(fn => fn());
   }, [firebaseUser, markLoaded]);
@@ -614,6 +621,19 @@ export function AppProvider({ children }) {
   };
 
   // ========== Templates ==========
+  // ========== Invoices ==========
+  const getInvoices = (trainerId) => invoices.filter(inv => inv.trainerId === trainerId);
+  const addInvoice = async (invoice) => {
+    const id = `inv-${Date.now()}`;
+    await setDoc(doc(db, 'invoices', id), { ...invoice, id });
+  };
+  const updateInvoice = async (invoiceId, updates) => {
+    await updateDoc(doc(db, 'invoices', invoiceId), updates);
+  };
+  const deleteInvoice = async (invoiceId) => {
+    await deleteDoc(doc(db, 'invoices', invoiceId));
+  };
+
   const getTemplates = () => templates;
 
   const saveAsTemplate = async (plan) => {
@@ -682,6 +702,7 @@ export function AppProvider({ children }) {
     getSessionStats,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
+    getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, findTrainerByCode, connectToTrainer,
     resetData,

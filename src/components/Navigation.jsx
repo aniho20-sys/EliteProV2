@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2
+  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2, Receipt
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
@@ -15,6 +15,7 @@ const trainerLinks = [
   { to: '/plans', icon: ClipboardList, label: 'Plans' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
+  { to: '/invoices', icon: Receipt, label: 'Invoices' },
   { to: '/exercises', icon: BookOpen, label: 'Exercises' },
 ];
 

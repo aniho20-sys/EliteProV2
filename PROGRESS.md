@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-20（Session 18）
+> 最後更新：2026-04-23（Session 19）
 
 ---
 
@@ -19,7 +19,7 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 | Session booking | ❌ | ✅ |
 | 堂數管理 | ❌ | ✅ |
 | Working hours | ❌ | ✅ |
-| 收費 / Invoice | ❌ | ❌ 未做 |
+| 收費 / Invoice | ❌ | ✅ Phase 1 |
 | Built-in exercise GIFs | ✅ | ❌ URL only |
 | Native mobile app | ✅ | ⚠️ PWA only |
 
@@ -47,6 +47,11 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 - FCM push notifications（code ready，待 VAPID key 啟動）
 - PWA manifest + iOS Add to Home Screen
 - Firebase Hosting + GitHub Actions CI（push to `claude/fitness-app-features-LbxtG` 自動部署）
+- **Invoice 收費管理 Phase 1**（生成 invoice、Unpaid/Paid/Overdue 狀態、Print/PDF export、逾期自動標記）
+- **Trainer 全客戶進度概覽頁**（weight sparkline、last workout、next session、sessions quota、4種排序）
+- **Client 標籤/分組**（自訂 labels、filter chips）
+- **Plan Builder mobile ↑↓ 按鈕**（mobile 用 ↑↓ 取代 drag handle）
+- **架構加固**：users listener 範圍限制、Timezone bug 修復（dateUtils.js）、GitHub Pages workflow 移除
 
 ---
 
@@ -77,7 +82,7 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 ### 🔴 高優先（核心體驗 / 差異化）
 | 功能 | 說明 |
 |------|------|
-| **Invoice / 收費管理（Phase 1）** | Invoice 生成 + 狀態追蹤（Unpaid/Paid/Overdue）+ PDF export；trainer 自己收款，App 只記帳 |
+| ~~**Invoice / 收費管理（Phase 1）**~~ | ✅ 已完成 |
 | **Push Notifications 啟動** | FCM code 已ready，需要 VAPID key + 重新部署 Cloud Functions |
 | **Privacy Policy + Terms of Service** | 全球推廣前必做，法律保障 |
 

@@ -22,6 +22,7 @@ const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ClientProgressOverviewPage = lazy(() => import('./pages/ClientProgressOverviewPage'));
+const InvoicePage = lazy(() => import('./pages/InvoicePage'));
 
 function LoadingScreen() {
   return (
@@ -54,6 +55,7 @@ function AppRoutes() {
               {isTrainer && <Route path="/clients" element={<ClientsPage />} />}
               {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
               {isTrainer && <Route path="/progress-overview" element={<ClientProgressOverviewPage />} />}
+              {isTrainer && <Route path="/invoices" element={<InvoicePage />} />}
               <Route path="/plans" element={<WorkoutPlansPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/messages" element={<MessagesPage />} />
