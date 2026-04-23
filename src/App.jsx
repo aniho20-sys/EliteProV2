@@ -21,6 +21,7 @@ const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 const MyWorkoutsPage = lazy(() => import('./pages/MyWorkoutsPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ClientProgressOverviewPage = lazy(() => import('./pages/ClientProgressOverviewPage'));
 
 function LoadingScreen() {
   return (
@@ -52,6 +53,7 @@ function AppRoutes() {
               <Route path="/" element={isTrainer ? <TrainerDashboard /> : <ClientDashboard />} />
               {isTrainer && <Route path="/clients" element={<ClientsPage />} />}
               {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
+              {isTrainer && <Route path="/progress-overview" element={<ClientProgressOverviewPage />} />}
               <Route path="/plans" element={<WorkoutPlansPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/messages" element={<MessagesPage />} />

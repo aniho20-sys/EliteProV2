@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon
+  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
@@ -11,6 +11,7 @@ import { useState } from 'react';
 const trainerLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
+  { to: '/progress-overview', icon: BarChart2, label: 'Progress' },
   { to: '/plans', icon: ClipboardList, label: 'Plans' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
@@ -31,9 +32,9 @@ const clientLinks = [
 const trainerBottomLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
+  { to: '/progress-overview', icon: BarChart2, label: 'Progress' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
-  { to: '/plans', icon: ClipboardList, label: 'Plans' },
 ];
 
 const clientBottomLinks = [

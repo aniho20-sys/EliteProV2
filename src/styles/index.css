@@ -1025,6 +1025,81 @@ tr:hover { background: var(--bg-card-hover); }
 .client-meta { color: var(--text-secondary); font-size: 0.8rem; }
 .client-goals { margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }
 
+/* ===== CLIENT PROGRESS OVERVIEW ===== */
+.client-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.client-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.client-progress-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+.client-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.client-progress-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.client-progress-name {
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.client-progress-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.client-progress-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.client-progress-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.client-progress-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.client-progress-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.client-progress-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ===== PROGRESS PAGE (RECHARTS) ===== */
 .progress-stats-grid {
   display: grid;
