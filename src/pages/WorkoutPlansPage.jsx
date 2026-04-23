@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, Bookmark } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, Bookmark, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
@@ -659,7 +659,11 @@ export default function WorkoutPlansPage() {
                       onDragEnd={() => setDragIdx(null)}
                     >
                       <div className="plan-exercise plan-exercise-drag">
-                        <GripVertical size={14} className="drag-handle" />
+                        <GripVertical size={14} className="drag-handle desktop-only" />
+                        <div className="reorder-btns">
+                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i - 1)} disabled={i === 0} title="Move up"><ArrowUp size={13} /></button>
+                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i + 1)} disabled={i === form.exercises.length - 1} title="Move down"><ArrowDown size={13} /></button>
+                        </div>
                         <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                         {ex.customMuscle && (
                           <span className="tag" style={{ fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ex.customMuscle}>

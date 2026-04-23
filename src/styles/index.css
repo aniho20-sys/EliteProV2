@@ -1662,6 +1662,12 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-video-input-row { display: flex; align-items: center; gap: 8px; padding: 8px 0 4px 28px; }
 .plan-video-input-row .form-input { font-size: 0.75rem; padding: 5px 10px; color: var(--text-muted); }
 .drag-handle { color: var(--text-muted); flex-shrink: 0; cursor: grab; }
+.reorder-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+.reorder-btn { padding: 2px; width: 20px; height: 20px; color: var(--text-muted); }
+.reorder-btn:disabled { opacity: 0.2; cursor: default; }
+.reorder-btn:not(:disabled):hover { color: var(--primary); }
+@media (min-width: 768px) { .desktop-only { display: flex !important; } .reorder-btns { display: none; } }
+@media (max-width: 767px) { .desktop-only { display: none !important; } }
 .plan-ex-no-results { font-size: 0.8rem; color: var(--text-muted); padding: 8px 12px; }
 .ex-search-results {
   background: var(--surface);
