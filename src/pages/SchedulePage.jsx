@@ -5,6 +5,7 @@ import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle } from 'lucide-
 import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { localToday, localDateAdd, parseLocalDate } from '../utils/dateUtils';
 
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
 
@@ -26,7 +27,7 @@ export default function SchedulePage() {
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(localToday());
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // schedId
@@ -51,14 +52,10 @@ export default function SchedulePage() {
   const BOOKING_SLOTS = generateSlots(whStart, whEnd, 30);
 
   // Get next 14 days
-  const dates = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return d.toISOString().split('T')[0];
-  });
+  const dates = Array.from({ length: 14 }, (_, i) => localDateAdd(i));
 
   // Month label for date selector
-  const selectedMonth = new Date(selectedDate).toLocaleDateString('en', { month: 'long', year: 'numeric' });
+  const selectedMonth = parseLocalDate(selectedDate).toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
   const schedule = getSchedule(
     isTrainer ? { trainerId: currentUser.id, date: selectedDate } : { clientId: currentUser.id, date: selectedDate }
@@ -156,7 +153,7 @@ export default function SchedulePage() {
   };
 
   const formatDay = (dateStr) => {
-    const d = new Date(dateStr);
+    const d = parseLocalDate(dateStr);
     return { day: d.toLocaleDateString('en', { weekday: 'short' }), date: d.getDate() };
   };
 
@@ -214,7 +211,7 @@ export default function SchedulePage() {
       {/* Schedule list */}
       <div className="card">
         <div className="schedule-day-header mb-16">
-          <h3 className="card-title">{new Date(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+          <h3 className="card-title">{parseLocalDate(selectedDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
         </div>
         {schedule.length === 0 ? (
           <EmptyState

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users } from 'lucide-react';
+import { localToday } from '../utils/dateUtils';
 import EmptyState from '../components/EmptyState';
 
 const SORT_OPTIONS = [
@@ -159,7 +160,7 @@ export default function ClientProgressOverviewPage() {
   const [sort, setSort] = useState('lastActive');
 
   const clients = getClients(currentUser.id);
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   const enriched = clients.map(client => {
     const bodyStats = getBodyStats(client.id);

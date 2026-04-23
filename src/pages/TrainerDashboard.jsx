@@ -4,19 +4,14 @@ import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCir
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { localToday, localDateAdd } from '../utils/dateUtils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getWeekDays() {
   const today = new Date();
-  const day = today.getDay(); // 0 = Sun
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((day + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d.toISOString().split('T')[0];
-  });
+  const offset = (today.getDay() + 6) % 7; // days since Monday
+  return Array.from({ length: 7 }, (_, i) => localDateAdd(i - offset));
 }
 
 function WeeklySessionsChart({ weekDays, schedule, today }) {
@@ -123,7 +118,7 @@ export default function TrainerDashboard() {
   };
   const clients = getClients(currentUser.id);
   const totalPlans = getWorkoutPlans({ trainerId: currentUser.id }).length;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const todaySchedule = getSchedule({ trainerId: currentUser.id, date: today });
   const unread = getUnreadCount(currentUser.id);
   const recentMessages = getMessages(currentUser.id)

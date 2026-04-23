@@ -85,10 +85,11 @@ export function AppProvider({ children }) {
     loadedRef.current = new Set();
     const unsubs = [];
 
-    unsubs.push(onSnapshot(collection(db, 'users'), (snap) => {
-      setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id })));
-      markLoaded('users');
-    }, () => markLoaded('users')));
+    unsubs.push(onSnapshot(
+      query(collection(db, 'users'), or(where('id', '==', uid), where('trainerId', '==', uid))),
+      (snap) => { setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id }))); markLoaded('users'); },
+      () => markLoaded('users'),
+    ));
 
     markLoaded('bodyStats'); // bodyStats handled via per-client subcollection listeners below
 
@@ -142,6 +143,22 @@ export function AppProvider({ children }) {
     );
     return () => unsub();
   }, [currentUser?.id, currentUser?.role]);
+
+  // --- Trainer profile for clients: load trainer doc so ProfilePage can show trainer name/inviteCode ---
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'client' || !currentUser.trainerId) return;
+    const unsub = onSnapshot(
+      doc(db, 'users', currentUser.trainerId),
+      (snap) => {
+        if (snap.exists()) setUsers(prev => {
+          const rest = prev.filter(u => u.id !== snap.id);
+          return [...rest, { ...snap.data(), id: snap.id }];
+        });
+      },
+      () => {},
+    );
+    return () => unsub();
+  }, [currentUser?.id, currentUser?.trainerId, currentUser?.role]);
 
   // --- Trainer schedule for clients: load trainer's full schedule so clients see real availability ---
   useEffect(() => {

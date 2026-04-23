@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext';
 import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
+import { localToday } from '../utils/dateUtils';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
@@ -13,7 +14,7 @@ export default function ClientDashboard() {
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
   const stats = getBodyStats(currentUser.id);
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const todaySchedule = getSchedule({ clientId: currentUser.id, date: today });
 
   const latestStat = stats[stats.length - 1];
