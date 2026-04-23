@@ -33,7 +33,7 @@ const clientLinks = [
 const trainerBottomLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/progress-overview', icon: BarChart2, label: 'Progress' },
+  { to: '/invoices', icon: Receipt, label: 'Invoices' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
 ];
