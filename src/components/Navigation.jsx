@@ -1,8 +1,9 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
-  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2, Receipt
+  BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2, Receipt,
+  MoreHorizontal, X, ChevronRight
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
@@ -29,33 +30,53 @@ const clientLinks = [
   { to: '/exercises', icon: BookOpen, label: 'Exercises' },
 ];
 
-// Bottom nav: pick key links (max 5) — always include Messages
-const trainerBottomLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+// Primary bottom nav (4 items) — most-used, always visible
+const trainerPrimaryLinks = [
+  { to: '/', icon: LayoutDashboard, label: 'Home' },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/invoices', icon: Receipt, label: 'Invoices' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
 ];
 
-const clientBottomLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+const clientPrimaryLinks = [
+  { to: '/', icon: LayoutDashboard, label: 'Home' },
   { to: '/my-workouts', icon: Dumbbell, label: 'Workouts' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
-  { to: '/progress', icon: TrendingUp, label: 'Progress' },
+];
+
+// "More" sheet links — secondary features
+const trainerMoreLinks = [
+  { to: '/invoices', icon: Receipt, label: 'Invoices' },
+  { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
+  { to: '/plans', icon: ClipboardList, label: 'Workout Plans' },
+  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
+  { to: '/profile', icon: UserCircle, label: 'Profile' },
+];
+
+const clientMoreLinks = [
+  { to: '/log', icon: ClipboardList, label: 'Workout Log' },
+  { to: '/progress', icon: TrendingUp, label: 'My Progress' },
+  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
+  { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
 export default function Navigation() {
   const { currentUser, logout, getUnreadCount } = useApp();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const links = currentUser?.role === 'trainer' ? trainerLinks : clientLinks;
-  const bottomLinks = currentUser?.role === 'trainer' ? trainerBottomLinks : clientBottomLinks;
+  const primaryLinks = currentUser?.role === 'trainer' ? trainerPrimaryLinks : clientPrimaryLinks;
+  const moreLinks = currentUser?.role === 'trainer' ? trainerMoreLinks : clientMoreLinks;
   const unreadCount = getUnreadCount(currentUser?.id);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/'); };
+
+  // "More" button is active if current path is one of the more-links
+  const moreIsActive = moreLinks.some(l => l.to !== '/' && location.pathname === l.to);
 
   return (
     <>
@@ -122,7 +143,7 @@ export default function Navigation() {
       {/* Mobile Bottom Nav */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {bottomLinks.map(link => (
+          {primaryLinks.map(link => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `bottom-nav-link ${isActive ? 'active' : ''}`}>
               <div className="bottom-nav-icon-wrap">
                 <link.icon size={20} strokeWidth={2} />
@@ -133,8 +154,64 @@ export default function Navigation() {
               {link.label}
             </NavLink>
           ))}
+          <button
+            className={`bottom-nav-link bottom-nav-more-btn ${moreOpen || moreIsActive ? 'active' : ''}`}
+            onClick={() => setMoreOpen(true)}
+            aria-label="More"
+          >
+            <div className="bottom-nav-icon-wrap">
+              <MoreHorizontal size={20} strokeWidth={2} />
+            </div>
+            More
+          </button>
         </div>
       </nav>
+
+      {/* More Sheet Overlay */}
+      {moreOpen && (
+        <div className="more-sheet-overlay" onClick={() => setMoreOpen(false)}>
+          <div className="more-sheet" onClick={e => e.stopPropagation()}>
+            <div className="more-sheet-handle" />
+            <div className="more-sheet-header">
+              <span className="more-sheet-title">More</span>
+              <button className="btn-icon" onClick={() => setMoreOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <nav className="more-sheet-nav">
+              {moreLinks.map(link => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === '/'}
+                  className={({ isActive }) => `more-sheet-link ${isActive ? 'active' : ''}`}
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <div className="more-sheet-link-icon">
+                    <link.icon size={20} strokeWidth={2} />
+                  </div>
+                  <span className="more-sheet-link-label">{link.label}</span>
+                  <ChevronRight size={16} className="more-sheet-link-chevron" />
+                </NavLink>
+              ))}
+              <button className="more-sheet-link more-sheet-logout" onClick={handleLogout}>
+                <div className="more-sheet-link-icon more-sheet-logout-icon">
+                  <LogOut size={20} strokeWidth={2} />
+                </div>
+                <span className="more-sheet-link-label">Log Out</span>
+                <ChevronRight size={16} className="more-sheet-link-chevron" />
+              </button>
+            </nav>
+            <div className="more-sheet-user">
+              <div className="sidebar-user-avatar">{currentUser?.name?.[0]}</div>
+              <div>
+                <div className="sidebar-user-name">{currentUser?.name}</div>
+                <div className="sidebar-user-role">{currentUser?.role}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
