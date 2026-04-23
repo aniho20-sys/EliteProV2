@@ -52,6 +52,8 @@ export default function ClientDetailPage() {
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
   const [savingNoteId, setSavingNoteId] = useState(null);
+  const [tagInput, setTagInput] = useState('');
+  const [savingTag, setSavingTag] = useState(false);
   const today = new Date().toISOString().split('T')[0];
   const [showLogModal, setShowLogModal] = useState(false);
   const [logPlanId, setLogPlanId] = useState('');
@@ -116,6 +118,26 @@ export default function ClientDetailPage() {
     } finally {
       setSavingSessions(false);
     }
+  };
+
+  const handleAddTag = async (e) => {
+    e.preventDefault();
+    const tag = tagInput.trim();
+    if (!tag) return;
+    const existing = client.tags || [];
+    if (existing.includes(tag)) { setTagInput(''); return; }
+    setSavingTag(true);
+    try {
+      await updateClient(clientId, { tags: [...existing, tag] });
+      setTagInput('');
+    } catch { toast('Failed to add tag', 'error'); }
+    finally { setSavingTag(false); }
+  };
+
+  const handleRemoveTag = async (tag) => {
+    const updated = (client.tags || []).filter(t => t !== tag);
+    try { await updateClient(clientId, { tags: updated }); }
+    catch { toast('Failed to remove tag', 'error'); }
   };
 
   const initLogEntries = (planId) => {
@@ -275,6 +297,30 @@ export default function ClientDetailPage() {
               ) : (
                 <p className="text-sm text-muted">Not set — click &quot;Set Total&quot; to configure</p>
               )}
+            </div>
+
+            {/* Tags */}
+            <div className="mt-16">
+              <div className="text-sm fw-bold mb-8">Labels</div>
+              <div className="client-tags-row">
+                {(client.tags || []).map(tag => (
+                  <span key={tag} className="client-tag">
+                    {tag}
+                    <button className="client-tag-remove" onClick={() => handleRemoveTag(tag)} aria-label={`Remove ${tag}`}>×</button>
+                  </span>
+                ))}
+              </div>
+              <form onSubmit={handleAddTag} className="client-tag-form mt-8">
+                <input
+                  className="form-input"
+                  style={{ flex: 1, padding: '4px 10px', fontSize: '0.85rem' }}
+                  placeholder="Add label…"
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  maxLength={30}
+                />
+                <button className="btn btn-outline btn-sm" type="submit" disabled={savingTag || !tagInput.trim()}>Add</button>
+              </form>
             </div>
           </div>
         </div>

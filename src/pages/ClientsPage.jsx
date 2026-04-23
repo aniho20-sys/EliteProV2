@@ -11,6 +11,7 @@ export default function ClientsPage() {
   const toast = useToast();
   const clients = getClients(currentUser.id);
   const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState('All');
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
   const [copied, setCopied] = useState(false);
 
@@ -20,7 +21,13 @@ export default function ClientsPage() {
     }
   }, [currentUser, inviteCode, getInviteCode]);
 
-  const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const allTags = ['All', ...Array.from(new Set(clients.flatMap(c => c.tags || []))).sort()];
+
+  const filtered = clients.filter(c => {
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const matchTag = activeTag === 'All' || (c.tags || []).includes(activeTag);
+    return matchSearch && matchTag;
+  });
 
   const handleCopy = () => {
     if (!inviteCode) return;
@@ -69,23 +76,36 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="filter-bar">
+      <div className="filter-bar" style={{ flexWrap: 'wrap', gap: 8 }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        {allTags.length > 1 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                className={`btn btn-sm ${activeTag === tag ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setActiveTag(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {filtered.length === 0 ? (
         <EmptyState
           icon={UserPlus}
-          title={search ? 'No matching clients' : 'No clients yet'}
+          title={search || activeTag !== 'All' ? 'No matching clients' : 'No clients yet'}
           description={
-            search
-              ? 'Try a different search term.'
+            search || activeTag !== 'All'
+              ? 'Try a different search or label filter.'
               : 'Share your invite code above to get your first client onboard.'
           }
-          action={!search && inviteCode ? { label: 'Copy Invite Code', onClick: handleCopy } : undefined}
+          action={!search && activeTag === 'All' && inviteCode ? { label: 'Copy Invite Code', onClick: handleCopy } : undefined}
         />
       ) : (
         <div className="grid-3">
@@ -99,6 +119,13 @@ export default function ClientsPage() {
                 {latest && <div className="client-meta mt-8">Weight: {latest.weight}kg | BF: {latest.bodyFat}%</div>}
                 <div className="client-goals">{client.goals}</div>
                 {client.notes && <div className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{client.notes}</div>}
+                {(client.tags || []).length > 0 && (
+                  <div className="client-tags-row mt-8">
+                    {client.tags.map(tag => (
+                      <span key={tag} className="client-tag client-tag-readonly">{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
