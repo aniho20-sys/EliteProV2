@@ -224,7 +224,7 @@ Top-level config files:
 - `currentUser` — Firestore profile object (null when not logged in)
 - `authReady` — `firebaseUser !== undefined` (auth check complete)
 - `needsProfile` — `firebaseUser` exists but no Firestore profile yet → show RoleSelectPage
-- `loading` — true while Firestore listeners are fetching initial data (tracks 7 collections)
+- `loading` — true while Firestore listeners are fetching initial data (tracks 8 collections)
 
 ### Available context functions
 ```js
@@ -319,7 +319,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **users**: Any auth can read; self-create own profile; trainer can create/update their clients
 - **bodyStats**: Any auth can read; only the client or their trainer can write
 - **workoutPlans**: Any auth can read; trainer can only write plans they own
-- **workoutLogs**: Any auth can read; clients write their own logs; **delete is disabled**
+- **workoutLogs**: Any auth can read; clients write and update their own logs; trainers can update logs they created (full fields) or add `trainerNotes` to any client log; **delete is disabled**
 - **schedule**: Any auth can read; trainer or client involved can write/delete
 - **messages**: Any auth can read; sender creates; recipient can only update `read` field; **delete is disabled**
 - **exercises**: Any auth can read; only trainers can write
@@ -377,7 +377,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 2. **Check Firestore rules** before adding new write operations — rules enforce role and ownership constraints
 3. **Demo data is scoped** — when adding new collections, seed data should be prefixed with `${trainerUid}-` for demo isolation
 4. **IDs are `Date.now()` strings** — e.g. `plan-${Date.now()}`, `log-${Date.now()}`; not UUIDs
-5. **`markLoaded` tracks 7 collections** — if adding a new Firestore collection listener, update the count in `markLoaded` (`loadedRef.current.size >= 7`)
+5. **`markLoaded` tracks 8 collections** — if adding a new Firestore collection listener, update the count in `markLoaded` (`loadedRef.current.size >= 8`)
 6. **Toast not alert** — use `useToast()` for user feedback, never `alert()`
 7. **HashRouter** — links must be hash-compatible; no server-side route handling
 8. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
