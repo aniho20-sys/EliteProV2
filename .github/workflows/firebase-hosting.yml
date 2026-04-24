@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting
+name: Deploy to Firebase Hosting + Rules
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
       - name: Write Firebase credentials
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
-      - name: Deploy to Firebase Hosting
-        run: npx firebase-tools@latest deploy --only hosting --project elitepro-16718 --non-interactive
+      - name: Deploy to Firebase Hosting + Firestore Rules
+        run: npx firebase-tools@latest deploy --only hosting,firestore:rules --project elitepro-16718 --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
