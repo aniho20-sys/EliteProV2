@@ -497,6 +497,7 @@ export function AppProvider({ children }) {
       id: `log-${Date.now()}`,
       clientId: log.clientId || currentUser?.id,
       trainerId: isTrainerRole ? currentUser.id : (currentUser?.trainerId || null),
+      createdBy: currentUser?.id,
       logType: log.logType || (isTrainerRole ? 'pt_session' : 'self_training'),
     };
     await setDoc(doc(db, 'workoutLogs', newLog.id), newLog);

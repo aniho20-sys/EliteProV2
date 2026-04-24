@@ -71,11 +71,11 @@ service cloud.firestore {
         request.resource.data.clientId == request.auth.uid ||
         isTrainerOf(request.resource.data.clientId)
       );
-      // Client can update their own log; trainer can update logs they created or add trainerNotes
+      // Client can update their own log; trainer can update logs they created (createdBy) or add trainerNotes
       allow update: if isAuth() && (
         resource.data.clientId == request.auth.uid ||
         (isTrainerOf(resource.data.clientId) && (
-          resource.data.trainerId == request.auth.uid ||
+          resource.data.createdBy == request.auth.uid ||
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerNotes'])
         ))
       );
