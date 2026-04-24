@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets } from '../utils/workoutUtils';
 import NotesSection from '../components/NotesSection';
@@ -32,7 +32,7 @@ function ChartTooltip({ active, payload, unit }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -62,6 +62,12 @@ export default function ClientDetailPage() {
   const [logRpe, setLogRpe] = useState(7);
   const [logNotes, setLogNotes] = useState('');
   const [savingLog, setSavingLog] = useState(false);
+  const [editingLogId, setEditingLogId] = useState(null);
+  const [editLogEntries, setEditLogEntries] = useState([]);
+  const [editLogDate, setEditLogDate] = useState('');
+  const [editLogRpe, setEditLogRpe] = useState(7);
+  const [editLogNotes, setEditLogNotes] = useState('');
+  const [savingEditLog, setSavingEditLog] = useState(false);
 
   if (!client) {
     return (
@@ -204,6 +210,42 @@ export default function ClientDetailPage() {
       toast('Failed to save note', 'error');
     } finally {
       setSavingNoteId(null);
+    }
+  };
+
+  const startEditLog = (log) => {
+    setEditingLogId(log.id);
+    setEditLogEntries(log.entries.map(e => ({
+      ...e,
+      sets: (e.sets || []).map(s => ({ weight: String(s.weight), reps: String(s.reps) })),
+    })));
+    setEditLogDate(log.date);
+    setEditLogRpe(log.rpe || 7);
+    setEditLogNotes(log.notes || '');
+  };
+
+  const updateEditLogSet = (exIdx, setIdx, field, value) => {
+    setEditLogEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
+    ));
+  };
+
+  const handleSaveEditLog = async () => {
+    const entriesToSave = editLogEntries.map(e => ({
+      ...e,
+      sets: (e.sets || []).filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
+    }));
+    if (entriesToSave.every(e => e.sets.length === 0)) { toast('Please enter at least one set', 'error'); return; }
+    setSavingEditLog(true);
+    try {
+      const completed = entriesToSave.every(e => e.sets.length > 0);
+      await updateWorkoutLog(editingLogId, { entries: entriesToSave, date: editLogDate, rpe: editLogRpe, notes: editLogNotes, completed });
+      setEditingLogId(null);
+      toast('Workout updated');
+    } catch {
+      toast('Failed to update workout', 'error');
+    } finally {
+      setSavingEditLog(false);
     }
   };
 
@@ -549,10 +591,15 @@ export default function ClientDetailPage() {
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">
                     <h3 className="card-title">{plan?.name || 'Workout'} - {l.date}</h3>
-                    <div className="flex gap-8">
+                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
+                      {l.trainerId === currentUser.id && (
+                        <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEditLog(l)} title="Edit workout">
+                          <Pencil size={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
                   {l.entries.map((entry, i) => (
@@ -681,6 +728,47 @@ export default function ClientDetailPage() {
               <button className="btn btn-danger" onClick={handleRemove} disabled={removing}>
                 <Trash2 size={15} /> {removing ? 'Removing…' : 'Yes, Remove'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingLogId && (
+        <div className="modal-overlay" onClick={() => setEditingLogId(null)}>
+          <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Edit PT Session</h3>
+            <div className="form-group">
+              <label className="form-label">Date</label>
+              <input className="form-input" type="date" value={editLogDate} onChange={e => setEditLogDate(e.target.value)} />
+            </div>
+            {editLogEntries.map((entry, exIdx) => (
+              <div key={exIdx} className="mb-16">
+                <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
+                {entry.sets.length === 0
+                  ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
+                  : entry.sets.map((set, setIdx) => (
+                    <div key={setIdx} className="log-set-row">
+                      <span className="log-set-num">Set {setIdx + 1}</span>
+                      <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateEditLogSet(exIdx, setIdx, 'weight', e.target.value)} />
+                      <span className="text-sm text-muted">kg x</span>
+                      <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateEditLogSet(exIdx, setIdx, 'reps', e.target.value)} />
+                      <span className="text-sm text-muted">reps</span>
+                    </div>
+                  ))
+                }
+              </div>
+            ))}
+            <div className="form-group">
+              <label className="form-label">RPE — {editLogRpe}/10</label>
+              <input type="range" min="1" max="10" value={editLogRpe} onChange={e => setEditLogRpe(Number(e.target.value))} style={{ width: '100%' }} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Session Notes</label>
+              <textarea className="form-textarea" value={editLogNotes} onChange={e => setEditLogNotes(e.target.value)} placeholder="Session notes…" rows={3} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setEditingLogId(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveEditLog} disabled={savingEditLog}>{savingEditLog ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </div>
         </div>

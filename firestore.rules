@@ -71,11 +71,13 @@ service cloud.firestore {
         request.resource.data.clientId == request.auth.uid ||
         isTrainerOf(request.resource.data.clientId)
       );
-      // Client can update their own log; trainer can only write trainerNotes field
+      // Client can update their own log; trainer can update logs they created or add trainerNotes
       allow update: if isAuth() && (
         resource.data.clientId == request.auth.uid ||
-        (isTrainerOf(resource.data.clientId) &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerNotes']))
+        (isTrainerOf(resource.data.clientId) && (
+          resource.data.trainerId == request.auth.uid ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerNotes'])
+        ))
       );
       allow delete: if false;
     }

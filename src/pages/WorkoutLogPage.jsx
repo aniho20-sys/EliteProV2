@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
@@ -9,7 +9,7 @@ import { normalizeSets } from '../utils/workoutUtils';
 const REST_PRESETS = [45, 60, 90, 120, 180];
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, getExercises, getPersonalRecords } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, getPersonalRecords } = useApp();
   const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
@@ -20,6 +20,12 @@ export default function WorkoutLogPage() {
   const [entries, setEntries] = useState([]);
   const [rpe, setRpe] = useState(7);
   const [notes, setNotes] = useState('');
+
+  const [editingLog, setEditingLog] = useState(null);
+  const [editEntries, setEditEntries] = useState([]);
+  const [editRpe, setEditRpe] = useState(7);
+  const [editNotes, setEditNotes] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Rest timer state
   const [restSeconds, setRestSeconds] = useState(90);
@@ -136,6 +142,43 @@ export default function WorkoutLogPage() {
     return maxWeight > 0 && maxWeight > currentPR;
   };
 
+  const startEdit = (log) => {
+    setEditingLog(log);
+    setEditEntries(log.entries.map(e => ({
+      ...e,
+      sets: (e.sets || []).map(s => ({ weight: String(s.weight), reps: String(s.reps) })),
+    })));
+    setEditRpe(log.rpe || 7);
+    setEditNotes(log.notes || '');
+  };
+
+  const updateEditSet = (exIdx, setIdx, field, value) => {
+    setEditEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
+    ));
+  };
+
+  const handleSaveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      const updatedEntries = editEntries.map(e => ({
+        ...e,
+        sets: (e.sets || []).filter(s => s.weight && s.reps).map(s => ({
+          weight: Number(s.weight),
+          reps: Number(s.reps),
+        })),
+      }));
+      const completed = updatedEntries.length > 0 && updatedEntries.every(e => e.sets.length > 0);
+      await updateWorkoutLog(editingLog.id, { entries: updatedEntries, rpe: editRpe, notes: editNotes, completed });
+      setEditingLog(null);
+      toast('Workout updated');
+    } catch {
+      toast('Failed to update workout', 'error');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const wasPRAtTime = (log, entry) => {
     const logDate = log.date;
     const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
@@ -249,10 +292,13 @@ export default function WorkoutLogPage() {
                       <h3 className="card-title">{plan?.name || 'Workout'}</h3>
                       <span className="text-sm text-muted">{l.date}</span>
                     </div>
-                    <div className="flex gap-8">
+                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
+                      <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEdit(l)} title="Edit workout">
+                        <Pencil size={13} />
+                      </button>
                     </div>
                   </div>
                   {l.entries.map((entry, i) => {
@@ -394,6 +440,42 @@ export default function WorkoutLogPage() {
               <textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did the workout feel?" />
             </div>
             <button className="btn btn-accent" onClick={handleSave} style={{ width: '100%' }}>Save Workout</button>
+          </div>
+        </div>
+      )}
+      {editingLog && (
+        <div className="modal-overlay" onClick={() => setEditingLog(null)}>
+          <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Edit Workout — {editingLog.date}</h3>
+            {editEntries.map((entry, exIdx) => (
+              <div key={exIdx} className="mb-16">
+                <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
+                {entry.sets.length === 0
+                  ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
+                  : entry.sets.map((set, setIdx) => (
+                    <div key={setIdx} className="log-set-row">
+                      <span className="log-set-num">Set {setIdx + 1}</span>
+                      <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateEditSet(exIdx, setIdx, 'weight', e.target.value)} />
+                      <span className="text-sm text-muted">kg x</span>
+                      <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateEditSet(exIdx, setIdx, 'reps', e.target.value)} />
+                      <span className="text-sm text-muted">reps</span>
+                    </div>
+                  ))
+                }
+              </div>
+            ))}
+            <div className="form-group">
+              <label className="form-label">RPE — {editRpe}/10</label>
+              <input type="range" min="1" max="10" value={editRpe} onChange={e => setEditRpe(Number(e.target.value))} style={{ width: '100%' }} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Session Notes</label>
+              <textarea className="form-textarea" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Session notes…" rows={3} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setEditingLog(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save Changes'}</button>
+            </div>
           </div>
         </div>
       )}
