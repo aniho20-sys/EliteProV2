@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-23（Session 19）
+> 最後更新：2026-04-24（Session 20）
 
 ---
 
@@ -52,6 +52,7 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 - **Client 標籤/分組**（自訂 labels、filter chips）
 - **Plan Builder mobile ↑↓ 按鈕**（mobile 用 ↑↓ 取代 drag handle）
 - **架構加固**：users listener 範圍限制、Timezone bug 修復（dateUtils.js）、GitHub Pages workflow 移除
+- **Mobile More 抽屜**（底部導航 4個主要 tab + More slide-up sheet，包含 Invoices、Progress Overview、Plans、Exercises、Profile、Log Out）
 
 ---
 
@@ -66,6 +67,7 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 | templates 獨立 collection | trainer-scoped，client 無法存取 |
 | Rest Timer 純前端 | Web Audio API + Vibration API，冇 backend 需求 |
 | Exercise Library 靜態 defaults | 避免跨 trainer 污染 |
+| Mobile nav 4 + More drawer | 底部 tab 上限 5 無法容納 8 個 trainer 頁面；More sheet 參考 Instagram 模式，UI/UX 優先 |
 
 ---
 
@@ -98,7 +100,7 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 | 功能 | 說明 |
 |------|------|
 | **Bulk Assign Plan to Multiple Clients** | 一次過 assign 同一個 plan 俾多個 client |
-| **Mobile Exercise Reorder ↑↓ Buttons** | 手機 drag reorder 體驗差，加 ↑↓ 按鈕 |
+| ~~**Mobile Exercise Reorder ↑↓ Buttons**~~ | ✅ 已完成 |
 | **Trainer 今日待辦** | Dashboard 直接顯示今日 sessions + 待確認 bookings |
 
 ### 🟢 低優先（加分項）
