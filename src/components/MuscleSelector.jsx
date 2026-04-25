@@ -207,7 +207,7 @@ function BodySVG({ uid, muscles, anatomyLines, selected, hovered, onToggle, onHo
       {/* Silhouette base */}
       <g style={{ pointerEvents: 'none' }}>
         {SILHOUETTE.map((s, i) => (
-          <Shape key={i} def={s} fill="var(--surface)" stroke="var(--border)" strokeWidth="1.4" />
+          <Shape key={i} def={s} fill="var(--bg-input)" stroke="var(--text-muted)" strokeWidth="1.2" strokeOpacity="0.6" />
         ))}
       </g>
 
@@ -229,8 +229,8 @@ function BodySVG({ uid, muscles, anatomyLines, selected, hovered, onToggle, onHo
                 def={shape}
                 fill={isSel ? `url(#${selId})` : isHov ? `url(#${hovId})` : 'transparent'}
                 stroke={isSel ? '#1a6fd4' : isHov ? '#6db8ff' : 'var(--text-muted)'}
-                strokeWidth={isSel ? 1.8 : 1}
-                strokeOpacity={isSel || isHov ? 1 : 0.28}
+                strokeWidth={isSel ? 2 : 1.1}
+                strokeOpacity={isSel || isHov ? 1 : 0.5}
               />
             ))}
           </g>
@@ -240,7 +240,7 @@ function BodySVG({ uid, muscles, anatomyLines, selected, hovered, onToggle, onHo
       {/* Anatomy detail lines */}
       <g style={{ pointerEvents: 'none' }}>
         {anatomyLines.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke="var(--text-muted)" strokeWidth="0.65" strokeOpacity="0.3" />
+          <path key={i} d={d} fill="none" stroke="var(--text-muted)" strokeWidth="0.8" strokeOpacity="0.5" />
         ))}
       </g>
     </svg>
