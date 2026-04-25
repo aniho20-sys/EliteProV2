@@ -2614,30 +2614,23 @@ tr:hover { background: var(--bg-card-hover); }
   padding: 10px 12px 12px;
   background: var(--bg);
 }
-.muscle-view-tabs {
+.muscle-bodies {
   display: flex;
-  gap: 3px;
-  margin-bottom: 10px;
-  background: var(--bg-input);
-  border-radius: 8px;
-  padding: 3px;
+  gap: 8px;
+  align-items: flex-start;
 }
-.muscle-tab {
+.muscle-body-col {
   flex: 1;
-  padding: 5px 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.15s;
+  min-width: 0;
 }
-.muscle-tab.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+.muscle-body-label {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }
 .muscle-hover-label {
   text-align: center;
