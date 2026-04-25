@@ -3,138 +3,179 @@ import { X } from 'lucide-react';
 
 const VB_W = 160, VB_H = 378;
 
-// Human body silhouette — smooth bezier paths
+// ── Silhouette ──────────────────────────────────────────────────────────────
 const SILHOUETTE = [
-  { type: 'circle', cx: 80, cy: 21, r: 16 },
-  { type: 'path', d: 'M75,35 Q80,32 85,35 L85,48 Q80,45 75,48 Z' },
-  { type: 'path', d: 'M27,56 C14,70 12,92 12,150 C12,163 22,169 30,171 L32,186 C36,210 50,220 56,228 L56,231 Q68,235 80,235 Q92,235 104,231 L104,228 C110,220 124,210 128,186 L130,171 C138,169 148,163 148,150 C148,92 146,70 133,56 C108,62 80,62 Q52,62 27,56 Z' },
-  { type: 'path', d: 'M10,59 C3,73 2,93 2,127 C2,134 7,137 12,137 L12,93 L12,61 Z' },
-  { type: 'path', d: 'M150,59 C157,73 158,93 158,127 C158,134 153,137 148,137 L148,93 L148,61 Z' },
-  { type: 'path', d: 'M2,131 C0,147 2,164 6,181 C8,186 12,187 14,186 L14,165 L12,141 L10,133 Z' },
-  { type: 'path', d: 'M158,131 C160,147 158,164 154,181 C152,186 148,187 146,186 L146,165 L148,141 L150,133 Z' },
-  { type: 'path', d: 'M28,233 L56,233 Q59,252 58,278 L54,303 Q51,310 42,310 Q33,310 30,303 L26,278 Q25,252 28,233 Z' },
-  { type: 'path', d: 'M104,233 L132,233 Q135,252 134,278 L130,303 Q127,310 118,310 Q109,310 106,303 L102,278 Q101,252 104,233 Z' },
-  { type: 'path', d: 'M28,306 Q25,324 27,349 L30,367 Q33,373 42,373 Q51,373 54,367 L57,349 Q59,324 56,306 Q51,311 42,311 Q33,311 28,306 Z' },
-  { type: 'path', d: 'M104,306 Q101,324 103,349 L106,367 Q109,373 118,373 Q127,373 130,367 L133,349 Q135,324 132,306 Q127,311 118,311 Q109,311 104,306 Z' },
+  { type: 'circle', cx: 80, cy: 22, r: 18 },
+  { type: 'path', d: 'M74,38 Q80,34 86,38 L87,52 Q80,49 73,52 Z' },
+  { type: 'path', d: 'M26,55 C13,70 11,92 11,150 C11,164 21,171 29,173 L31,188 C35,212 50,222 58,230 L58,234 Q69,238 80,238 Q91,238 102,234 L102,230 C110,222 125,212 129,188 L131,173 C139,171 149,164 149,150 C149,92 147,70 134,55 Q107,61 80,61 Q53,61 26,55 Z' },
+  { type: 'path', d: 'M10,59 C3,74 1,95 1,129 C1,137 6,141 11,141 L11,95 L11,61 Z' },
+  { type: 'path', d: 'M150,59 C157,74 159,95 159,129 C159,137 154,141 149,141 L149,95 L149,61 Z' },
+  { type: 'path', d: 'M1,134 C-1,151 2,169 6,187 C8,192 12,193 14,192 L14,171 L12,145 L10,136 Z' },
+  { type: 'path', d: 'M159,134 C161,151 158,169 154,187 C152,192 148,193 146,192 L146,171 L148,145 L150,136 Z' },
+  { type: 'path', d: 'M27,236 L57,236 Q60,256 59,283 L55,309 Q52,317 43,317 Q34,317 31,309 L27,283 Q25,256 27,236 Z' },
+  { type: 'path', d: 'M103,236 L133,236 Q135,256 134,283 L130,309 Q127,317 118,317 Q109,317 106,309 L102,283 Q100,256 103,236 Z' },
+  { type: 'path', d: 'M29,312 Q25,331 27,357 L31,374 Q35,380 43,380 Q51,380 55,374 L59,357 Q61,331 57,312 Q51,318 43,318 Q35,318 29,312 Z' },
+  { type: 'path', d: 'M103,312 Q99,331 101,357 L105,374 Q109,380 117,380 Q125,380 129,374 L133,357 Q135,331 131,312 Q125,318 117,318 Q109,318 103,312 Z' },
 ];
 
+// ── Anatomy detail lines (non-interactive, always visible) ──────────────────
+const ANATOMY_FRONT = [
+  'M80,55 L80,105',                              // sternum
+  'M80,106 L80,174',                             // linea alba
+  'M50,118 Q80,115 110,118',                     // abs band 1
+  'M46,134 Q80,131 114,134',                     // abs band 2
+  'M44,150 Q80,147 116,150',                     // abs band 3
+  'M44,166 Q80,163 116,166',                     // abs band 4
+  'M28,106 Q55,113 80,110 Q105,113 132,106',     // pec lower edge
+  'M35,112 Q30,126 33,136',                      // serratus L
+  'M36,126 Q29,140 32,148',
+  'M125,112 Q130,126 127,136',                   // serratus R
+  'M124,126 Q131,140 128,148',
+  'M44,174 Q36,194 40,224',                      // inguinal L
+  'M116,174 Q124,194 120,224',                   // inguinal R
+  'M43,242 L43,310',                             // quad center L
+  'M117,242 L117,310',                           // quad center R
+  'M37,300 Q41,310 44,316',                      // VMO L
+  'M123,300 Q119,310 116,316',                   // VMO R
+  'M43,320 L43,358',                             // calf center L
+  'M117,320 L117,358',                           // calf center R
+];
+
+const ANATOMY_BACK = [
+  'M80,55 L80,174',                              // spine
+  'M42,73 Q51,76 63,75',                         // scapula spine L (top)
+  'M63,75 Q61,97 56,116',                        // scapula border L
+  'M118,73 Q109,76 97,75',                       // scapula spine R
+  'M97,75 Q99,97 104,116',                       // scapula border R
+  'M44,86 Q52,83 63,84',                         // infraspinatus L
+  'M116,86 Q108,83 97,84',                       // infraspinatus R
+  'M80,132 L50,154 L80,174 L110,154 Z',         // thoracolumbar fascia
+  'M56,234 Q80,239 104,234',                     // glute crease
+  'M43,246 L43,308',                             // hamstring sep L
+  'M117,246 L117,308',                           // hamstring sep R
+  'M43,320 L43,360',                             // calf center L
+  'M117,320 L117,360',                           // calf center R
+];
+
+// ── Front muscles ───────────────────────────────────────────────────────────
 const FRONT_MUSCLES = [
   {
     id: 'Chest',
     shapes: [
-      { type: 'path', d: 'M27,63 C22,77 22,95 28,105 C36,111 54,111 72,104 L72,66 C54,60 38,59 27,63 Z' },
-      { type: 'path', d: 'M133,63 C138,77 138,95 132,105 C124,111 106,111 88,104 L88,66 C106,60 122,59 133,63 Z' },
+      { type: 'path', d: 'M26,61 C21,76 22,96 28,107 C38,114 58,114 80,107 L80,64 C57,58 40,57 26,61 Z' },
+      { type: 'path', d: 'M134,61 C139,76 138,96 132,107 C122,114 102,114 80,107 L80,64 C103,58 120,57 134,61 Z' },
     ],
   },
   {
     id: 'Shoulders',
     shapes: [
-      { type: 'path', d: 'M11,61 C3,74 2,93 2,112 L2,115 C6,120 12,118 12,113 L12,93 L12,62 Z' },
-      { type: 'path', d: 'M149,61 C157,74 158,93 158,112 L158,115 C154,120 148,118 148,113 L148,93 L148,62 Z' },
+      { type: 'path', d: 'M11,61 C3,75 1,95 1,118 L1,122 C5,128 11,126 11,120 L11,95 L11,62 Z' },
+      { type: 'path', d: 'M149,61 C157,75 159,95 159,118 L159,122 C155,128 149,126 149,120 L149,95 L149,62 Z' },
     ],
   },
   {
     id: 'Biceps',
     shapes: [
-      { type: 'path', d: 'M2,114 Q0,125 2,134 L12,134 L12,114 Z' },
-      { type: 'path', d: 'M158,114 Q160,125 158,134 L148,134 L148,114 Z' },
+      { type: 'path', d: 'M1,120 Q-1,132 1,142 L11,142 L11,120 Z' },
+      { type: 'path', d: 'M159,120 Q161,132 159,142 L149,142 L149,120 Z' },
     ],
   },
   {
     id: 'Forearms',
     shapes: [
-      { type: 'path', d: 'M2,136 Q0,151 3,166 L7,182 Q10,187 14,186 L14,166 L12,143 L10,138 Z' },
-      { type: 'path', d: 'M158,136 Q160,151 157,166 L153,182 Q150,187 146,186 L146,166 L148,143 L150,138 Z' },
+      { type: 'path', d: 'M1,144 Q-1,160 3,177 L7,193 Q10,197 14,196 L14,176 L12,152 L10,146 Z' },
+      { type: 'path', d: 'M159,144 Q161,160 157,177 L153,193 Q150,197 146,196 L146,176 L148,152 L150,146 Z' },
     ],
   },
   {
     id: 'Core',
     shapes: [
-      { type: 'path', d: 'M38,106 L122,106 Q130,121 130,149 Q128,165 120,171 L40,171 Q32,165 30,149 Q30,121 38,106 Z' },
+      { type: 'path', d: 'M36,107 L124,107 Q133,124 133,152 Q131,170 122,175 L38,175 Q29,170 27,152 Q27,124 36,107 Z' },
     ],
   },
   {
     id: 'Quadriceps',
     shapes: [
-      { type: 'path', d: 'M28,234 L56,234 Q59,253 58,279 L54,304 Q51,310 42,310 Q33,310 30,304 L26,279 Q25,253 28,234 Z' },
-      { type: 'path', d: 'M104,234 L132,234 Q135,253 134,279 L130,304 Q127,310 118,310 Q109,310 106,304 L102,279 Q101,253 104,234 Z' },
+      { type: 'path', d: 'M27,237 L57,237 Q60,257 59,284 L55,310 Q52,317 43,317 Q34,317 31,310 L27,284 Q25,257 27,237 Z' },
+      { type: 'path', d: 'M103,237 L133,237 Q135,257 134,284 L130,310 Q127,317 118,317 Q109,317 106,310 L102,284 Q100,257 103,237 Z' },
     ],
   },
   {
     id: 'Calves',
     shapes: [
-      { type: 'path', d: 'M28,307 Q25,325 27,350 L30,368 Q33,374 42,374 Q51,374 54,368 L57,350 Q59,325 56,307 Q51,311 42,311 Q33,311 28,307 Z' },
-      { type: 'path', d: 'M104,307 Q101,325 103,350 L106,368 Q109,374 118,374 Q127,374 130,368 L133,350 Q135,325 132,307 Q127,311 118,311 Q109,311 104,307 Z' },
+      { type: 'path', d: 'M29,313 Q25,333 27,359 L31,376 Q35,381 43,381 Q51,381 55,376 L59,359 Q61,333 57,313 Q51,318 43,318 Q35,318 29,313 Z' },
+      { type: 'path', d: 'M103,313 Q99,333 101,359 L105,376 Q109,381 117,381 Q125,381 129,376 L133,359 Q135,333 131,313 Q125,318 117,318 Q109,318 103,313 Z' },
     ],
   },
 ];
 
+// ── Back muscles ────────────────────────────────────────────────────────────
 const BACK_MUSCLES = [
   {
     id: 'Traps',
     shapes: [
-      { type: 'path', d: 'M32,58 Q40,50 80,50 Q120,50 128,58 L116,73 Q80,68 44,73 Z' },
+      { type: 'path', d: 'M30,57 Q40,49 80,49 Q120,49 130,57 L118,74 Q80,70 42,74 Z' },
     ],
   },
   {
     id: 'Shoulders',
     shapes: [
-      { type: 'path', d: 'M11,61 C3,74 2,93 2,112 L2,115 C6,120 12,118 12,113 L12,93 L12,62 Z' },
-      { type: 'path', d: 'M149,61 C157,74 158,93 158,112 L158,115 C154,120 148,118 148,113 L148,93 L148,62 Z' },
+      { type: 'path', d: 'M11,61 C3,75 1,95 1,118 L1,122 C5,128 11,126 11,120 L11,95 L11,62 Z' },
+      { type: 'path', d: 'M149,61 C157,75 159,95 159,118 L159,122 C155,128 149,126 149,120 L149,95 L149,62 Z' },
     ],
   },
   {
     id: 'Upper Back',
     shapes: [
-      { type: 'path', d: 'M36,74 L124,74 Q130,88 128,112 L32,112 Q30,88 36,74 Z' },
+      { type: 'path', d: 'M34,74 L126,74 Q133,91 131,118 L29,118 Q27,91 34,74 Z' },
     ],
   },
   {
     id: 'Lats',
     shapes: [
-      { type: 'path', d: 'M12,95 L30,96 Q36,122 36,151 L26,169 Q13,164 12,151 Z' },
-      { type: 'path', d: 'M148,95 L130,96 Q124,122 124,151 L134,169 Q147,164 148,151 Z' },
+      { type: 'path', d: 'M11,97 L30,99 Q37,128 37,158 L26,175 Q12,168 11,156 Z' },
+      { type: 'path', d: 'M149,97 L130,99 Q123,128 123,158 L134,175 Q148,168 149,156 Z' },
     ],
   },
   {
     id: 'Lower Back',
     shapes: [
-      { type: 'path', d: 'M38,114 L122,114 Q128,128 128,149 Q126,165 118,171 L42,171 Q34,165 32,149 Q32,128 38,114 Z' },
+      { type: 'path', d: 'M37,120 L123,120 Q131,136 131,154 Q129,170 120,176 L40,176 Q31,170 29,154 Q29,136 37,120 Z' },
     ],
   },
   {
     id: 'Triceps',
     shapes: [
-      { type: 'path', d: 'M2,114 Q0,125 2,134 L12,134 L12,114 Z' },
-      { type: 'path', d: 'M158,114 Q160,125 158,134 L148,134 L148,114 Z' },
+      { type: 'path', d: 'M1,120 Q-1,132 1,142 L11,142 L11,120 Z' },
+      { type: 'path', d: 'M159,120 Q161,132 159,142 L149,142 L149,120 Z' },
     ],
   },
   {
     id: 'Forearms',
     shapes: [
-      { type: 'path', d: 'M2,136 Q0,151 3,166 L7,182 Q10,187 14,186 L14,166 L12,143 L10,138 Z' },
-      { type: 'path', d: 'M158,136 Q160,151 157,166 L153,182 Q150,187 146,186 L146,166 L148,143 L150,138 Z' },
+      { type: 'path', d: 'M1,144 Q-1,160 3,177 L7,193 Q10,197 14,196 L14,176 L12,152 L10,146 Z' },
+      { type: 'path', d: 'M159,144 Q161,160 157,177 L153,193 Q150,197 146,196 L146,176 L148,152 L150,146 Z' },
     ],
   },
   {
     id: 'Glutes',
     shapes: [
-      { type: 'path', d: 'M28,171 L74,171 Q78,185 76,202 Q72,216 56,219 Q38,217 30,203 Q26,188 28,171 Z' },
-      { type: 'path', d: 'M86,171 L132,171 Q134,188 130,203 Q122,217 104,219 Q88,216 84,202 Q82,185 86,171 Z' },
+      { type: 'path', d: 'M27,176 L75,176 Q79,192 77,210 Q73,226 56,229 Q37,227 29,212 Q25,196 27,176 Z' },
+      { type: 'path', d: 'M85,176 L133,176 Q135,196 131,212 Q123,227 104,229 Q87,226 83,210 Q81,192 85,176 Z' },
     ],
   },
   {
     id: 'Hamstrings',
     shapes: [
-      { type: 'path', d: 'M29,222 L56,222 Q59,244 58,270 L54,296 Q51,304 42,304 Q33,304 30,296 L26,270 Q25,244 29,222 Z' },
-      { type: 'path', d: 'M104,222 L131,222 Q134,244 133,270 L129,296 Q126,304 117,304 Q108,304 105,296 L101,270 Q100,244 104,222 Z' },
+      { type: 'path', d: 'M29,232 L57,232 Q60,254 59,280 L55,307 Q52,314 43,315 Q34,315 31,307 L27,280 Q25,254 29,232 Z' },
+      { type: 'path', d: 'M103,232 L131,232 Q134,254 133,280 L129,307 Q126,314 117,315 Q108,315 105,307 L101,280 Q99,254 103,232 Z' },
     ],
   },
   {
     id: 'Calves',
     shapes: [
-      { type: 'path', d: 'M28,300 Q25,318 27,343 L30,361 Q33,367 42,367 Q51,367 54,361 L57,343 Q59,318 56,300 Q51,305 42,305 Q33,305 28,300 Z' },
-      { type: 'path', d: 'M104,300 Q101,318 103,343 L106,361 Q109,367 118,367 Q127,367 130,361 L133,343 Q135,318 132,300 Q127,305 118,305 Q109,305 104,300 Z' },
+      { type: 'path', d: 'M29,310 Q25,330 27,357 L31,374 Q35,380 43,380 Q51,380 55,374 L59,357 Q61,330 57,310 Q51,316 43,316 Q35,316 29,310 Z' },
+      { type: 'path', d: 'M103,310 Q99,330 101,357 L105,374 Q109,380 117,380 Q125,380 129,374 L133,357 Q135,330 131,310 Q125,316 117,316 Q109,316 103,310 Z' },
     ],
   },
 ];
@@ -147,26 +188,30 @@ function Shape({ def, ...props }) {
   return null;
 }
 
-function BodySVG({ muscles, selected, hovered, onToggle, onHover }) {
+function BodySVG({ uid, muscles, anatomyLines, selected, hovered, onToggle, onHover }) {
+  const selId = `ms-sel-${uid}`;
+  const hovId = `ms-hov-${uid}`;
   return (
     <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: '100%', display: 'block', overflow: 'visible' }}>
       <defs>
-        <radialGradient id="sel-grad" cx="50%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.75" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.35" />
+        <radialGradient id={selId} cx="45%" cy="28%" r="68%">
+          <stop offset="0%"   stopColor="#6db8ff" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#1a6fd4" stopOpacity="0.7" />
         </radialGradient>
-        <radialGradient id="hov-grad" cx="50%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.1" />
+        <radialGradient id={hovId} cx="45%" cy="28%" r="68%">
+          <stop offset="0%"   stopColor="#6db8ff" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#1a6fd4" stopOpacity="0.2" />
         </radialGradient>
       </defs>
 
+      {/* Silhouette base */}
       <g style={{ pointerEvents: 'none' }}>
         {SILHOUETTE.map((s, i) => (
-          <Shape key={i} def={s} fill="var(--surface)" stroke="var(--border)" strokeWidth="1.5" />
+          <Shape key={i} def={s} fill="var(--surface)" stroke="var(--border)" strokeWidth="1.4" />
         ))}
       </g>
 
+      {/* Interactive muscle regions */}
       {muscles.map(muscle => {
         const isSel = selected.includes(muscle.id);
         const isHov = hovered === muscle.id;
@@ -182,15 +227,22 @@ function BodySVG({ muscles, selected, hovered, onToggle, onHover }) {
               <Shape
                 key={si}
                 def={shape}
-                fill={isSel ? 'url(#sel-grad)' : isHov ? 'url(#hov-grad)' : 'transparent'}
-                stroke={isSel || isHov ? 'var(--primary)' : 'var(--text-muted)'}
-                strokeWidth={isSel ? 2 : 1.2}
-                strokeOpacity={isSel || isHov ? 1 : 0.3}
+                fill={isSel ? `url(#${selId})` : isHov ? `url(#${hovId})` : 'transparent'}
+                stroke={isSel ? '#1a6fd4' : isHov ? '#6db8ff' : 'var(--text-muted)'}
+                strokeWidth={isSel ? 1.8 : 1}
+                strokeOpacity={isSel || isHov ? 1 : 0.28}
               />
             ))}
           </g>
         );
       })}
+
+      {/* Anatomy detail lines */}
+      <g style={{ pointerEvents: 'none' }}>
+        {anatomyLines.map((d, i) => (
+          <path key={i} d={d} fill="none" stroke="var(--text-muted)" strokeWidth="0.65" strokeOpacity="0.3" />
+        ))}
+      </g>
     </svg>
   );
 }
@@ -207,16 +259,16 @@ export default function MuscleSelector({ selected = [], onChange }) {
       <div className="muscle-bodies">
         <div className="muscle-body-col">
           <div className="muscle-body-label">Front</div>
-          <BodySVG muscles={FRONT_MUSCLES} selected={selected} hovered={hovered} onToggle={toggle} onHover={setHovered} />
+          <BodySVG uid="f" muscles={FRONT_MUSCLES} anatomyLines={ANATOMY_FRONT} selected={selected} hovered={hovered} onToggle={toggle} onHover={setHovered} />
         </div>
         <div className="muscle-body-col">
           <div className="muscle-body-label">Back</div>
-          <BodySVG muscles={BACK_MUSCLES} selected={selected} hovered={hovered} onToggle={toggle} onHover={setHovered} />
+          <BodySVG uid="b" muscles={BACK_MUSCLES} anatomyLines={ANATOMY_BACK} selected={selected} hovered={hovered} onToggle={toggle} onHover={setHovered} />
         </div>
       </div>
 
       <div className="muscle-hover-label" style={{ visibility: hovered ? 'visible' : 'hidden' }}>
-        {hovered || ' '}
+        {hovered || ' '}
       </div>
 
       {selected.length > 0 && (
