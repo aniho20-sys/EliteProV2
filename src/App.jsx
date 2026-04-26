@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -23,6 +23,8 @@ const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ClientProgressOverviewPage = lazy(() => import('./pages/ClientProgressOverviewPage'));
 const InvoicePage = lazy(() => import('./pages/InvoicePage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
 
 function LoadingScreen() {
   return (
@@ -35,6 +37,11 @@ function LoadingScreen() {
 
 function AppRoutes() {
   const { currentUser, loading, authReady, needsProfile } = useApp();
+  const location = useLocation();
+
+  // Public pages — accessible without authentication
+  if (location.pathname === '/privacy') return <Suspense fallback={<LoadingScreen />}><PrivacyPolicyPage /></Suspense>;
+  if (location.pathname === '/terms') return <Suspense fallback={<LoadingScreen />}><TermsPage /></Suspense>;
 
   if (loading || !authReady) return <LoadingScreen />;
 

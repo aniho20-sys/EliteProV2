@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
@@ -181,6 +182,13 @@ export default function LoginPage() {
             Loads pre-filled sample clients, plans & logs
           </div>
         </div>
+      </div>
+
+      {/* Legal links */}
+      <div className="login-legal">
+        By continuing, you agree to our{' '}
+        <Link to="/terms">Terms of Service</Link> and{' '}
+        <Link to="/privacy">Privacy Policy</Link>
       </div>
 
       {/* Forgot Password Modal */}
