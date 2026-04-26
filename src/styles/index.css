@@ -336,8 +336,7 @@ body {
 .bottom-nav-inner {
   display: flex;
   justify-content: space-around;
-  max-width: 500px;
-  margin: 0 auto;
+  width: 100%;
 }
 .bottom-nav-link {
   display: flex;
@@ -346,7 +345,7 @@ body {
   gap: 2px;
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 8px 10px;
   min-height: 48px;
@@ -385,6 +384,8 @@ body {
   border-radius: 20px 20px 0 0;
   padding: 0 0 max(16px, env(safe-area-inset-bottom));
   animation: slideUp 0.28s var(--ease);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 @keyframes slideUp {
   from { transform: translateY(100%); }
@@ -657,7 +658,7 @@ body {
 @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
 
 /* ===== GRIDS ===== */
-.grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
 @media (max-width: 640px) {
@@ -2727,6 +2728,42 @@ tr:hover { background: var(--bg-card-hover); }
 .invoice-print-notes { background: var(--bg); border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 0.88rem; }
 .invoice-print-notes-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 4px; }
 .invoice-print-status { font-size: 0.9rem; color: var(--text-muted); }
+
+/* ── Responsive catch-all: 640px ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Filter bar: stack vertically on all phones (not just 380px) */
+  .filter-bar { flex-direction: column; }
+  .filter-bar .form-select,
+  .filter-bar .form-input { width: 100%; min-width: 0; }
+
+  /* Invoice line-item inputs: shrink on mobile */
+  .invoice-item-qty { width: 52px; }
+  .invoice-item-price { width: 76px; }
+  .invoice-item-row { font-size: 0.82rem; }
+
+  /* Page header: stack title and action button */
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-header .btn { align-self: stretch; justify-content: center; }
+
+  /* Modals: tighter padding on small phones */
+  .modal { padding: 20px; }
+  .modal-title { font-size: 1.05rem; }
+
+  /* Toast: use safe-area on phones with notch */
+  .toast-container { bottom: max(80px, calc(70px + env(safe-area-inset-bottom))); }
+}
+
+/* ── Responsive catch-all: tablet 641–900px ───────────────────────────────── */
+@media (max-width: 900px) and (min-width: 641px) {
+  /* Log set inputs: give more room on mid-size screens */
+  .log-set-input { width: 68px; }
+
+  /* Grid-2 on tablet: two columns max */
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+  /* Grid-3 on tablet: two columns */
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media print {
   .no-print { display: none !important; }
