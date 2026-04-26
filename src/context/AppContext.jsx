@@ -299,15 +299,14 @@ export function AppProvider({ children }) {
           err.code === 'auth/cancelled-popup-request') {
         return null;
       }
-      // Popup blocked or storage issues.
-      // signInWithRedirect is broken on iOS Safari (ITP wipes cross-domain
-      // localStorage before the callback fires). Throw so the UI can prompt
-      // the user to allow popups instead.
+      // Popup blocked — fall back to redirect (works on iOS Safari when
+      // App Check is not enforced on Authentication).
       if (err.code === 'auth/popup-blocked' ||
           err.code === 'auth/web-storage-unsupported' ||
           err.message?.includes('storage-partitioned') ||
           err.message?.includes('missing initial state')) {
-        throw Object.assign(new Error('popup-blocked'), { code: 'auth/popup-blocked' });
+        await signInWithRedirect(auth, googleProvider);
+        return null;
       }
       throw err;
     }
