@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCRfch8PtuqVdBIwjBcGq7NS5NDjt8PeZI',
@@ -13,6 +14,31 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// ── Firebase App Check ──────────────────────────────────────────────────────
+// Prevents unauthorized clients from hitting Firebase APIs.
+//
+// Dev:  debug token mode — Firebase generates a UUID and logs it to console.
+//       Copy that UUID → Firebase Console → App Check → Debug tokens.
+//
+// Prod: requires VITE_RECAPTCHA_SITE_KEY (reCAPTCHA v3 site key).
+//       Set as GitHub secret + local .env.local before enabling enforcement.
+//       Steps: see .env.example
+// ────────────────────────────────────────────────────────────────────────────
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
+if (import.meta.env.DEV) {
+  // eslint-disable-next-line no-restricted-globals
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
+if (RECAPTCHA_SITE_KEY || import.meta.env.DEV) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY ?? 'dev-debug-placeholder'),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
+
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
