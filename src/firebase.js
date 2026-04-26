@@ -32,11 +32,15 @@ if (import.meta.env.DEV) {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
 
-if (RECAPTCHA_SITE_KEY || import.meta.env.DEV) {
-  initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY ?? 'dev-debug-placeholder'),
-    isTokenAutoRefreshEnabled: true,
-  });
+try {
+  if (RECAPTCHA_SITE_KEY || import.meta.env.DEV) {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY ?? 'dev-debug-placeholder'),
+      isTokenAutoRefreshEnabled: true,
+    });
+  }
+} catch {
+  // App Check init failure must not block Auth or Firestore
 }
 
 export const db = getFirestore(app);

@@ -12,7 +12,9 @@ const AUTH_ERRORS = {
   'auth/requires-recent-login': 'For security, please sign out and sign in again before doing this.',
   'auth/user-disabled': 'This account has been disabled. Please contact support.',
   'auth/operation-not-allowed': 'This sign-in method is not enabled.',
-  'auth/popup-closed-by-user': null, // silent — user closed popup intentionally
+  'auth/unauthorized-domain': 'This domain is not authorised for sign-in. Please contact support.',
+  'auth/internal-error': 'An internal error occurred. Please try again.',
+  'auth/popup-closed-by-user': null,
   'auth/cancelled-popup-request': null,
   'auth/web-storage-unsupported': 'Your browser blocks required storage. Try disabling private mode or use a different browser.',
 };
@@ -20,5 +22,8 @@ const AUTH_ERRORS = {
 export function friendlyAuthError(err, fallback = 'Something went wrong. Please try again.') {
   const mapped = AUTH_ERRORS[err?.code];
   if (mapped === null) return null; // intentionally silent
-  return mapped || fallback;
+  if (mapped) return mapped;
+  // Show the raw error code for unrecognised errors so we can diagnose
+  const code = err?.code ? ` (${err.code})` : '';
+  return `${fallback}${code}`;
 }
