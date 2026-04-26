@@ -860,6 +860,18 @@ tr:hover { background: var(--bg-card-hover); }
   text-align: center;
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
+.login-popup-hint {
+  background: rgba(255, 171, 64, 0.12);
+  border: 1px solid rgba(255, 171, 64, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+.login-popup-hint strong { color: #b45309; }
+.login-popup-hint p { margin: 4px 0 0; }
 .login-demo {
   margin-top: 24px;
   padding-top: 20px;

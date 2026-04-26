@@ -103,7 +103,15 @@ export default function LoginPage() {
         </div>
         <div className="login-subtitle">Fitness Training Platform</div>
 
-        {error && <div className="login-error">{error}</div>}
+        {error && error.includes('popup') ? (
+          <div className="login-popup-hint">
+            <strong>允許彈出式視窗 / Allow Popups</strong>
+            <p>Tap <strong>"一律顯示"</strong> in the bar at the top of your screen, then tap <strong>"Continue with Google"</strong> again.</p>
+            <p style={{ marginTop: 6 }}>Or use <strong>Safari Settings → Websites → Pop-up Windows → Allow</strong> for this site.</p>
+          </div>
+        ) : error ? (
+          <div className="login-error">{error}</div>
+        ) : null}
         {info && <div className="login-info">{info}</div>}
 
         {/* Google Sign-In */}
