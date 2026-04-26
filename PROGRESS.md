@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-26（Session 23）
+> 最後更新：2026-04-26（Session 24）
 
 ---
 
@@ -17,6 +17,7 @@
 | 堂數管理 | ❌ | ✅ |
 | Invoice / 收費 | ❌ | ✅ |
 | Workout Log 編輯 | ❌ | ✅ |
+| Workout Complete Screen | ❌ | ✅ |
 | Smart Progression | ❌ | 🔜 |
 | Badge / 獎章系統 | ❌ | 🔜 |
 | Built-in exercise GIFs | ✅ | ❌ |
@@ -32,6 +33,7 @@
 - Client 管理（搜尋、detail view、labels/分組、Remove Client）
 - Workout Plan Builder（drag reorder、duplicate、custom exercises、templates）
 - Workout Log（auto-fill、PR tracking、edit 權限用 `createdBy` 判斷）
+- **Workout Complete Screen**（儲存後顯示 volume、exercises、RPE、new PRs、closing message）
 - Rest Timer（sticky bar、5個預設、Web Audio、震動）
 - Schedule 日曆（conflict check、booking、working hours、Mark Complete）
 - In-app Messaging（unread badges、real-time sync）
@@ -49,7 +51,7 @@
 - Mobile More 抽屜（底部導航 4 tab + slide-up sheet）
 - Global Search、EmptyState、Skeleton、Toast、Error Boundary
 - Message rate limiting（10條/分鐘 sliding window + Firestore rules 欄位校驗）
-- Firebase App Check（reCAPTCHA v3，dev debug mode，prod 用 VITE_RECAPTCHA_SITE_KEY）
+- Privacy Policy + Terms of Service（GDPR compliant，contact: Elitepro616@gmail.com）
 
 ---
 
@@ -64,6 +66,8 @@
 | HashRouter | Firebase Hosting SPA 需要 |
 | CI deploy Hosting only | Service account 缺 Firebase Rules Admin 權限；rules 需手動 deploy |
 | Mobile nav 4 + More drawer | 底部 tab 上限 5，無法容納全部頁面 |
+| 移除 Firebase App Check | reCAPTCHA 喺 iOS Safari 載唔到，令 popup 內部 auth 被 block，導致 Google 登入完全失效 |
+| authDomain 用 `firebaseapp.com`（非 `.web.app`） | Firebase 自動 register 呢個 domain 嘅 Google OAuth redirect URI，唔需要人手設定 |
 
 ---
 
@@ -73,8 +77,8 @@
 
 | # | 任務 |
 |---|------|
-| 1 | **Privacy Policy + Terms of Service** |
-| 2 | ~~**Firebase App Check**（防 API 濫用）~~ ✅ 已完成 |
+| 1 | ~~**Privacy Policy + Terms of Service**~~ ✅ 已完成 |
+| 2 | ~~**Firebase App Check**~~ 已移除（令 iOS 登入正常） |
 | 3 | **GDPR Cloud Function 部署**（需 Blaze plan）|
 | 4 | ~~**Message rate limiting**~~ ✅ 已完成 |
 
@@ -82,7 +86,7 @@
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 5 | **Workout Complete Screen** | 儲存 log 後顯示完成畫面（PRs、volume、closing message）；純前端 |
+| 5 | ~~**Workout Complete Screen**~~ ✅ 已完成 | 儲存後顯示 PRs、volume、closing message |
 | 6 | **Smart Progression Suggestions** | 根據過去3次 log 自動建議加重；純前端；競爭對手做唔到 |
 | 7 | **Session Recap 一鍵發送** | Mark Complete → 生成 recap → 教練 confirm → 發去 in-app message |
 | 8 | **獎章系統 Phase 1** | 訓練次數里程碑（10/50/100次）+ 相對 PR 進步；教練確認後 award |
