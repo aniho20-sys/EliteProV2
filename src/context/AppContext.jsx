@@ -6,7 +6,7 @@ import {
   onSnapshot, writeBatch, getDocs, query, where, or, orderBy,
 } from 'firebase/firestore';
 import {
-  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
+  onAuthStateChanged, signInWithPopup,
   GoogleAuthProvider,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -48,7 +48,6 @@ export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
   const [firebaseUser, setFirebaseUser] = useState(undefined);
-  const [redirectAuthError, setRedirectAuthError] = useState(null);
 
   const loadedRef = useRef(new Set());
 
@@ -57,12 +56,8 @@ export function AppProvider({ children }) {
     if (loadedRef.current.size >= 8) setLoading(false);
   }, []);
 
-  // --- Firebase Auth listener + redirect result ---
+  // --- Firebase Auth listener ---
   useEffect(() => {
-    getRedirectResult(auth).catch(err => {
-      const msg = friendlyAuthError(err);
-      if (msg) setRedirectAuthError(msg);
-    });
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
@@ -288,24 +283,14 @@ export function AppProvider({ children }) {
 
 // ========== Auth ==========
 
-  // Firebase Auth: Google Sign-In (popup + redirect fallback)
+  // Firebase Auth: Google Sign-In (popup)
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
-      // User intentionally closed the popup — silent
       if (err.code === 'auth/popup-closed-by-user' ||
           err.code === 'auth/cancelled-popup-request') {
-        return null;
-      }
-      // Popup blocked — fall back to redirect (works on iOS Safari when
-      // App Check is not enforced on Authentication).
-      if (err.code === 'auth/popup-blocked' ||
-          err.code === 'auth/web-storage-unsupported' ||
-          err.message?.includes('storage-partitioned') ||
-          err.message?.includes('missing initial state')) {
-        await signInWithRedirect(auth, googleProvider);
         return null;
       }
       throw err;
@@ -713,7 +698,6 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, logout, loading,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
-    redirectAuthError,
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
     getClients, getClient, updateClient, removeClient,
