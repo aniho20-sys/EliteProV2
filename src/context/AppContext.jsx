@@ -538,8 +538,24 @@ export function AppProvider({ children }) {
   // ========== Messages ==========
   const getMessages = (userId) => messages.filter(m => m.from === userId || m.to === userId);
 
+  // Per-session sliding-window rate limiter: max 10 messages per 60 seconds
+  const msgTimestampsRef = useRef([]);
+  const MSG_RATE_LIMIT = 10;
+  const MSG_RATE_WINDOW_MS = 60 * 1000;
+
   const sendMessage = async (from, to, text) => {
-    const msg = { id: `msg-${Date.now()}`, from, to, text, timestamp: new Date().toISOString(), read: false };
+    const trimmed = (text || '').trim();
+    if (!trimmed) throw new Error('Message cannot be empty');
+    if (trimmed.length > 2000) throw new Error('Message too long (max 2,000 characters)');
+
+    const now = Date.now();
+    msgTimestampsRef.current = msgTimestampsRef.current.filter(t => now - t < MSG_RATE_WINDOW_MS);
+    if (msgTimestampsRef.current.length >= MSG_RATE_LIMIT) {
+      throw new Error('Too many messages — please wait a moment before sending again');
+    }
+    msgTimestampsRef.current.push(now);
+
+    const msg = { id: `msg-${now}`, from, to, text: trimmed, timestamp: new Date().toISOString(), read: false };
     await setDoc(doc(db, 'messages', msg.id), msg);
     return msg;
   };

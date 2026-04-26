@@ -113,7 +113,16 @@ service cloud.firestore {
     // Only sender and recipient can read their messages.
     match /messages/{msgId} {
       allow read: if isAuth() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
-      allow create: if isAuth() && request.resource.data.from == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.to is string
+        && request.resource.data.to.size() > 0
+        && request.resource.data.to != request.auth.uid
+        && request.resource.data.keys().hasAll(['id', 'from', 'to', 'text', 'timestamp', 'read'])
+        && request.resource.data.keys().hasOnly(['id', 'from', 'to', 'text', 'timestamp', 'read']);
       allow update: if isAuth() && resource.data.to == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if false;
