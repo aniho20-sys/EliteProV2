@@ -2521,6 +2521,46 @@ tr:hover { background: var(--bg-card-hover); }
   .pr-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ── Custom Workout ────────────────────────────────────────────────────────── */
+.free-workout-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.free-workout-divider::before,
+.free-workout-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.exercise-picker-list {
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+.exercise-picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  gap: 2px;
+  transition: background 0.12s;
+}
+.exercise-picker-item:hover { background: var(--bg); }
+.exercise-picker-item:last-child { border-bottom: none; }
+
 /* ── Workout Complete Screen ───────────────────────────────────────────────── */
 @keyframes completeIn {
   from { opacity: 0; transform: translateY(24px); }

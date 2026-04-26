@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
@@ -79,6 +79,10 @@ export default function WorkoutLogPage() {
 
   const [completedData, setCompletedData] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [isFreeWorkout, setIsFreeWorkout] = useState(false);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [exerciseSearch, setExerciseSearch] = useState('');
+  const [showPlanPicker, setShowPlanPicker] = useState(false);
 
   const [editingLog, setEditingLog] = useState(null);
   const [editEntries, setEditEntries] = useState([]);
@@ -162,7 +166,65 @@ export default function WorkoutLogPage() {
 
   const resetTimer = () => { setTimerActive(false); setTimeLeft(restSeconds); };
 
+  const startFreeWorkout = () => {
+    setSelectedPlan(null);
+    setIsFreeWorkout(true);
+    setEntries([]);
+    setRpe(7);
+    setNotes('');
+    setRestSeconds(90);
+    setTimeLeft(90);
+    setTimerActive(false);
+    setShowLog(true);
+  };
+
+  const addExerciseToLog = (exercise) => {
+    setEntries(prev => [...prev, {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      sets: [{ weight: '', reps: '' }],
+    }]);
+    setShowExercisePicker(false);
+    setExerciseSearch('');
+  };
+
+  const addSet = (exIdx) => {
+    setEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: [...entry.sets, { weight: '', reps: '' }] } : entry
+    ));
+  };
+
+  const removeSet = (exIdx, setIdx) => {
+    setEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: entry.sets.filter((_, j) => j !== setIdx) } : entry
+    ));
+  };
+
+  const removeExercise = (exIdx) => {
+    setEntries(prev => prev.filter((_, i) => i !== exIdx));
+  };
+
+  const loadFromPlan = (plan) => {
+    const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
+    const planEntries = plan.exercises.map(ex => {
+      const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
+      const planSets = normalizeSets(ex);
+      return {
+        exerciseId: ex.exerciseId,
+        name: ex.name || getExerciseName(ex.exerciseId),
+        sets: planSets.map((ps, i) => {
+          const prev = lastEntry?.sets?.[i];
+          if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
+          return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+        }),
+      };
+    });
+    setEntries(prev => [...prev, ...planEntries]);
+    setShowPlanPicker(false);
+  };
+
   const startLog = (plan) => {
+    setIsFreeWorkout(false);
     setSelectedPlan(plan);
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
     setEntries(plan.exercises.map(ex => {
@@ -276,15 +338,18 @@ export default function WorkoutLogPage() {
     try {
       await addWorkoutLog({
         clientId: currentUser.id,
-        planId: selectedPlan.id,
+        planId: isFreeWorkout ? null : selectedPlan.id,
+        ...(isFreeWorkout && { workoutName: 'Custom Workout' }),
         date: new Date().toISOString().split('T')[0],
-        completed: completedCount === entries.length,
+        completed: completedCount > 0,
         entries: logEntries,
         rpe,
         notes,
       });
+      const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
       setShowLog(false);
-      setCompletedData({ planName: selectedPlan.name, exerciseCount: completedCount, totalVolume, newPRs, rpe });
+      setIsFreeWorkout(false);
+      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe });
     } catch {
       toast('Failed to save workout', 'error');
     } finally {
@@ -328,19 +393,25 @@ export default function WorkoutLogPage() {
             </div>
           )}
 
-          {plans.length > 0 && (
-            <div className="card mb-16">
-              <h3 className="card-title mb-16">Start a Workout</h3>
-              <div className="grid-3">
-                {plans.map(p => (
-                  <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
-                    <div className="fw-bold">{p.name}</div>
-                    <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="card mb-16">
+            <h3 className="card-title mb-16">Start a Workout</h3>
+            {plans.length > 0 && (
+              <>
+                <div className="grid-3">
+                  {plans.map(p => (
+                    <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
+                      <div className="fw-bold">{p.name}</div>
+                      <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="free-workout-divider"><span>or</span></div>
+              </>
+            )}
+            <button className="btn btn-outline" style={{ width: '100%' }} onClick={startFreeWorkout}>
+              <Plus size={16} /> Start Custom Workout
+            </button>
+          </div>
 
           <h3 className="mb-16">History</h3>
           {logs.length === 0 ? (
@@ -369,10 +440,11 @@ export default function WorkoutLogPage() {
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">
                     <div>
-                      <h3 className="card-title">{plan?.name || 'Workout'}</h3>
+                      <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'}</h3>
                       <span className="text-sm text-muted">{l.date}</span>
                     </div>
                     <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                      {!l.planId && <span className="tag">Custom</span>}
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
@@ -412,71 +484,133 @@ export default function WorkoutLogPage() {
       ) : (
         <div>
           <div className="log-top-bar mb-16">
-            <h2 className="page-title">{selectedPlan.name}</h2>
+            <h2 className="page-title">{isFreeWorkout ? 'Custom Workout' : selectedPlan.name}</h2>
             <div className="log-top-actions">
-              <button className="btn btn-outline" onClick={() => setShowLog(false)} disabled={saving}>Cancel</button>
+              {isFreeWorkout && plans.length > 0 && (
+                <button className="btn btn-outline btn-sm" onClick={() => setShowPlanPicker(true)}>Load Plan</button>
+              )}
+              <button className="btn btn-outline" onClick={() => { setShowLog(false); setIsFreeWorkout(false); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>
 
-          {entries.map((entry, exIdx) => {
-            const planEx = selectedPlan.exercises[exIdx];
-            const currentPR = prs[entry.exerciseId];
-            const exercise = getExercise(entry.exerciseId);
-            const gotNewPR = isNewPR(entry);
-            const lastLog = [...logs].reverse().find(l => l.planId === selectedPlan.id);
-            const lastEntry = lastLog?.entries?.find(e => e.exerciseId === entry.exerciseId);
-            return (
-              <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
-                <div className="log-card-header">
-                  <div className="log-card-title">
-                    <h3 className="card-title">
-                      {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                      {entry.name || getExerciseName(entry.exerciseId)}
-                    </h3>
-                    <div className="log-card-tags">
-                      {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
-                      <span className="text-sm text-muted">{(() => {
-                        const sets = normalizeSets(planEx);
-                        const reps = sets.map(s => s.reps);
-                        const weights = sets.map(s => s.weight);
-                        const allSameReps = reps.every(r => r === reps[0]);
-                        const hasWeight = weights.some(w => w > 0);
-                        let detail = allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`;
-                        if (hasWeight) detail += ` | ${weights.every(w => w === weights[0]) ? weights[0] + 'kg' : weights.join('/') + 'kg'}`;
-                        return detail;
-                      })()}</span>
-                      {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
-                    </div>
-                  </div>
-                  {lastEntry && (
-                    <div className="last-session-hint">
-                      <span className="last-session-label">Last session</span>
-                      <span className="last-session-data">{lastEntry.sets.map(s => `${s.weight}kg x ${s.reps}`).join(' | ')}</span>
-                    </div>
-                  )}
+          {isFreeWorkout ? (
+            <>
+              {entries.length === 0 && (
+                <div className="card mb-16" style={{ textAlign: 'center', padding: '32px 16px' }}>
+                  <p className="text-muted">No exercises yet — tap Add Exercise to get started.</p>
                 </div>
-                {planEx.notes && <p className="text-sm text-muted mb-16" style={{ fontStyle: 'italic' }}>{planEx.notes}</p>}
-                {(() => {
-                  const url = planEx?.videoUrl || exercise?.videoUrl;
-                  return url && isSafeUrl(url) ? (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
-                      <Play size={14} /> Watch Demo
-                    </a>
-                  ) : null;
-                })()}
-                {entry.sets.map((set, setIdx) => (
-                  <div key={setIdx} className="log-set-row">
-                    <span className="log-set-num">Set {setIdx + 1}</span>
-                    <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)} />
-                    <span className="text-sm text-muted">kg x</span>
-                    <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)} />
-                    <span className="text-sm text-muted">reps</span>
+              )}
+              {entries.map((entry, exIdx) => {
+                const currentPR = prs[entry.exerciseId];
+                const exercise = getExercise(entry.exerciseId);
+                const gotNewPR = isNewPR(entry);
+                return (
+                  <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
+                    <div className="log-card-header">
+                      <div className="log-card-title">
+                        <h3 className="card-title">
+                          {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
+                          {entry.name}
+                        </h3>
+                        <div className="log-card-tags">
+                          {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
+                          {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
+                        </div>
+                      </div>
+                      <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeExercise(exIdx)} title="Remove exercise">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    {exercise?.videoUrl && isSafeUrl(exercise.videoUrl) && (
+                      <a href={exercise.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
+                        <Play size={14} /> Watch Demo
+                      </a>
+                    )}
+                    {entry.sets.map((set, setIdx) => (
+                      <div key={setIdx} className="log-set-row">
+                        <span className="log-set-num">Set {setIdx + 1}</span>
+                        <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)} />
+                        <span className="text-sm text-muted">kg x</span>
+                        <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)} />
+                        <span className="text-sm text-muted">reps</span>
+                        {entry.sets.length > 1 && (
+                          <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeSet(exIdx, setIdx)} title="Remove set">
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={() => addSet(exIdx)}>
+                      <Plus size={13} /> Add Set
+                    </button>
                   </div>
-                ))}
-              </div>
-            );
-          })}
+                );
+              })}
+              <button className="btn btn-primary" style={{ width: '100%', marginBottom: 16 }} onClick={() => setShowExercisePicker(true)}>
+                <Plus size={16} /> Add Exercise
+              </button>
+            </>
+          ) : (
+            entries.map((entry, exIdx) => {
+              const planEx = selectedPlan.exercises[exIdx];
+              const currentPR = prs[entry.exerciseId];
+              const exercise = getExercise(entry.exerciseId);
+              const gotNewPR = isNewPR(entry);
+              const lastLog = [...logs].reverse().find(l => l.planId === selectedPlan.id);
+              const lastEntry = lastLog?.entries?.find(e => e.exerciseId === entry.exerciseId);
+              return (
+                <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
+                  <div className="log-card-header">
+                    <div className="log-card-title">
+                      <h3 className="card-title">
+                        {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
+                        {entry.name || getExerciseName(entry.exerciseId)}
+                      </h3>
+                      <div className="log-card-tags">
+                        {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
+                        <span className="text-sm text-muted">{(() => {
+                          const sets = normalizeSets(planEx);
+                          const reps = sets.map(s => s.reps);
+                          const weights = sets.map(s => s.weight);
+                          const allSameReps = reps.every(r => r === reps[0]);
+                          const hasWeight = weights.some(w => w > 0);
+                          let detail = allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`;
+                          if (hasWeight) detail += ` | ${weights.every(w => w === weights[0]) ? weights[0] + 'kg' : weights.join('/') + 'kg'}`;
+                          return detail;
+                        })()}</span>
+                        {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
+                      </div>
+                    </div>
+                    {lastEntry && (
+                      <div className="last-session-hint">
+                        <span className="last-session-label">Last session</span>
+                        <span className="last-session-data">{lastEntry.sets.map(s => `${s.weight}kg x ${s.reps}`).join(' | ')}</span>
+                      </div>
+                    )}
+                  </div>
+                  {planEx.notes && <p className="text-sm text-muted mb-16" style={{ fontStyle: 'italic' }}>{planEx.notes}</p>}
+                  {(() => {
+                    const url = planEx?.videoUrl || exercise?.videoUrl;
+                    return url && isSafeUrl(url) ? (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
+                        <Play size={14} /> Watch Demo
+                      </a>
+                    ) : null;
+                  })()}
+                  {entry.sets.map((set, setIdx) => (
+                    <div key={setIdx} className="log-set-row">
+                      <span className="log-set-num">Set {setIdx + 1}</span>
+                      <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)} />
+                      <span className="text-sm text-muted">kg x</span>
+                      <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)} />
+                      <span className="text-sm text-muted">reps</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })
+          )}
 
           {/* Rest Timer */}
           <div className="rest-timer-bar mb-16">
@@ -525,6 +659,60 @@ export default function WorkoutLogPage() {
           </div>
         </div>
       )}
+      {showExercisePicker && (
+        <div className="modal-overlay" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); }}>
+          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Add Exercise</h3>
+            <div className="form-group" style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+              <input
+                className="form-input"
+                style={{ paddingLeft: 36 }}
+                placeholder="Search by name or muscle…"
+                value={exerciseSearch}
+                onChange={e => setExerciseSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="exercise-picker-list">
+              {exerciseLibrary
+                .filter(e => !exerciseSearch ||
+                  e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+                  e.muscle?.toLowerCase().includes(exerciseSearch.toLowerCase()))
+                .map(exercise => (
+                  <button key={exercise.id} className="exercise-picker-item" onClick={() => addExerciseToLog(exercise)}>
+                    <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
+                    <span className="text-sm text-muted">{exercise.muscle}</span>
+                  </button>
+                ))}
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPlanPicker && (
+        <div className="modal-overlay" onClick={() => setShowPlanPicker(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Load from Plan</h3>
+            <p className="text-sm text-muted" style={{ marginBottom: 16 }}>Exercises will be added to your current session.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {plans.map(p => (
+                <button key={p.id} className="exercise-picker-item" onClick={() => loadFromPlan(p)}>
+                  <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{p.name}</span>
+                  <span className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</span>
+                </button>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setShowPlanPicker(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingLog && (
         <div className="modal-overlay" onClick={() => setEditingLog(null)}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
