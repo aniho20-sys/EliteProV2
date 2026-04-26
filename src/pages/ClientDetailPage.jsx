@@ -187,6 +187,13 @@ export default function ClientDetailPage() {
     setLogExSearch('');
   };
 
+  const addCustomLogExercise = (name) => {
+    const id = 'custom-' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    setLogEntries(prev => [...prev, { exerciseId: id, name: name.trim(), sets: [{ weight: '', reps: '' }] }]);
+    setShowLogExPicker(false);
+    setLogExSearch('');
+  };
+
   const addLogSet = (exIdx) => {
     setLogEntries(prev => prev.map((e, i) => i === exIdx ? { ...e, sets: [...e.sets, { weight: '', reps: '' }] } : e));
   };
@@ -848,6 +855,12 @@ export default function ClientDetailPage() {
               <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search by name or muscle…" value={logExSearch} onChange={e => setLogExSearch(e.target.value)} autoFocus />
             </div>
             <div className="exercise-picker-list">
+              {logExSearch.trim() && (
+                <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomLogExercise(logExSearch)}>
+                  <span className="fw-bold" style={{ fontSize: '0.9rem' }}>+ Add "{logExSearch.trim()}" as custom</span>
+                  <span className="text-sm text-muted">Not in library — add directly to this session</span>
+                </button>
+              )}
               {exerciseLibrary
                 .filter(e => !logExSearch || e.name.toLowerCase().includes(logExSearch.toLowerCase()) || e.muscle?.toLowerCase().includes(logExSearch.toLowerCase()))
                 .map(exercise => (

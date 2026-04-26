@@ -188,6 +188,13 @@ export default function WorkoutLogPage() {
     setExerciseSearch('');
   };
 
+  const addCustomExerciseToLog = (name) => {
+    const id = 'custom-' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    setEntries(prev => [...prev, { exerciseId: id, name: name.trim(), sets: [{ weight: '', reps: '' }] }]);
+    setShowExercisePicker(false);
+    setExerciseSearch('');
+  };
+
   const addSet = (exIdx) => {
     setEntries(prev => prev.map((entry, i) =>
       i === exIdx ? { ...entry, sets: [...entry.sets, { weight: '', reps: '' }] } : entry
@@ -675,6 +682,12 @@ export default function WorkoutLogPage() {
               />
             </div>
             <div className="exercise-picker-list">
+              {exerciseSearch.trim() && (
+                <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomExerciseToLog(exerciseSearch)}>
+                  <span className="fw-bold" style={{ fontSize: '0.9rem' }}>+ Add "{exerciseSearch.trim()}" as custom</span>
+                  <span className="text-sm text-muted">Not in library — add directly to this workout</span>
+                </button>
+              )}
               {exerciseLibrary
                 .filter(e => !exerciseSearch ||
                   e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||

@@ -2560,6 +2560,12 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .exercise-picker-item:hover { background: var(--bg); }
 .exercise-picker-item:last-child { border-bottom: none; }
+.exercise-picker-custom {
+  background: rgba(67, 97, 238, 0.04);
+  border-bottom: 2px solid var(--border) !important;
+}
+.exercise-picker-custom:hover { background: rgba(67, 97, 238, 0.08); }
+.exercise-picker-custom .fw-bold { color: var(--primary); }
 
 /* ── Workout Complete Screen ───────────────────────────────────────────────── */
 @keyframes completeIn {
