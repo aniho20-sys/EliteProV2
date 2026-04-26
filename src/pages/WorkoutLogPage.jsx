@@ -1,10 +1,66 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
+
+const CLOSING_MESSAGES = [
+  'Every rep builds the best version of you.',
+  'Consistency is what transforms average into excellence.',
+  'You showed up. That\'s already winning.',
+  'Progress, not perfection.',
+  'Strong today. Stronger tomorrow.',
+  'The only bad workout is the one that didn\'t happen.',
+];
+
+function WorkoutCompleteScreen({ data, onDone }) {
+  const msg = CLOSING_MESSAGES[Math.floor(Math.random() * CLOSING_MESSAGES.length)];
+  return (
+    <div className="workout-complete">
+      <div className="workout-complete-check">
+        <CheckCircle size={64} strokeWidth={1.5} />
+      </div>
+      <h1 className="workout-complete-title">Workout Complete</h1>
+      <p className="workout-complete-plan">{data.planName}</p>
+
+      <div className="workout-complete-stats">
+        <div className="workout-complete-stat">
+          <div className="workout-complete-stat-value">{data.totalVolume.toLocaleString()}</div>
+          <div className="workout-complete-stat-label">Volume (kg)</div>
+        </div>
+        <div className="workout-complete-stat">
+          <div className="workout-complete-stat-value">{data.exerciseCount}</div>
+          <div className="workout-complete-stat-label">Exercises</div>
+        </div>
+        <div className="workout-complete-stat">
+          <div className="workout-complete-stat-value">{data.rpe}/10</div>
+          <div className="workout-complete-stat-label">RPE</div>
+        </div>
+      </div>
+
+      {data.newPRs.length > 0 && (
+        <div className="workout-complete-prs">
+          <div className="workout-complete-prs-title">
+            <Trophy size={15} /> New Personal Records
+          </div>
+          {data.newPRs.map(pr => (
+            <div key={pr.exerciseId} className="workout-complete-pr-item">
+              <span>{pr.name}</span>
+              <span className="fw-bold">{pr.weight}kg</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="workout-complete-quote">"{msg}"</p>
+      <button className="btn btn-accent" onClick={onDone} style={{ width: '100%' }}>
+        Done
+      </button>
+    </div>
+  );
+}
 
 const REST_PRESETS = [45, 60, 90, 120, 180];
 
@@ -20,6 +76,9 @@ export default function WorkoutLogPage() {
   const [entries, setEntries] = useState([]);
   const [rpe, setRpe] = useState(7);
   const [notes, setNotes] = useState('');
+
+  const [completedData, setCompletedData] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const [editingLog, setEditingLog] = useState(null);
   const [editEntries, setEditEntries] = useState([]);
@@ -192,12 +251,27 @@ export default function WorkoutLogPage() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+
     const logEntries = entries.map(e => ({
       exerciseId: e.exerciseId,
       name: getExerciseName(e.exerciseId),
       sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
     }));
     const completedCount = logEntries.filter(e => e.sets.length > 0).length;
+
+    // Capture PRs before saving — prs state updates after snapshot fires
+    const newPRs = entries
+      .filter(e => isNewPR(e))
+      .map(e => ({
+        exerciseId: e.exerciseId,
+        name: e.name || getExerciseName(e.exerciseId),
+        weight: Math.max(...e.sets.map(s => Number(s.weight) || 0)),
+      }));
+    const totalVolume = logEntries.reduce(
+      (sum, e) => sum + e.sets.reduce((s2, s) => s2 + s.weight * s.reps, 0), 0
+    );
 
     try {
       await addWorkoutLog({
@@ -210,8 +284,12 @@ export default function WorkoutLogPage() {
         notes,
       });
       setShowLog(false);
-      toast('Workout saved');
-    } catch { toast('Failed to save workout', 'error'); }
+      setCompletedData({ planName: selectedPlan.name, exerciseCount: completedCount, totalVolume, newPRs, rpe });
+    } catch {
+      toast('Failed to save workout', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const prCount = Object.keys(prs).length;
@@ -226,7 +304,9 @@ export default function WorkoutLogPage() {
         <p className="page-subtitle">Record your training sessions</p>
       </div>
 
-      {!showLog ? (
+      {completedData ? (
+        <WorkoutCompleteScreen data={completedData} onDone={() => setCompletedData(null)} />
+      ) : !showLog ? (
         <>
           {prCount > 0 && (
             <div className="card mb-16 pr-summary-card">
@@ -334,8 +414,8 @@ export default function WorkoutLogPage() {
           <div className="log-top-bar mb-16">
             <h2 className="page-title">{selectedPlan.name}</h2>
             <div className="log-top-actions">
-              <button className="btn btn-outline" onClick={() => setShowLog(false)}>Cancel</button>
-              <button className="btn btn-accent" onClick={handleSave}>Save Workout</button>
+              <button className="btn btn-outline" onClick={() => setShowLog(false)} disabled={saving}>Cancel</button>
+              <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>
 
@@ -439,7 +519,9 @@ export default function WorkoutLogPage() {
               <label className="form-label">Session Notes</label>
               <textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did the workout feel?" />
             </div>
-            <button className="btn btn-accent" onClick={handleSave} style={{ width: '100%' }}>Save Workout</button>
+            <button className="btn btn-accent" onClick={handleSave} style={{ width: '100%' }} disabled={saving}>
+              {saving ? 'Saving…' : 'Save Workout'}
+            </button>
           </div>
         </div>
       )}

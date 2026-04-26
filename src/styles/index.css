@@ -2521,6 +2521,95 @@ tr:hover { background: var(--bg-card-hover); }
   .pr-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ── Workout Complete Screen ───────────────────────────────────────────────── */
+@keyframes completeIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.workout-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 16px 32px;
+  max-width: 420px;
+  margin: 0 auto;
+  animation: completeIn 0.4s var(--ease) both;
+}
+.workout-complete-check {
+  color: var(--success);
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.35));
+}
+.workout-complete-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.workout-complete-plan {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 28px;
+}
+.workout-complete-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+.workout-complete-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 8px;
+}
+.workout-complete-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.1;
+}
+.workout-complete-stat-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.workout-complete-prs {
+  width: 100%;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.workout-complete-prs-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--warning);
+  margin-bottom: 10px;
+}
+.workout-complete-pr-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid rgba(245, 158, 11, 0.12);
+  font-size: 0.88rem;
+}
+.workout-complete-quote {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.88rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
 /* Loading Screen */
 .loading-screen {
   display: flex;
