@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets } from '../utils/workoutUtils';
 import NotesSection from '../components/NotesSection';
@@ -57,11 +57,14 @@ export default function ClientDetailPage() {
   const today = new Date().toISOString().split('T')[0];
   const [showLogModal, setShowLogModal] = useState(false);
   const [logPlanId, setLogPlanId] = useState('');
+  const [logIsCustom, setLogIsCustom] = useState(false);
   const [logDate, setLogDate] = useState(today);
   const [logEntries, setLogEntries] = useState([]);
   const [logRpe, setLogRpe] = useState(7);
   const [logNotes, setLogNotes] = useState('');
   const [savingLog, setSavingLog] = useState(false);
+  const [showLogExPicker, setShowLogExPicker] = useState(false);
+  const [logExSearch, setLogExSearch] = useState('');
   const [editingLogId, setEditingLogId] = useState(null);
   const [editLogEntries, setEditLogEntries] = useState([]);
   const [editLogDate, setEditLogDate] = useState('');
@@ -147,6 +150,13 @@ export default function ClientDetailPage() {
   };
 
   const initLogEntries = (planId) => {
+    if (planId === 'custom') {
+      setLogIsCustom(true);
+      setLogPlanId('');
+      setLogEntries([]);
+      return;
+    }
+    setLogIsCustom(false);
     setLogPlanId(planId);
     if (!planId) { setLogEntries([]); return; }
     const plan = plans.find(p => p.id === planId);
@@ -167,6 +177,24 @@ export default function ClientDetailPage() {
     }));
   };
 
+  const addLogExercise = (exercise) => {
+    setLogEntries(prev => [...prev, { exerciseId: exercise.id, name: exercise.name, sets: [{ weight: '', reps: '' }] }]);
+    setShowLogExPicker(false);
+    setLogExSearch('');
+  };
+
+  const addLogSet = (exIdx) => {
+    setLogEntries(prev => prev.map((e, i) => i === exIdx ? { ...e, sets: [...e.sets, { weight: '', reps: '' }] } : e));
+  };
+
+  const removeLogSet = (exIdx, setIdx) => {
+    setLogEntries(prev => prev.map((e, i) => i === exIdx ? { ...e, sets: e.sets.filter((_, j) => j !== setIdx) } : e));
+  };
+
+  const removeLogExercise = (exIdx) => {
+    setLogEntries(prev => prev.filter((_, i) => i !== exIdx));
+  };
+
   const updateLogSet = (exIdx, setIdx, field, value) => {
     setLogEntries(prev => prev.map((entry, i) =>
       i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
@@ -184,16 +212,17 @@ export default function ClientDetailPage() {
     try {
       await addWorkoutLog({
         clientId: client.id,
-        planId: logPlanId,
+        planId: logIsCustom ? null : logPlanId,
+        ...(logIsCustom && { workoutName: 'Custom Workout' }),
         date: logDate,
-        completed: entriesToSave.length === logEntries.length,
+        completed: entriesToSave.length > 0,
         entries: entriesToSave,
         rpe: logRpe,
         notes: logNotes,
         logType: 'pt_session',
       });
       setShowLogModal(false);
-      setLogPlanId(''); setLogEntries([]); setLogRpe(7); setLogNotes('');
+      setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes('');
       toast('Workout logged');
     } catch { toast('Failed to save log', 'error'); }
     finally { setSavingLog(false); }
@@ -661,15 +690,16 @@ export default function ClientDetailPage() {
       )}
 
       {showLogModal && (
-        <div className="modal-overlay" onClick={() => setShowLogModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Log PT Session — {client.name}</h3>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Workout Plan</label>
-                <select className="form-select" value={logPlanId} onChange={e => initLogEntries(e.target.value)}>
+                <label className="form-label">Workout</label>
+                <select className="form-select" value={logIsCustom ? 'custom' : logPlanId} onChange={e => initLogEntries(e.target.value)}>
                   <option value="">Select a plan</option>
-                  {plans.map(p => <option key={p.id} value={p.id}>{p.name} ({p.day})</option>)}
+                  <option value="custom">— Custom Workout —</option>
+                  {plans.map(p => <option key={p.id} value={p.id}>{p.name}{p.day ? ` (${p.day})` : ''}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -677,9 +707,19 @@ export default function ClientDetailPage() {
                 <input className="form-input" type="date" value={logDate} onChange={e => setLogDate(e.target.value)} />
               </div>
             </div>
+
+            {logIsCustom && logEntries.length === 0 && (
+              <p className="text-sm text-muted" style={{ marginBottom: 12 }}>No exercises yet — add from the exercise library below.</p>
+            )}
+
             {logEntries.map((entry, exIdx) => (
               <div key={exIdx} className="card mb-8" style={{ background: 'var(--bg-hover)', border: 'none', padding: 12 }}>
-                <div className="fw-bold mb-8">{entry.name}</div>
+                <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span className="fw-bold">{entry.name}</span>
+                  {logIsCustom && (
+                    <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogExercise(exIdx)}><X size={13} /></button>
+                  )}
+                </div>
                 {entry.sets.map((set, setIdx) => (
                   <div key={setIdx} className="log-set-row">
                     <span className="log-set-num">Set {setIdx + 1}</span>
@@ -687,10 +727,25 @@ export default function ClientDetailPage() {
                     <span className="text-sm text-muted">kg ×</span>
                     <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateLogSet(exIdx, setIdx, 'reps', e.target.value)} />
                     <span className="text-sm text-muted">reps</span>
+                    {logIsCustom && entry.sets.length > 1 && (
+                      <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogSet(exIdx, setIdx)}><X size={12} /></button>
+                    )}
                   </div>
                 ))}
+                {logIsCustom && (
+                  <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={() => addLogSet(exIdx)}>
+                    <Plus size={13} /> Add Set
+                  </button>
+                )}
               </div>
             ))}
+
+            {logIsCustom && (
+              <button className="btn btn-outline" style={{ width: '100%', marginBottom: 12 }} onClick={() => setShowLogExPicker(true)}>
+                <Plus size={15} /> Add Exercise
+              </button>
+            )}
+
             {logEntries.length > 0 && (
               <>
                 <div className="form-group">
@@ -704,10 +759,35 @@ export default function ClientDetailPage() {
               </>
             )}
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setShowLogModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveLog} disabled={!logPlanId || logEntries.length === 0 || savingLog}>
+              <button className="btn btn-outline" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveLog} disabled={logEntries.length === 0 || savingLog}>
                 {savingLog ? 'Saving…' : 'Save PT Log'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLogExPicker && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => { setShowLogExPicker(false); setLogExSearch(''); }}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Add Exercise</h3>
+            <div className="form-group" style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+              <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search by name or muscle…" value={logExSearch} onChange={e => setLogExSearch(e.target.value)} autoFocus />
+            </div>
+            <div className="exercise-picker-list">
+              {exerciseLibrary
+                .filter(e => !logExSearch || e.name.toLowerCase().includes(logExSearch.toLowerCase()) || e.muscle?.toLowerCase().includes(logExSearch.toLowerCase()))
+                .map(exercise => (
+                  <button key={exercise.id} className="exercise-picker-item" onClick={() => addLogExercise(exercise)}>
+                    <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
+                    <span className="text-sm text-muted">{exercise.muscle}</span>
+                  </button>
+                ))}
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => { setShowLogExPicker(false); setLogExSearch(''); }}>Close</button>
             </div>
           </div>
         </div>
