@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-26（Session 22）
+> 最後更新：2026-04-26（Session 23）
 
 ---
 
@@ -48,6 +48,8 @@
 - Trainer 全客戶進度概覽頁（sparkline、排序）
 - Mobile More 抽屜（底部導航 4 tab + slide-up sheet）
 - Global Search、EmptyState、Skeleton、Toast、Error Boundary
+- Message rate limiting（10條/分鐘 sliding window + Firestore rules 欄位校驗）
+- Firebase App Check（reCAPTCHA v3，dev debug mode，prod 用 VITE_RECAPTCHA_SITE_KEY）
 
 ---
 
@@ -72,9 +74,9 @@
 | # | 任務 |
 |---|------|
 | 1 | **Privacy Policy + Terms of Service** |
-| 2 | **Firebase App Check**（防 API 濫用）|
+| 2 | ~~**Firebase App Check**（防 API 濫用）~~ ✅ 已完成 |
 | 3 | **GDPR Cloud Function 部署**（需 Blaze plan）|
-| 4 | **Message rate limiting** |
+| 4 | ~~**Message rate limiting**~~ ✅ 已完成 |
 
 ### 🟠 高優先——倚賴度功能
 
