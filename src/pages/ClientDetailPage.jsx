@@ -32,7 +32,7 @@ function ChartTooltip({ active, payload, unit }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -65,6 +65,10 @@ export default function ClientDetailPage() {
   const [savingLog, setSavingLog] = useState(false);
   const [showLogExPicker, setShowLogExPicker] = useState(false);
   const [logExSearch, setLogExSearch] = useState('');
+  const [savePlanLog, setSavePlanLog] = useState(null);
+  const [savePlanName, setSavePlanName] = useState('');
+  const [savePlanDay, setSavePlanDay] = useState('');
+  const [savingPlan, setSavingPlan] = useState(false);
   const [editingLogId, setEditingLogId] = useState(null);
   const [editLogEntries, setEditLogEntries] = useState([]);
   const [editLogDate, setEditLogDate] = useState('');
@@ -226,6 +230,42 @@ export default function ClientDetailPage() {
       toast('Workout logged');
     } catch { toast('Failed to save log', 'error'); }
     finally { setSavingLog(false); }
+  };
+
+  const openSavePlanModal = (log) => {
+    const plan = plans.find(p => p.id === log.planId);
+    setSavePlanLog(log);
+    setSavePlanName(log.workoutName || plan?.name || 'Custom Workout');
+    setSavePlanDay('');
+  };
+
+  const handleSaveLogAsPlan = async () => {
+    if (!savePlanLog || !savePlanName.trim()) return;
+    setSavingPlan(true);
+    try {
+      const exercises = savePlanLog.entries.map(entry => ({
+        exerciseId: entry.exerciseId,
+        name: entry.name,
+        sets: entry.sets?.length || 3,
+        reps: String(entry.sets?.[0]?.reps || ''),
+        rest: 90,
+        notes: '',
+        weight: 0,
+      }));
+      await addWorkoutPlan({
+        name: savePlanName.trim(),
+        trainerId: currentUser.id,
+        clientId: client.id,
+        day: savePlanDay.trim(),
+        exercises,
+      });
+      setSavePlanLog(null);
+      toast('Plan saved successfully');
+    } catch {
+      toast('Failed to save plan', 'error');
+    } finally {
+      setSavingPlan(false);
+    }
   };
 
   const handleSaveTrainerNote = async (logId) => {
@@ -619,11 +659,17 @@ export default function ClientDetailPage() {
               return (
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">
-                    <h3 className="card-title">{plan?.name || 'Workout'} - {l.date}</h3>
+                    <div>
+                      <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'} — {l.date}</h3>
+                    </div>
                     <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                      {!l.planId && <span className="tag">Custom</span>}
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                       <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
+                      <button className="btn btn-outline btn-sm" onClick={() => openSavePlanModal(l)} title="Save as Plan" style={{ fontSize: '0.72rem' }}>
+                        Save as Plan
+                      </button>
                       {l.createdBy === currentUser.id && (
                         <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEditLog(l)} title="Edit workout">
                           <Pencil size={13} />
@@ -762,6 +808,31 @@ export default function ClientDetailPage() {
               <button className="btn btn-outline" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveLog} disabled={logEntries.length === 0 || savingLog}>
                 {savingLog ? 'Saving…' : 'Save PT Log'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {savePlanLog && (
+        <div className="modal-overlay" onClick={() => setSavePlanLog(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Save as Plan</h3>
+            <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+              Creates a reusable plan from this session's {savePlanLog.entries.length} exercises.
+            </p>
+            <div className="form-group">
+              <label className="form-label">Plan Name</label>
+              <input className="form-input" value={savePlanName} onChange={e => setSavePlanName(e.target.value)} placeholder="e.g. Upper Body A" autoFocus />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Day / Label (optional)</label>
+              <input className="form-input" value={savePlanDay} onChange={e => setSavePlanDay(e.target.value)} placeholder="e.g. Monday, Day 1" />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setSavePlanLog(null)} disabled={savingPlan}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveLogAsPlan} disabled={!savePlanName.trim() || savingPlan}>
+                {savingPlan ? 'Saving…' : 'Save Plan'}
               </button>
             </div>
           </div>
