@@ -789,12 +789,14 @@ tr:hover { background: var(--bg-card-hover); }
 .login-page {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #eef2ff 0%, #f5f7fb 40%, #fff5f0 100%);
   position: relative;
-  padding: 20px;
+  padding: 20px 16px 40px;
   overflow: hidden;
+  gap: 16px;
 }
 .login-page::before {
   content: '';
@@ -2833,13 +2835,18 @@ tr:hover { background: var(--bg-card-hover); }
 
 /* Login page legal footer */
 .login-legal {
-  margin-top: 16px;
+  width: 100%;
+  max-width: 420px;
   text-align: center;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 .login-legal a {
-  color: var(--primary);
+  color: var(--text-muted);
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.login-legal a:hover {
+  color: var(--primary);
 }
