@@ -14,6 +14,7 @@ const AUTH_ERRORS = {
   'auth/operation-not-allowed': 'This sign-in method is not enabled.',
   'auth/unauthorized-domain': 'This domain is not authorised for sign-in. Please contact support.',
   'auth/internal-error': 'An internal error occurred. Please try again.',
+  'auth/popup-blocked': 'Google sign-in was blocked. Tap "Allow" (一律顯示) on the popup notification at the top of your screen, then try again.',
   'auth/popup-closed-by-user': null,
   'auth/cancelled-popup-request': null,
   'auth/web-storage-unsupported': 'Your browser blocks required storage. Try disabling private mode or use a different browser.',

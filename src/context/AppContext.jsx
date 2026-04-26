@@ -294,13 +294,22 @@ export function AppProvider({ children }) {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
-      if (err.code === 'auth/popup-blocked' ||
-          err.code === 'auth/popup-closed-by-user' ||
-          err.code === 'auth/web-storage-unsupported' ||
+      // User intentionally closed the popup — silent
+      if (err.code === 'auth/popup-closed-by-user' ||
+          err.code === 'auth/cancelled-popup-request') {
+        return null;
+      }
+      // Popup blocked by browser (common on iOS Safari).
+      // signInWithRedirect is broken on iOS due to storage partitioning — throw
+      // a friendly error instead so the user knows to allow popups.
+      if (err.code === 'auth/popup-blocked') {
+        throw Object.assign(new Error('popup-blocked'), { code: 'auth/popup-blocked' });
+      }
+      // Storage/ITP issues — same problem on iOS, same fix
+      if (err.code === 'auth/web-storage-unsupported' ||
           err.message?.includes('storage-partitioned') ||
           err.message?.includes('missing initial state')) {
-        await signInWithRedirect(auth, googleProvider);
-        return null;
+        throw Object.assign(new Error('popup-blocked'), { code: 'auth/popup-blocked' });
       }
       throw err;
     }
