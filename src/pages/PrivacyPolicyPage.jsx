@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
@@ -6,6 +7,7 @@ const CONTACT_EMAIL = 'elitepro616@gmail.com';
 const CONTROLLER = 'Elitepro Team';
 
 export default function PrivacyPolicyPage() {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
   return (
     <div className="legal-page">
       <div className="legal-container">
