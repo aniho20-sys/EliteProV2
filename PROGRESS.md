@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-04-24（Session 21）
+> 最後更新：2026-04-26（Session 22）
 
 ---
 
@@ -43,7 +43,7 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 - Body Stats / Progress（Recharts AreaChart、metric tiles、趨勢指示、edit measurement）
 - Profile（edit、invite code、shareable link、working hours、connect to trainer）
 - Global Search、EmptyState、Skeleton、Toast、Error Boundary
-- 互動人體肌肉模型（SVG 正面 + 背面）
+- **互動人體肌肉模型**（`react-body-highlighter` MIT 套件，正面 + 背面並排，灰色預設 / 藍色選中）
 - Firebase Auth（Google、Email/Password、Forgot Password、Demo Coach）
 - Firestore real-time sync（8 collections）、IndexedDB offline persistence
 - FCM push notifications（code ready，待 VAPID key 啟動）
@@ -72,6 +72,8 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 | Exercise Library 靜態 defaults | 避免跨 trainer 污染 |
 | Mobile nav 4 + More drawer | 底部 tab 上限 5 無法容納 8 個 trainer 頁面；More sheet 參考 Instagram 模式，UI/UX 優先 |
 | CI 同時 deploy Hosting + Firestore Rules | 避免 rules 同 code 脫節；手機亦唔需要手動 deploy rules |
+| MuscleSelector 用 `react-body-highlighter` 取代手寫 SVG | 手寫 SVG 路徑比例失真；開源套件（MIT）有精準人體路徑，支援 anterior/posterior 兩個 view |
+| MuscleSelector silhouette fill 用 `var(--bg-input)` | `var(--surface)` 係 undefined，SVG 默認 black fill；`--bg-input` light:`#f0f2f7` / dark:`#252a38` |
 
 ---
 
@@ -99,43 +101,65 @@ ElitePro 定位係「**完整 PT business 管理工具**」，唔只係 workout 
 |---|------|------|
 | 4 | **Message rate limiting** | 惡意用戶可 spam Firestore；建議 Firestore rule 限制每分鐘寫入次數，或 Cloud Function 做 throttle |
 
-### 🟡 中優先——核心體驗
+### 🟡 中優先——核心體驗 & 儀式感
 
 | # | 任務 | 說明 |
 |---|------|------|
 | 5 | **Push Notifications 啟動** | FCM code 已 ready，需要 VAPID key + 重新部署 Cloud Functions |
-| 6 | **Workout 完成 Summary 頁面** | 儲存後顯示總結（PRs、完成率），增加成就感 |
-| 7 | **Set Completion Checkbox** | 做完一組 tick，即時視覺反饋 |
-| 8 | **Volume Analytics Chart** | 週訓練量趨勢圖，學生睇到自己係咪進步緊 |
-| 9 | **Trainer 今日待辦** | Dashboard 直接顯示今日 sessions + 待確認 bookings |
-| 10 | **Bulk Assign Plan to Multiple Clients** | 一次過 assign 同一個 plan 俾多個 client |
+| 6 | **Workout Complete Screen** | 儲存 log 後顯示完成畫面：完成 exercises 數、破 PR 數、總 volume、RPE、closing message；有 PR 顯示特別慶祝動畫；純前端，難度低 |
+| 7 | **獎章系統 Phase 1** | 訓練次數里程碑（10/50/100次）+ 相對進步里程碑（任何 exercise PR 突破 X%）；觸發後 notify 教練確認先 award；新 `badges/{clientId}` Firestore collection；難度中 |
+| 8 | **Smart Progression Suggestions** | 教練開 client 計劃時，根據過去3次 log 自動建議「可以試加重 X kg」；純前端計算 workoutLogs 歷史；唔係 PT 界其他工具做到嘅功能，競爭優勢高 |
+| 9 | **Session Recap（一鍵發送）** | Mark Complete 後生成 recap preview（今日 exercises、PRs、RPE、教練短評）→ 教練一 tap confirm → 自動發去 in-app message；取代 WhatsApp 手打 summary |
+| 10 | **Set Completion Checkbox** | 做完一組 tick，即時視覺反饋 |
+| 11 | **Volume Analytics Chart** | 週訓練量趨勢圖，學生睇到自己係咪進步緊 |
+| 12 | **Business Analytics Dashboard** | 教練月收入趨勢、client retention rate、最忙時段；現有 invoice + schedule data 已足夠計算；難度低 |
+| 13 | **Bulk Assign Plan to Multiple Clients** | 一次過 assign 同一個 plan 俾多個 client |
 
 ### 🟡 中優先——架構技術債
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 11 | **AppContext 拆分** | 660+ lines，難維護；建議拆成 AuthContext、DataContext、ActionContext |
-| 12 | **Error handling 改善** | 部分 `catch {}` 靜默吞錯誤，debug 困難；加 console.error 或 error reporting |
-| 13 | **`Date.now()` → `crypto.randomUUID()`** | 低風險但應及早處理，避免並發 ID 碰撞 |
-| 14 | **Firestore workoutLogs index** | 用戶量大時 query 會慢；加 composite index（clientId + date） |
-| 15 | **eslint-disable 清理** | 部分 `useEffect` dependencies 用 disable 屏蔽而非真正修復 |
+| 14 | **AppContext 拆分** | 660+ lines，難維護；建議拆成 AuthContext、DataContext、ActionContext |
+| 15 | **Error handling 改善** | 部分 `catch {}` 靜默吞錯誤，debug 困難；加 console.error 或 error reporting |
+| 16 | **`Date.now()` → `crypto.randomUUID()`** | 低風險但應及早處理，避免並發 ID 碰撞 |
+| 17 | **Firestore workoutLogs index** | 用戶量大時 query 會慢；加 composite index（clientId + date） |
+| 18 | **eslint-disable 清理** | 部分 `useEffect` dependencies 用 disable 屏蔽而非真正修復 |
 
 ### 🟢 低優先——加分項
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 16 | **Modal Keyboard Trap（Accessibility）** | WCAG 合規；Tab 鍵應鎖定在 modal 內 |
-| 17 | **Invoice UI 優化** | 功能夠用，視覺設計可以再polish |
-| 18 | **進度相片** | 學生 body transformation 可視化 |
-| 19 | **Client Onboarding（PAR-Q）** | 專業教練標準流程，健康申報表 |
-| 20 | **Data Export** | 教練 backup 學生資料（CSV / PDF）|
-| 21 | **Landing Page** | 獨立推廣網址 |
-| 22 | **GA4 / Firebase Analytics** | 用戶行為追蹤 |
-| 23 | **Stripe 收費整合（Phase 2）** | Invoice Phase 1 穩定後才做 |
-| 24 | **App Store 上架（Capacitor）** | PWA 先行，穩定後考慮 |
+| 19 | **獎章系統 Phase 2（Shareable 卡）** | CSS rendered 成就卡 + Web Share API 分享；DOM 完全隔離防止截圖洩露其他資料；只顯示 first name + badge 名 + ElitePro logo |
+| 20 | **Modal Keyboard Trap（Accessibility）** | WCAG 合規；Tab 鍵應鎖定在 modal 內 |
+| 21 | **Invoice UI 優化** | 功能夠用，視覺設計可以再 polish |
+| 22 | **進度相片** | 學生 body transformation 可視化 |
+| 23 | **Client Onboarding（PAR-Q）** | 專業教練標準流程，健康申報表 |
+| 24 | **Data Export** | 教練 backup 學生資料（CSV / PDF）|
+| 25 | **Landing Page** | 獨立推廣網址 |
+| 26 | **GA4 / Firebase Analytics** | 用戶行為追蹤 |
+| 27 | **Stripe 收費整合（Phase 2）** | Invoice Phase 1 穩定後才做 |
+| 28 | **App Store 上架（Capacitor）** | PWA 先行，穩定後考慮 |
 
 ### 🎯 獲客工具
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 25 | **Hevy CSV Import** | 吸引 Hevy 用戶轉移；純前端（FileReader + fuzzy exercise matching）；需要 3-step UI（上載 → 預覽匹配 → 確認）；注意 duplicate detection + CSV sanitization |
+| 29 | **Hevy CSV Import** | 吸引 Hevy 用戶轉移；純前端（FileReader + fuzzy exercise matching）；需要 3-step UI（上載 → 預覽匹配 → 確認）；注意 duplicate detection + CSV sanitization |
+
+---
+
+## 🧠 產品策略討論紀錄（Session 22）
+
+### 「教練絕對倚賴」三個層次
+| 層次 | 做法 |
+|------|------|
+| 日常習慣 | 每日必開 Dashboard，一眼睇晒業務狀態（已有） |
+| 工作流整合 | Session 完成→ recap → 扣堂 → reminder 一條龍 |
+| 數據引力 | 歷史數據積累（workout logs、badges、PRs），轉移成本極高 |
+
+### 獎章系統設計原則
+- Phase 1：訓練次數里程碑 + 相對進步里程碑（避免 exercise 識別問題）
+- 觸發後 **notify 教練確認**先 award，唔自動發出（防止數據錯誤）
+- Badge 一旦 award 唔自動撤銷，只有教練人手移除
+- Shareable 卡 Phase 2 才做，先確保 badge 邏輯穩定
+- 儀式感設計原則：**克制而有意義**（Nike/Strava 風格，唔係 Duolingo 式誇張）
