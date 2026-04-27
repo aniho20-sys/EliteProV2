@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
-import { normalizeSets } from '../utils/workoutUtils';
+import MuscleSelector from '../components/MuscleSelector';
+import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
+import { isSafeUrl } from '../utils/urlUtils';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -62,7 +64,69 @@ function WorkoutCompleteScreen({ data, onDone }) {
   );
 }
 
-const REST_PRESETS = [45, 60, 90, 120, 180];
+const UNIT_OPTIONS = [
+  { value: 'weight_reps', label: 'Wt+Reps' },
+  { value: 'reps_only', label: 'Reps' },
+  { value: 'time', label: 'Time' },
+  { value: 'distance', label: 'Dist' },
+];
+const REST_OPTIONS = [30, 45, 60, 90, 120, 180, 300];
+
+const emptySet = (unit) => {
+  if (unit === 'reps_only') return { reps: '' };
+  if (unit === 'time') return { seconds: '' };
+  if (unit === 'distance') return { metres: '' };
+  return { weight: '', reps: '' };
+};
+
+const hasValue = (s, unit) => {
+  if (unit === 'reps_only') return Boolean(s.reps);
+  if (unit === 'time') return Boolean(s.seconds);
+  if (unit === 'distance') return Boolean(s.metres);
+  return Boolean(s.weight) && Boolean(s.reps);
+};
+
+const formatSet = (s, unit) => {
+  if (unit === 'reps_only') return `× ${s.reps}`;
+  if (unit === 'time') return `${s.seconds}s`;
+  if (unit === 'distance') return `${s.metres}m`;
+  return `${s.weight}kg × ${s.reps}`;
+};
+
+const formatRest = (s) => s < 60 ? `${s}s` : `${s / 60}m`;
+
+function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canRemove, done, onComplete }) {
+  return (
+    <div className={`log-set-row${done ? ' log-set-row-done' : ''}`}>
+      <span className="log-set-num">Set {setIdx + 1}</span>
+      {unit === 'weight_reps' && (<>
+        <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight ?? ''} onChange={e => onUpdate('weight', e.target.value)} />
+        <span className="text-sm text-muted">×</span>
+        <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps ?? ''} onChange={e => onUpdate('reps', e.target.value)} />
+      </>)}
+      {unit === 'reps_only' && (<>
+        <span className="text-sm text-muted">×</span>
+        <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps ?? ''} onChange={e => onUpdate('reps', e.target.value)} />
+      </>)}
+      {unit === 'time' && (<>
+        <input className="form-input log-set-input" type="number" placeholder="sec" value={set.seconds ?? ''} onChange={e => onUpdate('seconds', e.target.value)} />
+        <span className="text-sm text-muted">s</span>
+      </>)}
+      {unit === 'distance' && (<>
+        <input className="form-input log-set-input" type="number" placeholder="m" value={set.metres ?? ''} onChange={e => onUpdate('metres', e.target.value)} />
+        <span className="text-sm text-muted">m</span>
+      </>)}
+      {onComplete && (
+        <button className={`log-set-done${done ? ' done' : ''}`} onClick={onComplete} title="Mark set done">
+          <CheckCircle size={18} />
+        </button>
+      )}
+      {canRemove && (
+        <button className="btn btn-outline btn-sm btn-icon" onClick={onRemove} title="Remove set"><X size={12} /></button>
+      )}
+    </div>
+  );
+}
 
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords } = useApp();
@@ -80,8 +144,12 @@ export default function WorkoutLogPage() {
   const [completedData, setCompletedData] = useState(null);
   const [saving, setSaving] = useState(false);
   const [isFreeWorkout, setIsFreeWorkout] = useState(false);
+  const [completedSets, setCompletedSets] = useState(new Set());
+  const [customUnit, setCustomUnit] = useState('weight_reps');
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
+  const [pickerMuscles, setPickerMuscles] = useState([]);
+  const [showPickerMuscleFilter, setShowPickerMuscleFilter] = useState(false);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
 
   const [editingLog, setEditingLog] = useState(null);
@@ -98,7 +166,6 @@ export default function WorkoutLogPage() {
 
   const location = useLocation();
 
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
@@ -110,6 +177,43 @@ export default function WorkoutLogPage() {
     if (plan) { autoStartedRef.current = true; startLog(plan); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.planId, plans.length]);
+
+  // Restore in-progress log from localStorage on mount
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (draftRestoredRef.current || location.state?.planId) return;
+    draftRestoredRef.current = true;
+    try {
+      const raw = localStorage.getItem('elitepro_active_log_' + currentUser.id);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft.entries?.length) return;
+      setIsFreeWorkout(draft.isFreeWorkout ?? false);
+      setSelectedPlan(draft.selectedPlan ?? null);
+      setEntries(draft.entries);
+      setRpe(draft.rpe ?? 7);
+      setNotes(draft.notes ?? '');
+      setRestSeconds(draft.restSeconds ?? 90);
+      setTimeLeft(draft.restSeconds ?? 90);
+      setCompletedSets(new Set(draft.completedSets || []));
+      setShowLog(true);
+      toast('Workout session restored', 'info');
+    } catch {
+      localStorage.removeItem('elitepro_active_log_' + currentUser.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save in-progress log to localStorage
+  useEffect(() => {
+    if (!showLog) return;
+    try {
+      localStorage.setItem('elitepro_active_log_' + currentUser.id, JSON.stringify({
+        isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds,
+        completedSets: [...completedSets],
+      }));
+    } catch {}
+  }, [showLog, isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds, currentUser.id]);
 
   // Stop timer when leaving workout view
   useEffect(() => {
@@ -175,32 +279,37 @@ export default function WorkoutLogPage() {
     setRestSeconds(90);
     setTimeLeft(90);
     setTimerActive(false);
+    setCompletedSets(new Set());
+    setCustomUnit('weight_reps');
     setShowLog(true);
   };
 
   const addExerciseToLog = (exercise) => {
+    const unit = exercise.unit || 'weight_reps';
     setEntries(prev => [...prev, {
       exerciseId: exercise.id,
       name: exercise.name,
-      sets: [{ weight: '', reps: '' }],
+      unit,
+      rest: 90,
+      sets: [emptySet(unit)],
     }]);
     setShowExercisePicker(false);
     setExerciseSearch('');
   };
 
-  const addCustomExerciseToLog = (name) => {
+  const addCustomExerciseToLog = (name, unit = 'weight_reps') => {
     const id = 'custom-' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    setEntries(prev => [...prev, { exerciseId: id, name: name.trim(), sets: [{ weight: '', reps: '' }] }]);
+    setEntries(prev => [...prev, { exerciseId: id, name: name.trim(), unit, rest: 90, sets: [emptySet(unit)] }]);
     setShowExercisePicker(false);
     setExerciseSearch('');
-    // Save to library if not already there
+    setCustomUnit('weight_reps');
     const exists = exerciseLibrary.some(e => e.id === id);
-    if (!exists) addExercise({ id, name: name.trim(), muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
+    if (!exists) addExercise({ id, name: name.trim(), unit, muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
   };
 
   const addSet = (exIdx) => {
     setEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: [...entry.sets, { weight: '', reps: '' }] } : entry
+      i === exIdx ? { ...entry, sets: [...entry.sets, emptySet(entry.unit || 'weight_reps')] } : entry
     ));
   };
 
@@ -208,24 +317,73 @@ export default function WorkoutLogPage() {
     setEntries(prev => prev.map((entry, i) =>
       i === exIdx ? { ...entry, sets: entry.sets.filter((_, j) => j !== setIdx) } : entry
     ));
+    setCompletedSets(prev => {
+      const next = new Set();
+      prev.forEach(key => {
+        const [ex, set] = key.split('-').map(Number);
+        if (ex !== exIdx) { next.add(key); return; }
+        if (set < setIdx) next.add(key);
+        else if (set > setIdx) next.add(`${ex}-${set - 1}`);
+      });
+      return next;
+    });
   };
 
   const removeExercise = (exIdx) => {
     setEntries(prev => prev.filter((_, i) => i !== exIdx));
+    setCompletedSets(prev => {
+      const next = new Set();
+      prev.forEach(key => {
+        const [ex, set] = key.split('-').map(Number);
+        if (ex < exIdx) next.add(key);
+        else if (ex > exIdx) next.add(`${ex - 1}-${set}`);
+      });
+      return next;
+    });
+  };
+
+  const updateExerciseRest = (exIdx, seconds) => {
+    setEntries(prev => prev.map((entry, i) => i === exIdx ? { ...entry, rest: seconds } : entry));
+  };
+
+  const handleCompleteSet = (exIdx, setIdx) => {
+    const key = `${exIdx}-${setIdx}`;
+    const isCompleting = !completedSets.has(key);
+    setCompletedSets(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+    if (isCompleting) {
+      const restDur = entries[exIdx]?.rest || 90;
+      setRestSeconds(restDur);
+      setTimeLeft(restDur);
+      setTimerActive(true);
+    }
   };
 
   const loadFromPlan = (plan) => {
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
     const planEntries = plan.exercises.map(ex => {
+      const exercise = exerciseLibrary.find(e => e.id === ex.exerciseId);
+      const unit = exercise?.unit || 'weight_reps';
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
       const planSets = normalizeSets(ex);
       return {
         exerciseId: ex.exerciseId,
         name: ex.name || getExerciseName(ex.exerciseId),
+        unit,
+        rest: ex.rest || 90,
         sets: planSets.map((ps, i) => {
           const prev = lastEntry?.sets?.[i];
-          if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
-          return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+          if (prev) {
+            if (unit === 'reps_only') return { reps: String(prev.reps || '') };
+            if (unit === 'time') return { seconds: String(prev.seconds || '') };
+            if (unit === 'distance') return { metres: String(prev.metres || '') };
+            return { weight: String(prev.weight || ''), reps: String(prev.reps || '') };
+          }
+          if (unit === 'weight_reps') return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+          return emptySet(unit);
         }),
       };
     });
@@ -238,15 +396,25 @@ export default function WorkoutLogPage() {
     setSelectedPlan(plan);
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
     setEntries(plan.exercises.map(ex => {
+      const exercise = exerciseLibrary.find(e => e.id === ex.exerciseId);
+      const unit = exercise?.unit || 'weight_reps';
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
       const planSets = normalizeSets(ex);
       return {
         exerciseId: ex.exerciseId,
         name: ex.name || getExerciseName(ex.exerciseId),
+        unit,
+        rest: ex.rest || 90,
         sets: planSets.map((ps, i) => {
           const prev = lastEntry?.sets?.[i];
-          if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
-          return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+          if (prev) {
+            if (unit === 'reps_only') return { reps: String(prev.reps || '') };
+            if (unit === 'time') return { seconds: String(prev.seconds || '') };
+            if (unit === 'distance') return { metres: String(prev.metres || '') };
+            return { weight: String(prev.weight || ''), reps: String(prev.reps || '') };
+          }
+          if (unit === 'weight_reps') return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+          return emptySet(unit);
         }),
       };
     }));
@@ -255,19 +423,16 @@ export default function WorkoutLogPage() {
     setRestSeconds(90);
     setTimeLeft(90);
     setTimerActive(false);
+    setCompletedSets(new Set());
     setShowLog(true);
   };
 
   const updateSet = (exIdx, setIdx, field, value) => {
-    setEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? {
-        ...entry,
-        sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s),
-      } : entry
-    ));
+    setEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const isNewPR = (entry) => {
+    if ((entry.unit || 'weight_reps') !== 'weight_reps') return false;
     const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
     const currentPR = prs[entry.exerciseId]?.weight || 0;
     return maxWeight > 0 && maxWeight > currentPR;
@@ -277,29 +442,27 @@ export default function WorkoutLogPage() {
     setEditingLog(log);
     setEditEntries(log.entries.map(e => ({
       ...e,
-      sets: (e.sets || []).map(s => ({ weight: String(s.weight), reps: String(s.reps) })),
+      unit: e.unit || 'weight_reps',
+      sets: (e.sets || []).map(s => ({
+        weight: s.weight !== undefined ? String(s.weight) : '',
+        reps: s.reps !== undefined ? String(s.reps) : '',
+        seconds: s.seconds !== undefined ? String(s.seconds) : '',
+        metres: s.metres !== undefined ? String(s.metres) : '',
+      })),
     })));
     setEditRpe(log.rpe || 7);
     setEditNotes(log.notes || '');
   };
 
   const updateEditSet = (exIdx, setIdx, field, value) => {
-    setEditEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
-    ));
+    setEditEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const handleSaveEdit = async () => {
     setSavingEdit(true);
     try {
-      const updatedEntries = editEntries.map(e => ({
-        ...e,
-        sets: (e.sets || []).filter(s => s.weight && s.reps).map(s => ({
-          weight: Number(s.weight),
-          reps: Number(s.reps),
-        })),
-      }));
-      const completed = updatedEntries.length > 0 && updatedEntries.every(e => e.sets.length > 0);
+      const updatedEntries = serializeEntries(editEntries);
+      const completed = updatedEntries.some(e => e.sets.length > 0);
       await updateWorkoutLog(editingLog.id, { entries: updatedEntries, rpe: editRpe, notes: editNotes, completed });
       setEditingLog(null);
       toast('Workout updated');
@@ -311,6 +474,7 @@ export default function WorkoutLogPage() {
   };
 
   const wasPRAtTime = (log, entry) => {
+    if ((entry.unit || 'weight_reps') !== 'weight_reps') return false;
     const logDate = log.date;
     const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
     if (maxWeight <= 0) return false;
@@ -326,14 +490,22 @@ export default function WorkoutLogPage() {
     if (saving) return;
     setSaving(true);
 
-    const logEntries = entries.map(e => ({
-      exerciseId: e.exerciseId,
-      name: getExerciseName(e.exerciseId),
-      sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
-    }));
+    const logEntries = entries.map(e => {
+      const unit = e.unit || 'weight_reps';
+      return {
+        exerciseId: e.exerciseId,
+        name: e.name || getExerciseName(e.exerciseId),
+        unit,
+        sets: e.sets.filter(s => hasValue(s, unit)).map(s => {
+          if (unit === 'reps_only') return { reps: Number(s.reps) };
+          if (unit === 'time') return { seconds: Number(s.seconds) };
+          if (unit === 'distance') return { metres: Number(s.metres) };
+          return { weight: Number(s.weight), reps: Number(s.reps) };
+        }),
+      };
+    });
     const completedCount = logEntries.filter(e => e.sets.length > 0).length;
 
-    // Capture PRs before saving — prs state updates after snapshot fires
     const newPRs = entries
       .filter(e => isNewPR(e))
       .map(e => ({
@@ -341,9 +513,10 @@ export default function WorkoutLogPage() {
         name: e.name || getExerciseName(e.exerciseId),
         weight: Math.max(...e.sets.map(s => Number(s.weight) || 0)),
       }));
-    const totalVolume = logEntries.reduce(
-      (sum, e) => sum + e.sets.reduce((s2, s) => s2 + s.weight * s.reps, 0), 0
-    );
+    const totalVolume = logEntries.reduce((sum, e) => {
+      if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
+      return sum + e.sets.reduce((s2, s) => s2 + (s.weight || 0) * (s.reps || 0), 0);
+    }, 0);
 
     try {
       await addWorkoutLog({
@@ -357,8 +530,10 @@ export default function WorkoutLogPage() {
         notes,
       });
       const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
+      localStorage.removeItem('elitepro_active_log_' + currentUser.id);
       setShowLog(false);
       setIsFreeWorkout(false);
+      setCompletedSets(new Set());
       setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe });
     } catch {
       toast('Failed to save workout', 'error');
@@ -453,7 +628,7 @@ export default function WorkoutLogPage() {
                       <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'}</h3>
                       <span className="text-sm text-muted">{l.date}</span>
                     </div>
-                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {!l.planId && <span className="tag">Custom</span>}
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
@@ -473,7 +648,7 @@ export default function WorkoutLogPage() {
                           {entry.name || getExerciseName(entry.exerciseId)}
                         </span>
                         <span className="plan-exercise-detail">
-                          {skipped ? '—' : entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
+                          {skipped ? '—' : entry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}
                         </span>
                         {hadPR && <span className="tag tag-warning" style={{ fontSize: '0.6rem', padding: '2px 8px' }}>PR</span>}
                       </div>
@@ -499,7 +674,7 @@ export default function WorkoutLogPage() {
               {isFreeWorkout && plans.length > 0 && (
                 <button className="btn btn-outline btn-sm" onClick={() => setShowPlanPicker(true)}>Load Plan</button>
               )}
-              <button className="btn btn-outline" onClick={() => { setShowLog(false); setIsFreeWorkout(false); }} disabled={saving}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { localStorage.removeItem('elitepro_active_log_' + currentUser.id); setShowLog(false); setIsFreeWorkout(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>
@@ -528,6 +703,12 @@ export default function WorkoutLogPage() {
                           {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                         </div>
                       </div>
+                      <div className="log-exercise-rest">
+                        <Timer size={11} />
+                        <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
+                          {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}
+                        </select>
+                      </div>
                       <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeExercise(exIdx)} title="Remove exercise">
                         <X size={14} />
                       </button>
@@ -538,18 +719,14 @@ export default function WorkoutLogPage() {
                       </a>
                     )}
                     {entry.sets.map((set, setIdx) => (
-                      <div key={setIdx} className="log-set-row">
-                        <span className="log-set-num">Set {setIdx + 1}</span>
-                        <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)} />
-                        <span className="text-sm text-muted">kg x</span>
-                        <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)} />
-                        <span className="text-sm text-muted">reps</span>
-                        {entry.sets.length > 1 && (
-                          <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeSet(exIdx, setIdx)} title="Remove set">
-                            <X size={12} />
-                          </button>
-                        )}
-                      </div>
+                      <SetInputs key={setIdx} set={set} setIdx={setIdx}
+                        unit={entry.unit || 'weight_reps'}
+                        onUpdate={(field, val) => updateSet(exIdx, setIdx, field, val)}
+                        onRemove={() => removeSet(exIdx, setIdx)}
+                        canRemove={entry.sets.length > 1}
+                        done={completedSets.has(`${exIdx}-${setIdx}`)}
+                        onComplete={() => handleCompleteSet(exIdx, setIdx)}
+                      />
                     ))}
                     <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={() => addSet(exIdx)}>
                       <Plus size={13} /> Add Set
@@ -592,10 +769,16 @@ export default function WorkoutLogPage() {
                         {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                       </div>
                     </div>
+                    <div className="log-exercise-rest">
+                      <Timer size={11} />
+                      <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
+                        {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}
+                      </select>
+                    </div>
                     {lastEntry && (
                       <div className="last-session-hint">
-                        <span className="last-session-label">Last session</span>
-                        <span className="last-session-data">{lastEntry.sets.map(s => `${s.weight}kg x ${s.reps}`).join(' | ')}</span>
+                        <span className="last-session-label">Last</span>
+                        <span className="last-session-data">{lastEntry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}</span>
                       </div>
                     )}
                   </div>
@@ -609,13 +792,13 @@ export default function WorkoutLogPage() {
                     ) : null;
                   })()}
                   {entry.sets.map((set, setIdx) => (
-                    <div key={setIdx} className="log-set-row">
-                      <span className="log-set-num">Set {setIdx + 1}</span>
-                      <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)} />
-                      <span className="text-sm text-muted">kg x</span>
-                      <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)} />
-                      <span className="text-sm text-muted">reps</span>
-                    </div>
+                    <SetInputs key={setIdx} set={set} setIdx={setIdx}
+                      unit={entry.unit || 'weight_reps'}
+                      onUpdate={(field, val) => updateSet(exIdx, setIdx, field, val)}
+                      canRemove={false}
+                      done={completedSets.has(`${exIdx}-${setIdx}`)}
+                      onComplete={() => handleCompleteSet(exIdx, setIdx)}
+                    />
                   ))}
                 </div>
               );
@@ -624,28 +807,12 @@ export default function WorkoutLogPage() {
 
           {/* Rest Timer */}
           <div className="rest-timer-bar mb-16">
-            <div className="rest-timer-left">
-              <span className="rest-timer-label"><Timer size={12} style={{ verticalAlign: -1, marginRight: 4 }} />Rest Timer</span>
-              <div className="rest-timer-presets">
-                {REST_PRESETS.map(s => (
-                  <button
-                    key={s}
-                    className={`btn btn-sm ${restSeconds === s && !timerStarted ? 'btn-primary' : 'btn-outline'}`}
-                    onClick={() => setRestDuration(s)}
-                  >
-                    {s < 60 ? `${s}s` : `${s / 60}m`}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
             <div className="rest-timer-right">
               <span className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}>
                 {timerDisplay}
               </span>
-              <button
-                className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`}
-                onClick={toggleTimer}
-              >
+              <button className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`} onClick={toggleTimer}>
                 {timerActive ? 'Pause' : timerDone ? 'Restart' : timerStarted ? 'Resume' : 'Start'}
               </button>
               {timerStarted && !timerActive && !timerDone && (
@@ -670,7 +837,7 @@ export default function WorkoutLogPage() {
         </div>
       )}
       {showExercisePicker && (
-        <div className="modal-overlay" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); }}>
+        <div className="modal-overlay" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); setPickerMuscles([]); setShowPickerMuscleFilter(false); }}>
           <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Add Exercise</h3>
             <div className="form-group" style={{ position: 'relative' }}>
@@ -684,17 +851,45 @@ export default function WorkoutLogPage() {
                 autoFocus
               />
             </div>
+            <button
+              type="button"
+              className="picker-muscle-toggle"
+              onClick={() => setShowPickerMuscleFilter(v => !v)}
+            >
+              <span>Filter by muscle</span>
+              {pickerMuscles.length > 0 && (
+                <span className="picker-muscle-count">{pickerMuscles.length}</span>
+              )}
+              {showPickerMuscleFilter ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            {showPickerMuscleFilter && (
+              <div className="picker-muscle-wrap">
+                <MuscleSelector selected={pickerMuscles} onChange={setPickerMuscles} />
+              </div>
+            )}
             <div className="exercise-picker-list">
               {exerciseSearch.trim() && (
-                <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomExerciseToLog(exerciseSearch)}>
-                  <span className="fw-bold" style={{ fontSize: '0.9rem' }}>+ Add "{exerciseSearch.trim()}" as custom</span>
-                  <span className="text-sm text-muted">Not in library — add directly to this workout</span>
-                </button>
+                <div className="exercise-picker-custom-wrap">
+                  <span className="exercise-picker-custom-label">+ Add "{exerciseSearch.trim()}" as custom:</span>
+                  <div className="log-unit-picker">
+                    {UNIT_OPTIONS.map(opt => (
+                      <button key={opt.value} type="button"
+                        className={`log-unit-pill${customUnit === opt.value ? ' active' : ''}`}
+                        onClick={() => { setCustomUnit(opt.value); addCustomExerciseToLog(exerciseSearch.trim(), opt.value); }}
+                      >{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
               )}
               {exerciseLibrary
-                .filter(e => !exerciseSearch ||
-                  e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-                  e.muscle?.toLowerCase().includes(exerciseSearch.toLowerCase()))
+                .filter(e => {
+                  const matchText = !exerciseSearch ||
+                    e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+                    e.muscle?.toLowerCase().includes(exerciseSearch.toLowerCase());
+                  const matchMuscle = pickerMuscles.length === 0 ||
+                    pickerMuscles.some(m => e.muscle?.toLowerCase().includes(m.toLowerCase()));
+                  return matchText && matchMuscle;
+                })
                 .map(exercise => (
                   <button key={exercise.id} className="exercise-picker-item" onClick={() => addExerciseToLog(exercise)}>
                     <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
@@ -703,7 +898,7 @@ export default function WorkoutLogPage() {
                 ))}
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); }}>Close</button>
+              <button className="btn btn-outline" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); setPickerMuscles([]); setShowPickerMuscleFilter(false); }}>Close</button>
             </div>
           </div>
         </div>
@@ -739,13 +934,11 @@ export default function WorkoutLogPage() {
                 {entry.sets.length === 0
                   ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
                   : entry.sets.map((set, setIdx) => (
-                    <div key={setIdx} className="log-set-row">
-                      <span className="log-set-num">Set {setIdx + 1}</span>
-                      <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateEditSet(exIdx, setIdx, 'weight', e.target.value)} />
-                      <span className="text-sm text-muted">kg x</span>
-                      <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateEditSet(exIdx, setIdx, 'reps', e.target.value)} />
-                      <span className="text-sm text-muted">reps</span>
-                    </div>
+                    <SetInputs key={setIdx} set={set} setIdx={setIdx}
+                      unit={entry.unit || 'weight_reps'}
+                      onUpdate={(field, val) => updateEditSet(exIdx, setIdx, field, val)}
+                      canRemove={false}
+                    />
                   ))
                 }
               </div>

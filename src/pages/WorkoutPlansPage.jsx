@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets } from '../utils/workoutUtils';
+import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
@@ -13,8 +14,6 @@ export default function WorkoutPlansPage() {
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
-  const isYouTube = (url) => /youtu\.?be/i.test(url);
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url.trim());
   const clients = isTrainer ? getClients(currentUser.id) : [];
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
   const templates = isTrainer ? getTemplates() : [];

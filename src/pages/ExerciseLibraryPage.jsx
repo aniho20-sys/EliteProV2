@@ -4,6 +4,7 @@ import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX, Link2 } f
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
+import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 export default function ExerciseLibraryPage() {
   const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
@@ -20,9 +21,6 @@ export default function ExerciseLibraryPage() {
   const [form, setForm] = useState({ name: '', muscles: [], equipment: '', description: '', videoUrl: '' });
   const [focusUrl, setFocusUrl] = useState(false);
   const urlInputRef = useRef(null);
-
-  const isYouTube = (url) => /youtu\.?be/i.test(url);
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url.trim());
 
   useEffect(() => {
     if (showModal && focusUrl && urlInputRef.current) {
@@ -42,21 +40,21 @@ export default function ExerciseLibraryPage() {
   const openAdd = () => {
     setFocusUrl(false);
     setEditingEx(null);
-    setForm({ name: '', muscles: [], equipment: equipmentTypes[0], description: '', videoUrl: '' });
+    setForm({ name: '', muscles: [], equipment: equipmentTypes[0], description: '', videoUrl: '', unit: 'weight_reps' });
     setShowModal(true);
   };
 
   const openEdit = (ex) => {
     setFocusUrl(false);
     setEditingEx(ex);
-    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
+    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '', unit: ex.unit || 'weight_reps' });
     setShowModal(true);
   };
 
   // Opens edit modal with URL field auto-focused
   const openEditAtUrl = (ex) => {
     setEditingEx(ex);
-    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '' });
+    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '', unit: ex.unit || 'weight_reps' });
     setFocusUrl(true);
     setShowModal(true);
   };
@@ -186,6 +184,22 @@ export default function ExerciseLibraryPage() {
                 <select className="form-select" value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
                   {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
                 </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Unit Type</label>
+                <div className="log-unit-picker">
+                  {[
+                    { value: 'weight_reps', label: 'Weight + Reps' },
+                    { value: 'reps_only', label: 'Reps Only' },
+                    { value: 'time', label: 'Time (s)' },
+                    { value: 'distance', label: 'Distance (m)' },
+                  ].map(opt => (
+                    <button key={opt.value} type="button"
+                      className={`log-unit-pill${form.unit === opt.value ? ' active' : ''}`}
+                      onClick={() => setForm({ ...form, unit: opt.value })}
+                    >{opt.label}</button>
+                  ))}
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">

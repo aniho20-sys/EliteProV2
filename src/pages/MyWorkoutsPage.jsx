@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, ClipboardList, Dumbbell } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
-
-const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
+import { isSafeUrl } from '../utils/urlUtils';
 
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();

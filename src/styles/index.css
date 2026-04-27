@@ -485,6 +485,8 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
   z-index: 150;
+  /* Push content below iOS status bar when running as standalone PWA */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .mobile-header-inner {
   display: flex;
@@ -517,11 +519,11 @@ body {
   .sidebar { display: none; }
   .bottom-nav { display: block; }
   .mobile-header { display: block; }
-  .main-content { margin-left: 0; padding: 24px; padding-top: 64px; padding-bottom: 90px; }
+  .main-content { margin-left: 0; padding: 24px; padding-top: calc(64px + env(safe-area-inset-top, 0px)); padding-bottom: 90px; }
   .more-sheet-overlay { display: block; }
 }
 @media (max-width: 640px) {
-  .main-content { padding: 16px; padding-top: 60px; padding-bottom: 90px; }
+  .main-content { padding: 16px; padding-top: calc(60px + env(safe-area-inset-top, 0px)); padding-bottom: 90px; }
 }
 
 /* ===== CARDS ===== */
@@ -1878,6 +1880,67 @@ tr:hover { background: var(--bg-card-hover); }
   font-weight: 600;
 }
 .log-set-input { width: 80px; padding: 8px 10px; text-align: center; }
+.log-set-row-done { opacity: 0.5; }
+.log-set-done {
+  color: var(--border);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.log-set-done:hover { color: var(--text-muted); }
+.log-set-done.done { color: var(--success, #22c55e); }
+.log-set-done.done:hover { color: var(--danger); }
+
+.log-exercise-rest {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+}
+.log-rest-select {
+  font-size: 0.78rem;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.log-unit-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.log-unit-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.log-unit-pill:hover { border-color: var(--primary); color: var(--primary); }
+.log-unit-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.exercise-picker-custom-wrap {
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--border);
+  background: rgba(67, 97, 238, 0.04);
+}
+.exercise-picker-custom-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 8px;
+}
+
 @media (max-width: 640px) {
   .log-top-bar { flex-direction: column; align-items: stretch; }
   .log-top-actions { justify-content: stretch; }
@@ -2486,8 +2549,8 @@ tr:hover { background: var(--bg-card-hover); }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  display: block;
-  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
 }
 .rest-timer-left { flex: 1; min-width: 0; }
 .rest-timer-presets { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -2566,6 +2629,48 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .exercise-picker-custom:hover { background: rgba(67, 97, 238, 0.08); }
 .exercise-picker-custom .fw-bold { color: var(--primary); }
+
+/* Muscle filter toggle inside exercise picker */
+.picker-muscle-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, color 0.15s;
+}
+.picker-muscle-toggle:hover { border-color: var(--primary); color: var(--text); }
+.picker-muscle-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+}
+.picker-muscle-toggle > span:first-child { flex: 1; }
+.picker-muscle-wrap {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  animation: fadeIn 0.15s var(--ease);
+}
 
 /* ── Workout Complete Screen ───────────────────────────────────────────────── */
 @keyframes completeIn {
@@ -3033,4 +3138,121 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .login-legal a:hover {
   color: var(--primary);
+}
+
+/* ===== PWA INSTALL BANNER ===== */
+.install-banner {
+  position: fixed;
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  left: 12px;
+  right: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  z-index: 150;
+  animation: slideUpIn 0.35s var(--ease);
+}
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.install-banner-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--primary-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.install-banner-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.install-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.install-banner-text strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.install-banner-text span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.install-banner-cta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+}
+.install-banner-close {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* iOS install instructions modal */
+.ios-install-modal {
+  max-width: 360px;
+}
+.ios-install-steps {
+  padding: 4px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ios-install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+.ios-install-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ios-share-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  color: var(--primary);
+}
+
+/* On desktop (sidebar visible): pin banner differently */
+@media (min-width: 769px) {
+  .install-banner {
+    bottom: 24px;
+    left: auto;
+    right: 24px;
+    width: 320px;
+    border-radius: var(--radius);
+  }
 }

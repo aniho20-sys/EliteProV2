@@ -1,23 +1,18 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
-import { normalizeSets } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
+import { isSafeUrl, isYouTube } from '../utils/urlUtils';
+import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import NotesSection from '../components/NotesSection';
+import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const METRICS = [
-  { key: 'weight',  label: 'Weight',   unit: 'kg', color: '#FF6B35' },
-  { key: 'bodyFat', label: 'Body Fat', unit: '%',  color: '#ef476f' },
-  { key: 'chest',   label: 'Chest',    unit: 'cm', color: '#06d6a0' },
-  { key: 'waist',   label: 'Waist',    unit: 'cm', color: '#ffd166' },
-  { key: 'arms',    label: 'Arms',     unit: 'cm', color: '#118ab2' },
-  { key: 'legs',    label: 'Legs',     unit: 'cm', color: '#8338ec' },
-];
 
 function ChartTooltip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
@@ -41,7 +36,7 @@ export default function ClientDetailPage() {
   const logs = getWorkoutLogs(clientId);
   const [tab, setTab] = useState('overview');
   const [showAddStat, setShowAddStat] = useState(false);
-  const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+  const [statForm, setStatForm] = useState(EMPTY_STAT_FORM);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [activeMetric, setActiveMetric] = useState('weight');
@@ -65,6 +60,8 @@ export default function ClientDetailPage() {
   const [savingLog, setSavingLog] = useState(false);
   const [showLogExPicker, setShowLogExPicker] = useState(false);
   const [logExSearch, setLogExSearch] = useState('');
+  const [logExMuscles, setLogExMuscles] = useState([]);
+  const [showLogExMuscleFilter, setShowLogExMuscleFilter] = useState(false);
   const [savePlanLog, setSavePlanLog] = useState(null);
   const [savePlanName, setSavePlanName] = useState('');
   const [savePlanDay, setSavePlanDay] = useState('');
@@ -97,7 +94,7 @@ export default function ClientDetailPage() {
         chest: Number(statForm.chest), waist: Number(statForm.waist), hips: Number(statForm.hips),
         arms: Number(statForm.arms), legs: Number(statForm.legs),
       });
-      setStatForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+      setStatForm(EMPTY_STAT_FORM);
       setShowAddStat(false);
     } catch { /* error handled by Firestore listener */ }
   };
@@ -208,10 +205,12 @@ export default function ClientDetailPage() {
     setLogEntries(prev => prev.filter((_, i) => i !== exIdx));
   };
 
+  const resetLogForm = () => {
+    setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes('');
+  };
+
   const updateLogSet = (exIdx, setIdx, field, value) => {
-    setLogEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
-    ));
+    setLogEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const handleSaveLog = async () => {
@@ -235,7 +234,7 @@ export default function ClientDetailPage() {
         logType: 'pt_session',
       });
       setShowLogModal(false);
-      setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes('');
+      resetLogForm();
       toast('Workout logged');
     } catch { toast('Failed to save log', 'error'); }
     finally { setSavingLog(false); }
@@ -303,20 +302,15 @@ export default function ClientDetailPage() {
   };
 
   const updateEditLogSet = (exIdx, setIdx, field, value) => {
-    setEditLogEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
-    ));
+    setEditLogEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const handleSaveEditLog = async () => {
-    const entriesToSave = editLogEntries.map(e => ({
-      ...e,
-      sets: (e.sets || []).filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
-    }));
+    const entriesToSave = serializeEntries(editLogEntries);
     if (entriesToSave.every(e => e.sets.length === 0)) { toast('Please enter at least one set', 'error'); return; }
     setSavingEditLog(true);
     try {
-      const completed = entriesToSave.every(e => e.sets.length > 0);
+      const completed = entriesToSave.some(e => e.sets.length > 0);
       await updateWorkoutLog(editingLogId, { entries: entriesToSave, date: editLogDate, rpe: editLogRpe, notes: editLogNotes, completed });
       setEditingLogId(null);
       toast('Workout updated');
@@ -329,8 +323,6 @@ export default function ClientDetailPage() {
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
-  const isYouTube = (url) => /youtu\.?be/i.test(url);
 
 
   return (
@@ -651,7 +643,7 @@ export default function ClientDetailPage() {
         <div>
           <div className="flex-between mb-16">
             <span className="text-sm text-muted">{logs.length} session{logs.length !== 1 ? 's' : ''} logged</span>
-            <button className="btn btn-primary btn-sm" onClick={() => { setLogDate(today); setLogPlanId(''); setLogEntries([]); setLogRpe(7); setLogNotes(''); setShowLogModal(true); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { setLogDate(today); resetLogForm(); setShowLogModal(true); }}>
               <Plus size={16} /> Log Workout
             </button>
           </div>
@@ -671,7 +663,7 @@ export default function ClientDetailPage() {
                     <div>
                       <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'} — {l.date}</h3>
                     </div>
-                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {!l.planId && <span className="tag">Custom</span>}
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
@@ -745,7 +737,7 @@ export default function ClientDetailPage() {
       )}
 
       {showLogModal && (
-        <div className="modal-overlay" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>
+        <div className="modal-overlay" onClick={() => { setShowLogModal(false); resetLogForm(); }}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Log PT Session — {client.name}</h3>
             <div className="form-row">
@@ -814,7 +806,7 @@ export default function ClientDetailPage() {
               </>
             )}
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setShowLogModal(false); resetLogForm(); }}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveLog} disabled={logEntries.length === 0 || savingLog}>
                 {savingLog ? 'Saving…' : 'Save PT Log'}
               </button>
@@ -849,13 +841,29 @@ export default function ClientDetailPage() {
       )}
 
       {showLogExPicker && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => { setShowLogExPicker(false); setLogExSearch(''); }}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => { setShowLogExPicker(false); setLogExSearch(''); setLogExMuscles([]); setShowLogExMuscleFilter(false); }}>
           <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Add Exercise</h3>
             <div className="form-group" style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search by name or muscle…" value={logExSearch} onChange={e => setLogExSearch(e.target.value)} autoFocus />
             </div>
+            <button
+              type="button"
+              className="picker-muscle-toggle"
+              onClick={() => setShowLogExMuscleFilter(v => !v)}
+            >
+              <span>Filter by muscle</span>
+              {logExMuscles.length > 0 && (
+                <span className="picker-muscle-count">{logExMuscles.length}</span>
+              )}
+              {showLogExMuscleFilter ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            {showLogExMuscleFilter && (
+              <div className="picker-muscle-wrap">
+                <MuscleSelector selected={logExMuscles} onChange={setLogExMuscles} />
+              </div>
+            )}
             <div className="exercise-picker-list">
               {logExSearch.trim() && (
                 <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomLogExercise(logExSearch)}>
@@ -864,7 +872,14 @@ export default function ClientDetailPage() {
                 </button>
               )}
               {exerciseLibrary
-                .filter(e => !logExSearch || e.name.toLowerCase().includes(logExSearch.toLowerCase()) || e.muscle?.toLowerCase().includes(logExSearch.toLowerCase()))
+                .filter(e => {
+                  const matchText = !logExSearch ||
+                    e.name.toLowerCase().includes(logExSearch.toLowerCase()) ||
+                    e.muscle?.toLowerCase().includes(logExSearch.toLowerCase());
+                  const matchMuscle = logExMuscles.length === 0 ||
+                    logExMuscles.some(m => e.muscle?.toLowerCase().includes(m.toLowerCase()));
+                  return matchText && matchMuscle;
+                })
                 .map(exercise => (
                   <button key={exercise.id} className="exercise-picker-item" onClick={() => addLogExercise(exercise)}>
                     <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
@@ -873,7 +888,7 @@ export default function ClientDetailPage() {
                 ))}
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowLogExPicker(false); setLogExSearch(''); }}>Close</button>
+              <button className="btn btn-outline" onClick={() => { setShowLogExPicker(false); setLogExSearch(''); setLogExMuscles([]); setShowLogExMuscleFilter(false); }}>Close</button>
             </div>
           </div>
         </div>
