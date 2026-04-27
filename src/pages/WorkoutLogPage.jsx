@@ -65,7 +65,7 @@ function WorkoutCompleteScreen({ data, onDone }) {
 const REST_PRESETS = [45, 60, 90, 120, 180];
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, getPersonalRecords } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords } = useApp();
   const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
@@ -193,6 +193,9 @@ export default function WorkoutLogPage() {
     setEntries(prev => [...prev, { exerciseId: id, name: name.trim(), sets: [{ weight: '', reps: '' }] }]);
     setShowExercisePicker(false);
     setExerciseSearch('');
+    // Save to library if not already there
+    const exists = exerciseLibrary.some(e => e.id === id);
+    if (!exists) addExercise({ id, name: name.trim(), muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
   };
 
   const addSet = (exIdx) => {

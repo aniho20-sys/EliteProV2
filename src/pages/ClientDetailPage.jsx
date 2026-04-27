@@ -32,7 +32,7 @@ function ChartTooltip({ active, payload, unit }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -192,6 +192,8 @@ export default function ClientDetailPage() {
     setLogEntries(prev => [...prev, { exerciseId: id, name: name.trim(), sets: [{ weight: '', reps: '' }] }]);
     setShowLogExPicker(false);
     setLogExSearch('');
+    const exists = exerciseLibrary.some(e => e.id === id);
+    if (!exists) addExercise({ id, name: name.trim(), muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
   };
 
   const addLogSet = (exIdx) => {

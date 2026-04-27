@@ -615,8 +615,12 @@ export function AppProvider({ children }) {
   const getExercises = () => exercises.length > 0 ? exercises : defaultExercises;
 
   const addExercise = async (exercise) => {
-    const newEx = { ...exercise, id: `ex-${Date.now()}`, trainerId: currentUser?.id };
-    await setDoc(doc(db, 'exercises', newEx.id), newEx);
+    const trainerId = currentUser?.role === 'trainer'
+      ? currentUser.id
+      : (currentUser?.trainerId || currentUser?.id);
+    const id = exercise.id || `ex-${Date.now()}`;
+    const newEx = { ...exercise, id, trainerId };
+    await setDoc(doc(db, 'exercises', id), newEx);
     return newEx;
   };
 

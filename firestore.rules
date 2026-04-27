@@ -129,13 +129,18 @@ service cloud.firestore {
     }
 
     // ── Exercises ──
-    // Trainer reads own; client reads their trainer's. Defaults served from static JS.
+    // Trainer reads own; client reads trainer's + personal.
+    // Any auth user can create: trainer with own ID, client with trainer's ID or own ID.
     match /exercises/{exId} {
-      allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || userDoc().trainerId == resource.data.trainerId);
-      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
-      allow update, delete: if isTrainer() && (
-        !('trainerId' in resource.data) || resource.data.trainerId == request.auth.uid
+      allow read: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        userDoc().trainerId == resource.data.trainerId
       );
+      allow create: if isAuth() && (
+        request.resource.data.trainerId == request.auth.uid ||
+        (userDoc().trainerId != null && request.resource.data.trainerId == userDoc().trainerId)
+      );
+      allow update, delete: if isAuth() && resource.data.trainerId == request.auth.uid;
     }
 
     // ── Templates ──

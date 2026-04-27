@@ -34,6 +34,12 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
+      - name: Deploy Firestore Rules (best-effort)
+        run: npx firebase-tools@latest deploy --only firestore:rules --project elitepro-16718 --non-interactive
+        continue-on-error: true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
       - name: Deploy Functions (best-effort)
         run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
         continue-on-error: true
