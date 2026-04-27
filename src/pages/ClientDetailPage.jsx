@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
@@ -13,6 +13,31 @@ import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+
+const UNIT_OPTIONS = [
+  { value: 'weight_reps', label: 'Wt+Reps' },
+  { value: 'reps_only', label: 'Reps' },
+  { value: 'time', label: 'Time' },
+  { value: 'distance', label: 'Dist' },
+];
+const emptySet = (unit) => {
+  if (unit === 'reps_only') return { reps: '' };
+  if (unit === 'time') return { seconds: '' };
+  if (unit === 'distance') return { metres: '' };
+  return { weight: '', reps: '' };
+};
+const hasValue = (s, unit) => {
+  if (unit === 'reps_only') return Boolean(s.reps);
+  if (unit === 'time') return Boolean(s.seconds);
+  if (unit === 'distance') return Boolean(s.metres);
+  return Boolean(s.weight) && Boolean(s.reps);
+};
+const fmtSet = (s, unit) => {
+  if (unit === 'reps_only') return `× ${s.reps}`;
+  if (unit === 'time') return `${s.seconds}s`;
+  if (unit === 'distance') return `${s.metres}m`;
+  return `${s.weight}kg × ${s.reps}`;
+};
 
 function ChartTooltip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
@@ -61,6 +86,7 @@ export default function ClientDetailPage() {
   const [showLogExPicker, setShowLogExPicker] = useState(false);
   const [logExSearch, setLogExSearch] = useState('');
   const [logExMuscles, setLogExMuscles] = useState([]);
+  const [logCustomUnit, setLogCustomUnit] = useState('weight_reps');
   const [showLogExMuscleFilter, setShowLogExMuscleFilter] = useState(false);
   const [savePlanLog, setSavePlanLog] = useState(null);
   const [savePlanName, setSavePlanName] = useState('');
@@ -164,37 +190,54 @@ export default function ClientDetailPage() {
     if (!plan) return;
     const lastLog = [...logs].reverse().find(l => l.planId === planId);
     setLogEntries(plan.exercises.map(ex => {
+      const exercise = exerciseLibrary.find(e => e.id === ex.exerciseId);
+      const unit = exercise?.unit || 'weight_reps';
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
       const planSets = normalizeSets(ex);
       return {
         exerciseId: ex.exerciseId,
-        name: ex.name || exerciseLibrary.find(e => e.id === ex.exerciseId)?.name || ex.exerciseId,
+        name: ex.name || exercise?.name || ex.exerciseId,
+        unit,
         sets: planSets.map((ps, i) => {
           const prev = lastEntry?.sets?.[i];
-          if (prev) return { weight: String(prev.weight), reps: String(prev.reps) };
-          return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+          if (prev) {
+            if (unit === 'reps_only') return { reps: String(prev.reps || '') };
+            if (unit === 'time') return { seconds: String(prev.seconds || '') };
+            if (unit === 'distance') return { metres: String(prev.metres || '') };
+            return { weight: String(prev.weight || ''), reps: String(prev.reps || '') };
+          }
+          if (unit === 'weight_reps') return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
+          return emptySet(unit);
         }),
       };
     }));
   };
 
   const addLogExercise = (exercise) => {
-    setLogEntries(prev => [...prev, { exerciseId: exercise.id, name: exercise.name, sets: [{ weight: '', reps: '' }] }]);
+    const unit = exercise.unit || 'weight_reps';
+    setLogEntries(prev => [...prev, { exerciseId: exercise.id, name: exercise.name, unit, sets: [emptySet(unit)] }]);
     setShowLogExPicker(false);
     setLogExSearch('');
   };
 
-  const addCustomLogExercise = (name) => {
+  const addCustomLogExercise = (name, unit = 'weight_reps') => {
     const id = 'custom-' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    setLogEntries(prev => [...prev, { exerciseId: id, name: name.trim(), sets: [{ weight: '', reps: '' }] }]);
+    setLogEntries(prev => [...prev, { exerciseId: id, name: name.trim(), unit, sets: [emptySet(unit)] }]);
     setShowLogExPicker(false);
     setLogExSearch('');
+    setLogCustomUnit('weight_reps');
     const exists = exerciseLibrary.some(e => e.id === id);
-    if (!exists) addExercise({ id, name: name.trim(), muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
+    if (!exists) addExercise({ id, name: name.trim(), unit, muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
   };
 
   const addLogSet = (exIdx) => {
-    setLogEntries(prev => prev.map((e, i) => i === exIdx ? { ...e, sets: [...e.sets, { weight: '', reps: '' }] } : e));
+    setLogEntries(prev => prev.map((e, i) => i === exIdx ? { ...e, sets: [...e.sets, emptySet(e.unit || 'weight_reps')] } : e));
+  };
+
+  const updateLogExerciseUnit = (exIdx, unit) => {
+    setLogEntries(prev => prev.map((e, i) =>
+      i === exIdx ? { ...e, unit, sets: e.sets.map(() => emptySet(unit)) } : e
+    ));
   };
 
   const removeLogSet = (exIdx, setIdx) => {
@@ -214,11 +257,20 @@ export default function ClientDetailPage() {
   };
 
   const handleSaveLog = async () => {
-    const entriesToSave = logEntries.map(e => ({
-      exerciseId: e.exerciseId,
-      name: e.name,
-      sets: e.sets.filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
-    })).filter(e => e.sets.length > 0);
+    const entriesToSave = logEntries.map(e => {
+      const unit = e.unit || 'weight_reps';
+      return {
+        exerciseId: e.exerciseId,
+        name: e.name,
+        unit,
+        sets: e.sets.filter(s => hasValue(s, unit)).map(s => {
+          if (unit === 'reps_only') return { reps: Number(s.reps) };
+          if (unit === 'time') return { seconds: Number(s.seconds) };
+          if (unit === 'distance') return { metres: Number(s.metres) };
+          return { weight: Number(s.weight), reps: Number(s.reps) };
+        }),
+      };
+    }).filter(e => e.sets.length > 0);
     if (entriesToSave.length === 0) { toast('Please enter at least one set', 'error'); return; }
     setSavingLog(true);
     try {
@@ -294,7 +346,13 @@ export default function ClientDetailPage() {
     setEditingLogId(log.id);
     setEditLogEntries(log.entries.map(e => ({
       ...e,
-      sets: (e.sets || []).map(s => ({ weight: String(s.weight), reps: String(s.reps) })),
+      unit: e.unit || 'weight_reps',
+      sets: (e.sets || []).map(s => ({
+        weight: s.weight !== undefined ? String(s.weight) : '',
+        reps: s.reps !== undefined ? String(s.reps) : '',
+        seconds: s.seconds !== undefined ? String(s.seconds) : '',
+        metres: s.metres !== undefined ? String(s.metres) : '',
+      })),
     })));
     setEditLogDate(log.date);
     setEditLogRpe(log.rpe || 7);
@@ -682,7 +740,7 @@ export default function ClientDetailPage() {
                     <div key={i} className="plan-exercise">
                       <span className="plan-exercise-name">{entry.name || getExerciseName(entry.exerciseId)}</span>
                       <span className="plan-exercise-detail">
-                        {entry.sets.map((s) => `${s.weight}kg x ${s.reps}`).join(' | ')}
+                        {entry.sets.map(s => fmtSet(s, entry.unit || 'weight_reps')).join(' | ')}
                       </span>
                     </div>
                   ))}
@@ -759,33 +817,54 @@ export default function ClientDetailPage() {
               <p className="text-sm text-muted" style={{ marginBottom: 12 }}>No exercises yet — add from the exercise library below.</p>
             )}
 
-            {logEntries.map((entry, exIdx) => (
-              <div key={exIdx} className="card mb-8" style={{ background: 'var(--bg-hover)', border: 'none', padding: 12 }}>
-                <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span className="fw-bold">{entry.name}</span>
-                  {logIsCustom && (
-                    <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogExercise(exIdx)}><X size={13} /></button>
-                  )}
-                </div>
-                {entry.sets.map((set, setIdx) => (
-                  <div key={setIdx} className="log-set-row">
-                    <span className="log-set-num">Set {setIdx + 1}</span>
-                    <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateLogSet(exIdx, setIdx, 'weight', e.target.value)} />
-                    <span className="text-sm text-muted">kg ×</span>
-                    <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateLogSet(exIdx, setIdx, 'reps', e.target.value)} />
-                    <span className="text-sm text-muted">reps</span>
-                    {logIsCustom && entry.sets.length > 1 && (
-                      <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogSet(exIdx, setIdx)}><X size={12} /></button>
+            {logEntries.map((entry, exIdx) => {
+              const unit = entry.unit || 'weight_reps';
+              return (
+                <div key={exIdx} className="card mb-8" style={{ background: 'var(--bg-hover)', border: 'none', padding: 12 }}>
+                  <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <span className="fw-bold">{entry.name}</span>
+                    <div className="log-exercise-rest">
+                      <select className="log-rest-select" value={unit} onChange={e => updateLogExerciseUnit(exIdx, e.target.value)} title="Unit type">
+                        {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                    {logIsCustom && (
+                      <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogExercise(exIdx)}><X size={13} /></button>
                     )}
                   </div>
-                ))}
-                {logIsCustom && (
-                  <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={() => addLogSet(exIdx)}>
-                    <Plus size={13} /> Add Set
-                  </button>
-                )}
-              </div>
-            ))}
+                  {entry.sets.map((set, setIdx) => (
+                    <div key={setIdx} className="log-set-row">
+                      <span className="log-set-num">Set {setIdx + 1}</span>
+                      {unit === 'weight_reps' && (<>
+                        <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight ?? ''} onChange={e => updateLogSet(exIdx, setIdx, 'weight', e.target.value)} />
+                        <span className="text-sm text-muted">×</span>
+                        <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps ?? ''} onChange={e => updateLogSet(exIdx, setIdx, 'reps', e.target.value)} />
+                      </>)}
+                      {unit === 'reps_only' && (<>
+                        <span className="text-sm text-muted">×</span>
+                        <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps ?? ''} onChange={e => updateLogSet(exIdx, setIdx, 'reps', e.target.value)} />
+                      </>)}
+                      {unit === 'time' && (<>
+                        <input className="form-input log-set-input" type="number" placeholder="sec" value={set.seconds ?? ''} onChange={e => updateLogSet(exIdx, setIdx, 'seconds', e.target.value)} />
+                        <span className="text-sm text-muted">s</span>
+                      </>)}
+                      {unit === 'distance' && (<>
+                        <input className="form-input log-set-input" type="number" placeholder="m" value={set.metres ?? ''} onChange={e => updateLogSet(exIdx, setIdx, 'metres', e.target.value)} />
+                        <span className="text-sm text-muted">m</span>
+                      </>)}
+                      {logIsCustom && entry.sets.length > 1 && (
+                        <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogSet(exIdx, setIdx)}><X size={12} /></button>
+                      )}
+                    </div>
+                  ))}
+                  {logIsCustom && (
+                    <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={() => addLogSet(exIdx)}>
+                      <Plus size={13} /> Add Set
+                    </button>
+                  )}
+                </div>
+              );
+            })}
 
             {logIsCustom && (
               <button className="btn btn-outline" style={{ width: '100%', marginBottom: 12 }} onClick={() => setShowLogExPicker(true)}>
@@ -866,10 +945,17 @@ export default function ClientDetailPage() {
             )}
             <div className="exercise-picker-list">
               {logExSearch.trim() && (
-                <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomLogExercise(logExSearch)}>
-                  <span className="fw-bold" style={{ fontSize: '0.9rem' }}>+ Add "{logExSearch.trim()}" as custom</span>
-                  <span className="text-sm text-muted">Not in library — add directly to this session</span>
-                </button>
+                <div className="exercise-picker-custom-wrap">
+                  <span className="exercise-picker-custom-label">+ Add "{logExSearch.trim()}" as custom:</span>
+                  <div className="log-unit-picker">
+                    {UNIT_OPTIONS.map(opt => (
+                      <button key={opt.value} type="button"
+                        className={`log-unit-pill${logCustomUnit === opt.value ? ' active' : ''}`}
+                        onClick={() => { setLogCustomUnit(opt.value); addCustomLogExercise(logExSearch.trim(), opt.value); }}
+                      >{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
               )}
               {exerciseLibrary
                 .filter(e => {
@@ -922,23 +1008,39 @@ export default function ClientDetailPage() {
               <label className="form-label">Date</label>
               <input className="form-input" type="date" value={editLogDate} onChange={e => setEditLogDate(e.target.value)} />
             </div>
-            {editLogEntries.map((entry, exIdx) => (
-              <div key={exIdx} className="mb-16">
-                <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
-                {entry.sets.length === 0
-                  ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
-                  : entry.sets.map((set, setIdx) => (
-                    <div key={setIdx} className="log-set-row">
-                      <span className="log-set-num">Set {setIdx + 1}</span>
-                      <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight} onChange={e => updateEditLogSet(exIdx, setIdx, 'weight', e.target.value)} />
-                      <span className="text-sm text-muted">kg x</span>
-                      <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps} onChange={e => updateEditLogSet(exIdx, setIdx, 'reps', e.target.value)} />
-                      <span className="text-sm text-muted">reps</span>
-                    </div>
-                  ))
-                }
-              </div>
-            ))}
+            {editLogEntries.map((entry, exIdx) => {
+              const unit = entry.unit || 'weight_reps';
+              return (
+                <div key={exIdx} className="mb-16">
+                  <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
+                  {entry.sets.length === 0
+                    ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
+                    : entry.sets.map((set, setIdx) => (
+                      <div key={setIdx} className="log-set-row">
+                        <span className="log-set-num">Set {setIdx + 1}</span>
+                        {unit === 'weight_reps' && (<>
+                          <input className="form-input log-set-input" type="number" placeholder="kg" value={set.weight ?? ''} onChange={e => updateEditLogSet(exIdx, setIdx, 'weight', e.target.value)} />
+                          <span className="text-sm text-muted">×</span>
+                          <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps ?? ''} onChange={e => updateEditLogSet(exIdx, setIdx, 'reps', e.target.value)} />
+                        </>)}
+                        {unit === 'reps_only' && (<>
+                          <span className="text-sm text-muted">×</span>
+                          <input className="form-input log-set-input" type="number" placeholder="reps" value={set.reps ?? ''} onChange={e => updateEditLogSet(exIdx, setIdx, 'reps', e.target.value)} />
+                        </>)}
+                        {unit === 'time' && (<>
+                          <input className="form-input log-set-input" type="number" placeholder="sec" value={set.seconds ?? ''} onChange={e => updateEditLogSet(exIdx, setIdx, 'seconds', e.target.value)} />
+                          <span className="text-sm text-muted">s</span>
+                        </>)}
+                        {unit === 'distance' && (<>
+                          <input className="form-input log-set-input" type="number" placeholder="m" value={set.metres ?? ''} onChange={e => updateEditLogSet(exIdx, setIdx, 'metres', e.target.value)} />
+                          <span className="text-sm text-muted">m</span>
+                        </>)}
+                      </div>
+                    ))
+                  }
+                </div>
+              );
+            })}
             <div className="form-group">
               <label className="form-label">RPE — {editLogRpe}/10</label>
               <input type="range" min="1" max="10" value={editLogRpe} onChange={e => setEditLogRpe(Number(e.target.value))} style={{ width: '100%' }} />
