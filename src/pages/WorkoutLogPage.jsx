@@ -346,6 +346,17 @@ export default function WorkoutLogPage() {
     setEntries(prev => prev.map((entry, i) => i === exIdx ? { ...entry, rest: seconds } : entry));
   };
 
+  const updateExerciseUnit = (exIdx, unit) => {
+    setEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, unit, sets: entry.sets.map(() => emptySet(unit)) } : entry
+    ));
+    setCompletedSets(prev => {
+      const next = new Set();
+      prev.forEach(key => { if (!key.startsWith(`${exIdx}-`)) next.add(key); });
+      return next;
+    });
+  };
+
   const handleCompleteSet = (exIdx, setIdx) => {
     const key = `${exIdx}-${setIdx}`;
     const isCompleting = !completedSets.has(key);
@@ -704,6 +715,9 @@ export default function WorkoutLogPage() {
                         </div>
                       </div>
                       <div className="log-exercise-rest">
+                        <select className="log-rest-select" value={entry.unit || 'weight_reps'} onChange={e => updateExerciseUnit(exIdx, e.target.value)} title="Unit type">
+                          {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
                         <Timer size={11} />
                         <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
                           {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}
@@ -770,6 +784,9 @@ export default function WorkoutLogPage() {
                       </div>
                     </div>
                     <div className="log-exercise-rest">
+                      <select className="log-rest-select" value={entry.unit || 'weight_reps'} onChange={e => updateExerciseUnit(exIdx, e.target.value)} title="Unit type">
+                        {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
                       <Timer size={11} />
                       <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
                         {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}
