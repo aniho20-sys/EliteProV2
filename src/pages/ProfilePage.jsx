@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
@@ -48,6 +48,8 @@ export default function ProfilePage() {
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
   const [codeCopied, setCodeCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const codeCopiedTimer = useRef(null);
+  const linkCopiedTimer = useRef(null);
   const INVITE_URL = `https://elitepro-16718.web.app/#/?invite=${inviteCode}`;
 
   // Trainer: working hours
@@ -100,7 +102,8 @@ export default function ProfilePage() {
     navigator.clipboard.writeText(inviteCode).then(() => {
       setCodeCopied(true);
       toast('Invite code copied!');
-      setTimeout(() => setCodeCopied(false), 2000);
+      clearTimeout(codeCopiedTimer.current);
+      codeCopiedTimer.current = setTimeout(() => setCodeCopied(false), 2000);
     }).catch(() => toast('Failed to copy', 'error'));
   };
 
@@ -109,7 +112,8 @@ export default function ProfilePage() {
       .then(() => {
         setLinkCopied(true);
         toast('Invite link copied!');
-        setTimeout(() => setLinkCopied(false), 2000);
+        clearTimeout(linkCopiedTimer.current);
+        linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
       })
       .catch(() => toast('Failed to copy', 'error'));
   };

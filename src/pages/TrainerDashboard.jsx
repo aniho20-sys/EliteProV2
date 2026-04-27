@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -102,18 +102,22 @@ export default function TrainerDashboard() {
   const toast = useToast();
   const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem } = useApp();
   const [completing, setCompleting] = useState(new Set());
+  const completingRef = useRef(new Set());
 
   const handleComplete = async (e, itemId) => {
     e.preventDefault();
     e.stopPropagation();
-    setCompleting(prev => new Set(prev).add(itemId));
+    if (completingRef.current.has(itemId)) return;
+    completingRef.current.add(itemId);
+    setCompleting(new Set(completingRef.current));
     try {
       await updateScheduleItem(itemId, { status: 'completed' });
       toast('Session marked as complete');
     } catch {
       toast('Failed to update session', 'error');
     } finally {
-      setCompleting(prev => { const s = new Set(prev); s.delete(itemId); return s; });
+      completingRef.current.delete(itemId);
+      setCompleting(new Set(completingRef.current));
     }
   };
   const clients = getClients(currentUser.id);

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
-import { normalizeSets } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
 import NotesSection from '../components/NotesSection';
 import ProgressView from '../components/ProgressView';
 import EmptyState from '../components/EmptyState';
@@ -208,10 +208,12 @@ export default function ClientDetailPage() {
     setLogEntries(prev => prev.filter((_, i) => i !== exIdx));
   };
 
+  const resetLogForm = () => {
+    setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes('');
+  };
+
   const updateLogSet = (exIdx, setIdx, field, value) => {
-    setLogEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
-    ));
+    setLogEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const handleSaveLog = async () => {
@@ -235,7 +237,7 @@ export default function ClientDetailPage() {
         logType: 'pt_session',
       });
       setShowLogModal(false);
-      setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes('');
+      resetLogForm();
       toast('Workout logged');
     } catch { toast('Failed to save log', 'error'); }
     finally { setSavingLog(false); }
@@ -303,20 +305,15 @@ export default function ClientDetailPage() {
   };
 
   const updateEditLogSet = (exIdx, setIdx, field, value) => {
-    setEditLogEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
-    ));
+    setEditLogEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const handleSaveEditLog = async () => {
-    const entriesToSave = editLogEntries.map(e => ({
-      ...e,
-      sets: (e.sets || []).filter(s => s.weight && s.reps).map(s => ({ weight: Number(s.weight), reps: Number(s.reps) })),
-    }));
+    const entriesToSave = serializeEntries(editLogEntries);
     if (entriesToSave.every(e => e.sets.length === 0)) { toast('Please enter at least one set', 'error'); return; }
     setSavingEditLog(true);
     try {
-      const completed = entriesToSave.every(e => e.sets.length > 0);
+      const completed = entriesToSave.some(e => e.sets.length > 0);
       await updateWorkoutLog(editingLogId, { entries: entriesToSave, date: editLogDate, rpe: editLogRpe, notes: editLogNotes, completed });
       setEditingLogId(null);
       toast('Workout updated');
@@ -651,7 +648,7 @@ export default function ClientDetailPage() {
         <div>
           <div className="flex-between mb-16">
             <span className="text-sm text-muted">{logs.length} session{logs.length !== 1 ? 's' : ''} logged</span>
-            <button className="btn btn-primary btn-sm" onClick={() => { setLogDate(today); setLogPlanId(''); setLogEntries([]); setLogRpe(7); setLogNotes(''); setShowLogModal(true); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { setLogDate(today); resetLogForm(); setShowLogModal(true); }}>
               <Plus size={16} /> Log Workout
             </button>
           </div>
@@ -745,7 +742,7 @@ export default function ClientDetailPage() {
       )}
 
       {showLogModal && (
-        <div className="modal-overlay" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>
+        <div className="modal-overlay" onClick={() => { setShowLogModal(false); resetLogForm(); }}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Log PT Session — {client.name}</h3>
             <div className="form-row">
@@ -814,7 +811,7 @@ export default function ClientDetailPage() {
               </>
             )}
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowLogModal(false); setLogIsCustom(false); setLogPlanId(''); setLogEntries([]); }}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setShowLogModal(false); resetLogForm(); }}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveLog} disabled={logEntries.length === 0 || savingLog}>
                 {savingLog ? 'Saving…' : 'Save PT Log'}
               </button>

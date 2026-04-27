@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
-import { normalizeSets } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -294,12 +294,7 @@ export default function WorkoutLogPage() {
   };
 
   const updateSet = (exIdx, setIdx, field, value) => {
-    setEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? {
-        ...entry,
-        sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s),
-      } : entry
-    ));
+    setEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const isNewPR = (entry) => {
@@ -319,22 +314,14 @@ export default function WorkoutLogPage() {
   };
 
   const updateEditSet = (exIdx, setIdx, field, value) => {
-    setEditEntries(prev => prev.map((entry, i) =>
-      i === exIdx ? { ...entry, sets: entry.sets.map((s, j) => j === setIdx ? { ...s, [field]: value } : s) } : entry
-    ));
+    setEditEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
   };
 
   const handleSaveEdit = async () => {
     setSavingEdit(true);
     try {
-      const updatedEntries = editEntries.map(e => ({
-        ...e,
-        sets: (e.sets || []).filter(s => s.weight && s.reps).map(s => ({
-          weight: Number(s.weight),
-          reps: Number(s.reps),
-        })),
-      }));
-      const completed = updatedEntries.length > 0 && updatedEntries.every(e => e.sets.length > 0);
+      const updatedEntries = serializeEntries(editEntries);
+      const completed = updatedEntries.some(e => e.sets.length > 0);
       await updateWorkoutLog(editingLog.id, { entries: updatedEntries, rpe: editRpe, notes: editNotes, completed });
       setEditingLog(null);
       toast('Workout updated');
