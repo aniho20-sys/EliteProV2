@@ -2,14 +2,54 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA / manifest -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="theme-color" content="#4361ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ElitePro" />
-    <meta name="theme-color" content="#4361ee" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- iOS splash screens (portrait) -->
+    <!-- iPhone 15 Pro Max / 14 Pro Max (1290×2796 @3x → 430×932pt) -->
+    <link rel="apple-touch-startup-image"
+      media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/apple-splash-1290x2796.png" />
+    <!-- iPhone 15 Pro / 14 Pro (1179×2556 @3x → 393×852pt) -->
+    <link rel="apple-touch-startup-image"
+      media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/apple-splash-1179x2556.png" />
+    <!-- iPhone 15 / 14 / 13 / 12 (1170×2532 @3x → 390×844pt) -->
+    <link rel="apple-touch-startup-image"
+      media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+      href="/splash/apple-splash-1170x2532.png" />
+    <!-- iPhone 11 / XR (828×1792 @2x → 414×896pt) -->
+    <link rel="apple-touch-startup-image"
+      media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+      href="/splash/apple-splash-828x1792.png" />
+    <!-- iPhone SE 3rd gen / 8 / 7 (750×1334 @2x → 375×667pt) -->
+    <link rel="apple-touch-startup-image"
+      media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+      href="/splash/apple-splash-750x1334.png" />
+    <!-- iPad Pro 12.9" (2048×2732 @2x) -->
+    <link rel="apple-touch-startup-image"
+      media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+      href="/splash/apple-splash-2048x2732.png" />
+
+    <!-- Open Graph / social preview -->
+    <meta property="og:title" content="ElitePro - Fitness Training" />
+    <meta property="og:description" content="Fitness training platform for personal trainers and clients" />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:type" content="website" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />

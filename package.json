@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-splash.cjs",
     "build": "vite build",
     "build:gh": "DEPLOY_TARGET=gh-pages vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "generate-splash": "node scripts/generate-splash.cjs",
     "deploy": "npm run build && firebase deploy",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules"
