@@ -663,7 +663,7 @@ export default function ClientDetailPage() {
                     <div>
                       <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'} — {l.date}</h3>
                     </div>
-                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {!l.planId && <span className="tag">Custom</span>}
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>

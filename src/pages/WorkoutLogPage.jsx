@@ -628,7 +628,7 @@ export default function WorkoutLogPage() {
                       <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'}</h3>
                       <span className="text-sm text-muted">{l.date}</span>
                     </div>
-                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {!l.planId && <span className="tag">Custom</span>}
                       {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
