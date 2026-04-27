@@ -111,6 +111,41 @@ export default function WorkoutLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.planId, plans.length]);
 
+  // Restore in-progress log from localStorage on mount
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (draftRestoredRef.current || location.state?.planId) return;
+    draftRestoredRef.current = true;
+    try {
+      const raw = localStorage.getItem('elitepro_active_log_' + currentUser.id);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft.entries?.length) return;
+      setIsFreeWorkout(draft.isFreeWorkout ?? false);
+      setSelectedPlan(draft.selectedPlan ?? null);
+      setEntries(draft.entries);
+      setRpe(draft.rpe ?? 7);
+      setNotes(draft.notes ?? '');
+      setRestSeconds(draft.restSeconds ?? 90);
+      setTimeLeft(draft.restSeconds ?? 90);
+      setShowLog(true);
+      toast('Workout session restored', 'info');
+    } catch {
+      localStorage.removeItem('elitepro_active_log_' + currentUser.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save in-progress log to localStorage
+  useEffect(() => {
+    if (!showLog) return;
+    try {
+      localStorage.setItem('elitepro_active_log_' + currentUser.id, JSON.stringify({
+        isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds,
+      }));
+    } catch {}
+  }, [showLog, isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds, currentUser.id]);
+
   // Stop timer when leaving workout view
   useEffect(() => {
     if (!showLog) {
@@ -357,6 +392,7 @@ export default function WorkoutLogPage() {
         notes,
       });
       const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
+      localStorage.removeItem('elitepro_active_log_' + currentUser.id);
       setShowLog(false);
       setIsFreeWorkout(false);
       setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe });
@@ -499,7 +535,7 @@ export default function WorkoutLogPage() {
               {isFreeWorkout && plans.length > 0 && (
                 <button className="btn btn-outline btn-sm" onClick={() => setShowPlanPicker(true)}>Load Plan</button>
               )}
-              <button className="btn btn-outline" onClick={() => { setShowLog(false); setIsFreeWorkout(false); }} disabled={saving}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { localStorage.removeItem('elitepro_active_log_' + currentUser.id); setShowLog(false); setIsFreeWorkout(false); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>
