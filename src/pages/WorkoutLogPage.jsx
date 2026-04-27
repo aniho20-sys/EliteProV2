@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 
@@ -83,6 +84,8 @@ export default function WorkoutLogPage() {
   const [isFreeWorkout, setIsFreeWorkout] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
+  const [pickerMuscles, setPickerMuscles] = useState([]);
+  const [showPickerMuscleFilter, setShowPickerMuscleFilter] = useState(false);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
 
   const [editingLog, setEditingLog] = useState(null);
@@ -693,7 +696,7 @@ export default function WorkoutLogPage() {
         </div>
       )}
       {showExercisePicker && (
-        <div className="modal-overlay" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); }}>
+        <div className="modal-overlay" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); setPickerMuscles([]); setShowPickerMuscleFilter(false); }}>
           <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Add Exercise</h3>
             <div className="form-group" style={{ position: 'relative' }}>
@@ -707,6 +710,22 @@ export default function WorkoutLogPage() {
                 autoFocus
               />
             </div>
+            <button
+              type="button"
+              className="picker-muscle-toggle"
+              onClick={() => setShowPickerMuscleFilter(v => !v)}
+            >
+              <span>Filter by muscle</span>
+              {pickerMuscles.length > 0 && (
+                <span className="picker-muscle-count">{pickerMuscles.length}</span>
+              )}
+              {showPickerMuscleFilter ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            {showPickerMuscleFilter && (
+              <div className="picker-muscle-wrap">
+                <MuscleSelector selected={pickerMuscles} onChange={setPickerMuscles} />
+              </div>
+            )}
             <div className="exercise-picker-list">
               {exerciseSearch.trim() && (
                 <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomExerciseToLog(exerciseSearch)}>
@@ -715,9 +734,14 @@ export default function WorkoutLogPage() {
                 </button>
               )}
               {exerciseLibrary
-                .filter(e => !exerciseSearch ||
-                  e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-                  e.muscle?.toLowerCase().includes(exerciseSearch.toLowerCase()))
+                .filter(e => {
+                  const matchText = !exerciseSearch ||
+                    e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+                    e.muscle?.toLowerCase().includes(exerciseSearch.toLowerCase());
+                  const matchMuscle = pickerMuscles.length === 0 ||
+                    pickerMuscles.some(m => e.muscle?.toLowerCase().includes(m.toLowerCase()));
+                  return matchText && matchMuscle;
+                })
                 .map(exercise => (
                   <button key={exercise.id} className="exercise-picker-item" onClick={() => addExerciseToLog(exercise)}>
                     <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
@@ -726,7 +750,7 @@ export default function WorkoutLogPage() {
                 ))}
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); }}>Close</button>
+              <button className="btn btn-outline" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); setPickerMuscles([]); setShowPickerMuscleFilter(false); }}>Close</button>
             </div>
           </div>
         </div>

@@ -1,12 +1,13 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import NotesSection from '../components/NotesSection';
+import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
@@ -59,6 +60,8 @@ export default function ClientDetailPage() {
   const [savingLog, setSavingLog] = useState(false);
   const [showLogExPicker, setShowLogExPicker] = useState(false);
   const [logExSearch, setLogExSearch] = useState('');
+  const [logExMuscles, setLogExMuscles] = useState([]);
+  const [showLogExMuscleFilter, setShowLogExMuscleFilter] = useState(false);
   const [savePlanLog, setSavePlanLog] = useState(null);
   const [savePlanName, setSavePlanName] = useState('');
   const [savePlanDay, setSavePlanDay] = useState('');
@@ -838,13 +841,29 @@ export default function ClientDetailPage() {
       )}
 
       {showLogExPicker && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => { setShowLogExPicker(false); setLogExSearch(''); }}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => { setShowLogExPicker(false); setLogExSearch(''); setLogExMuscles([]); setShowLogExMuscleFilter(false); }}>
           <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Add Exercise</h3>
             <div className="form-group" style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search by name or muscle…" value={logExSearch} onChange={e => setLogExSearch(e.target.value)} autoFocus />
             </div>
+            <button
+              type="button"
+              className="picker-muscle-toggle"
+              onClick={() => setShowLogExMuscleFilter(v => !v)}
+            >
+              <span>Filter by muscle</span>
+              {logExMuscles.length > 0 && (
+                <span className="picker-muscle-count">{logExMuscles.length}</span>
+              )}
+              {showLogExMuscleFilter ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            {showLogExMuscleFilter && (
+              <div className="picker-muscle-wrap">
+                <MuscleSelector selected={logExMuscles} onChange={setLogExMuscles} />
+              </div>
+            )}
             <div className="exercise-picker-list">
               {logExSearch.trim() && (
                 <button className="exercise-picker-item exercise-picker-custom" onClick={() => addCustomLogExercise(logExSearch)}>
@@ -853,7 +872,14 @@ export default function ClientDetailPage() {
                 </button>
               )}
               {exerciseLibrary
-                .filter(e => !logExSearch || e.name.toLowerCase().includes(logExSearch.toLowerCase()) || e.muscle?.toLowerCase().includes(logExSearch.toLowerCase()))
+                .filter(e => {
+                  const matchText = !logExSearch ||
+                    e.name.toLowerCase().includes(logExSearch.toLowerCase()) ||
+                    e.muscle?.toLowerCase().includes(logExSearch.toLowerCase());
+                  const matchMuscle = logExMuscles.length === 0 ||
+                    logExMuscles.some(m => e.muscle?.toLowerCase().includes(m.toLowerCase()));
+                  return matchText && matchMuscle;
+                })
                 .map(exercise => (
                   <button key={exercise.id} className="exercise-picker-item" onClick={() => addLogExercise(exercise)}>
                     <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
@@ -862,7 +888,7 @@ export default function ClientDetailPage() {
                 ))}
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowLogExPicker(false); setLogExSearch(''); }}>Close</button>
+              <button className="btn btn-outline" onClick={() => { setShowLogExPicker(false); setLogExSearch(''); setLogExMuscles([]); setShowLogExMuscleFilter(false); }}>Close</button>
             </div>
           </div>
         </div>
