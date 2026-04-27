@@ -1880,6 +1880,67 @@ tr:hover { background: var(--bg-card-hover); }
   font-weight: 600;
 }
 .log-set-input { width: 80px; padding: 8px 10px; text-align: center; }
+.log-set-row-done { opacity: 0.5; }
+.log-set-done {
+  color: var(--border);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.log-set-done:hover { color: var(--text-muted); }
+.log-set-done.done { color: var(--success, #22c55e); }
+.log-set-done.done:hover { color: var(--danger); }
+
+.log-exercise-rest {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+}
+.log-rest-select {
+  font-size: 0.78rem;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.log-unit-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.log-unit-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.log-unit-pill:hover { border-color: var(--primary); color: var(--primary); }
+.log-unit-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.exercise-picker-custom-wrap {
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--border);
+  background: rgba(67, 97, 238, 0.04);
+}
+.exercise-picker-custom-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 8px;
+}
+
 @media (max-width: 640px) {
   .log-top-bar { flex-direction: column; align-items: stretch; }
   .log-top-actions { justify-content: stretch; }
@@ -2488,8 +2549,8 @@ tr:hover { background: var(--bg-card-hover); }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  display: block;
-  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
 }
 .rest-timer-left { flex: 1; min-width: 0; }
 .rest-timer-presets { display: flex; gap: 4px; flex-wrap: wrap; }
