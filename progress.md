@@ -12,59 +12,62 @@
 | `67a6e46` | Auto-save in-progress workout log to localStorage |
 | `55a83bd` | Fix Google sign-in OAuth redirect URI |
 | `01cfffb` | Allow clients to add custom exercises to library |
+| `9a7cd44` | Add per-exercise rest timer and exercise unit types to workout log |
+| `0f31f71` | Fix workout log card header overflow on mobile (flex-wrap) |
+| `f6ca21c` | Allow changing unit type per exercise directly on the log card |
+| `feff44d` | Add unit types to trainer PT session log modal in ClientDetailPage |
 
 ---
 
-## In Progress (plan approved, implementation not started)
+## Pending Tasks
 
-### Feature: Per-Exercise Rest Timer + Exercise Unit Types
+### 🔴 Priority 1 — Fixed (regression closed)
+
+| Item | Status |
+|------|--------|
+| `ClientDetailPage` log history showing `undefinedkg × undefined` for non-weight entries | ✅ Fixed in `feff44d` — `fmtSet()` applied to history display |
+
+---
+
+### 🟡 Priority 2 — CLAUDE.md Update
+
+**Problem**: CLAUDE.md is significantly outdated. The following features are implemented but not documented:
+
+| Missing item | Location |
+|---|---|
+| `InvoicePage` + `/invoices` route | `src/pages/InvoicePage.jsx`, `src/App.jsx` |
+| `ClientProgressOverviewPage` + `/progress-overview` route | `src/pages/ClientProgressOverviewPage.jsx` |
+| Templates system (`getTemplates`, `saveAsTemplate`, `deleteTemplate`) | `src/context/AppContext.jsx`, `src/pages/WorkoutPlansPage.jsx` |
+| Session quota (`totalSessions`, `sessionOffset`, `getSessionStats`) | `src/context/AppContext.jsx`, `src/pages/ClientDetailPage.jsx` |
+| `getTrainerSchedule()` + `trainerSchedule` state | `src/context/AppContext.jsx` |
+| `removeClient()`, `updateBodyStat()`, `updateWorkoutLog()`, `deleteScheduleItem()` | `src/context/AppContext.jsx` |
+| `invoices` + `templates` Firestore collections | `src/context/AppContext.jsx`, `firestore.rules` |
+| `dateUtils.js`, `urlUtils.js` | `src/utils/` |
+| Per-exercise rest timer + unit types (4 unit types, `SetInputs`, helpers) | `src/pages/WorkoutLogPage.jsx` |
+| `markLoaded` now tracks 8 collections including `invoices` (not 8 hardcoded per old comment) | `src/context/AppContext.jsx:56` |
+
+**Action**: Rewrite the relevant sections of `CLAUDE.md` — State Management, Project Structure, Routing table, Available context functions.
+
+---
+
+### 🟡 Priority 3 — Unit Select → Pill Buttons (UX)
+
+**Problem**: Exercise card headers in the workout log use a native `<select>` dropdown for unit type (Wt+Reps / Reps / Time / Dist). On mobile, native selects feel inconsistent with the pill buttons already used in the exercise picker custom-add section.
 
 **Files to modify:**
-- `src/pages/WorkoutLogPage.jsx` — primary, most changes
-- `src/pages/ExerciseLibraryPage.jsx` — add unit picker to exercise form
-- `src/styles/index.css` — new CSS classes
+- `src/pages/WorkoutLogPage.jsx` — replace unit `<select>` with pill row in exercise card (free workout + plan-based)
+- `src/pages/ClientDetailPage.jsx` — same for PT session log modal exercise cards
 
-**WorkoutLogPage.jsx changes:**
-- [ ] Remove `REST_PRESETS` constant
-- [ ] Add `completedSets: Set` state (tracks `"exIdx-setIdx"` strings)
-- [ ] Add `customUnit` state for unit picker in exercise picker modal
-- [ ] Add `emptySet(unit)` helper — returns correct blank set shape per unit
-- [ ] Add `hasValue(s, unit)` helper — unit-aware save filter
-- [ ] Add `formatSet(s, unit)` helper — unit-aware history display
-- [ ] Add `SetInputs` sub-component — renders kg+reps / reps / seconds / metres inputs
-- [ ] Add `handleCompleteSet(exIdx, setIdx)` — toggle done + auto-start timer with exercise's rest
-- [ ] Add `updateExerciseRest(exIdx, seconds)` — update per-exercise rest
-- [ ] Update `startFreeWorkout` — reset `completedSets`
-- [ ] Update `startLog` — add `rest` + `unit` to each entry, reset `completedSets`
-- [ ] Update `loadFromPlan` — add `rest` + `unit` to each entry
-- [ ] Update `addExerciseToLog` — add `rest: 90, unit: exercise.unit || 'weight_reps'`
-- [ ] Update `addCustomExerciseToLog(name, unit)` — accept unit param
-- [ ] Update `addSet` — use `emptySet(entry.unit)` for correct blank set shape
-- [ ] Update `removeSet` — shift `completedSets` keys correctly
-- [ ] Update `removeExercise` — shift `completedSets` keys correctly
-- [ ] Update `isNewPR` + `wasPRAtTime` — skip non-weight_reps exercises
-- [ ] Update `startEdit` — include `seconds`/`metres` fields in string conversion
-- [ ] Update `handleSave` — unit-aware set serialization + total volume
-- [ ] Update localStorage save — include `completedSets: [...completedSets]`
-- [ ] Update localStorage restore — `setCompletedSets(new Set(draft.completedSets || []))`
-- [ ] Update Cancel button — reset `completedSets`
-- [ ] Update exercise card UI — per-exercise rest `<select>` in header
-- [ ] Update set row UI — unit-aware inputs + ✓ `CheckCircle` button
-- [ ] Update exercise picker — replace custom-add button with unit pill buttons
-- [ ] Update history display — use `formatSet(s, entry.unit)`
-- [ ] Update edit modal set rows — unit-aware via `SetInputs`
-- [ ] Simplify timer bar — remove `.rest-timer-presets` row
+**Design**: Show 4 small pills inline below the exercise name (or in a collapsible row), replacing the `<select>`. Reuse existing `.log-unit-pill` + `.log-unit-pill.active` CSS classes.
 
-**ExerciseLibraryPage.jsx changes:**
-- [ ] Add `unit` field to form state (default `'weight_reps'`)
-- [ ] Add unit selector (4 pills or `<select>`) in add/edit exercise modal
-- [ ] Include `unit` in `exData` when saving
+---
 
-**src/styles/index.css changes:**
-- [ ] `.log-exercise-rest` + `.log-rest-select` — per-exercise rest control
-- [ ] `.log-set-done` + `.log-set-done.done` — ✓ button states
-- [ ] `.log-unit-picker` + `.log-unit-pill` + `.log-unit-pill.active` — custom exercise unit pills
-- [ ] `.exercise-picker-custom-wrap` + `.exercise-picker-custom-label` — custom add section styling
+### 🟡 Priority 4 — Invoice Firestore Rules Ownership Check
+
+**Problem**: `deleteInvoice` in `AppContext` calls `deleteDoc` directly. The Firestore rule for `/invoices/{invoiceId}` must explicitly verify `request.auth.uid == resource.data.trainerId` before allowing delete. Needs audit to confirm the rule is not missing this check.
+
+**File to check**: `firestore.rules` — `/invoices/{invoiceId}` match block
+**File to update if needed**: `firestore.rules`, then `npm run deploy:rules`
 
 ---
 
