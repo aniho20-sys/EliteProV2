@@ -3,8 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Plus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import ProgressView from '../components/ProgressView';
-
-const EMPTY_FORM = { weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' };
+import { EMPTY_STAT_FORM } from '../data/metrics';
 
 export default function ProgressPage() {
   const { currentUser, getBodyStats, addBodyStat, updateBodyStat } = useApp();
@@ -13,9 +12,9 @@ export default function ProgressPage() {
   const [showModal, setShowModal] = useState(false);
   const [editStat, setEditStat] = useState(null); // null = add mode, object = edit mode
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(EMPTY_STAT_FORM);
 
-  const openAdd = () => { setEditStat(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openAdd = () => { setEditStat(null); setForm(EMPTY_STAT_FORM); setShowModal(true); };
   const openEdit = (stat) => {
     setEditStat(stat);
     setForm({

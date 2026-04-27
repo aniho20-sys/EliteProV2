@@ -117,12 +117,6 @@ export function NotificationProvider({ children }) {
     return () => { if (unsubscribe) unsubscribe(); };
   }, [supported, permission]);
 
-  // Update tab title with unread count
-  useEffect(() => {
-    if (!currentUser) return;
-    // This is handled by existing unread logic — could enhance later
-  }, [currentUser]);
-
   return (
     <NotificationContext.Provider value={{ permission, supported, token, requestPermission }}>
       {children}

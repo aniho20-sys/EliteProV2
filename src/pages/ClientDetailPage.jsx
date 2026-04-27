@@ -4,20 +4,14 @@ import { useApp } from '../context/AppContext';
 import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
+import { isSafeUrl, isYouTube } from '../utils/urlUtils';
+import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import NotesSection from '../components/NotesSection';
 import ProgressView from '../components/ProgressView';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const METRICS = [
-  { key: 'weight',  label: 'Weight',   unit: 'kg', color: '#FF6B35' },
-  { key: 'bodyFat', label: 'Body Fat', unit: '%',  color: '#ef476f' },
-  { key: 'chest',   label: 'Chest',    unit: 'cm', color: '#06d6a0' },
-  { key: 'waist',   label: 'Waist',    unit: 'cm', color: '#ffd166' },
-  { key: 'arms',    label: 'Arms',     unit: 'cm', color: '#118ab2' },
-  { key: 'legs',    label: 'Legs',     unit: 'cm', color: '#8338ec' },
-];
 
 function ChartTooltip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
@@ -41,7 +35,7 @@ export default function ClientDetailPage() {
   const logs = getWorkoutLogs(clientId);
   const [tab, setTab] = useState('overview');
   const [showAddStat, setShowAddStat] = useState(false);
-  const [statForm, setStatForm] = useState({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+  const [statForm, setStatForm] = useState(EMPTY_STAT_FORM);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [activeMetric, setActiveMetric] = useState('weight');
@@ -97,7 +91,7 @@ export default function ClientDetailPage() {
         chest: Number(statForm.chest), waist: Number(statForm.waist), hips: Number(statForm.hips),
         arms: Number(statForm.arms), legs: Number(statForm.legs),
       });
-      setStatForm({ weight: '', bodyFat: '', chest: '', waist: '', hips: '', arms: '', legs: '' });
+      setStatForm(EMPTY_STAT_FORM);
       setShowAddStat(false);
     } catch { /* error handled by Firestore listener */ }
   };
@@ -326,8 +320,6 @@ export default function ClientDetailPage() {
 
   const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
-  const isYouTube = (url) => /youtu\.?be/i.test(url);
 
 
   return (

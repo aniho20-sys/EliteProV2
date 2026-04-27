@@ -4,6 +4,7 @@ import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX, Link2 } f
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
+import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 export default function ExerciseLibraryPage() {
   const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
@@ -20,9 +21,6 @@ export default function ExerciseLibraryPage() {
   const [form, setForm] = useState({ name: '', muscles: [], equipment: '', description: '', videoUrl: '' });
   const [focusUrl, setFocusUrl] = useState(false);
   const urlInputRef = useRef(null);
-
-  const isYouTube = (url) => /youtu\.?be/i.test(url);
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url.trim());
 
   useEffect(() => {
     if (showModal && focusUrl && urlInputRef.current) {

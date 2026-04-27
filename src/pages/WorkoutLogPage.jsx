@@ -5,6 +5,7 @@ import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, 
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
+import { isSafeUrl } from '../utils/urlUtils';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -98,7 +99,6 @@ export default function WorkoutLogPage() {
 
   const location = useLocation();
 
-  const isSafeUrl = (url) => /^https?:\/\//i.test(url?.trim() || '');
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
