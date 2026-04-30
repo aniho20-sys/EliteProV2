@@ -36,7 +36,9 @@ service cloud.firestore {
         || (isTrainer()
             && request.resource.data.role == 'client'
             && request.resource.data.trainerId == request.auth.uid);
-      allow update: if isOwner(userId) || isTrainerOf(userId);
+      // Role is immutable after creation — prevents client→trainer privilege escalation
+      allow update: if (isOwner(userId) || isTrainerOf(userId))
+        && request.resource.data.role == resource.data.role;
       allow delete: if isOwner(userId);
     }
 
@@ -60,7 +62,10 @@ service cloud.firestore {
     match /workoutPlans/{planId} {
       allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
       allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
-      allow update, delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+      // trainerId is immutable after creation
+      allow update: if isAuth() && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == resource.data.trainerId;
+      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
     }
 
     // ── Workout Logs ──
@@ -99,10 +104,13 @@ service cloud.firestore {
         (request.resource.data.clientId == request.auth.uid &&
          userDoc().trainerId == request.resource.data.trainerId)
       );
+      // trainerId and clientId are immutable — only status/notes/time/type may change
       allow update: if isAuth() && (
         resource.data.trainerId == request.auth.uid ||
         resource.data.clientId == request.auth.uid
-      );
+      )
+        && request.resource.data.trainerId == resource.data.trainerId
+        && request.resource.data.clientId == resource.data.clientId;
       allow delete: if isAuth() && (
         resource.data.trainerId == request.auth.uid ||
         resource.data.clientId == request.auth.uid
@@ -140,7 +148,10 @@ service cloud.firestore {
         request.resource.data.trainerId == request.auth.uid ||
         (userDoc().trainerId != null && request.resource.data.trainerId == userDoc().trainerId)
       );
-      allow update, delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+      // trainerId is immutable after creation
+      allow update: if isAuth() && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == resource.data.trainerId;
+      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
     }
 
     // ── Templates ──
@@ -148,7 +159,10 @@ service cloud.firestore {
     match /templates/{templateId} {
       allow read: if isTrainer() && resource.data.trainerId == request.auth.uid;
       allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
-      allow update, delete: if isTrainer() && resource.data.trainerId == request.auth.uid;
+      // trainerId is immutable after creation
+      allow update: if isTrainer() && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == resource.data.trainerId;
+      allow delete: if isTrainer() && resource.data.trainerId == request.auth.uid;
     }
 
     // ── Invoices ──
@@ -159,7 +173,10 @@ service cloud.firestore {
         resource.data.clientId == request.auth.uid
       );
       allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
-      allow update: if isTrainer() && resource.data.trainerId == request.auth.uid;
+      // trainerId is immutable after creation
+      allow update: if isTrainer()
+        && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == resource.data.trainerId;
       allow delete: if isTrainer() && resource.data.trainerId == request.auth.uid;
     }
   }
