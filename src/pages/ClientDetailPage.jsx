@@ -11,8 +11,6 @@ import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
 
 const UNIT_OPTIONS = [
   { value: 'weight_reps', label: 'Wt+Reps' },
@@ -39,20 +37,11 @@ const fmtSet = (s, unit) => {
   return `${s.weight}kg × ${s.reps}`;
 };
 
-function ChartTooltip({ active, payload, unit }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="progress-tooltip">
-      <div className="progress-tooltip-date">{payload[0]?.payload?.fullDate}</div>
-      <div className="progress-tooltip-val">{payload[0]?.value}<span>{unit}</span></div>
-    </div>
-  );
-}
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -60,11 +49,12 @@ export default function ClientDetailPage() {
   const plans = getWorkoutPlans({ clientId });
   const logs = getWorkoutLogs(clientId);
   const [tab, setTab] = useState('overview');
-  const [showAddStat, setShowAddStat] = useState(false);
+  const [showStatModal, setShowStatModal] = useState(false);
+  const [editStat, setEditStat] = useState(null);
   const [statForm, setStatForm] = useState(EMPTY_STAT_FORM);
+  const [savingStat, setSavingStat] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [activeMetric, setActiveMetric] = useState('weight');
   const [editingSessions, setEditingSessions] = useState(false);
   const [sessionsInput, setSessionsInput] = useState('');
   const [offsetInput, setOffsetInput] = useState('');
@@ -112,17 +102,32 @@ export default function ClientDetailPage() {
 
   const latestStat = stats[stats.length - 1];
 
-  const handleAddStat = async (e) => {
+  const openStatAdd = () => { setEditStat(null); setStatForm(EMPTY_STAT_FORM); setShowStatModal(true); };
+  const openStatEdit = (s) => {
+    setEditStat(s);
+    setStatForm({ weight: s.weight ?? '', bodyFat: s.bodyFat ?? '', chest: s.chest ?? '', waist: s.waist ?? '', hips: s.hips ?? '', arms: s.arms ?? '', legs: s.legs ?? '' });
+    setShowStatModal(true);
+  };
+  const handleStatSubmit = async (e) => {
     e.preventDefault();
+    setSavingStat(true);
     try {
-      await addBodyStat(clientId, {
-        weight: Number(statForm.weight), bodyFat: Number(statForm.bodyFat),
-        chest: Number(statForm.chest), waist: Number(statForm.waist), hips: Number(statForm.hips),
-        arms: Number(statForm.arms), legs: Number(statForm.legs),
-      });
-      setStatForm(EMPTY_STAT_FORM);
-      setShowAddStat(false);
-    } catch { /* error handled by Firestore listener */ }
+      const data = {
+        weight: Number(statForm.weight) || 0, bodyFat: Number(statForm.bodyFat) || 0,
+        chest: Number(statForm.chest) || 0, waist: Number(statForm.waist) || 0,
+        hips: Number(statForm.hips) || 0, arms: Number(statForm.arms) || 0,
+        legs: Number(statForm.legs) || 0,
+      };
+      if (editStat) {
+        await updateBodyStat(clientId, editStat.id, data);
+        toast('Measurement updated');
+      } else {
+        await addBodyStat(clientId, { ...data, addedBy: 'coach' });
+        toast('Measurement added');
+      }
+      setShowStatModal(false);
+    } catch { toast('Failed to save measurement', 'error'); }
+    finally { setSavingStat(false); }
   };
 
   const handleRemove = async () => {
@@ -399,7 +404,7 @@ export default function ClientDetailPage() {
       </div>
 
       <div className="tabs">
-        {['overview', 'body stats', 'progress', 'workout plans', 'workout logs', 'notes'].map(t => (
+        {['overview', 'progress', 'workout plans', 'workout logs', 'notes'].map(t => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -496,143 +501,20 @@ export default function ClientDetailPage() {
         </div>
       )}
 
-      {tab === 'body stats' && (
-        <div>
-          <div className="flex-between mb-16">
-            <h3>Body Stats History</h3>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAddStat(true)}><Plus size={16} /> Add Record</button>
-          </div>
-          {stats.length === 0 ? (
-            <EmptyState
-              icon={LineChart}
-              title="No measurements yet"
-              description="Add a body stat record to start tracking this client's progress."
-              action={{ label: 'Add Record', onClick: () => setShowAddStat(true) }}
-            />
-          ) : (
-            <>
-              {/* Recharts progress chart */}
-              {stats.length > 0 && (() => {
-                const metric = METRICS.find(m => m.key === activeMetric);
-                const chartData = stats.filter(s => s[activeMetric] != null).map(s => ({ date: s.date.slice(5), fullDate: s.date, value: Number(s[activeMetric]) }));
-                const vals = chartData.map(d => d.value);
-                const yMin = vals.length ? Math.floor(Math.min(...vals) * 0.97) : 0;
-                const yMax = vals.length ? Math.ceil(Math.max(...vals) * 1.03) : 100;
-                const change = stats.length > 1 ? stats[stats.length - 1][activeMetric] - stats[0][activeMetric] : null;
-                return (
-                  <div className="card mb-16">
-                    <div className="progress-stats-grid" style={{ marginBottom: 16 }}>
-                      {METRICS.map(m => {
-                        const val = latestStat?.[m.key];
-                        const diff = stats.length > 1 ? stats[stats.length - 1][m.key] - stats[0][m.key] : null;
-                        return (
-                          <button key={m.key} className={`progress-stat-tile${activeMetric === m.key ? ' active' : ''}`} style={{ '--tile-color': m.color }} onClick={() => setActiveMetric(m.key)}>
-                            <div className="progress-stat-label">{m.label}</div>
-                            <div className="progress-stat-val">{val ?? '—'}<span className="progress-stat-unit">{m.unit}</span></div>
-                            {diff !== null && (
-                              <div className={`progress-stat-diff ${diff < 0 ? 'down' : diff > 0 ? 'up' : 'flat'}`}>
-                                {diff > 0 ? <TrendingUp size={10} /> : diff < 0 ? <TrendingDown size={10} /> : <Minus size={10} />}
-                                {diff > 0 ? '+' : ''}{diff.toFixed(1)}{m.unit}
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {chartData.length > 1 && (
-                      <>
-                        <div className="progress-chart-header">
-                          <div>
-                            <div className="progress-chart-title">{metric.label} Trend</div>
-                            {change !== null && <div className={`progress-chart-change ${change < 0 ? 'down' : change > 0 ? 'up' : 'flat'}`}>{change > 0 ? '↑' : change < 0 ? '↓' : '→'} {Math.abs(change).toFixed(1)}{metric.unit} since start</div>}
-                          </div>
-                          <div className="progress-metric-pills">
-                            {METRICS.map(m => (
-                              <button key={m.key} className={`progress-metric-pill${activeMetric === m.key ? ' active' : ''}`} style={activeMetric === m.key ? { background: m.color, borderColor: m.color } : {}} onClick={() => setActiveMetric(m.key)}>{m.label}</button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="progress-chart-wrap">
-                          <ResponsiveContainer width="100%" height={200}>
-                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                              <defs>
-                                <linearGradient id={`grad-client-${activeMetric}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%"  stopColor={metric.color} stopOpacity={0.25} />
-                                  <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                              <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                              <YAxis domain={[yMin, yMax]} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={v => `${v}${metric.unit}`} />
-                              <Tooltip content={<ChartTooltip unit={metric.unit} />} />
-                              <Area type="monotone" dataKey="value" stroke={metric.color} strokeWidth={2.5} fill={`url(#grad-client-${activeMetric})`} dot={{ r: 3, fill: metric.color, strokeWidth: 0 }} activeDot={{ r: 5, fill: metric.color, strokeWidth: 2, stroke: 'var(--surface)' }} />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
-
-              <div className="card table-wrapper">
-                <table>
-                  <thead><tr><th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th>Source</th></tr></thead>
-                  <tbody>
-                    {[...stats].reverse().map((s, i) => (
-                      <tr key={i}><td>{s.date}</td><td>{s.weight}kg</td><td>{s.bodyFat}%</td><td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips ? `${s.hips}cm` : '—'}</td><td>{s.arms}cm</td><td>{s.legs}cm</td><td>{s.addedBy === 'coach' ? <span className="tag tag-accent" style={{ fontSize: '0.65rem' }}>Coach</span> : s.addedBy === 'self' ? <span className="tag" style={{ fontSize: '0.65rem' }}>Self</span> : '—'}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {showAddStat && (
-            <div className="modal-overlay" onClick={() => setShowAddStat(false)}>
-              <div className="modal" onClick={e => e.stopPropagation()}>
-                <h3 className="modal-title">Add Body Stats</h3>
-                <form onSubmit={handleAddStat}>
-                  <div className="form-row">
-                    <div className="form-group"><label className="form-label">Weight (kg)</label><input className="form-input" type="number" step="0.1" required value={statForm.weight} onChange={e => setStatForm({ ...statForm, weight: e.target.value })} /></div>
-                    <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" value={statForm.bodyFat} onChange={e => setStatForm({ ...statForm, bodyFat: e.target.value })} /></div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.chest} onChange={e => setStatForm({ ...statForm, chest: e.target.value })} /></div>
-                    <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.waist} onChange={e => setStatForm({ ...statForm, waist: e.target.value })} /></div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.hips} onChange={e => setStatForm({ ...statForm, hips: e.target.value })} /></div>
-                    <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.arms} onChange={e => setStatForm({ ...statForm, arms: e.target.value })} /></div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.legs} onChange={e => setStatForm({ ...statForm, legs: e.target.value })} /></div>
-                  </div>
-                  <div className="modal-actions">
-                    <button type="button" className="btn btn-outline" onClick={() => setShowAddStat(false)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary">Save</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {tab === 'progress' && (
         <div>
           <div className="flex-between mb-16">
             <div>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <BarChart2 size={18} style={{ color: 'var(--primary)' }} /> Progress Charts
+                <BarChart2 size={18} style={{ color: 'var(--primary)' }} /> Body Composition
               </h3>
               <p className="text-sm text-muted mt-4">{stats.length} measurement{stats.length !== 1 ? 's' : ''} recorded</p>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAddStat(true)}>
+            <button className="btn btn-primary btn-sm" onClick={openStatAdd}>
               <Plus size={16} /> Add Measurement
             </button>
           </div>
-          <ProgressView clientId={clientId} canDelete={false} />
+          <ProgressView clientId={clientId} canDelete={false} onAdd={openStatAdd} onEdit={openStatEdit} />
         </div>
       )}
 
@@ -1053,6 +935,35 @@ export default function ClientDetailPage() {
               <button className="btn btn-outline" onClick={() => setEditingLogId(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveEditLog} disabled={savingEditLog}>{savingEditLog ? 'Saving…' : 'Save Changes'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showStatModal && (
+        <div className="modal-overlay" onClick={() => setShowStatModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">{editStat ? 'Edit Measurement' : 'Add Measurement'}</h3>
+            <form onSubmit={handleStatSubmit}>
+              <div className="form-row">
+                <div className="form-group"><label className="form-label">Weight (kg)</label><input className="form-input" type="number" step="0.1" min="20" max="300" required value={statForm.weight} onChange={e => setStatForm({ ...statForm, weight: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={statForm.bodyFat} onChange={e => setStatForm({ ...statForm, bodyFat: e.target.value })} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.chest} onChange={e => setStatForm({ ...statForm, chest: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.waist} onChange={e => setStatForm({ ...statForm, waist: e.target.value })} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.hips} onChange={e => setStatForm({ ...statForm, hips: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.arms} onChange={e => setStatForm({ ...statForm, arms: e.target.value })} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.legs} onChange={e => setStatForm({ ...statForm, legs: e.target.value })} /></div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setShowStatModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingStat}>{savingStat ? 'Saving…' : editStat ? 'Save Changes' : 'Save'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
