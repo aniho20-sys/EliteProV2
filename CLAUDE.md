@@ -26,53 +26,67 @@ ElitePro is a web-based fitness training platform for personal trainers and thei
 ```
 src/
 ├── components/
-│   ├── EmptyState.jsx      # Reusable empty state (icon + title + desc + CTA action)
-│   ├── ErrorBoundary.jsx   # React class error boundary (wraps entire app)
-│   ├── GlobalSearch.jsx    # Search bar: clients, exercises, plans
-│   ├── MuscleSelector.jsx  # Interactive SVG muscle body model for exercise targeting
-│   ├── Navigation.jsx      # Sidebar (desktop) + top header + bottom nav (mobile)
-│   ├── NotesSection.jsx    # Client notes section component
-│   └── Skeleton.jsx        # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
+│   ├── EmptyState.jsx        # Reusable empty state (icon + title + desc + CTA action)
+│   ├── ErrorBoundary.jsx     # React class error boundary (wraps entire app)
+│   ├── ExerciseProgress.jsx  # Per-exercise strength progression chart (exercise picker + Recharts area + PR badges)
+│   ├── GlobalSearch.jsx      # Search bar: clients, exercises, plans
+│   ├── InstallPrompt.jsx     # PWA install prompt banner (beforeinstallprompt + iOS fallback)
+│   ├── MuscleSelector.jsx    # Interactive SVG muscle body model for exercise targeting
+│   ├── Navigation.jsx        # Sidebar (desktop) + top header + bottom nav (mobile)
+│   ├── NotesSection.jsx      # Client notes section component
+│   ├── ProgressView.jsx      # Body composition chart + stats grid + history table; shared by ProgressPage & ClientDetailPage
+│   └── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
 ├── context/
-│   ├── AppContext.jsx       # Global state + all Firestore/Auth operations
+│   ├── AppContext.jsx         # Global state + all Firestore/Auth operations
 │   ├── NotificationContext.jsx # FCM push notifications (code ready, needs Blaze deploy)
-│   ├── ThemeContext.jsx     # Light/dark theme toggle (persisted to localStorage)
-│   └── ToastContext.jsx     # Toast notification system (3s auto-dismiss)
+│   ├── ThemeContext.jsx       # Light/dark theme toggle (persisted to localStorage)
+│   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss)
 ├── data/
-│   ├── exercises.js        # Static exercise library (seeded into Firestore)
-│   └── sampleData.js       # Demo seed data (ghost clients, plans, logs, etc.)
+│   ├── exercises.js          # Static exercise library (seeded into Firestore)
+│   ├── metrics.js            # Body stat metric definitions: METRICS array + EMPTY_STAT_FORM
+│   └── sampleData.js         # Demo seed data (ghost clients, plans, logs, etc.)
 ├── pages/
-│   ├── LoginPage.jsx           # Auth: Google, email/password, forgot password, demo
-│   ├── RoleSelectPage.jsx      # Post-auth profile creation (role + invite code)
-│   ├── TrainerDashboard.jsx    # Trainer home: stats overview
-│   ├── ClientDashboard.jsx     # Client home: workout summary + body stats
-│   ├── ClientsPage.jsx         # Trainer: client list
-│   ├── ClientDetailPage.jsx    # Trainer: client detail (stats, plans, logs, notes)
-│   ├── WorkoutPlansPage.jsx    # Create/view workout plans
-│   ├── SchedulePage.jsx        # Session scheduling + calendar view
-│   ├── MessagesPage.jsx        # In-app messaging (full page)
-│   ├── ExerciseLibraryPage.jsx # Exercise database with search/filter
-│   ├── MyWorkoutsPage.jsx      # Client: assigned workout plans
-│   ├── WorkoutLogPage.jsx      # Client: log workout sessions
-│   ├── ProgressPage.jsx        # Client: body stats tracking + charts
-│   └── ProfilePage.jsx         # User profile, invite code, account management
+│   ├── LoginPage.jsx                 # Auth: Google, email/password, forgot password, demo
+│   ├── RoleSelectPage.jsx            # Post-auth profile creation (role + invite code)
+│   ├── TrainerDashboard.jsx          # Trainer home: stats overview
+│   ├── ClientDashboard.jsx           # Client home: workout summary + body stats
+│   ├── ClientsPage.jsx               # Trainer: client list
+│   ├── ClientDetailPage.jsx          # Trainer: client detail tabs (overview, progress, plans, logs, notes)
+│   ├── ClientProgressOverviewPage.jsx # Trainer: all-clients progress overview with volume, sessions, PR stats + sorting
+│   ├── InvoicePage.jsx               # Trainer: invoice creation, management, status tracking
+│   ├── WorkoutPlansPage.jsx          # Create/view workout plans + save-as-template
+│   ├── SchedulePage.jsx              # Session scheduling + calendar view
+│   ├── MessagesPage.jsx              # In-app messaging (full page)
+│   ├── ExerciseLibraryPage.jsx       # Exercise database with search/filter
+│   ├── MyWorkoutsPage.jsx            # Client: assigned workout plans
+│   ├── WorkoutLogPage.jsx            # Client: log workout sessions (rest timer, unit types, localStorage draft)
+│   ├── ProgressPage.jsx              # Client: body composition tab + exercise progression tab
+│   ├── ProfilePage.jsx               # User profile, invite code, account management
+│   ├── PrivacyPolicyPage.jsx         # Static privacy policy (no auth required)
+│   └── TermsPage.jsx                 # Static terms of service (no auth required)
 ├── styles/
-│   └── index.css           # Global styles (CSS variables, skeleton, empty states)
+│   └── index.css             # Global styles (CSS variables, skeleton, empty states)
 ├── utils/
-│   ├── authErrors.js       # Firebase Auth error code → friendly message map
-│   ├── sessionUtils.js     # Session colour/label helpers
-│   └── workoutUtils.js     # Workout set normalisation helpers
-├── firebase.js             # Firebase init (db, auth exports)
-├── App.jsx                 # Root: provider tree + routing + invite code URL parsing
-└── main.jsx                # Entry point
+│   ├── authErrors.js         # Firebase Auth error code → friendly message map
+│   ├── dateUtils.js          # Local timezone-safe date helpers: localToday, localDateAdd, parseLocalDate
+│   ├── sessionUtils.js       # Session colour/label helpers
+│   ├── urlUtils.js           # URL safety validators: isSafeUrl(url), isYouTube(url)
+│   └── workoutUtils.js       # Workout set normalisation helpers
+├── firebase.js               # Firebase init (db, auth exports)
+├── App.jsx                   # Root: provider tree + routing + invite code URL parsing
+└── main.jsx                  # Entry point
 
-functions/                  # Cloud Functions (needs Blaze plan to deploy)
-├── index.js                # sendNotificationOnMessage + sendNotificationOnSchedule
+functions/                    # Cloud Functions (needs Blaze plan to deploy)
+├── index.js                  # sendNotificationOnMessage + sendNotificationOnSchedule
 └── package.json
 
 public/
-├── firebase-messaging-sw.js # FCM background notification Service Worker
-└── manifest.json            # PWA manifest (needs proper icons)
+├── firebase-messaging-sw.js  # FCM background notification Service Worker
+├── manifest.json             # PWA manifest
+└── splash/                   # iOS PWA splash screens (auto-generated by scripts/generate-splash.cjs)
+
+scripts/
+└── generate-splash.cjs       # Generates iOS splash PNGs into public/splash/ (runs in prebuild)
 ```
 
 Top-level config files:
@@ -165,16 +179,23 @@ Top-level config files:
 {
   id: string,
   clientId: string,
-  planId: string,
+  planId: string,        // '' for free workouts
   date: string,          // 'YYYY-MM-DD'
   entries: [
     {
       exerciseId: string,
-      sets: [{ weight: number, reps: number, completed: boolean }],
+      unit: 'weight_reps' | 'reps_only' | 'time' | 'distance',  // defaults to 'weight_reps'
+      sets: [
+        // weight_reps: { weight: number, reps: number, completed: boolean }
+        // reps_only:   { reps: number, completed: boolean }
+        // time:        { seconds: number, completed: boolean }
+        // distance:    { metres: number, completed: boolean }
+      ],
     }
   ],
   notes: string,
   rpe: number,           // 1-10 rate of perceived exertion
+  trainerNotes: string,  // trainer-only annotation (trainers can always add this field)
 }
 ```
 
@@ -213,6 +234,38 @@ Top-level config files:
   equipment: string,     // from equipmentTypes list
   description: string,
   instructions: string,
+  unit: 'weight_reps' | 'reps_only' | 'time' | 'distance',  // defaults to 'weight_reps' when absent
+  videoUrl: string,      // optional YouTube/safe URL for demo video
+}
+```
+
+#### `invoices/{invoiceId}`
+```js
+{
+  id: string,
+  trainerId: string,
+  clientId: string,
+  clientName: string,
+  amount: number,        // in currency units (e.g. HKD)
+  currency: string,      // e.g. 'HKD'
+  status: 'draft' | 'sent' | 'paid' | 'overdue',
+  issueDate: string,     // 'YYYY-MM-DD'
+  dueDate: string,       // 'YYYY-MM-DD'
+  description: string,
+  items: [{ description: string, quantity: number, unitPrice: number }],
+}
+```
+
+#### `templates/{templateId}`
+```js
+{
+  id: string,
+  trainerId: string,
+  name: string,
+  day: string,
+  exercises: [
+    { exerciseId: string, sets: number, reps: string, rest: number, notes: string }
+  ],
 }
 ```
 
@@ -224,7 +277,7 @@ Top-level config files:
 - `currentUser` — Firestore profile object (null when not logged in)
 - `authReady` — `firebaseUser !== undefined` (auth check complete)
 - `needsProfile` — `firebaseUser` exists but no Firestore profile yet → show RoleSelectPage
-- `loading` — true while Firestore listeners are fetching initial data (tracks 8 collections)
+- `loading` — true while Firestore listeners are fetching initial data (tracks 8 collections: users, bodyStats, workoutPlans, workoutLogs, schedule, messages, exercises, invoices)
 
 ### Available context functions
 ```js
@@ -242,11 +295,13 @@ deleteAccount()              // deletes Firestore profile + bodyStats + Firebase
 getClients(trainerId)        // returns client users for a trainer
 getClient(clientId)
 updateClient(clientId, updates)
+removeClient(clientId)       // sets trainerId to null (detaches client from trainer)
 
 // Body Stats
-getBodyStats(clientId)       // returns entries array
+getBodyStats(clientId)       // returns entries array (sorted by date)
 addBodyStat(clientId, stat)
-deleteBodyStat(clientId, index)
+updateBodyStat(clientId, entryId, updates)
+deleteBodyStat(clientId, entryId)
 
 // Workout Plans
 getWorkoutPlans({ clientId?, trainerId? })
@@ -257,11 +312,14 @@ deleteWorkoutPlan(planId)
 // Workout Logs
 getWorkoutLogs(clientId)
 addWorkoutLog(log)
+updateWorkoutLog(logId, updates)  // trainer adds trainerNotes; clients edit their own logs
 
 // Schedule
 getSchedule({ trainerId?, clientId?, date? })
+getTrainerSchedule(trainerId)    // returns all schedule items for a trainer
 addScheduleItem(item)
 updateScheduleItem(itemId, updates)
+deleteScheduleItem(itemId)
 
 // Messages
 getMessages(userId)          // returns all messages involving userId
@@ -269,16 +327,30 @@ sendMessage(from, to, text)
 getUnreadCount(userId)
 markMessagesRead(userId, otherUserId)
 
+// Session Stats (for session quota tracking)
+getSessionStats(clientId)    // returns { used, total, offset, colour, label }
+
 // Personal Records
 getPersonalRecords(clientId) // returns { exerciseId: { weight, date } }
 
 // Exercises
-getExercises()
+getExercises()               // returns Firestore exercises if available, else static defaults
 addExercise(exercise)
 updateExercise(exerciseId, updates)
 deleteExercise(exerciseId)
 muscleGroups                 // string[] constant
 equipmentTypes               // string[] constant
+
+// Invoices (trainer-only write; client can read their own)
+getInvoices(trainerId)
+addInvoice(invoice)
+updateInvoice(invoiceId, updates)
+deleteInvoice(invoiceId)
+
+// Templates (trainer-only)
+getTemplates()               // returns all templates for current trainer
+saveAsTemplate(plan)         // saves a workout plan as a reusable template
+deleteTemplate(templateId)
 
 // Invite Codes
 getInviteCode(trainerId)     // generates + saves if missing
@@ -287,7 +359,7 @@ connectToTrainer(clientId, inviteCode)
 
 // Demo
 resetData()                  // trainer-only: wipes + re-seeds demo data
-data                         // raw { users, bodyStats, workoutPlans, workoutLogs, schedule, messages, exercises }
+data                         // raw { users, bodyStats, workoutPlans, workoutLogs, schedule, messages, exercises, invoices }
 ```
 
 ### Other contexts
@@ -303,6 +375,8 @@ Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 | `/` | TrainerDashboard | ClientDashboard |
 | `/clients` | ClientsPage | — |
 | `/clients/:clientId` | ClientDetailPage | — |
+| `/progress-overview` | ClientProgressOverviewPage | — |
+| `/invoices` | InvoicePage | — |
 | `/plans` | WorkoutPlansPage | WorkoutPlansPage |
 | `/schedule` | SchedulePage | SchedulePage |
 | `/messages` | MessagesPage | MessagesPage |
@@ -311,18 +385,22 @@ Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 | `/my-workouts` | — | MyWorkoutsPage |
 | `/log` | — | WorkoutLogPage |
 | `/progress` | — | ProgressPage |
+| `/privacy` | PrivacyPolicyPage (no auth) | PrivacyPolicyPage (no auth) |
+| `/terms` | TermsPage (no auth) | TermsPage (no auth) |
 
 Routes are conditionally rendered based on `currentUser.role`. Unknown routes redirect to `/`.
 
 ## Firestore Security Rules Summary
 - **Auth required** for all reads and writes
-- **users**: Any auth can read; self-create own profile; trainer can create/update their clients
-- **bodyStats**: Any auth can read; only the client or their trainer can write
-- **workoutPlans**: Any auth can read; trainer can only write plans they own
-- **workoutLogs**: Any auth can read; clients write and update their own logs; trainers can update logs they created (full fields) or add `trainerNotes` to any client log; **delete is disabled**
-- **schedule**: Any auth can read; trainer or client involved can write/delete
-- **messages**: Any auth can read; sender creates; recipient can only update `read` field; **delete is disabled**
-- **exercises**: Any auth can read; only trainers can write
+- **users**: Any auth can read; self-create own profile; trainer can create/update their clients. `role` field is **immutable after creation** — prevents client→trainer privilege escalation
+- **bodyStats**: Only the client or their trainer can read/write; only the client can delete
+- **workoutPlans**: Owner trainer or assigned client can read; trainer creates/updates/deletes own plans. `trainerId` is immutable after creation
+- **workoutLogs**: Owner client or their trainer can read; clients create and update their own logs; trainers can update logs they created (full fields) or add `trainerNotes` to any client log; **delete is disabled**
+- **schedule**: Trainer, client, or any client of the same trainer can read; trainer books for own clients only, client books with own trainer only; `trainerId`+`clientId` are immutable after creation
+- **messages**: Sender and recipient can read; sender creates; recipient can only update `read` field; **delete is disabled**
+- **exercises**: Trainer reads own; client reads trainer's + personal; any auth can create with valid trainerId; trainer can update/delete own exercises. `trainerId` is immutable after creation
+- **templates**: Trainer-only access to own templates. `trainerId` is immutable after creation
+- **invoices**: Trainer reads/writes own; client reads invoices addressed to them. `trainerId` is immutable after creation
 
 ## Styling Conventions
 - All styles live in `src/styles/index.css`
@@ -377,17 +455,24 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 2. **Check Firestore rules** before adding new write operations — rules enforce role and ownership constraints
 3. **Demo data is scoped** — when adding new collections, seed data should be prefixed with `${trainerUid}-` for demo isolation
 4. **IDs are `Date.now()` strings** — e.g. `plan-${Date.now()}`, `log-${Date.now()}`; not UUIDs
-5. **`markLoaded` tracks 8 collections** — if adding a new Firestore collection listener, update the count in `markLoaded` (`loadedRef.current.size >= 8`)
+5. **`markLoaded` tracks 8 collections** — current set: users, bodyStats (manual), workoutPlans, workoutLogs, schedule, messages, exercises (manual), invoices. If adding a new Firestore collection listener, increment the threshold in `markLoaded` (`loadedRef.current.size >= N`)
 6. **Toast not alert** — use `useToast()` for user feedback, never `alert()`
 7. **HashRouter** — links must be hash-compatible; no server-side route handling
 8. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
-9. **No localStorage for app data** — only `ThemeContext` uses localStorage; all app state lives in Firestore
+9. **No localStorage for app data** — `ThemeContext` uses localStorage for theme; `WorkoutLogPage` uses it for in-progress draft only. All persisted app state lives in Firestore
 10. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
 11. **Always await Firestore writes** — wrap in try/catch with error toast; never fire-and-forget
 12. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
 13. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
 14. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
 15. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists but needs Blaze plan + VAPID key before deployment
+16. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
+17. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
+18. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
+19. **URL safety** — always validate external URLs with `isSafeUrl(url)` from `utils/urlUtils.js` before rendering links or iframes
+20. **Body composition UI** — use `<ProgressView clientId={...} canDelete onAdd={...} onEdit={...} />` as the canonical body composition view; never inline duplicate chart/table/modal markup
+21. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`
+22. **Immutable fields in Firestore updates** — `trainerId`, `clientId`, and `role` must never change after creation; all update rules in `firestore.rules` enforce this
 
 ## Team Structure
 
