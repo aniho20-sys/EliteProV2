@@ -1325,6 +1325,102 @@ tr:hover { background: var(--bg-card-hover); }
   .progress-metric-pills { gap: 5px; }
 }
 
+/* ===== EXERCISE PROGRESS ===== */
+.exercise-progress-wrap {}
+
+.ex-progress-search-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+.ex-progress-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.ex-progress-search {
+  padding-left: 32px !important;
+}
+.ex-progress-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.ex-progress-item {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.ex-progress-item:hover { border-color: var(--primary); color: var(--primary); }
+.ex-progress-item.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ex-progress-empty { font-size: 0.85rem; color: var(--text-muted); padding: 8px 0; }
+
+.ex-progress-single-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0 8px;
+}
+.ex-progress-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.ex-progress-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ex-progress-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.ex-progress-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 12px 10px 0;
+  border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
+}
+.ex-progress-table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.ex-progress-table tbody tr:last-child td { border-bottom: none; }
+
+.ex-progress-pr-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
 /* ===== SCHEDULE ===== */
 .schedule-header {
   display: flex;

@@ -9,6 +9,7 @@ import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import NotesSection from '../components/NotesSection';
 import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
+import ExerciseProgress from '../components/ExerciseProgress';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 
@@ -49,6 +50,7 @@ export default function ClientDetailPage() {
   const plans = getWorkoutPlans({ clientId });
   const logs = getWorkoutLogs(clientId);
   const [tab, setTab] = useState('overview');
+  const [progressTab, setProgressTab] = useState('body');
   const [showStatModal, setShowStatModal] = useState(false);
   const [editStat, setEditStat] = useState(null);
   const [statForm, setStatForm] = useState(EMPTY_STAT_FORM);
@@ -504,17 +506,25 @@ export default function ClientDetailPage() {
       {tab === 'progress' && (
         <div>
           <div className="flex-between mb-16">
-            <div>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <BarChart2 size={18} style={{ color: 'var(--primary)' }} /> Body Composition
-              </h3>
-              <p className="text-sm text-muted mt-4">{stats.length} measurement{stats.length !== 1 ? 's' : ''} recorded</p>
+            <div className="tabs" style={{ marginBottom: 0 }}>
+              {[['body', 'Body Composition'], ['exercise', 'Exercise Progress']].map(([key, label]) => (
+                <button key={key} className={`tab ${progressTab === key ? 'active' : ''}`} onClick={() => setProgressTab(key)}>
+                  {label}
+                </button>
+              ))}
             </div>
-            <button className="btn btn-primary btn-sm" onClick={openStatAdd}>
-              <Plus size={16} /> Add Measurement
-            </button>
+            {progressTab === 'body' && (
+              <button className="btn btn-primary btn-sm" onClick={openStatAdd}>
+                <Plus size={16} /> Add Measurement
+              </button>
+            )}
           </div>
-          <ProgressView clientId={clientId} canDelete={false} onAdd={openStatAdd} onEdit={openStatEdit} />
+          {progressTab === 'body' && (
+            <ProgressView clientId={clientId} canDelete={false} onAdd={openStatAdd} onEdit={openStatEdit} />
+          )}
+          {progressTab === 'exercise' && (
+            <ExerciseProgress clientId={clientId} />
+          )}
         </div>
       )}
 

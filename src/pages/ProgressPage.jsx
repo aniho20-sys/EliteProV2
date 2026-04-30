@@ -3,12 +3,14 @@ import { useApp } from '../context/AppContext';
 import { Plus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import ProgressView from '../components/ProgressView';
+import ExerciseProgress from '../components/ExerciseProgress';
 import { EMPTY_STAT_FORM } from '../data/metrics';
 
 export default function ProgressPage() {
   const { currentUser, getBodyStats, addBodyStat, updateBodyStat } = useApp();
   const stats = getBodyStats(currentUser.id);
   const toast = useToast();
+  const [activeTab, setActiveTab] = useState('body');
   const [showModal, setShowModal] = useState(false);
   const [editStat, setEditStat] = useState(null); // null = add mode, object = edit mode
   const [saving, setSaving] = useState(false);
@@ -61,12 +63,27 @@ export default function ProgressPage() {
           <h1 className="page-title">My Progress</h1>
           <p className="page-subtitle">{stats.length} measurement{stats.length !== 1 ? 's' : ''} recorded</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={16} /> Add Measurement
-        </button>
+        {activeTab === 'body' && (
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={16} /> Add Measurement
+          </button>
+        )}
       </div>
 
-      <ProgressView clientId={currentUser.id} canDelete onAdd={openAdd} onEdit={openEdit} />
+      <div className="tabs mb-16">
+        {[['body', 'Body Composition'], ['exercise', 'Exercise Progress']].map(([key, label]) => (
+          <button key={key} className={`tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'body' && (
+        <ProgressView clientId={currentUser.id} canDelete onAdd={openAdd} onEdit={openEdit} />
+      )}
+      {activeTab === 'exercise' && (
+        <ExerciseProgress clientId={currentUser.id} />
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
