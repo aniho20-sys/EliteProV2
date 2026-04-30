@@ -1,6 +1,6 @@
 # ElitePro Development Progress
 
-## Already Completed (committed to `claude/fitness-app-features-LbxtG`)
+## Completed
 
 | Commit | Description |
 |--------|-------------|
@@ -16,58 +16,19 @@
 | `0f31f71` | Fix workout log card header overflow on mobile (flex-wrap) |
 | `f6ca21c` | Allow changing unit type per exercise directly on the log card |
 | `feff44d` | Add unit types to trainer PT session log modal in ClientDetailPage |
+| `bc42943` | Fix custom exercise add feedback + add exercise progress to Progress Overview |
+| `9f8a1f0` | Security: harden Firestore update rules — lock immutable fields + fix privilege escalation |
+| `f2057f0` | Add strength/PR progress to trainer Progress Overview (ClientProgressOverviewPage) |
+| `f5872f6` | Remove duplicate body stats tab from ClientDetailPage |
+| `4e50215` | Add ExerciseProgress component — per-exercise strength progression chart |
+| `(latest)` | Priority 3: Replace unit `<select>` with pill buttons in WorkoutLogPage + ClientDetailPage |
+| `(latest)` | Priority 2: Update CLAUDE.md + progress.md to reflect all new features |
 
 ---
 
 ## Pending Tasks
 
-### 🔴 Priority 1 — Fixed (regression closed)
-
-| Item | Status |
-|------|--------|
-| `ClientDetailPage` log history showing `undefinedkg × undefined` for non-weight entries | ✅ Fixed in `feff44d` — `fmtSet()` applied to history display |
-
----
-
-### 🟡 Priority 2 — CLAUDE.md Update
-
-**Problem**: CLAUDE.md is significantly outdated. The following features are implemented but not documented:
-
-| Missing item | Location |
-|---|---|
-| `InvoicePage` + `/invoices` route | `src/pages/InvoicePage.jsx`, `src/App.jsx` |
-| `ClientProgressOverviewPage` + `/progress-overview` route | `src/pages/ClientProgressOverviewPage.jsx` |
-| Templates system (`getTemplates`, `saveAsTemplate`, `deleteTemplate`) | `src/context/AppContext.jsx`, `src/pages/WorkoutPlansPage.jsx` |
-| Session quota (`totalSessions`, `sessionOffset`, `getSessionStats`) | `src/context/AppContext.jsx`, `src/pages/ClientDetailPage.jsx` |
-| `getTrainerSchedule()` + `trainerSchedule` state | `src/context/AppContext.jsx` |
-| `removeClient()`, `updateBodyStat()`, `updateWorkoutLog()`, `deleteScheduleItem()` | `src/context/AppContext.jsx` |
-| `invoices` + `templates` Firestore collections | `src/context/AppContext.jsx`, `firestore.rules` |
-| `dateUtils.js`, `urlUtils.js` | `src/utils/` |
-| Per-exercise rest timer + unit types (4 unit types, `SetInputs`, helpers) | `src/pages/WorkoutLogPage.jsx` |
-| `markLoaded` now tracks 8 collections including `invoices` (not 8 hardcoded per old comment) | `src/context/AppContext.jsx:56` |
-
-**Action**: Rewrite the relevant sections of `CLAUDE.md` — State Management, Project Structure, Routing table, Available context functions.
-
----
-
-### 🟡 Priority 3 — Unit Select → Pill Buttons (UX)
-
-**Problem**: Exercise card headers in the workout log use a native `<select>` dropdown for unit type (Wt+Reps / Reps / Time / Dist). On mobile, native selects feel inconsistent with the pill buttons already used in the exercise picker custom-add section.
-
-**Files to modify:**
-- `src/pages/WorkoutLogPage.jsx` — replace unit `<select>` with pill row in exercise card (free workout + plan-based)
-- `src/pages/ClientDetailPage.jsx` — same for PT session log modal exercise cards
-
-**Design**: Show 4 small pills inline below the exercise name (or in a collapsible row), replacing the `<select>`. Reuse existing `.log-unit-pill` + `.log-unit-pill.active` CSS classes.
-
----
-
-### 🟡 Priority 4 — Invoice Firestore Rules Ownership Check
-
-**Problem**: `deleteInvoice` in `AppContext` calls `deleteDoc` directly. The Firestore rule for `/invoices/{invoiceId}` must explicitly verify `request.auth.uid == resource.data.trainerId` before allowing delete. Needs audit to confirm the rule is not missing this check.
-
-**File to check**: `firestore.rules` — `/invoices/{invoiceId}` match block
-**File to update if needed**: `firestore.rules`, then `npm run deploy:rules`
+No outstanding tasks. All priority items completed.
 
 ---
 

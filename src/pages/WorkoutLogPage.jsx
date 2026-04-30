@@ -714,10 +714,15 @@ export default function WorkoutLogPage() {
                           {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                         </div>
                       </div>
+                      <div className="log-unit-picker" style={{ marginBottom: 8 }}>
+                        {UNIT_OPTIONS.map(o => (
+                          <button key={o.value} type="button"
+                            className={`log-unit-pill${(entry.unit || 'weight_reps') === o.value ? ' active' : ''}`}
+                            onClick={() => updateExerciseUnit(exIdx, o.value)}
+                          >{o.label}</button>
+                        ))}
+                      </div>
                       <div className="log-exercise-rest">
-                        <select className="log-rest-select" value={entry.unit || 'weight_reps'} onChange={e => updateExerciseUnit(exIdx, e.target.value)} title="Unit type">
-                          {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
                         <Timer size={11} />
                         <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
                           {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}
@@ -783,10 +788,15 @@ export default function WorkoutLogPage() {
                         {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                       </div>
                     </div>
+                    <div className="log-unit-picker" style={{ marginBottom: 8 }}>
+                      {UNIT_OPTIONS.map(o => (
+                        <button key={o.value} type="button"
+                          className={`log-unit-pill${(entry.unit || 'weight_reps') === o.value ? ' active' : ''}`}
+                          onClick={() => updateExerciseUnit(exIdx, o.value)}
+                        >{o.label}</button>
+                      ))}
+                    </div>
                     <div className="log-exercise-rest">
-                      <select className="log-rest-select" value={entry.unit || 'weight_reps'} onChange={e => updateExerciseUnit(exIdx, e.target.value)} title="Unit type">
-                        {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
                       <Timer size={11} />
                       <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
                         {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}

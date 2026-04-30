@@ -713,16 +713,19 @@ export default function ClientDetailPage() {
               const unit = entry.unit || 'weight_reps';
               return (
                 <div key={exIdx} className="card mb-8" style={{ background: 'var(--bg-hover)', border: 'none', padding: 12 }}>
-                  <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
                     <span className="fw-bold">{entry.name}</span>
-                    <div className="log-exercise-rest">
-                      <select className="log-rest-select" value={unit} onChange={e => updateLogExerciseUnit(exIdx, e.target.value)} title="Unit type">
-                        {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                    </div>
                     {logIsCustom && (
                       <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeLogExercise(exIdx)}><X size={13} /></button>
                     )}
+                  </div>
+                  <div className="log-unit-picker" style={{ marginBottom: 8 }}>
+                    {UNIT_OPTIONS.map(o => (
+                      <button key={o.value} type="button"
+                        className={`log-unit-pill${unit === o.value ? ' active' : ''}`}
+                        onClick={() => updateLogExerciseUnit(exIdx, o.value)}
+                      >{o.label}</button>
+                    ))}
                   </div>
                   {entry.sets.map((set, setIdx) => (
                     <div key={setIdx} className="log-set-row">
