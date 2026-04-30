@@ -2,15 +2,43 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users } from 'lucide-react';
-import { localToday } from '../utils/dateUtils';
+import { localToday, localDateAdd } from '../utils/dateUtils';
 import EmptyState from '../components/EmptyState';
 
 const SORT_OPTIONS = [
   { value: 'name', label: 'Name' },
   { value: 'lastActive', label: 'Last Active' },
   { value: 'weightChange', label: 'Weight Change' },
+  { value: 'volume', label: 'Volume' },
   { value: 'sessionsLeft', label: 'Sessions Left' },
 ];
+
+function calcVolumeInRange(logs, startDate, endDate) {
+  return logs
+    .filter(log => log.date >= startDate && log.date <= endDate)
+    .reduce((total, log) => {
+      return total + (log.entries || []).reduce((lt, entry) => {
+        return lt + (entry.sets || []).reduce((st, s) => {
+          if (s.completed === false) return st;
+          return st + (Number(s.weight) || 0) * (Number(s.reps) || 0);
+        }, 0);
+      }, 0);
+    }, 0);
+}
+
+function weeklyVolumeSparkline(logs) {
+  return Array.from({ length: 6 }, (_, i) => {
+    const endDate = localDateAdd(-(5 - i) * 7);
+    const startDate = localDateAdd(-(6 - i) * 7);
+    return calcVolumeInRange(logs, startDate, endDate);
+  });
+}
+
+function fmtVolume(v) {
+  if (!v) return '—';
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}t`;
+  return `${Math.round(v)}kg`;
+}
 
 function MiniSparkline({ data, color = 'var(--primary)' }) {
   if (!data || data.length < 2) return null;
@@ -72,7 +100,7 @@ function SessionsBar({ used, total }) {
   );
 }
 
-function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, onClick }) {
+function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline, onClick }) {
   const latest = bodyStats[bodyStats.length - 1];
   const prev = bodyStats.length > 1 ? bodyStats[bodyStats.length - 2] : null;
   const weightChange = latest && prev ? latest.weight - prev.weight : null;
@@ -125,6 +153,31 @@ function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, onClic
         </div>
       </div>
 
+      {/* Exercise progress row */}
+      <div className="client-progress-stats">
+        <div className="client-progress-stat">
+          <span className="client-progress-stat-label">Volume (30d)</span>
+          <span className="client-progress-stat-value">{fmtVolume(volume30d)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <TrendIcon change={volumeChange} goodDirection="up" />
+            {volumeChange !== null && Math.abs(volumeChange) >= 1 && (
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                {volumeChange > 0 ? '+' : ''}{Math.round(volumeChange)}%
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="client-progress-stat">
+          <span className="client-progress-stat-label">Sessions (30d)</span>
+          <span className="client-progress-stat-value">{sessions30d}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>workouts</span>
+        </div>
+        <div className="client-progress-stat" style={{ alignItems: 'flex-start' }}>
+          <span className="client-progress-stat-label">Vol Trend</span>
+          <MiniSparkline data={volSparkline} color="var(--accent)" />
+        </div>
+      </div>
+
       {/* Activity row */}
       <div className="client-progress-activity">
         <div className="client-progress-activity-item">
@@ -161,6 +214,8 @@ export default function ClientProgressOverviewPage() {
 
   const clients = getClients(currentUser.id);
   const today = localToday();
+  const start30d = localDateAdd(-30);
+  const start60d = localDateAdd(-60);
 
   const enriched = clients.map(client => {
     const bodyStats = getBodyStats(client.id);
@@ -175,7 +230,12 @@ export default function ClientProgressOverviewPage() {
     const weightChange = latest && prev ? latest.weight - prev.weight : null;
     const lastLog = logs.length > 0 ? [...logs].sort((a, b) => b.date.localeCompare(a.date))[0] : null;
     const daysSinceLog = daysSince(lastLog?.date);
-    return { client, bodyStats, logs, nextSession, sessionStats, latest, weightChange, daysSinceLog };
+    const volume30d = calcVolumeInRange(logs, start30d, today);
+    const volumePrev30d = calcVolumeInRange(logs, start60d, start30d);
+    const volumeChange = volumePrev30d > 0 ? ((volume30d - volumePrev30d) / volumePrev30d) * 100 : null;
+    const sessions30d = logs.filter(l => l.date >= start30d && l.date <= today).length;
+    const volSparkline = weeklyVolumeSparkline(logs);
+    return { client, bodyStats, logs, nextSession, sessionStats, latest, weightChange, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline };
   });
 
   const sorted = [...enriched].sort((a, b) => {
@@ -190,6 +250,7 @@ export default function ClientProgressOverviewPage() {
       const wb = b.weightChange ?? 9999;
       return wa - wb;
     }
+    if (sort === 'volume') return (b.volume30d ?? 0) - (a.volume30d ?? 0);
     if (sort === 'sessionsLeft') {
       const ra = a.sessionStats.remaining ?? 9999;
       const rb = b.sessionStats.remaining ?? 9999;
@@ -228,7 +289,7 @@ export default function ClientProgressOverviewPage() {
           </div>
 
           <div className="client-progress-grid">
-            {sorted.map(({ client, bodyStats, logs, nextSession, sessionStats }) => (
+            {sorted.map(({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline }) => (
               <ClientCard
                 key={client.id}
                 client={client}
@@ -236,6 +297,10 @@ export default function ClientProgressOverviewPage() {
                 logs={logs}
                 nextSession={nextSession}
                 sessionStats={sessionStats}
+                volume30d={volume30d}
+                volumeChange={volumeChange}
+                sessions30d={sessions30d}
+                volSparkline={volSparkline}
                 onClick={() => navigate(`/clients/${client.id}`)}
               />
             ))}

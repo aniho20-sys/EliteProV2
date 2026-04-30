@@ -154,8 +154,10 @@ export default function WorkoutPlansPage() {
             sets: defaultSets(), notes: '',
           }],
         }));
+        toast(`"${name}" added to plan`);
       }
       setCustomForm(EMPTY_CUSTOM);
+      setShowCustomForm(false);
     } catch (err) {
       toast('Failed to add exercise: ' + (err.message || 'Unknown error'), 'error');
     } finally {
