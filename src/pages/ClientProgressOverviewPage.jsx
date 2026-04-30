@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users, Trophy } from 'lucide-react';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import EmptyState from '../components/EmptyState';
 
@@ -10,6 +10,7 @@ const SORT_OPTIONS = [
   { value: 'lastActive', label: 'Last Active' },
   { value: 'weightChange', label: 'Weight Change' },
   { value: 'volume', label: 'Volume' },
+  { value: 'prs', label: 'New PRs' },
   { value: 'sessionsLeft', label: 'Sessions Left' },
 ];
 
@@ -38,6 +39,42 @@ function fmtVolume(v) {
   if (!v) return '—';
   if (v >= 1000) return `${(v / 1000).toFixed(1)}t`;
   return `${Math.round(v)}kg`;
+}
+
+function calcPRProgress(logs, startDate, exerciseLibrary) {
+  const prsBefore = {};
+  const prsInPeriod = {};
+  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+  sorted.forEach(log => {
+    (log.entries || []).forEach(entry => {
+      const weights = (entry.sets || [])
+        .filter(s => s.completed !== false)
+        .map(s => Number(s.weight) || 0);
+      const maxW = weights.length ? Math.max(...weights) : 0;
+      if (maxW <= 0) return;
+      if (log.date < startDate) {
+        if (!prsBefore[entry.exerciseId] || maxW > prsBefore[entry.exerciseId])
+          prsBefore[entry.exerciseId] = maxW;
+      } else {
+        if (!prsInPeriod[entry.exerciseId] || maxW > prsInPeriod[entry.exerciseId])
+          prsInPeriod[entry.exerciseId] = maxW;
+      }
+    });
+  });
+  let prCount = 0;
+  let bestGain = null;
+  Object.entries(prsInPeriod).forEach(([exId, w]) => {
+    const baseline = prsBefore[exId] || 0;
+    if (w > baseline) {
+      prCount++;
+      const gain = w - baseline;
+      if (!bestGain || gain > bestGain.gain) {
+        const name = exerciseLibrary.find(e => e.id === exId)?.name || exId;
+        bestGain = { name, gain, isNew: baseline === 0 };
+      }
+    }
+  });
+  return { prCount, bestGain };
 }
 
 function MiniSparkline({ data, color = 'var(--primary)' }) {
@@ -100,7 +137,7 @@ function SessionsBar({ used, total }) {
   );
 }
 
-function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline, onClick }) {
+function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain, onClick }) {
   const latest = bodyStats[bodyStats.length - 1];
   const prev = bodyStats.length > 1 ? bodyStats[bodyStats.length - 2] : null;
   const weightChange = latest && prev ? latest.weight - prev.weight : null;
@@ -199,6 +236,19 @@ function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, volume
             {nextSession ? `${nextSession.date} ${nextSession.time}` : 'None'}
           </span>
         </div>
+        {prCount > 0 && (
+          <div className="client-progress-activity-item">
+            <Trophy size={13} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+            <span className="text-sm" style={{ fontWeight: 600, color: 'var(--warning)' }}>
+              {prCount} new PR{prCount !== 1 ? 's' : ''} (30d)
+            </span>
+            {bestGain && (
+              <span className="text-sm text-muted" style={{ marginLeft: 2 }}>
+                · {bestGain.name} {bestGain.isNew ? '(first)' : `+${bestGain.gain}kg`}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Sessions quota */}
@@ -209,7 +259,8 @@ function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, volume
 
 export default function ClientProgressOverviewPage() {
   const navigate = useNavigate();
-  const { currentUser, getClients, getBodyStats, getWorkoutLogs, getSchedule, getSessionStats } = useApp();
+  const { currentUser, getClients, getBodyStats, getWorkoutLogs, getSchedule, getSessionStats, getExercises } = useApp();
+  const exerciseLibrary = getExercises();
   const [sort, setSort] = useState('lastActive');
 
   const clients = getClients(currentUser.id);
@@ -235,7 +286,8 @@ export default function ClientProgressOverviewPage() {
     const volumeChange = volumePrev30d > 0 ? ((volume30d - volumePrev30d) / volumePrev30d) * 100 : null;
     const sessions30d = logs.filter(l => l.date >= start30d && l.date <= today).length;
     const volSparkline = weeklyVolumeSparkline(logs);
-    return { client, bodyStats, logs, nextSession, sessionStats, latest, weightChange, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline };
+    const { prCount, bestGain } = calcPRProgress(logs, start30d, exerciseLibrary);
+    return { client, bodyStats, logs, nextSession, sessionStats, latest, weightChange, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain };
   });
 
   const sorted = [...enriched].sort((a, b) => {
@@ -251,6 +303,7 @@ export default function ClientProgressOverviewPage() {
       return wa - wb;
     }
     if (sort === 'volume') return (b.volume30d ?? 0) - (a.volume30d ?? 0);
+    if (sort === 'prs') return (b.prCount ?? 0) - (a.prCount ?? 0);
     if (sort === 'sessionsLeft') {
       const ra = a.sessionStats.remaining ?? 9999;
       const rb = b.sessionStats.remaining ?? 9999;
@@ -289,7 +342,7 @@ export default function ClientProgressOverviewPage() {
           </div>
 
           <div className="client-progress-grid">
-            {sorted.map(({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline }) => (
+            {sorted.map(({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain }) => (
               <ClientCard
                 key={client.id}
                 client={client}
@@ -301,6 +354,8 @@ export default function ClientProgressOverviewPage() {
                 volumeChange={volumeChange}
                 sessions30d={sessions30d}
                 volSparkline={volSparkline}
+                prCount={prCount}
+                bestGain={bestGain}
                 onClick={() => navigate(`/clients/${client.id}`)}
               />
             ))}
