@@ -4,7 +4,7 @@ import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbel
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
-import { normalizeSets } from '../utils/workoutUtils';
+import { normalizeSets, emptySet } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
@@ -44,12 +44,10 @@ export default function WorkoutPlansPage() {
   const [customForm, setCustomForm] = useState(EMPTY_CUSTOM);
   const [customSaving, setCustomSaving] = useState(false);
 
-  const defaultSets = () => [{ weight: 0, reps: '10' }, { weight: 0, reps: '10' }, { weight: 0, reps: '10' }];
-
   const addExToForm = (exercise) => {
     setForm(prev => ({
       ...prev,
-      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: defaultSets(), notes: '' }],
+      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }],
     }));
   };
 
@@ -87,7 +85,7 @@ export default function WorkoutPlansPage() {
       ...prev,
       exercises: prev.exercises.map((ex, i) => {
         if (i !== exIndex) return ex;
-        const last = ex.sets[ex.sets.length - 1] || { weight: 0, reps: '10' };
+        const last = ex.sets[ex.sets.length - 1] || emptySet('weight_reps');
         return { ...ex, sets: [...ex.sets, { ...last }] };
       }),
     }));
@@ -142,7 +140,7 @@ export default function WorkoutPlansPage() {
         });
         setForm(prev => ({
           ...prev,
-          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: defaultSets(), notes: '' }],
+          exercises: [...prev.exercises, { exerciseId: newEx.id, name: newEx.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }],
         }));
         toast(`"${name}" saved to Exercise Library`);
       } else {
@@ -151,7 +149,7 @@ export default function WorkoutPlansPage() {
           exercises: [...prev.exercises, {
             exerciseId: name,
             customMuscle: muscleStr,
-            sets: defaultSets(), notes: '',
+            sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '',
           }],
         }));
         toast(`"${name}" added to plan`);
@@ -195,7 +193,7 @@ export default function WorkoutPlansPage() {
           return;
         }
       }
-      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: defaultSets(), notes: '' }];
+      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }];
     }
 
     if (exercises.length === 0) {
