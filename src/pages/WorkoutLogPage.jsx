@@ -5,7 +5,7 @@ import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, 
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
-import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 
 const CLOSING_MESSAGES = [
@@ -64,35 +64,7 @@ function WorkoutCompleteScreen({ data, onDone }) {
   );
 }
 
-const UNIT_OPTIONS = [
-  { value: 'weight_reps', label: 'Wt+Reps' },
-  { value: 'reps_only', label: 'Reps' },
-  { value: 'time', label: 'Time' },
-  { value: 'distance', label: 'Dist' },
-];
 const REST_OPTIONS = [30, 45, 60, 90, 120, 180, 300];
-
-const emptySet = (unit) => {
-  if (unit === 'reps_only') return { reps: '' };
-  if (unit === 'time') return { seconds: '' };
-  if (unit === 'distance') return { metres: '' };
-  return { weight: '', reps: '' };
-};
-
-const hasValue = (s, unit) => {
-  if (unit === 'reps_only') return Boolean(s.reps);
-  if (unit === 'time') return Boolean(s.seconds);
-  if (unit === 'distance') return Boolean(s.metres);
-  return Boolean(s.weight) && Boolean(s.reps);
-};
-
-const formatSet = (s, unit) => {
-  if (unit === 'reps_only') return `× ${s.reps}`;
-  if (unit === 'time') return `${s.seconds}s`;
-  if (unit === 'distance') return `${s.metres}m`;
-  return `${s.weight}kg × ${s.reps}`;
-};
-
 const formatRest = (s) => s < 60 ? `${s}s` : `${s / 60}m`;
 
 function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canRemove, done, onComplete }) {

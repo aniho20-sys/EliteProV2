@@ -76,9 +76,11 @@ export default function ExerciseLibraryPage() {
   };
 
   const handleDelete = async (id) => {
+    const ex = exercises.find(e => e.id === id);
+    if (!window.confirm(`Delete "${ex?.name || 'this exercise'}"? This cannot be undone.`)) return;
     try {
       await deleteExercise(id);
-      toast('Exercise deleted', 'error');
+      toast('Exercise deleted', 'info');
     } catch { toast('Failed to delete', 'error'); }
   };
 

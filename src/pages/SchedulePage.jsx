@@ -131,7 +131,7 @@ export default function SchedulePage() {
     setDeleting(true);
     try {
       await deleteScheduleItem(deleteModal);
-      toast('Session deleted', 'error');
+      toast('Session deleted', 'info');
       setDeleteModal(null);
     } catch (err) {
       toast(`Failed to delete: ${err?.message || 'unknown error'}`, 'error');
@@ -145,7 +145,7 @@ export default function SchedulePage() {
       await updateScheduleItem(itemId, { status });
       if (status === 'confirmed') toast('Session confirmed');
       else if (status === 'completed') toast('Session marked as complete');
-      else if (status === 'cancelled') toast('Session cancelled', 'error');
+      else if (status === 'cancelled') toast('Session cancelled', 'info');
       else toast(`Session ${status}`);
     } catch (err) {
       toast(`Failed to update: ${err?.message || 'unknown error'}`, 'error');
