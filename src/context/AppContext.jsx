@@ -17,6 +17,7 @@ import {
   sampleSchedule, sampleMessages,
 } from '../data/sampleData';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
+import { localToday } from '../utils/dateUtils';
 
 const AppContext = createContext();
 const googleProvider = new GoogleAuthProvider();
@@ -337,7 +338,7 @@ export function AppProvider({ children }) {
         role: 'trainer',
         speciality: 'Strength & Conditioning',
         avatar: null,
-        joinDate: new Date().toISOString().split('T')[0],
+        joinDate: localToday(),
         inviteCode: generateInviteCode(),
         isDemo: true,
       };
@@ -370,7 +371,7 @@ export function AppProvider({ children }) {
       email: firebaseUser.email || '',
       role,
       avatar: firebaseUser.photoURL || null,
-      joinDate: new Date().toISOString().split('T')[0],
+      joinDate: localToday(),
       ...(role === 'client'
         ? { trainerId, goals: '', age: '', height: '' }
         : { speciality: '', inviteCode: generateInviteCode() }
@@ -443,7 +444,7 @@ export function AppProvider({ children }) {
 
   const addBodyStat = async (clientId, stat) => {
     const addedBy = currentUser?.role === 'trainer' ? 'coach' : 'self';
-    const entry = { ...stat, date: stat.date || new Date().toISOString().split('T')[0], addedBy };
+    const entry = { ...stat, date: stat.date || localToday(), addedBy };
     await addDoc(collection(db, 'bodyStats', clientId, 'entries'), entry);
   };
 
@@ -655,7 +656,7 @@ export function AppProvider({ children }) {
       name: plan.name,
       day: plan.day,
       exercises: plan.exercises,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: localToday(),
     };
     await setDoc(doc(db, 'templates', template.id), template);
     return template;

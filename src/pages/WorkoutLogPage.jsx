@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
+import { localToday } from '../utils/dateUtils';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -506,7 +507,7 @@ export default function WorkoutLogPage() {
         clientId: currentUser.id,
         planId: isFreeWorkout ? null : selectedPlan.id,
         ...(isFreeWorkout && { workoutName: 'Custom Workout' }),
-        date: new Date().toISOString().split('T')[0],
+        date: localToday(),
         completed: completedCount > 0,
         entries: logEntries,
         rpe,

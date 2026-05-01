@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import { EMPTY_STAT_FORM } from '../data/metrics';
+import { localToday } from '../utils/dateUtils';
 
 export default function ProgressPage() {
   const { currentUser, getBodyStats, addBodyStat, updateBodyStat } = useApp();
@@ -48,7 +49,7 @@ export default function ProgressPage() {
         await updateBodyStat(currentUser.id, editStat.id, data);
         toast('Measurement updated');
       } else {
-        await addBodyStat(currentUser.id, { ...data, date: new Date().toISOString().split('T')[0] });
+        await addBodyStat(currentUser.id, { ...data, date: localToday() });
         toast('Measurement saved');
       }
       setShowModal(false);
