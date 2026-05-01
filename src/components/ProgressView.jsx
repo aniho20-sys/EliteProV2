@@ -22,6 +22,12 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
   const { getBodyStats, deleteBodyStat } = useApp();
   const stats = getBodyStats(clientId);
   const toast = useToast();
+
+  const handleDelete = (s) => {
+    if (!window.confirm(`Delete measurement from ${s.date}?`)) return;
+    deleteBodyStat(clientId, s.id);
+    toast('Measurement deleted', 'info');
+  };
   const [activeMetric, setActiveMetric] = useState('weight');
 
   if (stats.length === 0) {
@@ -164,7 +170,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                   {canDelete && (
                     <td>
                       <button className="btn-icon" title="Delete"
-                        onClick={() => { deleteBodyStat(clientId, s.id); toast('Deleted', 'error'); }}>
+                        onClick={() => handleDelete(s)}>
                         <Trash2 size={14} style={{ color: 'var(--danger)' }} />
                       </button>
                     </td>
@@ -191,7 +197,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                   )}
                   {canDelete && (
                     <button className="btn-icon" title="Delete"
-                      onClick={() => { deleteBodyStat(clientId, s.id); toast('Deleted', 'error'); }}>
+                      onClick={() => handleDelete(s)}>
                       <Trash2 size={14} style={{ color: 'var(--danger)' }} />
                     </button>
                   )}

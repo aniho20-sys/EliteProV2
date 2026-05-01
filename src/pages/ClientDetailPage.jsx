@@ -1,11 +1,12 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, UserX, LineChart, ClipboardList, NotebookPen, Trash2, TrendingUp, TrendingDown, Minus, Play, ExternalLink, BarChart2, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
-import { normalizeSets, applySetUpdate, serializeEntries } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
+import { localToday } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
 import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
@@ -13,30 +14,6 @@ import ExerciseProgress from '../components/ExerciseProgress';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 
-const UNIT_OPTIONS = [
-  { value: 'weight_reps', label: 'Wt+Reps' },
-  { value: 'reps_only', label: 'Reps' },
-  { value: 'time', label: 'Time' },
-  { value: 'distance', label: 'Dist' },
-];
-const emptySet = (unit) => {
-  if (unit === 'reps_only') return { reps: '' };
-  if (unit === 'time') return { seconds: '' };
-  if (unit === 'distance') return { metres: '' };
-  return { weight: '', reps: '' };
-};
-const hasValue = (s, unit) => {
-  if (unit === 'reps_only') return Boolean(s.reps);
-  if (unit === 'time') return Boolean(s.seconds);
-  if (unit === 'distance') return Boolean(s.metres);
-  return Boolean(s.weight) && Boolean(s.reps);
-};
-const fmtSet = (s, unit) => {
-  if (unit === 'reps_only') return `× ${s.reps}`;
-  if (unit === 'time') return `${s.seconds}s`;
-  if (unit === 'distance') return `${s.metres}m`;
-  return `${s.weight}kg × ${s.reps}`;
-};
 
 
 export default function ClientDetailPage() {
@@ -66,7 +43,7 @@ export default function ClientDetailPage() {
   const [savingNoteId, setSavingNoteId] = useState(null);
   const [tagInput, setTagInput] = useState('');
   const [savingTag, setSavingTag] = useState(false);
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const [showLogModal, setShowLogModal] = useState(false);
   const [logPlanId, setLogPlanId] = useState('');
   const [logIsCustom, setLogIsCustom] = useState(false);
@@ -256,7 +233,7 @@ export default function ClientDetailPage() {
   };
 
   const resetLogForm = () => {
-    setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes('');
+    setLogPlanId(''); setLogIsCustom(false); setLogEntries([]); setLogRpe(7); setLogNotes(''); setLogDate(today);
   };
 
   const updateLogSet = (exIdx, setIdx, field, value) => {
@@ -326,7 +303,7 @@ export default function ClientDetailPage() {
         day: savePlanDay.trim(),
         exercises,
       });
-      setSavePlanLog(null);
+      setSavePlanLog(null); setSavePlanName(''); setSavePlanDay('');
       toast('Plan saved successfully');
     } catch {
       toast('Failed to save plan', 'error');
@@ -467,7 +444,7 @@ export default function ClientDetailPage() {
                     <span style={{ fontSize: '1.1rem', fontWeight: 700, color: sessColor }}>{sessUsed} / {sessTotal}</span>
                   </div>
                   <div className="session-progress-bar">
-                    <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessColor }} />
+                    <div className="session-progress-fill" style={{ width: `${sessTotal > 0 ? Math.min(100, Math.round((sessUsed / sessTotal) * 100)) : 0}%`, background: sessColor }} />
                   </div>
                   <div className="text-sm mt-6" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</div>
                 </>
@@ -632,7 +609,7 @@ export default function ClientDetailPage() {
                     <div key={i} className="plan-exercise">
                       <span className="plan-exercise-name">{entry.name || getExerciseName(entry.exerciseId)}</span>
                       <span className="plan-exercise-detail">
-                        {entry.sets.map(s => fmtSet(s, entry.unit || 'weight_reps')).join(' | ')}
+                        {entry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}
                       </span>
                     </div>
                   ))}

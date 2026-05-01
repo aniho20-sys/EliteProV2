@@ -1,3 +1,31 @@
+export const UNIT_OPTIONS = [
+  { value: 'weight_reps', label: 'Wt+Reps' },
+  { value: 'reps_only', label: 'Reps' },
+  { value: 'time', label: 'Time' },
+  { value: 'distance', label: 'Dist' },
+];
+
+export function emptySet(unit) {
+  if (unit === 'reps_only') return { reps: '' };
+  if (unit === 'time') return { seconds: '' };
+  if (unit === 'distance') return { metres: '' };
+  return { weight: '', reps: '' };
+}
+
+export function hasValue(s, unit) {
+  if (unit === 'reps_only') return Boolean(s.reps);
+  if (unit === 'time') return Boolean(s.seconds);
+  if (unit === 'distance') return Boolean(s.metres);
+  return Boolean(s.weight) && Boolean(s.reps);
+}
+
+export function formatSet(s, unit) {
+  if (unit === 'reps_only') return `× ${s.reps}`;
+  if (unit === 'time') return `${s.seconds}s`;
+  if (unit === 'distance') return `${s.metres}m`;
+  return `${s.weight}kg × ${s.reps}`;
+}
+
 export function normalizeSets(ex) {
   if (Array.isArray(ex.sets)) return ex.sets;
   const count = ex.sets || 1;
