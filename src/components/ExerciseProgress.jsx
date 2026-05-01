@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Dumbbell, Search, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Dumbbell, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import EmptyState from './EmptyState';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -45,36 +45,31 @@ export default function ExerciseProgress({ clientId }) {
   const logs = getWorkoutLogs(clientId);
   const exerciseLibrary = getExercises();
 
-  const [search, setSearch] = useState('');
+  // selectedId=null means auto-use the first (most-logged) exercise
   const [selectedId, setSelectedId] = useState(null);
   const [metric, setMetric] = useState('maxWeight');
 
-  // Build list of exercises that actually appear in logs
-  const exerciseIds = useMemo(() => {
+  // Build list sorted by session count descending — most-logged first
+  const exerciseOptions = useMemo(() => {
     const ids = new Set();
     logs.forEach(log => (log.entries || []).forEach(e => ids.add(e.exerciseId)));
-    return [...ids];
-  }, [logs]);
+    return [...ids]
+      .map(id => {
+        const count = logs.filter(l => l.entries?.some(e => e.exerciseId === id)).length;
+        return { id, name: exerciseLibrary.find(e => e.id === id)?.name || id, count };
+      })
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [logs, exerciseLibrary]);
 
-  const exerciseOptions = useMemo(() => {
-    return exerciseIds
-      .map(id => ({ id, name: exerciseLibrary.find(e => e.id === id)?.name || id }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [exerciseIds, exerciseLibrary]);
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return exerciseOptions;
-    const q = search.toLowerCase();
-    return exerciseOptions.filter(e => e.name.toLowerCase().includes(q));
-  }, [exerciseOptions, search]);
+  // Default to most-logged exercise when nothing is manually selected
+  const activeId = selectedId ?? exerciseOptions[0]?.id ?? null;
 
   const history = useMemo(() => {
-    if (!selectedId) return [];
-    return buildHistory(logs, selectedId);
-  }, [logs, selectedId]);
+    if (!activeId) return [];
+    return buildHistory(logs, activeId);
+  }, [logs, activeId]);
 
   const selectedMetric = EX_METRICS.find(m => m.key === metric);
-
   const chartData = history.map(h => ({ date: h.date, shortDate: h.shortDate, value: h[metric] }));
   const vals = chartData.map(d => d.value);
   const yMin = vals.length ? Math.floor(Math.min(...vals) * 0.95) : 0;
@@ -95,45 +90,47 @@ export default function ExerciseProgress({ clientId }) {
     );
   }
 
+  const activeExName = exerciseOptions.find(e => e.id === activeId)?.name || '';
+
   return (
     <div className="exercise-progress-wrap">
-      {/* Exercise Picker */}
-      <div className="card mb-16">
-        <h3 className="card-title mb-16">Select Exercise</h3>
-        <div className="ex-progress-search-wrap">
-          <Search size={14} className="ex-progress-search-icon" />
-          <input
-            className="form-input ex-progress-search"
-            placeholder="Search exercises…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      {/* Compact header: exercise selector + metric pills */}
+      <div className="ex-progress-header">
+        <div className="ex-progress-select-wrap">
+          <label className="ex-progress-select-label">Exercise</label>
+          <select
+            className="form-select ex-progress-select"
+            value={activeId || ''}
+            onChange={e => setSelectedId(e.target.value)}
+          >
+            {exerciseOptions.map(ex => (
+              <option key={ex.id} value={ex.id}>
+                {ex.name} ({ex.count} session{ex.count !== 1 ? 's' : ''})
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="ex-progress-list">
-          {filtered.map(ex => (
+        <div className="progress-metric-pills">
+          {EX_METRICS.map(m => (
             <button
-              key={ex.id}
-              className={`ex-progress-item ${selectedId === ex.id ? 'active' : ''}`}
-              onClick={() => setSelectedId(ex.id)}
+              key={m.key}
+              className={`progress-metric-pill ${metric === m.key ? 'active' : ''}`}
+              style={metric === m.key ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+              onClick={() => setMetric(m.key)}
             >
-              {ex.name}
+              {m.label}
             </button>
           ))}
-          {filtered.length === 0 && (
-            <p className="ex-progress-empty">No exercises match "{search}"</p>
-          )}
         </div>
       </div>
 
       {/* Chart */}
-      {selectedId && (
+      {activeId && (
         <>
           <div className="card mb-16">
             <div className="progress-chart-header">
               <div>
-                <div className="progress-chart-title">
-                  {exerciseOptions.find(e => e.id === selectedId)?.name}
-                </div>
+                <div className="progress-chart-title">{activeExName}</div>
                 {change !== null && (
                   <div className={`progress-chart-change ${change > 0 ? 'up' : change < 0 ? 'down' : 'flat'}`}>
                     {change > 0 ? <TrendingUp size={12} /> : change < 0 ? <TrendingDown size={12} /> : <Minus size={12} />}
@@ -143,18 +140,6 @@ export default function ExerciseProgress({ clientId }) {
                     {' '}since first session
                   </div>
                 )}
-              </div>
-              <div className="progress-metric-pills">
-                {EX_METRICS.map(m => (
-                  <button
-                    key={m.key}
-                    className={`progress-metric-pill ${metric === m.key ? 'active' : ''}`}
-                    style={metric === m.key ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
-                    onClick={() => setMetric(m.key)}
-                  >
-                    {m.label}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -200,8 +185,7 @@ export default function ExerciseProgress({ clientId }) {
                   </thead>
                   <tbody>
                     {[...history].reverse().map((h, i, arr) => {
-                      // arr is reversed so earlier sessions are at the end
-                      const prevSessions = arr.slice(i + 1); // sessions before this one (chronologically)
+                      const prevSessions = arr.slice(i + 1);
                       const prevMax = prevSessions.length ? Math.max(...prevSessions.map(x => x.maxWeight)) : 0;
                       const isPR = h.maxWeight > 0 && h.maxWeight > prevMax;
                       return (
@@ -223,13 +207,6 @@ export default function ExerciseProgress({ clientId }) {
             </div>
           )}
         </>
-      )}
-
-      {!selectedId && (
-        <div className="ex-progress-placeholder">
-          <Dumbbell size={32} style={{ color: 'var(--text-muted)', marginBottom: 8 }} />
-          <p>Select an exercise above to see its progression chart.</p>
-        </div>
       )}
     </div>
   );
