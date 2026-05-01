@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, emptySet } from '../utils/workoutUtils';
+import { resolveExerciseName } from '../utils/exerciseUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
@@ -214,7 +215,7 @@ export default function WorkoutPlansPage() {
     }
   };
 
-  const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
+  const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
 

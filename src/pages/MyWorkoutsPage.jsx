@@ -4,6 +4,7 @@ import { Play, ClipboardList, Dumbbell } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
+import { resolveExerciseName } from '../utils/exerciseUtils';
 
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();
@@ -11,7 +12,7 @@ export default function MyWorkoutsPage() {
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const exercises = getExercises();
 
-  const getExerciseName = (id, fallback) => exercises.find(e => e.id === id)?.name || fallback || id;
+  const getExerciseName = (id, fallback) => resolveExerciseName(exercises, id, fallback);
   const getExercise = (id) => exercises.find(e => e.id === id);
 
   return (

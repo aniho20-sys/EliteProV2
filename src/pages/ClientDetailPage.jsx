@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp,
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
+import { resolveExerciseName } from '../utils/exerciseUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import { localToday } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
@@ -363,7 +364,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  const getExerciseName = (id, fallback) => exerciseLibrary.find(e => e.id === id)?.name || fallback || id;
+  const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
 

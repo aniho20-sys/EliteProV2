@@ -8,6 +8,7 @@ import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 import { localToday } from '../utils/dateUtils';
+import { resolveExerciseName } from '../utils/exerciseUtils';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -139,7 +140,7 @@ export default function WorkoutLogPage() {
 
   const location = useLocation();
 
-  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
   const autoStartedRef = useRef(false);

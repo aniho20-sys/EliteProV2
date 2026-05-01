@@ -2,6 +2,7 @@ import { useApp } from '../context/AppContext';
 import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { localToday } from '../utils/dateUtils';
+import { resolveExerciseName } from '../utils/exerciseUtils';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
@@ -10,7 +11,7 @@ export default function ClientDashboard() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
-  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
   const stats = getBodyStats(currentUser.id);
