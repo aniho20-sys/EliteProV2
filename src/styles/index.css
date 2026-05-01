@@ -1986,6 +1986,28 @@ tr:hover { background: var(--bg-card-hover); }
   color: var(--text-secondary);
   font-weight: 500;
 }
+.progression-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid var(--success);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
+.progression-hint-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.progression-hint-weight {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--success);
+}
 .log-set-row {
   display: flex;
   align-items: center;
@@ -2527,6 +2549,65 @@ tr:hover { background: var(--bg-card-hover); }
   flex-shrink: 0;
 }
 
+/* ===== BUSINESS ANALYTICS ===== */
+.analytics-retention-bar {
+  height: 10px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.analytics-retention-fill {
+  height: 100%;
+  background: var(--success);
+  border-radius: var(--radius-full);
+  transition: width 0.5s var(--ease);
+}
+.analytics-client-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.analytics-client-row:last-child { border-bottom: none; }
+.analytics-client-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.analytics-top-client {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.analytics-top-rank {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 18px;
+}
+.analytics-bar-bg {
+  height: 6px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.analytics-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width 0.5s var(--ease);
+}
+.analytics-unpaid-banner {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-xs);
+}
+
 /* ===== ONBOARDING ===== */
 .onboarding-card {
   border-left: 3px solid var(--primary);
@@ -2945,6 +3026,60 @@ tr:hover { background: var(--bg-card-hover); }
 .wh-banner span {
   flex: 1;
 }
+
+/* Badge System */
+.badges-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.badge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  min-width: 80px;
+  text-align: center;
+}
+.badge-icon { font-size: 1.5rem; line-height: 1; }
+.badge-name { font-size: 0.75rem; font-weight: 700; color: var(--text); }
+.badge-date { font-size: 0.65rem; color: var(--text-muted); }
+
+/* Session Recap Modal */
+.recap-session-info {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.recap-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.875rem;
+}
+.recap-row .form-label {
+  margin: 0;
+  font-size: 0.75rem;
+  min-width: 60px;
+}
+.recap-send-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: 16px;
+  user-select: none;
+}
+.recap-send-toggle input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; }
 
 /* Trainer Notes on Workout Logs */
 .trainer-note-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }

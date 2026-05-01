@@ -25,6 +25,11 @@
 | `b2b6801` | Final audit: delete confirmations, toast type fixes, shared utils, dead code removal |
 | `f486fb7` | Compress desktop sidebar: 8 → 4 primary + collapsible More section |
 | `0e63d7f` | Simplify Exercise Progress picker: auto-select + compact dropdown sorted by session count |
+| — | Smart Progression Suggestions: +2.5kg hint in workout log when last 2 sessions plateaued at same weight |
+| — | Session Recap 一鍵發送: trainer marks session complete → recap modal → optional message to client |
+| — | Badge System Phase 1: milestone badges at 1/10/50/100 sessions; shown in ClientDashboard + ClientDetailPage |
+| — | Business Analytics page (/analytics): monthly revenue bar chart, sessions trend, 30-day retention, top clients |
+| — | Volume Analytics Chart: weekly training volume bar chart in ProgressPage + ClientDetailPage progress tab |
 
 ---
 

@@ -665,6 +665,36 @@ export function AppProvider({ children }) {
     await deleteDoc(doc(db, 'templates', templateId));
   };
 
+  // ========== Badges ==========
+  const BADGE_MILESTONES = [
+    { id: 'first_session', name: 'First Step', icon: '🏃', threshold: 1 },
+    { id: 'sessions_10', name: '10 Sessions', icon: '🔥', threshold: 10 },
+    { id: 'sessions_50', name: '50 Sessions', icon: '⚡', threshold: 50 },
+    { id: 'sessions_100', name: 'Century Club', icon: '🏆', threshold: 100 },
+  ];
+
+  const getBadges = (clientId) => {
+    const client = users.find(u => u.id === clientId);
+    return client?.badges || [];
+  };
+
+  // Checks session count milestones and awards any new badges; returns newly awarded badges.
+  const checkAndAwardBadges = async (clientId) => {
+    const client = users.find(u => u.id === clientId);
+    if (!client) return [];
+    const existing = client.badges || [];
+    const existingIds = new Set(existing.map(b => b.id));
+    const sessionCount = workoutLogs.filter(l => l.clientId === clientId).length + 1; // +1 for the new log being saved
+    const newBadges = BADGE_MILESTONES.filter(
+      m => sessionCount >= m.threshold && !existingIds.has(m.id)
+    );
+    if (newBadges.length === 0) return [];
+    const awardedAt = new Date().toISOString().split('T')[0];
+    const toAdd = newBadges.map(b => ({ id: b.id, name: b.name, icon: b.icon, awardedAt }));
+    await updateDoc(doc(db, 'users', clientId), { badges: [...existing, ...toAdd] });
+    return toAdd;
+  };
+
   // ========== Reset (demo only) ==========
   // Wipes only the current user's demo-scoped data, then re-seeds
   const resetData = async () => {
@@ -716,6 +746,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, findTrainerByCode, connectToTrainer,
+    getBadges, checkAndAwardBadges,
     resetData,
   };
 

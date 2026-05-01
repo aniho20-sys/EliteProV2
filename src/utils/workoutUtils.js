@@ -33,6 +33,32 @@ export function normalizeSets(ex) {
   return Array.from({ length: count }, (_, i) => ({ weight: weights[i] || 0, reps: ex.reps || '0' }));
 }
 
+// Returns a weight suggestion (kg) based on the last N logs for one exercise.
+// Returns null if insufficient data or exercise is not weight_reps type.
+export function getProgressionSuggestion(logs, exerciseId) {
+  const relevant = [...logs]
+    .sort((a, b) => (a.date > b.date ? -1 : 1))
+    .filter(log => log.entries?.some(e => e.exerciseId === exerciseId && (e.unit || 'weight_reps') === 'weight_reps'))
+    .slice(0, 3);
+
+  if (relevant.length < 2) return null;
+
+  const maxWeights = relevant.map(log => {
+    const entry = log.entries.find(e => e.exerciseId === exerciseId);
+    if (!entry?.sets?.length) return 0;
+    return Math.max(...entry.sets.map(s => Number(s.weight) || 0));
+  }).filter(w => w > 0);
+
+  if (maxWeights.length < 2) return null;
+
+  // If last 2 sessions have the same peak weight, suggest a 2.5kg bump
+  const [latest, prev] = maxWeights;
+  if (latest > 0 && latest === prev) return +(latest + 2.5).toFixed(1);
+  // If progressive over last 3, also suggest next step
+  if (maxWeights.length === 3 && latest > prev && prev > maxWeights[2]) return +(latest + 2.5).toFixed(1);
+  return null;
+}
+
 // Immutably update one field of one set inside an entries array
 export function applySetUpdate(entries, exIdx, setIdx, field, value) {
   return entries.map((entry, i) =>

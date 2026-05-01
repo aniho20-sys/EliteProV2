@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -100,24 +100,42 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem } = useApp();
-  const [completing, setCompleting] = useState(new Set());
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient } = useApp();
   const completingRef = useRef(new Set());
+  const [recapSession, setRecapSession] = useState(null);
+  const [recapNote, setRecapNote] = useState('');
+  const [recapSend, setRecapSend] = useState(true);
+  const [savingRecap, setSavingRecap] = useState(false);
 
-  const handleComplete = async (e, itemId) => {
+  const openRecap = (e, session) => {
     e.preventDefault();
     e.stopPropagation();
-    if (completingRef.current.has(itemId)) return;
-    completingRef.current.add(itemId);
-    setCompleting(new Set(completingRef.current));
+    if (completingRef.current.has(session.id)) return;
+    const client = getClient(session.clientId);
+    setRecapNote(`Great session today, ${client?.name?.split(' ')[0] || 'client'}! 💪`);
+    setRecapSend(true);
+    setRecapSession(session);
+  };
+
+  const handleConfirmComplete = async () => {
+    if (!recapSession) return;
+    setSavingRecap(true);
+    completingRef.current.add(recapSession.id);
     try {
-      await updateScheduleItem(itemId, { status: 'completed' });
-      toast('Session marked as complete');
+      await updateScheduleItem(recapSession.id, { status: 'completed' });
+      if (recapSend && recapNote.trim()) {
+        const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
+        await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
+        toast('Session complete — recap sent to client');
+      } else {
+        toast('Session marked as complete');
+      }
+      setRecapSession(null);
     } catch {
       toast('Failed to update session', 'error');
     } finally {
-      completingRef.current.delete(itemId);
-      setCompleting(new Set(completingRef.current));
+      completingRef.current.delete(recapSession.id);
+      setSavingRecap(false);
     }
   };
   const clients = getClients(currentUser.id);
@@ -216,8 +234,7 @@ export default function TrainerDashboard() {
                     {s.status === 'confirmed' && (
                       <button
                         className="btn-icon"
-                        onClick={(e) => handleComplete(e, s.id)}
-                        disabled={completing.has(s.id)}
+                        onClick={(e) => openRecap(e, s)}
                         title="Mark as complete"
                       >
                         <CheckCircle size={16} style={{ color: 'var(--accent)' }} />
@@ -294,6 +311,32 @@ export default function TrainerDashboard() {
           )}
         </div>
       </div>
+
+      {recapSession && (
+        <div className="modal-overlay" onClick={() => !savingRecap && setRecapSession(null)}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Complete Session</h3>
+            <div className="recap-session-info">
+              <div className="recap-row"><span className="form-label">Client</span><span>{getClient(recapSession.clientId)?.name || '—'}</span></div>
+              <div className="recap-row"><span className="form-label">Date</span><span>{recapSession.date} · {recapSession.time}</span></div>
+              <div className="recap-row"><span className="form-label">Type</span><span>{recapSession.type}</span></div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Message to client (optional)</label>
+              <textarea className="form-textarea" rows={3} value={recapNote} onChange={e => setRecapNote(e.target.value)} placeholder="Add a note for the client…" disabled={savingRecap} />
+            </div>
+            <label className="recap-send-toggle">
+              <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
+              <Send size={14} />
+              Send recap message to client
+            </label>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setRecapSession(null)} disabled={savingRecap}>Cancel</button>
+              <button className="btn btn-accent" onClick={handleConfirmComplete} disabled={savingRecap}>{savingRecap ? 'Saving…' : 'Mark Complete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

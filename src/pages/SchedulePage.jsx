@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -21,7 +21,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats } = useApp();
+  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const isTrainer = currentUser.role === 'trainer';
@@ -33,6 +33,10 @@ export default function SchedulePage() {
   const [deleteModal, setDeleteModal] = useState(null); // schedId
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
+  const [recapSession, setRecapSession] = useState(null); // schedule item to recap
+  const [recapNote, setRecapNote] = useState('');
+  const [recapSend, setRecapSend] = useState(true);
+  const [savingRecap, setSavingRecap] = useState(false);
 
   const [bannerDismissed, setBannerDismissed] = useState(
     () => !!localStorage.getItem('elitepro_wh_banner_dismissed')
@@ -144,11 +148,38 @@ export default function SchedulePage() {
     try {
       await updateScheduleItem(itemId, { status });
       if (status === 'confirmed') toast('Session confirmed');
-      else if (status === 'completed') toast('Session marked as complete');
       else if (status === 'cancelled') toast('Session cancelled', 'info');
       else toast(`Session ${status}`);
     } catch (err) {
       toast(`Failed to update: ${err?.message || 'unknown error'}`, 'error');
+    }
+  };
+
+  const openRecap = (session) => {
+    setRecapSession(session);
+    const client = getClient(session.clientId);
+    setRecapNote(`Great session today, ${client?.name?.split(' ')[0] || 'client'}! 💪`);
+    setRecapSend(true);
+  };
+
+  const handleConfirmComplete = async () => {
+    if (!recapSession) return;
+    setSavingRecap(true);
+    try {
+      await updateScheduleItem(recapSession.id, { status: 'completed' });
+      if (recapSend && recapNote.trim()) {
+        const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
+        await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
+        toast('Session complete — recap sent to client');
+      } else {
+        toast('Session marked as complete');
+      }
+      setRecapSession(null);
+      setRecapNote('');
+    } catch (err) {
+      toast(`Failed: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setSavingRecap(false);
     }
   };
 
@@ -244,7 +275,7 @@ export default function SchedulePage() {
                       </>
                     )}
                     {isTrainer && s.status === 'confirmed' && (
-                      <button className="btn-icon" onClick={() => updateStatus(s.id, 'completed')} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
+                      <button className="btn-icon" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
                     )}
                     {!isTrainer && s.status === 'pending' && (
                       <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
@@ -266,6 +297,41 @@ export default function SchedulePage() {
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setDeleteModal(null)} disabled={deleting}>Cancel</button>
               <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {recapSession && (
+        <div className="modal-overlay" onClick={() => !savingRecap && setRecapSession(null)}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Complete Session</h3>
+            <div className="recap-session-info">
+              <div className="recap-row"><span className="form-label">Client</span><span>{getClient(recapSession.clientId)?.name || '—'}</span></div>
+              <div className="recap-row"><span className="form-label">Date</span><span>{recapSession.date} · {recapSession.time}</span></div>
+              <div className="recap-row"><span className="form-label">Type</span><span>{recapSession.type}</span></div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Message to client (optional)</label>
+              <textarea
+                className="form-textarea"
+                rows={3}
+                value={recapNote}
+                onChange={e => setRecapNote(e.target.value)}
+                placeholder="Add a note for the client…"
+                disabled={savingRecap}
+              />
+            </div>
+            <label className="recap-send-toggle">
+              <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
+              <Send size={14} />
+              Send recap message to client
+            </label>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setRecapSession(null)} disabled={savingRecap}>Cancel</button>
+              <button className="btn btn-accent" onClick={handleConfirmComplete} disabled={savingRecap}>
+                {savingRecap ? 'Saving…' : 'Mark Complete'}
+              </button>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 
 export default function ClientDashboard() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getBadges } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
   const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
@@ -24,6 +24,7 @@ export default function ClientDashboard() {
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
   const sessColor = getSessionColor(sessRemaining);
 
+  const badges = getBadges(currentUser.id);
   const totalWorkouts = logs.length;
   const thisWeekLogs = logs.filter(l => {
     const logDate = new Date(l.date);
@@ -220,6 +221,24 @@ export default function ClientDashboard() {
                   <div className="pr-exercise">{getExerciseName(exId)}</div>
                   <div className="pr-weight">{pr.weight}kg</div>
                   <div className="pr-date">{pr.date}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {badges.length > 0 && (
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">🏅 My Badges</h3>
+              <span className="tag tag-primary">{badges.length}</span>
+            </div>
+            <div className="badges-grid">
+              {badges.map(b => (
+                <div key={b.id} className="badge-item">
+                  <span className="badge-icon">{b.icon}</span>
+                  <span className="badge-name">{b.name}</span>
+                  <span className="badge-date">{b.awardedAt}</span>
                 </div>
               ))}
             </div>

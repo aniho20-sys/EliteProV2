@@ -24,6 +24,7 @@ const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ClientProgressOverviewPage = lazy(() => import('./pages/ClientProgressOverviewPage'));
 const InvoicePage = lazy(() => import('./pages/InvoicePage'));
+const BusinessAnalyticsPage = lazy(() => import('./pages/BusinessAnalyticsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 
@@ -65,6 +66,7 @@ function AppRoutes() {
               {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
               {isTrainer && <Route path="/progress-overview" element={<ClientProgressOverviewPage />} />}
               {isTrainer && <Route path="/invoices" element={<InvoicePage />} />}
+              {isTrainer && <Route path="/analytics" element={<BusinessAnalyticsPage />} />}
               <Route path="/plans" element={<WorkoutPlansPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/messages" element={<MessagesPage />} />

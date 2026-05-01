@@ -2,12 +2,58 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Plus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import { EMPTY_STAT_FORM } from '../data/metrics';
 
+function VolumeChart({ logs }) {
+  const weeks = Array.from({ length: 8 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (7 - i) * 7);
+    const start = new Date(d);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    const label = start.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    const volume = logs
+      .filter(l => l.date >= fmt(start) && l.date <= fmt(end))
+      .reduce((sum, l) => sum + (l.entries || []).reduce((s2, e) => {
+        if ((e.unit || 'weight_reps') !== 'weight_reps') return s2;
+        return s2 + (e.sets || []).reduce((s3, s) => s3 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+      }, 0), 0);
+    return { label, volume };
+  });
+  const hasData = weeks.some(w => w.volume > 0);
+  return (
+    <div className="card">
+      <div className="card-header">
+        <h3 className="card-title">Weekly Training Volume (kg)</h3>
+      </div>
+      {!hasData ? (
+        <p className="text-sm text-muted" style={{ padding: '16px 0' }}>No weight-based logs yet. Volume will appear once workouts are logged.</p>
+      ) : (
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={weeks} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} />
+            <Tooltip
+              contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+              formatter={v => [`${v.toLocaleString()} kg`, 'Volume']}
+            />
+            <Bar dataKey="volume" fill="var(--accent)" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 export default function ProgressPage() {
-  const { currentUser, getBodyStats, addBodyStat, updateBodyStat } = useApp();
+  const { currentUser, getBodyStats, addBodyStat, updateBodyStat, getWorkoutLogs } = useApp();
+  const logs = getWorkoutLogs(currentUser.id);
   const stats = getBodyStats(currentUser.id);
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('body');
@@ -71,7 +117,7 @@ export default function ProgressPage() {
       </div>
 
       <div className="tabs mb-16">
-        {[['body', 'Body Composition'], ['exercise', 'Exercise Progress']].map(([key, label]) => (
+        {[['body', 'Body Composition'], ['exercise', 'Exercise Progress'], ['volume', 'Volume']].map(([key, label]) => (
           <button key={key} className={`tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
             {label}
           </button>
@@ -83,6 +129,9 @@ export default function ProgressPage() {
       )}
       {activeTab === 'exercise' && (
         <ExerciseProgress clientId={currentUser.id} />
+      )}
+      {activeTab === 'volume' && (
+        <VolumeChart logs={logs} />
       )}
 
       {showModal && (

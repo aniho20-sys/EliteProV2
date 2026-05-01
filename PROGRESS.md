@@ -87,10 +87,10 @@
 | # | 任務 | 說明 |
 |---|------|------|
 | 5 | ~~**Workout Complete Screen**~~ ✅ 已完成 | 儲存後顯示 PRs、volume、closing message |
-| 6 | **Smart Progression Suggestions** | 根據過去3次 log 自動建議加重；純前端；競爭對手做唔到 |
-| 7 | **Session Recap 一鍵發送** | Mark Complete → 生成 recap → 教練 confirm → 發去 in-app message |
-| 8 | **獎章系統 Phase 1** | 訓練次數里程碑（10/50/100次）+ 相對 PR 進步；教練確認後 award |
-| 9 | **Business Analytics** | 月收入趨勢、retention rate；現有 invoice + schedule data 已足夠 |
+| 6 | ~~**Smart Progression Suggestions**~~ ✅ 已完成 | 分析最近3次 log；plateau 時顯示 +2.5kg 建議 |
+| 7 | ~~**Session Recap 一鍵發送**~~ ✅ 已完成 | Mark Complete → recap modal → 發送 message 給 client |
+| 8 | ~~**獎章系統 Phase 1**~~ ✅ 已完成 | 1/10/50/100 次里程碑 badge；ClientDashboard + ClientDetail 顯示 |
+| 9 | ~~**Business Analytics**~~ ✅ 已完成 | /analytics 頁面：月收入、sessions、30日 retention、Top clients |
 
 ### 🟡 中優先
 
@@ -98,7 +98,7 @@
 |---|------|
 | 10 | **Push Notifications 啟動**（需 VAPID key + Blaze）|
 | 11 | **Set Completion Checkbox** |
-| 12 | **Volume Analytics Chart** |
+| 12 | ~~**Volume Analytics Chart**~~ ✅ 已完成 |
 | 13 | **Bulk Assign Plan to Multiple Clients** |
 | 14 | **AppContext 拆分**（660+ lines）|
 | 15 | **Firestore workoutLogs composite index** |

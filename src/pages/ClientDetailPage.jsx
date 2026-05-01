@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
@@ -16,10 +17,56 @@ import { useToast } from '../context/ToastContext';
 
 
 
+function VolumeChart({ logs }) {
+  const weeks = Array.from({ length: 8 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (7 - i) * 7);
+    const start = new Date(d);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    const label = start.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    const volume = logs
+      .filter(l => l.date >= fmt(start) && l.date <= fmt(end))
+      .reduce((sum, l) => sum + (l.entries || []).reduce((s2, e) => {
+        if ((e.unit || 'weight_reps') !== 'weight_reps') return s2;
+        return s2 + (e.sets || []).reduce((s3, s) => s3 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+      }, 0), 0);
+    return { label, volume };
+  });
+
+  const hasData = weeks.some(w => w.volume > 0);
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <h3 className="card-title">Weekly Training Volume (kg)</h3>
+      </div>
+      {!hasData ? (
+        <p className="text-sm text-muted" style={{ padding: '16px 0' }}>No weight-based logs yet. Volume will appear once workouts are logged.</p>
+      ) : (
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={weeks} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} />
+            <Tooltip
+              contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+              formatter={v => [`${v.toLocaleString()} kg`, 'Volume']}
+            />
+            <Bar dataKey="volume" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -453,6 +500,26 @@ export default function ClientDetailPage() {
               )}
             </div>
 
+            {/* Badges */}
+            {(() => {
+              const badges = getBadges(clientId);
+              if (!badges.length) return null;
+              return (
+                <div className="mt-16">
+                  <div className="text-sm fw-bold mb-8">🏅 Badges</div>
+                  <div className="badges-grid">
+                    {badges.map(b => (
+                      <div key={b.id} className="badge-item">
+                        <span className="badge-icon">{b.icon}</span>
+                        <span className="badge-name">{b.name}</span>
+                        <span className="badge-date">{b.awardedAt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Tags */}
             <div className="mt-16">
               <div className="text-sm fw-bold mb-8">Labels</div>
@@ -484,7 +551,7 @@ export default function ClientDetailPage() {
         <div>
           <div className="flex-between mb-16">
             <div className="tabs" style={{ marginBottom: 0 }}>
-              {[['body', 'Body Composition'], ['exercise', 'Exercise Progress']].map(([key, label]) => (
+              {[['body', 'Body Composition'], ['exercise', 'Exercise Progress'], ['volume', 'Volume']].map(([key, label]) => (
                 <button key={key} className={`tab ${progressTab === key ? 'active' : ''}`} onClick={() => setProgressTab(key)}>
                   {label}
                 </button>
@@ -501,6 +568,9 @@ export default function ClientDetailPage() {
           )}
           {progressTab === 'exercise' && (
             <ExerciseProgress clientId={clientId} />
+          )}
+          {progressTab === 'volume' && (
+            <VolumeChart logs={logs} />
           )}
         </div>
       )}

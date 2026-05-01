@@ -5,7 +5,7 @@ import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, 
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
-import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet, getProgressionSuggestion } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 
 const CLOSING_MESSAGES = [
@@ -51,6 +51,16 @@ function WorkoutCompleteScreen({ data, onDone }) {
             <div key={pr.exerciseId} className="workout-complete-pr-item">
               <span>{pr.name}</span>
               <span className="fw-bold">{pr.weight}kg</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {data.newBadges?.length > 0 && (
+        <div className="workout-complete-prs">
+          <div className="workout-complete-prs-title">🏅 Badge Unlocked!</div>
+          {data.newBadges.map(b => (
+            <div key={b.id} className="workout-complete-pr-item">
+              <span>{b.icon} {b.name}</span>
             </div>
           ))}
         </div>
@@ -101,7 +111,7 @@ function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canR
 }
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords, checkAndAwardBadges } = useApp();
   const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
@@ -512,12 +522,13 @@ export default function WorkoutLogPage() {
         rpe,
         notes,
       });
+      const newBadges = await checkAndAwardBadges(currentUser.id).catch(() => []);
       const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
       localStorage.removeItem('elitepro_active_log_' + currentUser.id);
       setShowLog(false);
       setIsFreeWorkout(false);
       setCompletedSets(new Set());
-      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe });
+      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe, newBadges });
     } catch {
       toast('Failed to save workout', 'error');
     } finally {
@@ -780,6 +791,15 @@ export default function WorkoutLogPage() {
                         <span className="last-session-data">{lastEntry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}</span>
                       </div>
                     )}
+                    {(() => {
+                      const suggestion = getProgressionSuggestion(logs, entry.exerciseId);
+                      return suggestion ? (
+                        <div className="progression-hint">
+                          <span className="progression-hint-label">↑ Try</span>
+                          <span className="progression-hint-weight">{suggestion}kg</span>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   {planEx.notes && <p className="text-sm text-muted mb-16" style={{ fontStyle: 'italic' }}>{planEx.notes}</p>}
                   {(() => {
