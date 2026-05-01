@@ -21,14 +21,27 @@
 | `f2057f0` | Add strength/PR progress to trainer Progress Overview (ClientProgressOverviewPage) |
 | `f5872f6` | Remove duplicate body stats tab from ClientDetailPage |
 | `4e50215` | Add ExerciseProgress component — per-exercise strength progression chart |
-| `(latest)` | Priority 3: Replace unit `<select>` with pill buttons in WorkoutLogPage + ClientDetailPage |
-| `(latest)` | Priority 2: Update CLAUDE.md + progress.md to reflect all new features |
+| `9d12766` | Priority 3 + 2: unit pill buttons in WorkoutLogPage + ClientDetailPage; CLAUDE.md rewrite |
+| `b2b6801` | Final audit: delete confirmations, toast type fixes, shared utils, dead code removal |
+| `f486fb7` | Compress desktop sidebar: 8 → 4 primary + collapsible More section |
+| `0e63d7f` | Simplify Exercise Progress picker: auto-select + compact dropdown sorted by session count |
 
 ---
 
 ## Pending Tasks
 
 No outstanding tasks. All priority items completed.
+
+---
+
+## Navigation Architecture
+
+| Platform | Primary (always visible) | Secondary (More) |
+|---|---|---|
+| **Trainer desktop sidebar** | Dashboard, Clients, Schedule, Messages | Progress Overview, Workout Plans, Invoices, Exercise Library |
+| **Trainer mobile bottom nav** | Home, Clients, Schedule, Messages | Invoices, Progress Overview, Plans, Exercise Library, Profile |
+| **Client desktop sidebar** | Dashboard, Workouts, Log, Progress, Messages | Schedule, Exercise Library |
+| **Client mobile bottom nav** | Home, Workouts, Schedule, Messages | Workout Log, My Progress, Exercise Library, Profile |
 
 ---
 

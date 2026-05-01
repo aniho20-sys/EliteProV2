@@ -28,11 +28,11 @@ src/
 ├── components/
 │   ├── EmptyState.jsx        # Reusable empty state (icon + title + desc + CTA action)
 │   ├── ErrorBoundary.jsx     # React class error boundary (wraps entire app)
-│   ├── ExerciseProgress.jsx  # Per-exercise strength progression chart (exercise picker + Recharts area + PR badges)
+│   ├── ExerciseProgress.jsx  # Per-exercise strength progression chart (auto-selects most-logged exercise; dropdown sorted by session count; Recharts AreaChart + PR badges in history table)
 │   ├── GlobalSearch.jsx      # Search bar: clients, exercises, plans
 │   ├── InstallPrompt.jsx     # PWA install prompt banner (beforeinstallprompt + iOS fallback)
 │   ├── MuscleSelector.jsx    # Interactive SVG muscle body model for exercise targeting
-│   ├── Navigation.jsx        # Sidebar (desktop) + top header + bottom nav (mobile)
+│   ├── Navigation.jsx        # Desktop sidebar (4 primary + collapsible More with 4 secondary) + mobile top header + bottom nav (4 primary + More sheet)
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── ProgressView.jsx      # Body composition chart + stats grid + history table; shared by ProgressPage & ClientDetailPage
 │   └── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
@@ -471,8 +471,10 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 18. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
 19. **URL safety** — always validate external URLs with `isSafeUrl(url)` from `utils/urlUtils.js` before rendering links or iframes
 20. **Body composition UI** — use `<ProgressView clientId={...} canDelete onAdd={...} onEdit={...} />` as the canonical body composition view; never inline duplicate chart/table/modal markup
-21. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`
+21. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`, auto-selects the most-logged exercise, and sorts the dropdown by session count
 22. **Immutable fields in Firestore updates** — `trainerId`, `clientId`, and `role` must never change after creation; all update rules in `firestore.rules` enforce this
+23. **Navigation architecture** — desktop sidebar has 4 primary links + a collapsible "More" section with secondary links (defined as `trainerLinks`/`trainerSecondaryLinks` and `clientLinks`/`clientSecondaryLinks`). Mobile bottom nav has 4 primary links + "More" sheet (`trainerPrimaryLinks`/`trainerMoreLinks`). Keep primary nav to ≤5 items; add new features to the secondary/More section
+24. **Workout utilities** — `UNIT_OPTIONS`, `emptySet(unit)`, `hasValue(s, unit)`, `formatSet(s, unit)` are all exported from `utils/workoutUtils.js`; never redefine them locally in pages
 
 ## Team Structure
 
