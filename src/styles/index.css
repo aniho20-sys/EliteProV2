@@ -296,6 +296,49 @@ body {
   border: 2px solid var(--bg);
 }
 
+.sidebar-more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 16px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  margin-bottom: 2px;
+}
+.sidebar-more-toggle:hover {
+  color: var(--text);
+  background: var(--bg-card-hover);
+}
+.sidebar-more-toggle.secondary-active {
+  color: var(--primary);
+}
+.sidebar-more-chevron {
+  margin-left: auto;
+  transition: transform 0.2s var(--ease);
+  opacity: 0.5;
+}
+.sidebar-more-chevron.open {
+  transform: rotate(90deg);
+  opacity: 1;
+}
+.sidebar-secondary-links {
+  border-left: 2px solid var(--border);
+  margin-left: 22px;
+  padding-left: 4px;
+  margin-bottom: 4px;
+}
+.sidebar-link-secondary {
+  font-size: 0.875rem;
+  padding: 9px 12px;
+}
+
 .sidebar-theme-toggle {
   padding: 0 24px 8px;
 }

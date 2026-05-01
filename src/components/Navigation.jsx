@@ -9,15 +9,20 @@ import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
 
+// Primary sidebar links (desktop) — most-used, always visible
 const trainerLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/progress-overview', icon: BarChart2, label: 'Progress' },
-  { to: '/plans', icon: ClipboardList, label: 'Plans' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
+];
+
+// Secondary sidebar links (desktop) — shown in collapsible "More" section
+const trainerSecondaryLinks = [
+  { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
+  { to: '/plans', icon: ClipboardList, label: 'Workout Plans' },
   { to: '/invoices', icon: Receipt, label: 'Invoices' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercises' },
+  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
 ];
 
 const clientLinks = [
@@ -25,9 +30,12 @@ const clientLinks = [
   { to: '/my-workouts', icon: Dumbbell, label: 'Workouts' },
   { to: '/log', icon: ClipboardList, label: 'Log' },
   { to: '/progress', icon: TrendingUp, label: 'Progress' },
-  { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercises' },
+];
+
+const clientSecondaryLinks = [
+  { to: '/schedule', icon: Calendar, label: 'Schedule' },
+  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
 ];
 
 // Primary bottom nav (4 items) — most-used, always visible
@@ -67,11 +75,16 @@ export default function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const links = currentUser?.role === 'trainer' ? trainerLinks : clientLinks;
+  const secondaryLinks = currentUser?.role === 'trainer' ? trainerSecondaryLinks : clientSecondaryLinks;
   const primaryLinks = currentUser?.role === 'trainer' ? trainerPrimaryLinks : clientPrimaryLinks;
   const moreLinks = currentUser?.role === 'trainer' ? trainerMoreLinks : clientMoreLinks;
   const unreadCount = getUnreadCount(currentUser?.id);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+
+  // Auto-expand sidebar "More" if current page is a secondary link
+  const sidebarSecondaryActive = secondaryLinks.some(l => location.pathname === l.to);
+  const [sidebarMoreOpen, setSidebarMoreOpen] = useState(sidebarSecondaryActive);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -96,6 +109,24 @@ export default function Navigation() {
               )}
             </NavLink>
           ))}
+          <button
+            className={`sidebar-more-toggle ${sidebarSecondaryActive ? 'secondary-active' : ''}`}
+            onClick={() => setSidebarMoreOpen(v => !v)}
+          >
+            <MoreHorizontal size={19} strokeWidth={2} />
+            More
+            <ChevronRight size={14} className={`sidebar-more-chevron ${sidebarMoreOpen ? 'open' : ''}`} />
+          </button>
+          {sidebarMoreOpen && (
+            <div className="sidebar-secondary-links">
+              {secondaryLinks.map(link => (
+                <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sidebar-link sidebar-link-secondary ${isActive ? 'active' : ''}`}>
+                  <link.icon size={17} strokeWidth={2} />
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
         </nav>
         <div className="sidebar-theme-toggle">
           <button className="btn btn-outline btn-sm" onClick={toggleTheme} style={{ width: '100%' }}>
