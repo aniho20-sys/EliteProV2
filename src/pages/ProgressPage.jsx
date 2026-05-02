@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import { EMPTY_STAT_FORM } from '../data/metrics';
+import { localToday } from '../utils/dateUtils';
 
 function VolumeChart({ logs }) {
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -94,7 +95,7 @@ export default function ProgressPage() {
         await updateBodyStat(currentUser.id, editStat.id, data);
         toast('Measurement updated');
       } else {
-        await addBodyStat(currentUser.id, { ...data, date: new Date().toISOString().split('T')[0] });
+        await addBodyStat(currentUser.id, { ...data, date: localToday() });
         toast('Measurement saved');
       }
       setShowModal(false);

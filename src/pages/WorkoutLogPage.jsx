@@ -7,6 +7,8 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet, getProgressionSuggestion } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
+import { localToday } from '../utils/dateUtils';
+import { resolveExerciseName } from '../utils/exerciseUtils';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -28,10 +30,17 @@ function WorkoutCompleteScreen({ data, onDone }) {
       <p className="workout-complete-plan">{data.planName}</p>
 
       <div className="workout-complete-stats">
-        <div className="workout-complete-stat">
-          <div className="workout-complete-stat-value">{data.totalVolume.toLocaleString()}</div>
-          <div className="workout-complete-stat-label">Volume (kg)</div>
-        </div>
+        {data.totalVolume > 0 ? (
+          <div className="workout-complete-stat">
+            <div className="workout-complete-stat-value">{data.totalVolume.toLocaleString()}</div>
+            <div className="workout-complete-stat-label">Volume (kg)</div>
+          </div>
+        ) : (
+          <div className="workout-complete-stat">
+            <div className="workout-complete-stat-value">{data.totalSets}</div>
+            <div className="workout-complete-stat-label">Sets</div>
+          </div>
+        )}
         <div className="workout-complete-stat">
           <div className="workout-complete-stat-value">{data.exerciseCount}</div>
           <div className="workout-complete-stat-label">Exercises</div>
@@ -148,7 +157,7 @@ export default function WorkoutLogPage() {
 
   const location = useLocation();
 
-  const getExerciseName = (id) => exerciseLibrary.find(e => e.id === id)?.name || id;
+  const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
   const autoStartedRef = useRef(false);
@@ -510,13 +519,14 @@ export default function WorkoutLogPage() {
       if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
       return sum + e.sets.reduce((s2, s) => s2 + (s.weight || 0) * (s.reps || 0), 0);
     }, 0);
+    const totalSets = logEntries.reduce((sum, e) => sum + e.sets.length, 0);
 
     try {
       await addWorkoutLog({
         clientId: currentUser.id,
         planId: isFreeWorkout ? null : selectedPlan.id,
         ...(isFreeWorkout && { workoutName: 'Custom Workout' }),
-        date: new Date().toISOString().split('T')[0],
+        date: localToday(),
         completed: completedCount > 0,
         entries: logEntries,
         rpe,
@@ -528,7 +538,7 @@ export default function WorkoutLogPage() {
       setShowLog(false);
       setIsFreeWorkout(false);
       setCompletedSets(new Set());
-      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe, newBadges });
+      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe, newBadges });
     } catch {
       toast('Failed to save workout', 'error');
     } finally {

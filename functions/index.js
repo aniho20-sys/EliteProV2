@@ -127,30 +127,53 @@ exports.onNewSchedule = onDocumentCreated('schedule/{schedId}', async (event) =>
   });
 });
 
-// ─── Schedule status change → Push to relevant party ───
+// ─── Schedule status change → Push to both parties ───
 exports.onScheduleUpdate = onDocumentUpdated('schedule/{schedId}', async (event) => {
   const before = event.data.before.data();
   const after = event.data.after.data();
 
   if (!before || !after || before.status === after.status) return;
 
-  // Notify the OTHER party about the status change
   const statusLabel = { confirmed: 'confirmed', cancelled: 'cancelled', completed: 'completed' };
   const label = statusLabel[after.status];
   if (!label) return;
 
-  // If trainer changed status → notify client, and vice versa
-  const notifyId = after.clientId; // simplified: always notify client
-  const snap = await db.doc(`users/${notifyId}`).get();
-  if (!snap.exists) return;
+  const [clientSnap, trainerSnap] = await Promise.all([
+    db.doc(`users/${after.clientId}`).get(),
+    db.doc(`users/${after.trainerId}`).get(),
+  ]);
 
-  const { fcmTokens } = snap.data();
-
-  await sendPush(notifyId, fcmTokens, {
+  const notification = {
     title: `Session ${label}`,
-    body: `Your ${after.type} on ${after.date} at ${after.time} has been ${label}`,
+    body: `${after.type} on ${after.date} at ${after.time} has been ${label}`,
+  };
+  const data = { type: 'schedule', url: '/#/schedule' };
+
+  await Promise.all([
+    clientSnap.exists ? sendPush(after.clientId, clientSnap.data().fcmTokens, notification, data) : null,
+    trainerSnap.exists ? sendPush(after.trainerId, trainerSnap.data().fcmTokens, notification, data) : null,
+  ]);
+});
+
+// ─── New Workout Plan assigned → Push to client ───
+exports.onNewWorkoutPlan = onDocumentCreated('workoutPlans/{planId}', async (event) => {
+  const plan = event.data.data();
+  if (!plan || !plan.clientId || !plan.trainerId) return;
+
+  const [clientSnap, trainerSnap] = await Promise.all([
+    db.doc(`users/${plan.clientId}`).get(),
+    db.doc(`users/${plan.trainerId}`).get(),
+  ]);
+
+  if (!clientSnap.exists) return;
+  const { fcmTokens } = clientSnap.data();
+  const trainerName = trainerSnap.exists ? trainerSnap.data().name : 'Your trainer';
+
+  await sendPush(plan.clientId, fcmTokens, {
+    title: 'New Workout Plan',
+    body: `${trainerName} created "${plan.name}" for you`,
   }, {
-    type: 'schedule',
-    url: '/#/schedule',
+    type: 'plan',
+    url: '/#/my-workouts',
   });
 });
