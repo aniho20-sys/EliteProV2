@@ -30,10 +30,17 @@ function WorkoutCompleteScreen({ data, onDone }) {
       <p className="workout-complete-plan">{data.planName}</p>
 
       <div className="workout-complete-stats">
-        <div className="workout-complete-stat">
-          <div className="workout-complete-stat-value">{data.totalVolume.toLocaleString()}</div>
-          <div className="workout-complete-stat-label">Volume (kg)</div>
-        </div>
+        {data.totalVolume > 0 ? (
+          <div className="workout-complete-stat">
+            <div className="workout-complete-stat-value">{data.totalVolume.toLocaleString()}</div>
+            <div className="workout-complete-stat-label">Volume (kg)</div>
+          </div>
+        ) : (
+          <div className="workout-complete-stat">
+            <div className="workout-complete-stat-value">{data.totalSets}</div>
+            <div className="workout-complete-stat-label">Sets</div>
+          </div>
+        )}
         <div className="workout-complete-stat">
           <div className="workout-complete-stat-value">{data.exerciseCount}</div>
           <div className="workout-complete-stat-label">Exercises</div>
@@ -502,6 +509,7 @@ export default function WorkoutLogPage() {
       if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
       return sum + e.sets.reduce((s2, s) => s2 + (s.weight || 0) * (s.reps || 0), 0);
     }, 0);
+    const totalSets = logEntries.reduce((sum, e) => sum + e.sets.length, 0);
 
     try {
       await addWorkoutLog({
@@ -519,7 +527,7 @@ export default function WorkoutLogPage() {
       setShowLog(false);
       setIsFreeWorkout(false);
       setCompletedSets(new Set());
-      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, newPRs, rpe });
+      setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe });
     } catch {
       toast('Failed to save workout', 'error');
     } finally {
