@@ -121,6 +121,7 @@ function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canR
 
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords, checkAndAwardBadges } = useApp();
+  const isTrainer = currentUser?.role === 'trainer';
   const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
@@ -605,19 +606,21 @@ export default function WorkoutLogPage() {
           <h3 className="mb-16">History</h3>
           {logs.length === 0 ? (
             <EmptyState
-              icon={plans.length === 0 && !currentUser.trainerId ? UserPlus : NotebookPen}
+              icon={!isTrainer && plans.length === 0 && !currentUser.trainerId ? UserPlus : NotebookPen}
               title="No workouts logged yet"
               description={
-                !currentUser.trainerId
-                  ? 'Connect to a coach first — they will assign workout plans for you to follow.'
-                  : plans.length > 0
-                    ? 'Select a plan above to start logging your first session.'
-                    : 'Your coach hasn\'t assigned any plans yet. Message them to get started.'
+                isTrainer
+                  ? 'Tap "Start Custom Workout" to begin a session with the rest timer.'
+                  : !currentUser.trainerId
+                    ? 'Connect to a coach first — they will assign workout plans for you to follow.'
+                    : plans.length > 0
+                      ? 'Select a plan above to start logging your first session.'
+                      : 'Your coach hasn\'t assigned any plans yet. Message them to get started.'
               }
               action={
-                !currentUser.trainerId
+                !isTrainer && !currentUser.trainerId
                   ? { label: 'Connect to a Coach', to: '/profile' }
-                  : plans.length === 0
+                  : !isTrainer && plans.length === 0
                     ? { label: 'Message Your Coach', to: '/messages' }
                     : undefined
               }

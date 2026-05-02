@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
   BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2, Receipt, PieChart,
-  MoreHorizontal, X, ChevronRight, Timer
+  MoreHorizontal, X, ChevronRight
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
@@ -19,7 +19,7 @@ const trainerLinks = [
 
 // Secondary sidebar links (desktop) — shown in collapsible "More" section
 const trainerSecondaryLinks = [
-  { to: '/timer', icon: Timer, label: 'Rest Timer' },
+  { to: '/log', icon: ClipboardList, label: 'Session Log' },
   { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
   { to: '/plans', icon: ClipboardList, label: 'Workout Plans' },
   { to: '/invoices', icon: Receipt, label: 'Invoices' },
@@ -57,7 +57,7 @@ const clientPrimaryLinks = [
 
 // "More" sheet links — secondary features
 const trainerMoreLinks = [
-  { to: '/timer', icon: Timer, label: 'Rest Timer' },
+  { to: '/log', icon: ClipboardList, label: 'Session Log' },
   { to: '/invoices', icon: Receipt, label: 'Invoices' },
   { to: '/analytics', icon: PieChart, label: 'Analytics' },
   { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
