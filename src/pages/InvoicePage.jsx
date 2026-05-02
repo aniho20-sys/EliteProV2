@@ -136,6 +136,7 @@ export default function InvoicePage() {
     if (!form.clientId) { toast('Please select a client', 'error'); return; }
     if (!form.dueDate) { toast('Please set a due date', 'error'); return; }
     if (form.items.some(i => !i.description.trim())) { toast('All items need a description', 'error'); return; }
+    if (formTotal <= 0) { toast('Invoice total must be greater than zero', 'error'); return; }
     setSaving(true);
     try {
       await addInvoice({

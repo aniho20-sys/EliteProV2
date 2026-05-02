@@ -1,7 +1,7 @@
 import { useApp } from '../context/AppContext';
 import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
-import { localToday } from '../utils/dateUtils';
+import { localToday, localDateAdd } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { Link } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
@@ -27,12 +27,7 @@ export default function ClientDashboard() {
 
   const badges = getBadges(currentUser.id);
   const totalWorkouts = logs.length;
-  const thisWeekLogs = logs.filter(l => {
-    const logDate = new Date(l.date);
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return logDate >= weekAgo;
-  });
+  const thisWeekLogs = logs.filter(l => l.date >= localDateAdd(today, -7));
 
   return (
     <div>

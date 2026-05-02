@@ -20,6 +20,7 @@ export default function ExerciseLibraryPage() {
   const [editingEx, setEditingEx] = useState(null);
   const [form, setForm] = useState({ name: '', muscles: [], equipment: '', description: '', videoUrl: '' });
   const [focusUrl, setFocusUrl] = useState(false);
+  const [saving, setSaving] = useState(false);
   const urlInputRef = useRef(null);
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function ExerciseLibraryPage() {
     e.preventDefault();
     const { muscles, ...rest } = form;
     const exData = { ...rest, muscle: muscles.join(', ') };
+    setSaving(true);
     try {
       if (editingEx) {
         await updateExercise(editingEx.id, exData);
@@ -72,7 +74,7 @@ export default function ExerciseLibraryPage() {
         toast('Exercise added');
       }
       setShowModal(false);
-    } catch { toast('Failed to save exercise', 'error'); }
+    } catch { toast('Failed to save exercise', 'error'); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
@@ -229,7 +231,7 @@ export default function ExerciseLibraryPage() {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">{editingEx ? 'Save Changes' : 'Add Exercise'}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editingEx ? 'Save Changes' : 'Add Exercise'}</button>
               </div>
             </form>
           </div>

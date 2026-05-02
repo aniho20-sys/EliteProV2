@@ -35,6 +35,7 @@
   --text-muted: #9098a8;
 
   /* Borders & Surfaces */
+  --surface: #f0f2f7;
   --border: #e2e6ef;
   --border-light: #ebeef5;
   --divider: rgba(0, 0, 0, 0.06);
@@ -67,6 +68,7 @@
   --text-secondary: #9ca3b4;
   --text-muted: #6b7280;
 
+  --surface: #252a38;
   --border: #2d3348;
   --border-light: #353b50;
   --divider: rgba(255, 255, 255, 0.06);
@@ -417,7 +419,7 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 200;
+  z-index: 250;
   animation: fadeIn 0.2s var(--ease);
 }
 .more-sheet {
@@ -3517,17 +3519,17 @@ tr:hover { background: var(--bg-card-hover); }
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 10px 16px;
-  background: #1e293b;
-  color: #94a3b8;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--border);
 }
 @media (min-width: 769px) {
   .offline-banner {

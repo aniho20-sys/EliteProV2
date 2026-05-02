@@ -193,7 +193,7 @@ export default function ClientDetailPage() {
     const tag = tagInput.trim();
     if (!tag) return;
     const existing = client.tags || [];
-    if (existing.includes(tag)) { setTagInput(''); return; }
+    if (existing.includes(tag)) { toast('Tag already added', 'info'); setTagInput(''); return; }
     setSavingTag(true);
     try {
       await updateClient(clientId, { tags: [...existing, tag] });

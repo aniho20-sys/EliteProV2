@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -123,6 +123,7 @@ export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords, checkAndAwardBadges } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const location = useLocation();
+  const navigate = useNavigate();
   // Trainer can log on behalf of a client (passed via navigation state)
   const targetClientId = (isTrainer && location.state?.clientId) ? location.state.clientId : currentUser.id;
   const targetClientName = location.state?.clientName || null;
@@ -566,7 +567,10 @@ export default function WorkoutLogPage() {
       </div>
 
       {completedData ? (
-        <WorkoutCompleteScreen data={completedData} onDone={() => setCompletedData(null)} />
+        <WorkoutCompleteScreen data={completedData} onDone={() => {
+          setCompletedData(null);
+          if (loggingForClient) navigate(`/clients/${targetClientId}`, { state: { tab: 'workout logs' } });
+        }} />
       ) : !showLog ? (
         <>
           {prCount > 0 && (
