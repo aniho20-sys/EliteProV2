@@ -28,6 +28,7 @@ const InvoicePage = lazy(() => import('./pages/InvoicePage'));
 const BusinessAnalyticsPage = lazy(() => import('./pages/BusinessAnalyticsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
+const RestTimerPage = lazy(() => import('./pages/RestTimerPage'));
 
 function LoadingScreen() {
   return (
@@ -69,6 +70,7 @@ function AppRoutes() {
               {isTrainer && <Route path="/progress-overview" element={<ClientProgressOverviewPage />} />}
               {isTrainer && <Route path="/invoices" element={<InvoicePage />} />}
               {isTrainer && <Route path="/analytics" element={<BusinessAnalyticsPage />} />}
+              {isTrainer && <Route path="/timer" element={<RestTimerPage />} />}
               <Route path="/plans" element={<WorkoutPlansPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/messages" element={<MessagesPage />} />
