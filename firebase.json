@@ -29,7 +29,13 @@
         ]
       },
       {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
+        "source": "*.@(png|ico|svg)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, no-cache" }
+        ]
+      },
+      {
+        "source": "**/*.@(jpg|jpeg|gif|webp)",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=604800" }
         ]
