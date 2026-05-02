@@ -3510,3 +3510,27 @@ tr:hover { background: var(--bg-card-hover); }
     border-radius: var(--radius);
   }
 }
+
+/* ── Offline Banner ── */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-bottom: 1px solid #334155;
+}
+@media (min-width: 769px) {
+  .offline-banner {
+    left: var(--sidebar-width, 240px);
+  }
+}
