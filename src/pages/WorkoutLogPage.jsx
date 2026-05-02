@@ -122,10 +122,15 @@ function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canR
 export default function WorkoutLogPage() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords, checkAndAwardBadges } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
+  const location = useLocation();
+  // Trainer can log on behalf of a client (passed via navigation state)
+  const targetClientId = (isTrainer && location.state?.clientId) ? location.state.clientId : currentUser.id;
+  const targetClientName = location.state?.clientName || null;
+  const loggingForClient = isTrainer && targetClientId !== currentUser.id;
   const exerciseLibrary = getExercises();
-  const plans = getWorkoutPlans({ clientId: currentUser.id });
-  const logs = getWorkoutLogs(currentUser.id);
-  const prs = getPersonalRecords(currentUser.id);
+  const plans = getWorkoutPlans({ clientId: targetClientId });
+  const logs = getWorkoutLogs(targetClientId);
+  const prs = getPersonalRecords(targetClientId);
   const toast = useToast();
   const [showLog, setShowLog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -156,8 +161,6 @@ export default function WorkoutLogPage() {
   const [timerActive, setTimerActive] = useState(false);
   const timerRef = useRef(null);
 
-  const location = useLocation();
-
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
@@ -176,7 +179,7 @@ export default function WorkoutLogPage() {
     if (draftRestoredRef.current || location.state?.planId) return;
     draftRestoredRef.current = true;
     try {
-      const raw = localStorage.getItem('elitepro_active_log_' + currentUser.id);
+      const raw = localStorage.getItem('elitepro_active_log_' + targetClientId);
       if (!raw) return;
       const draft = JSON.parse(raw);
       if (!draft.entries?.length) return;
@@ -191,7 +194,7 @@ export default function WorkoutLogPage() {
       setShowLog(true);
       toast('Workout session restored', 'info');
     } catch {
-      localStorage.removeItem('elitepro_active_log_' + currentUser.id);
+      localStorage.removeItem('elitepro_active_log_' + targetClientId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -200,12 +203,12 @@ export default function WorkoutLogPage() {
   useEffect(() => {
     if (!showLog) return;
     try {
-      localStorage.setItem('elitepro_active_log_' + currentUser.id, JSON.stringify({
+      localStorage.setItem('elitepro_active_log_' + targetClientId, JSON.stringify({
         isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds,
         completedSets: [...completedSets],
       }));
     } catch {}
-  }, [showLog, isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds, currentUser.id]);
+  }, [showLog, isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds, targetClientId]);
 
   // Stop timer when leaving workout view
   useEffect(() => {
@@ -524,7 +527,8 @@ export default function WorkoutLogPage() {
 
     try {
       await addWorkoutLog({
-        clientId: currentUser.id,
+        clientId: targetClientId,
+        ...(loggingForClient && { trainerId: currentUser.id, createdBy: currentUser.id, logType: 'pt_session' }),
         planId: isFreeWorkout ? null : selectedPlan.id,
         ...(isFreeWorkout && { workoutName: 'Custom Workout' }),
         date: localToday(),
@@ -533,9 +537,9 @@ export default function WorkoutLogPage() {
         rpe,
         notes,
       });
-      const newBadges = await checkAndAwardBadges(currentUser.id).catch(() => []);
+      const newBadges = await checkAndAwardBadges(targetClientId).catch(() => []);
       const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
-      localStorage.removeItem('elitepro_active_log_' + currentUser.id);
+      localStorage.removeItem('elitepro_active_log_' + targetClientId);
       setShowLog(false);
       setIsFreeWorkout(false);
       setCompletedSets(new Set());
@@ -556,7 +560,9 @@ export default function WorkoutLogPage() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Workout Log</h1>
-        <p className="page-subtitle">Record your training sessions</p>
+        <p className="page-subtitle">
+          {loggingForClient ? `Logging for ${targetClientName}` : 'Record your training sessions'}
+        </p>
       </div>
 
       {completedData ? (
@@ -681,7 +687,7 @@ export default function WorkoutLogPage() {
               {isFreeWorkout && plans.length > 0 && (
                 <button className="btn btn-outline btn-sm" onClick={() => setShowPlanPicker(true)}>Load Plan</button>
               )}
-              <button className="btn btn-outline" onClick={() => { localStorage.removeItem('elitepro_active_log_' + currentUser.id); setShowLog(false); setIsFreeWorkout(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { localStorage.removeItem('elitepro_active_log_' + targetClientId); setShowLog(false); setIsFreeWorkout(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>

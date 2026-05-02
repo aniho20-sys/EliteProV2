@@ -641,9 +641,14 @@ export default function ClientDetailPage() {
         <div>
           <div className="flex-between mb-16">
             <span className="text-sm text-muted">{logs.length} session{logs.length !== 1 ? 's' : ''} logged</span>
-            <button className="btn btn-primary btn-sm" onClick={() => { setLogDate(today); resetLogForm(); setShowLogModal(true); }}>
-              <Plus size={16} /> Log Workout
-            </button>
+            <div className="flex gap-8">
+              <button className="btn btn-primary btn-sm" onClick={() => navigate('/log', { state: { clientId: client.id, clientName: client.name } })}>
+                Log Session
+              </button>
+              <button className="btn btn-outline btn-sm" onClick={() => { setLogDate(today); resetLogForm(); setShowLogModal(true); }}>
+                <Plus size={16} /> Quick Log
+              </button>
+            </div>
           </div>
           {logs.length === 0 ? (
             <EmptyState
