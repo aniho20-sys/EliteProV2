@@ -6,7 +6,7 @@ import {
   onSnapshot, writeBatch, getDocs, query, where, or, orderBy,
 } from 'firebase/firestore';
 import {
-  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
+  onAuthStateChanged, signInWithPopup,
   GoogleAuthProvider,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -59,8 +59,6 @@ export function AppProvider({ children }) {
 
   // --- Firebase Auth listener ---
   useEffect(() => {
-    // Handle redirect sign-in result (iOS standalone PWA flow)
-    getRedirectResult(auth).catch(() => {});
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
@@ -286,24 +284,15 @@ export function AppProvider({ children }) {
 
 // ========== Auth ==========
 
-  // Firebase Auth: Google Sign-In
-  // iOS standalone PWA blocks popups — use redirect flow instead
+  // Firebase Auth: Google Sign-In (popup)
   const signInWithGoogle = async () => {
-    const isIOSStandalone = window.navigator.standalone === true;
-    if (isIOSStandalone) {
-      await signInWithRedirect(auth, googleProvider);
-      return null; // page will reload after redirect completes
-    }
     try {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
-      if (err.code === 'auth/popup-blocked') {
-        await signInWithRedirect(auth, googleProvider);
-        return null;
-      }
       if (err.code === 'auth/popup-closed-by-user' ||
-          err.code === 'auth/cancelled-popup-request') {
+          err.code === 'auth/cancelled-popup-request' ||
+          err.code === 'auth/popup-blocked') {
         return null;
       }
       throw err;
