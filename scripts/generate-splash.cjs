@@ -11,8 +11,7 @@ const OUT_DIR = path.join(__dirname, '..', 'public', 'splash');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 // Brand colors
-const BG = [15, 23, 42];       // #0f172a
-const ACCENT = [67, 97, 238];  // #4361ee
+const BG = [255, 255, 255];    // #ffffff white
 
 // CRC-32 table
 const CRC_TABLE = (() => {
@@ -51,21 +50,6 @@ function makePNG(width, height, [r, g, b]) {
     for (let x = 0; x < width; x++) {
       const off = base + 1 + x * 3;
       raw[off] = r; raw[off + 1] = g; raw[off + 2] = b;
-    }
-  }
-
-  // Draw a centered circle (brand icon placeholder)
-  const cx = Math.floor(width / 2);
-  const cy = Math.floor(height / 2);
-  const radius = Math.floor(Math.min(width, height) * 0.08);
-  for (let y = cy - radius; y <= cy + radius; y++) {
-    for (let x = cx - radius; x <= cx + radius; x++) {
-      if ((x - cx) ** 2 + (y - cy) ** 2 <= radius ** 2) {
-        if (y >= 0 && y < height && x >= 0 && x < width) {
-          const off = y * rowBytes + 1 + x * 3;
-          raw[off] = ACCENT[0]; raw[off + 1] = ACCENT[1]; raw[off + 2] = ACCENT[2];
-        }
-      }
     }
   }
 
