@@ -30,12 +30,27 @@
 | — | Badge System Phase 1: milestone badges at 1/10/50/100 sessions; shown in ClientDashboard + ClientDetailPage |
 | — | Business Analytics page (/analytics): monthly revenue bar chart, sessions trend, 30-day retention, top clients |
 | — | Volume Analytics Chart: weekly training volume bar chart in ProgressPage + ClientDetailPage progress tab |
+| `431e771` | Fix CI: add .npmrc legacy-peer-deps to unblock npm ci (vite-plugin-pwa@1.2.0 / vite@8 peer dep conflict) |
+| `463995c` | Fix app icon compositing — crop to logo bounding box before scaling |
+| `7f8a5ad` | Cache-bust icons by versioning filenames to -v3 (white background blue swirl logo) |
+| `b44926a` | Set no-cache on PNG/ICO icons so updates take effect immediately |
+| `3416163` | Trainer can log workout for client with integrated rest timer (same UX as client side) |
+| `658ead8` | Comprehensive app audit — 7 bugs fixed (surface CSS var, z-index, date util, invoice zero-total, double-submit, week filter) |
+| `f02ff7b` | CI: restore continue-on-error for Firestore rules (SA lacks Cloud Datastore Admin permission) |
+| `6f66c39` | CI: explicitly pass --legacy-peer-deps to npm ci in workflow (more reliable than .npmrc alone) |
+| `d10eb1c` | Add firestore.indexes.json + reference in firebase.json (required by firebase-tools) |
+| `643bb80` | Add Kettlebell + Other equipment types; improve WorkoutPlans UX (equip filter, unit types per exercise, notes, unit-aware set inputs) |
+| `36f3b64` | Fix SchedulePage: allow viewing past dates via prev/next week navigation |
 
 ---
 
 ## Pending Tasks
 
-No outstanding tasks. All priority items completed.
+| # | Task |
+|---|------|
+| 1 | Fix CI service account — add Cloud Datastore Admin role so Firestore rules auto-deploy |
+| 2 | Push Notifications (needs VAPID key + Blaze plan) |
+| 3 | GDPR Cloud Function deploy (needs Blaze plan) |
 
 ---
 
@@ -58,3 +73,13 @@ No outstanding tasks. All priority items completed.
 | `reps_only` | reps only | `× 20` |
 | `time` | seconds | `60s` |
 | `distance` | metres | `400m` |
+
+---
+
+## Known CI Limitation
+
+CI service account (`FIREBASE_SERVICE_ACCOUNT`) has **Firebase Hosting Admin** scope only.  
+Firestore rules deployment returns HTTP 403 (`Permission denied to get service [firestore.googleapis.com]`).  
+**Workaround:** Firestore rules must be published manually via Firebase Console.  
+**Permanent fix:** Go to Google Cloud Console → IAM → find the CI service account → add **Cloud Datastore Index Admin** role.
+
