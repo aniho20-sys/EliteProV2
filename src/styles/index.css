@@ -2984,16 +2984,30 @@ tr:hover { background: var(--bg-card-hover); }
   align-items: center;
   justify-content: center;
   height: 100vh;
+  gap: 32px;
+  background: #ffffff;
+}
+.loading-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 16px;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  background: var(--bg);
+}
+.loading-logo {
+  width: 80px;
+  height: 80px;
+}
+.loading-brand-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1a1d26;
 }
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid #e5e7ef;
+  border-top-color: #863bff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
