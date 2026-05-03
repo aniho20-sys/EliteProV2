@@ -798,10 +798,11 @@ tr:hover { background: var(--bg-card-hover); }
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 200;
+  z-index: 500;
   padding: 20px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   animation: fadeIn 0.15s var(--ease);
 }
 .modal {
@@ -817,7 +818,7 @@ tr:hover { background: var(--bg-card-hover); }
 }
 @media (max-width: 640px) {
   .modal { padding: 20px; border-radius: var(--radius-sm); margin: 0; }
-  .modal-overlay { padding: 12px; align-items: flex-start; }
+  .modal-overlay { padding: 12px; padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom, 0px))); }
 }
 .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.2px; }
 .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
