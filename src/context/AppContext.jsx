@@ -287,22 +287,10 @@ export function AppProvider({ children }) {
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
-  // Try popup first; if blocked (iOS Safari standalone), fall back to redirect
+  // Use redirect flow — popup is unreliable on iOS Chrome/Safari
   const signInWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      return result.user;
-    } catch (err) {
-      if (err.code === 'auth/popup-blocked') {
-        await signInWithRedirect(auth, googleProvider);
-        return null;
-      }
-      if (err.code === 'auth/popup-closed-by-user' ||
-          err.code === 'auth/cancelled-popup-request') {
-        return null;
-      }
-      throw err;
-    }
+    await signInWithRedirect(auth, googleProvider);
+    return null;
   };
 
   const signUpEmail = async (email, password) => {
