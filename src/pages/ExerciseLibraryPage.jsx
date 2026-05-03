@@ -118,8 +118,16 @@ export default function ExerciseLibraryPage() {
           <div key={ex.id} className="card exercise-card">
             <div className="exercise-name">{ex.name}</div>
             <div className="exercise-meta">
-              <span className="tag tag-primary">{ex.muscle}</span>
-              <span className="tag tag-accent">{ex.equipment}</span>
+              {(() => {
+                const muscles = ex.muscle ? ex.muscle.split(', ').filter(Boolean) : [];
+                const shown = muscles.slice(0, 3);
+                const extra = muscles.length - shown.length;
+                return (<>
+                  {shown.map(m => <span key={m} className="tag tag-primary" style={{ fontSize: '0.72rem' }}>{m}</span>)}
+                  {extra > 0 && <span className="tag" style={{ fontSize: '0.72rem' }}>+{extra} more</span>}
+                  {ex.equipment && <span className="tag tag-accent" style={{ fontSize: '0.72rem' }}>{ex.equipment}</span>}
+                </>);
+              })()}
             </div>
             <div className="exercise-desc">{ex.description}</div>
             <div className="exercise-actions mt-8">

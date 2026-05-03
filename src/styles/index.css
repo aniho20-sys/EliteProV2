@@ -1778,7 +1778,7 @@ tr:hover { background: var(--bg-card-hover); }
   transform: translateY(-1px);
 }
 .exercise-name { font-weight: 700; margin-bottom: 8px; font-size: 0.95rem; }
-.exercise-meta { display: flex; gap: 6px; margin-bottom: 10px; }
+.exercise-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; align-items: center; }
 .exercise-desc { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.5; }
 .exercise-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .exercise-trainer-actions { display: flex; gap: 2px; margin-left: auto; }
