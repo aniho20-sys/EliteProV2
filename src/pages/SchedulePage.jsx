@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -28,6 +28,7 @@ export default function SchedulePage() {
   const clients = isTrainer ? getClients(currentUser.id) : [];
 
   const [selectedDate, setSelectedDate] = useState(localToday());
+  const [dateOffset, setDateOffset] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // schedId
@@ -55,11 +56,12 @@ export default function SchedulePage() {
   const whEnd = trainerUser?.workingHours?.end || '17:00';
   const BOOKING_SLOTS = generateSlots(whStart, whEnd, 30);
 
-  // Get next 14 days
-  const dates = Array.from({ length: 14 }, (_, i) => localDateAdd(i));
+  // 14-day window starting from offset (can go negative to see past)
+  const dates = Array.from({ length: 14 }, (_, i) => localDateAdd(dateOffset + i));
+  const today = localToday();
 
-  // Month label for date selector
-  const selectedMonth = parseLocalDate(selectedDate).toLocaleDateString('en', { month: 'long', year: 'numeric' });
+  // Month label based on the first visible date
+  const selectedMonth = parseLocalDate(dates[0]).toLocaleDateString('en', { month: 'long', year: 'numeric' });
 
   const schedule = getSchedule(
     isTrainer ? { trainerId: currentUser.id, date: selectedDate } : { clientId: currentUser.id, date: selectedDate }
@@ -220,18 +222,27 @@ export default function SchedulePage() {
       )}
 
       {/* Date selector */}
-      <div className="date-selector-month">{selectedMonth}</div>
+      <div className="date-selector-nav">
+        <button className="btn-icon" onClick={() => setDateOffset(p => p - 7)} title="Previous week"><ChevronLeft size={18} /></button>
+        <span className="date-selector-month" style={{ margin: 0 }}>{selectedMonth}</span>
+        <button className="btn-icon" onClick={() => setDateOffset(p => p + 7)} title="Next week"><ChevronRight size={18} /></button>
+        {dateOffset !== 0 && (
+          <button className="btn btn-sm btn-outline" onClick={() => { setDateOffset(0); setSelectedDate(today); }}>Today</button>
+        )}
+      </div>
       <div className="date-selector mb-16">
         {dates.map(date => {
           const { day, date: num } = formatDay(date);
           const count = getSessionCount(date);
+          const isToday = date === today;
+          const isPast = date < today;
           return (
             <button
               key={date}
-              className={`date-btn ${selectedDate === date ? 'date-btn-active' : ''}`}
+              className={`date-btn ${selectedDate === date ? 'date-btn-active' : ''} ${isPast ? 'date-btn-past' : ''}`}
               onClick={() => setSelectedDate(date)}
             >
-              <div className="date-btn-day">{day}</div>
+              <div className="date-btn-day">{isToday ? 'Today' : day}</div>
               <div className="date-btn-num">{num}</div>
               {count > 0 && <div className="date-btn-dot" />}
             </button>

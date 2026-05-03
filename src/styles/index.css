@@ -1150,6 +1150,14 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 8px;
   letter-spacing: 0.3px;
 }
+.date-selector-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.date-btn-past { opacity: 0.55; }
+.date-btn-past.date-btn-active { opacity: 1; }
 
 .page-header { margin-bottom: 28px; }
 .page-title {
