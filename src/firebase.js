@@ -4,7 +4,7 @@ import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCRfch8PtuqVdBIwjBcGq7NS5NDjt8PeZI',
-  authDomain: 'elitepro-16718.web.app',
+  authDomain: 'elitepro-16718.firebaseapp.com',
   projectId: 'elitepro-16718',
   storageBucket: 'elitepro-16718.firebasestorage.app',
   messagingSenderId: '167024537410',
