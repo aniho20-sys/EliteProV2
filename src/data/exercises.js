@@ -43,4 +43,4 @@ export const muscleGroups = [
   'Core', 'Glutes',
   'Quadriceps', 'Hamstrings', 'Calves',
 ];
-export const equipmentTypes = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight'];
+export const equipmentTypes = ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Bodyweight', 'Other'];

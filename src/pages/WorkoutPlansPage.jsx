@@ -4,14 +4,14 @@ import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbel
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
-import { normalizeSets, emptySet } from '../utils/workoutUtils';
+import { normalizeSets, emptySet, UNIT_OPTIONS } from '../utils/workoutUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, getTemplates, saveAsTemplate, deleteTemplate } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, getTemplates, saveAsTemplate, deleteTemplate, equipmentTypes } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -22,6 +22,7 @@ export default function WorkoutPlansPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', clientId: '', day: '', exercises: [] });
   const [exFilter, setExFilter] = useState('');
+  const [exEquipFilter, setExEquipFilter] = useState('');
   const exFilterRef = useRef('');
   const [dragIdx, setDragIdx] = useState(null);
   const [creatingCustom, setCreatingCustom] = useState(false);
@@ -46,9 +47,26 @@ export default function WorkoutPlansPage() {
   const [customSaving, setCustomSaving] = useState(false);
 
   const addExToForm = (exercise) => {
+    const unit = exercise.unit || 'weight_reps';
     setForm(prev => ({
       ...prev,
-      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }],
+      exercises: [...prev.exercises, { exerciseId: exercise.id, name: exercise.name, unit, sets: Array.from({ length: 3 }, () => emptySet(unit)), notes: '' }],
+    }));
+  };
+
+  const changeExUnit = (exIndex, unit) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => i !== exIndex ? ex : {
+        ...ex, unit, sets: Array.from({ length: ex.sets.length }, () => emptySet(unit)),
+      }),
+    }));
+  };
+
+  const setExNotes = (exIndex, value) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => i !== exIndex ? ex : { ...ex, notes: value }),
     }));
   };
 
@@ -206,6 +224,7 @@ export default function WorkoutPlansPage() {
       await addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id });
       setForm({ name: '', clientId: '', day: '', exercises: [] });
       updateExFilter('');
+      setExEquipFilter('');
       setShowCreate(false);
       setShowCustomForm(false);
       setCustomForm(EMPTY_CUSTOM);
@@ -220,17 +239,21 @@ export default function WorkoutPlansPage() {
 
 
   const formatExDetail = (ex) => {
+    const unit = ex.unit || 'weight_reps';
     const sets = normalizeSets(ex);
+    if (unit === 'time') return `${sets.length} sets · ${sets.map(s => `${s.seconds || 0}s`).join('/')}`;
+    if (unit === 'distance') return `${sets.length} sets · ${sets.map(s => `${s.metres || 0}m`).join('/')}`;
+    if (unit === 'reps_only') {
+      const allSame = sets.every(s => s.reps === sets[0].reps);
+      return allSame ? `${sets.length} × ${sets[0].reps || 0} reps` : sets.map(s => s.reps || 0).join('/') + ' reps';
+    }
     const reps = sets.map(s => s.reps);
     const weights = sets.map(s => s.weight);
     const allSameReps = reps.every(r => r === reps[0]);
     const allSameWeight = weights.every(w => w === weights[0]);
-    const hasWeight = weights.some(w => w > 0);
-
-    let detail = allSameReps ? `${sets.length} x ${reps[0]}` : sets.map(s => s.reps).join('/') + ' reps';
-    if (hasWeight) {
-      detail += allSameWeight ? ` @ ${weights[0]}kg` : ` | ${weights.join('/')}kg`;
-    }
+    const hasWeight = weights.some(w => Number(w) > 0);
+    let detail = allSameReps ? `${sets.length} × ${reps[0] || 0}` : reps.join('/') + ' reps';
+    if (hasWeight) detail += allSameWeight ? ` @ ${weights[0]}kg` : ` | ${weights.join('/')}kg`;
     return detail;
   };
 
@@ -310,9 +333,12 @@ export default function WorkoutPlansPage() {
     }
   };
 
-  const filteredExercises = exerciseLibrary.filter(e =>
-    e.name.toLowerCase().includes(exFilter.toLowerCase()) || e.muscle.toLowerCase().includes(exFilter.toLowerCase())
-  );
+  const filteredExercises = exerciseLibrary.filter(e => {
+    const q = exFilter.toLowerCase();
+    const matchesText = !q || e.name.toLowerCase().includes(q) || e.muscle.toLowerCase().includes(q);
+    const matchesEquip = !exEquipFilter || e.equipment === exEquipFilter;
+    return matchesText && matchesEquip;
+  });
 
   return (
     <div>
@@ -559,13 +585,22 @@ export default function WorkoutPlansPage() {
               {/* Exercise search */}
               <div className="form-group">
                 <label className="form-label">Add Exercises</label>
-                <input className="form-input" placeholder="Search or type a custom exercise..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
-                {exFilter && (
+                <div className="plan-equip-filters">
+                  <button type="button" className={`plan-equip-chip${!exEquipFilter ? ' active' : ''}`} onClick={() => setExEquipFilter('')}>All</button>
+                  {equipmentTypes.map(eq => (
+                    <button key={eq} type="button" className={`plan-equip-chip${exEquipFilter === eq ? ' active' : ''}`} onClick={() => setExEquipFilter(p => p === eq ? '' : eq)}>{eq}</button>
+                  ))}
+                </div>
+                <input className="form-input" placeholder="Search exercises..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
+                {(exFilter || exEquipFilter) && (
                   <div className="ex-search-results">
-                    {filteredExercises.slice(0, 8).map(ex => (
+                    {filteredExercises.slice(0, 12).map(ex => (
                       <div key={ex.id} className="contact-item" onClick={() => { addExToForm(ex); updateExFilter(''); }}>
                         <span className="text-sm">{ex.name}</span>
-                        <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
+                        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+                          <span className="tag">{ex.equipment}</span>
+                          <span className="tag tag-primary">{ex.muscle}</span>
+                        </div>
                       </div>
                     ))}
                     {filteredExercises.length === 0 && (
@@ -673,15 +708,36 @@ export default function WorkoutPlansPage() {
                         <span className="text-xs text-muted" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
                         <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
                       </div>
+                      <div className="log-unit-picker plan-unit-picker">
+                        {UNIT_OPTIONS.map(opt => (
+                          <button key={opt.value} type="button"
+                            className={`log-unit-pill${(ex.unit || 'weight_reps') === opt.value ? ' active' : ''}`}
+                            onClick={() => changeExUnit(i, opt.value)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
                       <div className="plan-sets-list">
                         {ex.sets.map((s, si) => (
                           <div key={si} className="plan-set-row">
                             <span className="plan-set-label">Set {si + 1}</span>
-                            <input className="form-input log-set-input" type="number" value={s.weight || ''} onChange={e => updateSet(i, si, 'weight', Number(e.target.value) || 0)} placeholder="0" title="Weight (kg)" />
-                            <span className="text-xs text-muted">kg</span>
-                            <span className="text-xs text-muted">x</span>
-                            <input className="form-input log-set-input" value={s.reps} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
-                            <span className="text-xs text-muted">reps</span>
+                            {(ex.unit || 'weight_reps') === 'weight_reps' && (<>
+                              <input className="form-input log-set-input" type="number" value={s.weight || ''} onChange={e => updateSet(i, si, 'weight', Number(e.target.value) || 0)} placeholder="0" title="Weight (kg)" />
+                              <span className="text-xs text-muted">kg ×</span>
+                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
+                              <span className="text-xs text-muted">reps</span>
+                            </>)}
+                            {ex.unit === 'reps_only' && (<>
+                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
+                              <span className="text-xs text-muted">reps</span>
+                            </>)}
+                            {ex.unit === 'time' && (<>
+                              <input className="form-input log-set-input" type="number" value={s.seconds || ''} onChange={e => updateSet(i, si, 'seconds', Number(e.target.value) || 0)} placeholder="30" title="Seconds" />
+                              <span className="text-xs text-muted">sec</span>
+                            </>)}
+                            {ex.unit === 'distance' && (<>
+                              <input className="form-input log-set-input" type="number" value={s.metres || ''} onChange={e => updateSet(i, si, 'metres', Number(e.target.value) || 0)} placeholder="100" title="Metres" />
+                              <span className="text-xs text-muted">m</span>
+                            </>)}
                             {ex.sets.length > 1 && (
                               <button type="button" className="btn-icon" onClick={() => removeSet(i, si)} title="Remove set"><Trash2 size={12} /></button>
                             )}
@@ -691,6 +747,12 @@ export default function WorkoutPlansPage() {
                           <Plus size={14} /> New Set
                         </button>
                       </div>
+                      <input
+                        className="form-input plan-ex-notes-input"
+                        placeholder="Notes for this exercise (optional)"
+                        value={ex.notes || ''}
+                        onChange={e => setExNotes(i, e.target.value)}
+                      />
                       <div className="plan-video-input-row">
                         <Link2 size={12} style={{ color: ex.videoUrl ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }} />
                         <input
