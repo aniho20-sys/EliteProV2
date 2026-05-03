@@ -28,13 +28,13 @@ const trainerSecondaryLinks = [
 
 const clientLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/my-workouts', icon: Dumbbell, label: 'Workouts' },
-  { to: '/log', icon: ClipboardList, label: 'Log' },
+  { to: '/log', icon: Dumbbell, label: 'Workout Log' },
   { to: '/progress', icon: TrendingUp, label: 'Progress' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
 ];
 
 const clientSecondaryLinks = [
+  { to: '/my-workouts', icon: ClipboardList, label: 'My Plans' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
 ];
@@ -49,7 +49,7 @@ const trainerPrimaryLinks = [
 
 const clientPrimaryLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
-  { to: '/my-workouts', icon: Dumbbell, label: 'Workouts' },
+  { to: '/log', icon: Dumbbell, label: 'Log' },
   { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
 ];
@@ -65,7 +65,7 @@ const trainerMoreLinks = [
 ];
 
 const clientMoreLinks = [
-  { to: '/log', icon: ClipboardList, label: 'Workout Log' },
+  { to: '/my-workouts', icon: ClipboardList, label: 'My Plans' },
   { to: '/progress', icon: TrendingUp, label: 'My Progress' },
   { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
   { to: '/profile', icon: UserCircle, label: 'Profile' },
