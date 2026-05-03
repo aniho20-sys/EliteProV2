@@ -32,10 +32,7 @@ const TermsPage = lazy(() => import('./pages/TermsPage'));
 function LoadingScreen() {
   return (
     <div className="loading-screen">
-      <div className="loading-brand">
-        <img src="/icon-512-v3.png" alt="ElitePro" className="loading-logo" />
-        <span className="loading-brand-name">ElitePro</span>
-      </div>
+      <div className="loading-brand-text">Elite<span>Pro</span></div>
       <div className="loading-spinner" />
     </div>
   );
