@@ -2996,6 +2996,7 @@ tr:hover { background: var(--bg-card-hover); }
 .loading-logo {
   width: 80px;
   height: 80px;
+  mix-blend-mode: multiply;
 }
 .loading-brand-name {
   font-size: 1.75rem;
