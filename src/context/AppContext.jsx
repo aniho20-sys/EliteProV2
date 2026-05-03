@@ -6,7 +6,7 @@ import {
   onSnapshot, writeBatch, getDocs, query, where, or, orderBy,
 } from 'firebase/firestore';
 import {
-  onAuthStateChanged, signInWithPopup,
+  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
   GoogleAuthProvider,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -59,6 +59,8 @@ export function AppProvider({ children }) {
 
   // --- Firebase Auth listener ---
   useEffect(() => {
+    // Complete redirect sign-in if returning from Google OAuth
+    getRedirectResult(auth).catch(() => {});
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
@@ -284,8 +286,14 @@ export function AppProvider({ children }) {
 
 // ========== Auth ==========
 
-  // Firebase Auth: Google Sign-In (popup)
+  // Firebase Auth: Google Sign-In
+  // iOS Safari kills popups automatically — use redirect flow on iOS
   const signInWithGoogle = async () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      await signInWithRedirect(auth, googleProvider);
+      return null; // page reloads after Google redirects back
+    }
     try {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
