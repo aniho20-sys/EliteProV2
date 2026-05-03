@@ -2466,7 +2466,7 @@ tr:hover { background: var(--bg-card-hover); }
 
 /* ===== EXTRA SMALL SCREENS (iPhone SE etc.) ===== */
 @media (max-width: 380px) {
-  .main-content { padding: 12px; padding-top: 56px; padding-bottom: 85px; }
+  .main-content { padding: 12px; padding-top: calc(60px + env(safe-area-inset-top, 0px)); padding-bottom: 85px; }
   .page-title { font-size: 1.2rem; }
   .card { padding: 14px; }
   .modal { padding: 18px; margin: 10px; }
