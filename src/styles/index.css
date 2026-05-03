@@ -2994,8 +2994,8 @@ tr:hover { background: var(--bg-card-hover); }
   gap: 16px;
 }
 .loading-logo {
-  width: 80px;
-  height: 80px;
+  width: 140px;
+  height: 140px;
   mix-blend-mode: multiply;
 }
 .loading-brand-name {
