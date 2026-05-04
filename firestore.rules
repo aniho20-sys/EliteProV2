@@ -52,7 +52,7 @@ service cloud.firestore {
       match /entries/{entryId} {
         allow read: if isOwner(clientId) || isTrainerOf(clientId);
         allow create: if isOwner(clientId) || isTrainerOf(clientId);
-        allow update: if false;
+        allow update: if isOwner(clientId) || isTrainerOf(clientId);
         allow delete: if isOwner(clientId);
       }
     }

@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { localToday } from '../utils/dateUtils';
+import { localToday, localDateAdd } from '../utils/dateUtils';
 import { TrendingUp, Users, Calendar, DollarSign } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 
@@ -21,6 +21,10 @@ function last6Months() {
   });
 }
 
+function invTotal(inv) {
+  return (inv.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unitPrice) || 0), 0);
+}
+
 export default function BusinessAnalyticsPage() {
   const { currentUser, getClients, getInvoices, getSchedule, getWorkoutLogs } = useApp();
   const today = localToday();
@@ -34,7 +38,7 @@ export default function BusinessAnalyticsPage() {
     month: formatMonthLabel(m),
     revenue: invoices
       .filter(inv => inv.status === 'paid' && getMonthKey(inv.issueDate) === m)
-      .reduce((s, inv) => s + (inv.amount || 0), 0),
+      .reduce((s, inv) => s + invTotal(inv), 0),
   }));
 
   // Sessions by month (completed)
@@ -44,9 +48,7 @@ export default function BusinessAnalyticsPage() {
   }));
 
   // Retention: clients who have a workout log in last 30 days
-  const thirtyDaysAgo = new Date(localToday());
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const recentCutoff = thirtyDaysAgo.toISOString().split('T')[0];
+  const recentCutoff = localDateAdd(-30);
 
   const activeClients = clients.filter(c => {
     const logs = getWorkoutLogs(c.id);
@@ -58,13 +60,13 @@ export default function BusinessAnalyticsPage() {
   const currentMonth = today.slice(0, 7);
   const paidThisMonth = invoices
     .filter(inv => inv.status === 'paid' && getMonthKey(inv.issueDate) === currentMonth)
-    .reduce((s, inv) => s + (inv.amount || 0), 0);
+    .reduce((s, inv) => s + invTotal(inv), 0);
   const totalUnpaid = invoices
-    .filter(inv => inv.status === 'unpaid' || (inv.status === 'unpaid' && inv.dueDate < today))
-    .reduce((s, inv) => s + (inv.amount || 0), 0);
+    .filter(inv => inv.status === 'unpaid')
+    .reduce((s, inv) => s + invTotal(inv), 0);
   const totalPaidYTD = invoices
     .filter(inv => inv.status === 'paid' && inv.issueDate?.startsWith(today.slice(0, 4)))
-    .reduce((s, inv) => s + (inv.amount || 0), 0);
+    .reduce((s, inv) => s + invTotal(inv), 0);
 
   // Top clients by completed sessions
   const clientSessionCounts = clients.map(c => ({

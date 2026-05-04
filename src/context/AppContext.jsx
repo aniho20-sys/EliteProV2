@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { friendlyAuthError } from '../utils/authErrors';
 import { db, auth } from '../firebase';
 import {
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
