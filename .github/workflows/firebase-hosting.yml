@@ -40,6 +40,10 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
+      - name: Install Functions dependencies
+        run: cd functions && npm ci
+        continue-on-error: true
+
       - name: Deploy Functions (best-effort)
         run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
         continue-on-error: true
