@@ -31,18 +31,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setError('');
     setAuthLoading(true);
-    try {
-      const user = await signInWithGoogle();
-      if (!user) return; // redirect initiated — keep spinner, page will navigate away
-      // popup success — auth state change navigates away; spinner stays until unmount
-    } catch (err) {
-      const msg = friendlyAuthError(err);
-      if (msg) setError(msg);
-      setAuthLoading(false);
-    }
+    signInWithGoogle(); // fires redirect synchronously — page navigates away
   };
 
   const handleForgotPassword = async (e) => {

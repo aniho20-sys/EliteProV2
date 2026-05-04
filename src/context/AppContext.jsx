@@ -287,9 +287,10 @@ export function AppProvider({ children }) {
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
-  // Use redirect flow — popup is unreliable on iOS Chrome/Safari
-  const signInWithGoogle = async () => {
-    await signInWithRedirect(auth, googleProvider);
+  // No await — redirect must fire synchronously in user-gesture context
+  // (Safari blocks navigation triggered after async operations)
+  const signInWithGoogle = () => {
+    signInWithRedirect(auth, googleProvider);
     return null;
   };
 
