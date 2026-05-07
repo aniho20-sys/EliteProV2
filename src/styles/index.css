@@ -56,10 +56,11 @@
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Muscle selector */
-  --muscle-body-fill: #eaecf4;
-  --muscle-body-stroke: #bfc6db;
-  --muscle-idle: #bec8e4;
-  --muscle-hover: #a5b4fc;
+  --muscle-body-fill: #d4d8e2;
+  --muscle-body-stroke: #a0a8b8;
+  --muscle-idle: #bcc2ce;
+  --muscle-stroke: #8e96a4;
+  --muscle-hover: #7c9ee8;
 }
 
 /* Dark theme */
@@ -83,10 +84,11 @@
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 
-  --muscle-body-fill: #252a3e;
-  --muscle-body-stroke: #3a4062;
-  --muscle-idle: #3a4268;
-  --muscle-hover: #4f5c9e;
+  --muscle-body-fill: #2a2f3d;
+  --muscle-body-stroke: #444c60;
+  --muscle-idle: #383e50;
+  --muscle-stroke: #555f72;
+  --muscle-hover: #5577cc;
 }
 [data-theme="dark"] .login-page {
   background: linear-gradient(135deg, #0f1117 0%, #161926 40%, #1a1520 100%);
@@ -3198,13 +3200,17 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .muscle-region .muscle-shape {
   fill: var(--muscle-idle);
-  transition: fill 0.15s;
+  stroke: var(--muscle-stroke);
+  stroke-width: 0.6;
+  transition: fill 0.15s, stroke 0.15s;
 }
 .muscle-region:hover .muscle-shape {
   fill: var(--muscle-hover);
+  stroke: var(--primary);
 }
 .muscle-region.active .muscle-shape {
   fill: var(--primary);
+  stroke: var(--primary-dark, #2845c8);
 }
 .muscle-selected-chips {
   display: flex;
