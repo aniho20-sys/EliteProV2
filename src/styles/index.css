@@ -54,6 +54,12 @@
 
   /* Transitions */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Muscle selector */
+  --muscle-body-fill: #eaecf4;
+  --muscle-body-stroke: #bfc6db;
+  --muscle-idle: #bec8e4;
+  --muscle-hover: #a5b4fc;
 }
 
 /* Dark theme */
@@ -76,6 +82,11 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  --muscle-body-fill: #252a3e;
+  --muscle-body-stroke: #3a4062;
+  --muscle-idle: #3a4268;
+  --muscle-hover: #4f5c9e;
 }
 [data-theme="dark"] .login-page {
   background: linear-gradient(135deg, #0f1117 0%, #161926 40%, #1a1520 100%);
@@ -3163,6 +3174,7 @@ tr:hover { background: var(--bg-card-hover); }
   min-width: 0;
 }
 .muscle-body-label {
+  display: block;
   text-align: center;
   font-size: 0.72rem;
   font-weight: 600;
@@ -3171,14 +3183,28 @@ tr:hover { background: var(--bg-card-hover); }
   text-transform: uppercase;
   margin-bottom: 4px;
 }
-.muscle-hover-label {
-  text-align: center;
-  font-size: 0.78rem;
-  color: var(--primary);
-  font-weight: 600;
-  margin-top: 4px;
-  height: 16px;
-  line-height: 16px;
+.muscle-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.muscle-body-shape > * {
+  fill: var(--muscle-body-fill);
+  stroke: var(--muscle-body-stroke);
+  stroke-width: 0.6;
+}
+.muscle-region {
+  cursor: pointer;
+}
+.muscle-region .muscle-shape {
+  fill: var(--muscle-idle);
+  transition: fill 0.15s;
+}
+.muscle-region:hover .muscle-shape {
+  fill: var(--muscle-hover);
+}
+.muscle-region.active .muscle-shape {
+  fill: var(--primary);
 }
 .muscle-selected-chips {
   display: flex;

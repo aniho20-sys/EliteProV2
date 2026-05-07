@@ -42,5 +42,6 @@ export const muscleGroups = [
   'Biceps', 'Triceps', 'Forearms',
   'Core', 'Glutes',
   'Quadriceps', 'Hamstrings', 'Calves',
+  'Adductors', 'Abductors',
 ];
 export const equipmentTypes = ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Bodyweight', 'Other'];
