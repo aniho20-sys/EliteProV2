@@ -48,6 +48,7 @@ export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
   const [firebaseUser, setFirebaseUser] = useState(undefined);
+  const [googleAuthError, setGoogleAuthError] = useState(null);
 
   const loadedRef = useRef(new Set());
 
@@ -59,7 +60,11 @@ export function AppProvider({ children }) {
   // --- Firebase Auth listener ---
   useEffect(() => {
     // Complete redirect sign-in if returning from Google OAuth
-    getRedirectResult(auth).catch(() => {});
+    getRedirectResult(auth).catch((err) => {
+      if (err.code !== 'auth/no-current-user') {
+        setGoogleAuthError(err);
+      }
+    });
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
@@ -728,6 +733,7 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, logout, loading,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
+    googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
     getClients, getClient, updateClient, removeClient,

@@ -6,7 +6,7 @@ import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
 import { friendlyAuthError } from '../utils/authErrors';
 
 export default function LoginPage() {
-  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset } = useApp();
+  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset, googleAuthError, clearGoogleAuthError } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +18,14 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
+
+  useEffect(() => {
+    if (googleAuthError) {
+      setError(friendlyAuthError(googleAuthError) || 'Google sign-in failed. Please try again.');
+      setAuthLoading(false);
+      clearGoogleAuthError();
+    }
+  }, [googleAuthError, clearGoogleAuthError]);
 
   const handleDemoCoach = async () => {
     setError('');
