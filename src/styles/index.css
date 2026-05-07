@@ -2043,7 +2043,8 @@ tr:hover { background: var(--bg-card-hover); }
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px;
+  padding: 11px;
+  margin: -11px;
   flex-shrink: 0;
   transition: color 0.15s;
   display: flex;
@@ -3673,4 +3674,126 @@ tr:hover { background: var(--bg-card-hover); }
   font-weight: 600;
   color: var(--accent);
   text-align: center;
+}
+
+/* ===== iOS Auto-Zoom Fix =====
+   iOS Safari zooms in when focused input font-size < 16px.
+   Setting 16px on mobile prevents this without disabling user zoom. */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+/* ===== Workout Log Steppers ===== */
+.log-field-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.log-stepper {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  line-height: 1;
+  padding: 0;
+}
+.log-stepper:active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+@media (max-width: 640px) {
+  .log-stepper {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+}
+
+/* ===== Exercise Picker Chips ===== */
+.picker-muscle-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.picker-muscle-chips::-webkit-scrollbar { display: none; }
+.picker-chip {
+  white-space: nowrap;
+  padding: 5px 11px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.picker-chip:active,
+.picker-chip-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.picker-empty {
+  padding: 16px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ===== Progression Hint Apply Button ===== */
+.progression-hint-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+}
+.progression-hint-btn:active { opacity: 0.7; }
+.progression-hint-apply {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ===== Last Session Fill Button ===== */
+.last-session-fill-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+/* ===== Custom Exercise Confirm Row ===== */
+.picker-custom-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+  font-size: 0.85rem;
+  color: var(--text);
+  flex-wrap: wrap;
 }

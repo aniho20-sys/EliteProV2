@@ -43,7 +43,7 @@ const clientSecondaryLinks = [
 const trainerPrimaryLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/schedule', icon: Calendar, label: 'Schedule' },
+  { to: '/plans', icon: ClipboardList, label: 'Plans' },
   { to: '/messages', icon: MessageSquare, label: 'Messages' },
 ];
 
@@ -56,10 +56,10 @@ const clientPrimaryLinks = [
 
 // "More" sheet links — secondary features
 const trainerMoreLinks = [
+  { to: '/schedule', icon: Calendar, label: 'Schedule' },
   { to: '/invoices', icon: Receipt, label: 'Invoices' },
   { to: '/analytics', icon: PieChart, label: 'Analytics' },
   { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
-  { to: '/plans', icon: ClipboardList, label: 'Workout Plans' },
   { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
   { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
