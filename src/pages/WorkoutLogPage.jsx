@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search, Info } from 'lucide-react';
+import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet, getProgressionSuggestion } from '../utils/workoutUtils';
@@ -195,6 +196,7 @@ export default function WorkoutLogPage() {
   const [completedSets, setCompletedSets] = useState(new Set());
   const [customUnit, setCustomUnit] = useState('weight_reps');
   const [pendingCustomUnit, setPendingCustomUnit] = useState(null);
+  const [detailExercise, setDetailExercise] = useState(null);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [pickerMuscles, setPickerMuscles] = useState([]);
@@ -786,6 +788,7 @@ export default function WorkoutLogPage() {
                         <h3 className="card-title">
                           {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                           {entry.name}
+                          {exercise && <button className="ex-info-btn" onClick={() => setDetailExercise(exercise)} title="Exercise details"><Info size={14} /></button>}
                         </h3>
                         <div className="log-card-tags">
                           {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
@@ -850,6 +853,7 @@ export default function WorkoutLogPage() {
                       <h3 className="card-title">
                         {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                         {entry.name || getExerciseName(entry.exerciseId)}
+                        {exercise && <button className="ex-info-btn" onClick={() => setDetailExercise(exercise)} title="Exercise details"><Info size={14} /></button>}
                       </h3>
                       <div className="log-card-tags">
                         {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
@@ -1082,6 +1086,13 @@ export default function WorkoutLogPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {detailExercise && (
+        <ExerciseDetailModal
+          exercise={detailExercise}
+          onClose={() => setDetailExercise(null)}
+        />
       )}
     </div>
   );

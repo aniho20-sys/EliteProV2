@@ -4,6 +4,7 @@ import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX, Link2 } f
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
+import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 export default function ExerciseLibraryPage() {
@@ -22,6 +23,7 @@ export default function ExerciseLibraryPage() {
   const [focusUrl, setFocusUrl] = useState(false);
   const [saving, setSaving] = useState(false);
   const urlInputRef = useRef(null);
+  const [detailExercise, setDetailExercise] = useState(null);
 
   useEffect(() => {
     if (showModal && focusUrl && urlInputRef.current) {
@@ -115,7 +117,7 @@ export default function ExerciseLibraryPage() {
 
       <div className="grid-3">
         {filtered.map(ex => (
-          <div key={ex.id} className="card exercise-card">
+          <div key={ex.id} className="card exercise-card exercise-card-clickable" onClick={() => setDetailExercise(ex)}>
             <div className="exercise-name">{ex.name}</div>
             <div className="exercise-meta">
               {(() => {
@@ -130,7 +132,7 @@ export default function ExerciseLibraryPage() {
               })()}
             </div>
             <div className="exercise-desc">{ex.description}</div>
-            <div className="exercise-actions mt-8">
+            <div className="exercise-actions mt-8" onClick={e => e.stopPropagation()}>
               {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
                 isYouTube(ex.videoUrl) ? (
                   <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video">
@@ -244,6 +246,14 @@ export default function ExerciseLibraryPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {detailExercise && (
+        <ExerciseDetailModal
+          exercise={detailExercise}
+          onClose={() => setDetailExercise(null)}
+          onAddLink={(ex) => { setDetailExercise(null); openEditAtUrl(ex); }}
+        />
       )}
     </div>
   );
