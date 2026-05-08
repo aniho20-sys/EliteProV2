@@ -1,11 +1,14 @@
 import { X } from 'lucide-react';
 
 /*
-  Image: /muscle-map.png — 1536×1024px, front view left half (0-768), back view right half (768-1536).
-  Each SVG uses viewBox="0 0 768 1024".
-  Front: image at x=0 shows left half.
-  Back:  image at x=-768 shifts it left, revealing right half.
-  Overlay paths are transparent; hover = light blue, active = solid blue.
+  Image: /muscle-map.png — 1536×1024px
+  Front view = left half (x:0–768), Back view = right half (x:768–1536).
+  SVG viewBox="0 0 768 1024" for both panels.
+  Front: image at x=0 shows left half (figure center x≈456).
+  Back:  image at x=-768 shifts left, showing right half (figure center x≈264).
+  Overlay paths are transparent; hover = blue tint, active = solid blue.
+
+  All coordinates derived from pixel-level analysis of the actual PNG.
 */
 
 const IMG = '/muscle-map.png';
@@ -37,134 +40,146 @@ export default function MuscleSelector({ selected = [], onChange }) {
     <div className="muscle-selector">
       <div className="muscle-bodies">
 
-        {/* ── FRONT VIEW ── */}
+        {/* ── FRONT VIEW ── figure center x≈456, spans x=229–684 */}
         <div className="muscle-body-col">
           <span className="muscle-body-label">Front</span>
           <svg viewBox={`0 0 ${VW} ${VH}`} className="muscle-svg">
             <image href={IMG} x="0" y="0" width={VW * 2} height={VH} style={{ pointerEvents: 'none' }} />
 
-            {/* Traps — small V at neck/collar */}
+            {/* Traps — visible front: small bridge across neck/clavicle */}
             <Muscle name="Traps" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M358,168 C342,175 320,188 304,213 L384,243 L463,213 C446,188 423,175 408,168 Z" />
+              <path className="muscle-shape" d="M413,145 C428,138 445,135 456,135 C467,135 483,138 498,145 C514,152 524,168 518,185 C510,200 490,208 456,212 C422,208 401,200 393,185 C387,168 398,152 413,145 Z" />
             </Muscle>
 
-            {/* Shoulders — front deltoid caps */}
+            {/* Shoulders — front deltoid caps, outer edges of chest band */}
             <Muscle name="Shoulders" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="152" cy="262" rx="60" ry="68" />
-              <ellipse className="muscle-shape" cx="614" cy="262" rx="60" ry="68" />
+              {/* Left deltoid */}
+              <ellipse className="muscle-shape" cx="338" cy="290" rx="42" ry="68" />
+              {/* Right deltoid */}
+              <ellipse className="muscle-shape" cx="574" cy="290" rx="42" ry="68" />
             </Muscle>
 
-            {/* Chest — two pectorals */}
+            {/* Chest — two pectoral fans, split at sternum (x=456) */}
             <Muscle name="Chest" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M384,228 C358,222 302,228 268,258 C243,283 240,330 254,366 C269,397 316,410 384,410 Z" />
-              <path className="muscle-shape" d="M384,228 C410,222 464,228 498,258 C523,283 526,330 512,366 C497,397 450,410 384,410 Z" />
+              {/* Left pec */}
+              <path className="muscle-shape" d="M456,248 C446,242 425,240 405,244 C378,250 362,268 360,294 C358,320 370,350 390,366 C410,378 438,382 456,378 Z" />
+              {/* Right pec */}
+              <path className="muscle-shape" d="M456,248 C466,242 487,240 507,244 C534,250 550,268 552,294 C554,320 542,350 522,366 C502,378 474,382 456,378 Z" />
             </Muscle>
 
-            {/* Biceps */}
+            {/* Biceps — front of upper arm */}
             <Muscle name="Biceps" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="147" cy="415" rx="50" ry="76" />
-              <ellipse className="muscle-shape" cx="619" cy="415" rx="50" ry="76" />
+              <ellipse className="muscle-shape" cx="308" cy="418" rx="32" ry="48" />
+              <ellipse className="muscle-shape" cx="602" cy="418" rx="32" ry="48" />
             </Muscle>
 
-            {/* Forearms */}
+            {/* Forearms — lower arm, elbow to wrist */}
             <Muscle name="Forearms" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="128" cy="548" rx="44" ry="76" />
-              <ellipse className="muscle-shape" cx="637" cy="548" rx="44" ry="76" />
+              <ellipse className="muscle-shape" cx="275" cy="524" rx="33" ry="58" />
+              <ellipse className="muscle-shape" cx="638" cy="524" rx="33" ry="58" />
             </Muscle>
 
-            {/* Core — abs + obliques */}
+            {/* Core — abs six-block + obliques */}
             <Muscle name="Core" selected={selected} onToggle={toggle}>
               {/* Left oblique */}
-              <ellipse className="muscle-shape" cx="234" cy="492" rx="52" ry="95" />
+              <ellipse className="muscle-shape" cx="346" cy="462" rx="24" ry="56" />
               {/* Right oblique */}
-              <ellipse className="muscle-shape" cx="532" cy="492" rx="52" ry="95" />
-              {/* Abs 6-block area */}
-              <rect className="muscle-shape" x="304" y="408" width="158" height="200" rx="18" />
+              <ellipse className="muscle-shape" cx="566" cy="462" rx="24" ry="56" />
+              {/* Abs block */}
+              <rect className="muscle-shape" x="380" y="385" width="152" height="155" rx="14" />
             </Muscle>
 
-            {/* Quadriceps */}
+            {/* Quadriceps — front of thigh */}
             <Muscle name="Quadriceps" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="280" cy="722" rx="82" ry="105" />
-              <ellipse className="muscle-shape" cx="486" cy="722" rx="82" ry="105" />
+              <ellipse className="muscle-shape" cx="405" cy="730" rx="38" ry="100" />
+              <ellipse className="muscle-shape" cx="505" cy="730" rx="38" ry="100" />
             </Muscle>
 
-            {/* Adductors — inner thigh */}
+            {/* Adductors — inner thigh, slim wedge between quads */}
             <Muscle name="Adductors" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="352" cy="712" rx="40" ry="90" />
-              <ellipse className="muscle-shape" cx="414" cy="712" rx="40" ry="90" />
+              <ellipse className="muscle-shape" cx="446" cy="700" rx="14" ry="78" />
+              <ellipse className="muscle-shape" cx="463" cy="700" rx="14" ry="78" />
+            </Muscle>
+
+            {/* Calves — partially visible from front (shins/lower leg) */}
+            <Muscle name="Calves" selected={selected} onToggle={toggle}>
+              <ellipse className="muscle-shape" cx="405" cy="908" rx="26" ry="54" />
+              <ellipse className="muscle-shape" cx="504" cy="908" rx="26" ry="54" />
             </Muscle>
 
           </svg>
         </div>
 
-        {/* ── BACK VIEW ── */}
+        {/* ── BACK VIEW ── figure center x≈264, spans x=35–493 (right half coords) */}
         <div className="muscle-body-col">
           <span className="muscle-body-label">Back</span>
           <svg viewBox={`0 0 ${VW} ${VH}`} className="muscle-svg">
-            {/* Shift image -768 to reveal right half */}
+            {/* Shift -768 to reveal right half of image */}
             <image href={IMG} x={-VW} y="0" width={VW * 2} height={VH} style={{ pointerEvents: 'none' }} />
 
-            {/* Trapezius — large kite covering upper back */}
+            {/* Traps — large kite from neck to mid-back center */}
             <Muscle name="Traps" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M384,168 C432,168 514,190 543,234 C558,270 546,324 510,358 C474,384 430,394 384,394 C336,394 292,384 256,358 C220,324 208,270 222,234 C252,190 334,168 384,168 Z" />
+              <path className="muscle-shape" d="M264,145 C220,148 168,162 140,190 C120,210 118,240 135,266 C152,290 196,306 264,310 C332,306 376,290 393,266 C410,240 408,210 388,190 C360,162 308,148 264,145 Z" />
             </Muscle>
 
-            {/* Shoulders — rear deltoids */}
+            {/* Shoulders — rear deltoid caps */}
             <Muscle name="Shoulders" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="152" cy="262" rx="60" ry="68" />
-              <ellipse className="muscle-shape" cx="614" cy="262" rx="60" ry="68" />
+              <ellipse className="muscle-shape" cx="150" cy="288" rx="45" ry="62" />
+              <ellipse className="muscle-shape" cx="378" cy="288" rx="45" ry="62" />
+            </Muscle>
+
+            {/* Upper Back — rhomboids between shoulder blades */}
+            <Muscle name="Upper Back" selected={selected} onToggle={toggle}>
+              <ellipse className="muscle-shape" cx="264" cy="322" rx="82" ry="68" />
             </Muscle>
 
             {/* Lats — wide fans, armpit to lower back */}
             <Muscle name="Lats" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M196,300 C155,325 130,380 130,438 C130,500 148,552 174,580 C194,602 224,606 254,585 C278,566 290,522 292,462 C294,402 284,346 266,310 Z" />
-              <path className="muscle-shape" d="M570,300 C612,325 636,380 636,438 C636,500 618,552 592,580 C572,602 542,606 512,585 C488,566 476,522 474,462 C472,402 482,346 500,310 Z" />
-            </Muscle>
-
-            {/* Upper Back — rhomboids */}
-            <Muscle name="Upper Back" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="384" cy="302" rx="92" ry="68" />
+              {/* Left lat */}
+              <path className="muscle-shape" d="M195,310 C168,325 140,356 128,400 C118,440 122,490 138,520 C152,545 172,550 192,534 C212,516 220,470 218,420 C216,372 208,334 195,310 Z" />
+              {/* Right lat */}
+              <path className="muscle-shape" d="M333,310 C360,325 388,356 400,400 C410,440 406,490 390,520 C376,545 356,550 336,534 C316,516 308,470 310,420 C312,372 320,334 333,310 Z" />
             </Muscle>
 
             {/* Lower Back — erector spinae */}
             <Muscle name="Lower Back" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="384" cy="498" rx="74" ry="72" />
+              <ellipse className="muscle-shape" cx="264" cy="506" rx="88" ry="68" />
             </Muscle>
 
             {/* Triceps — back of upper arm */}
             <Muscle name="Triceps" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="147" cy="415" rx="50" ry="76" />
-              <ellipse className="muscle-shape" cx="619" cy="415" rx="50" ry="76" />
+              <ellipse className="muscle-shape" cx="117" cy="420" rx="32" ry="46" />
+              <ellipse className="muscle-shape" cx="411" cy="420" rx="32" ry="46" />
             </Muscle>
 
-            {/* Forearms */}
+            {/* Forearms — back view lower arm */}
             <Muscle name="Forearms" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="128" cy="548" rx="44" ry="76" />
-              <ellipse className="muscle-shape" cx="637" cy="548" rx="44" ry="76" />
+              <ellipse className="muscle-shape" cx="82" cy="528" rx="36" ry="58" />
+              <ellipse className="muscle-shape" cx="447" cy="528" rx="36" ry="58" />
             </Muscle>
 
-            {/* Glutes — two large rounded shapes */}
+            {/* Glutes — two gluteus maximus, split at midline */}
             <Muscle name="Glutes" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="300" cy="670" rx="98" ry="84" />
-              <ellipse className="muscle-shape" cx="466" cy="670" rx="98" ry="84" />
+              <ellipse className="muscle-shape" cx="211" cy="644" rx="50" ry="62" />
+              <ellipse className="muscle-shape" cx="316" cy="644" rx="50" ry="62" />
             </Muscle>
 
-            {/* Abductors — outer hip */}
+            {/* Abductors — outer hip / TFL, beside glutes */}
             <Muscle name="Abductors" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="192" cy="638" rx="58" ry="70" />
-              <ellipse className="muscle-shape" cx="574" cy="638" rx="58" ry="70" />
+              <ellipse className="muscle-shape" cx="76" cy="578" rx="30" ry="44" />
+              <ellipse className="muscle-shape" cx="452" cy="578" rx="30" ry="44" />
             </Muscle>
 
-            {/* Hamstrings */}
+            {/* Hamstrings — back of thigh */}
             <Muscle name="Hamstrings" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="282" cy="728" rx="82" ry="105" />
-              <ellipse className="muscle-shape" cx="484" cy="728" rx="82" ry="105" />
+              <ellipse className="muscle-shape" cx="211" cy="730" rx="38" ry="100" />
+              <ellipse className="muscle-shape" cx="315" cy="730" rx="38" ry="100" />
             </Muscle>
 
-            {/* Calves */}
+            {/* Calves — gastrocnemius, back of lower leg */}
             <Muscle name="Calves" selected={selected} onToggle={toggle}>
-              <ellipse className="muscle-shape" cx="270" cy="898" rx="64" ry="80" />
-              <ellipse className="muscle-shape" cx="492" cy="898" rx="64" ry="80" />
+              <ellipse className="muscle-shape" cx="213" cy="905" rx="26" ry="54" />
+              <ellipse className="muscle-shape" cx="313" cy="905" rx="26" ry="54" />
             </Muscle>
 
           </svg>
