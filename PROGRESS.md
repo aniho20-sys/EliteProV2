@@ -83,11 +83,11 @@
 
 | # | 任務 | 詳情 |
 |---|------|------|
-| 1 | **Badge CSS 缺失** | `.badge-item`、`.badge-icon`、`.badge-name`、`.badge-date` 未加入 index.css，badges 無法渲染 |
-| 2 | **NotesSection stale closure** | `useEffect` 缺 `currentUser.id`、`otherUserId`、`markMessagesRead` 依賴，換對話時 mark-as-read 可能靜默失敗 |
-| 3 | **Client 記錄 workout 後 Trainer 無通知** | 新 workout log 沒有 push notification trigger |
-| 4 | **Session booking 無提示給 Trainer** | Pending sessions 沒有 badge/通知，教練要人手查 Schedule |
-| 5 | **Cloud Functions 部署** | CI service account 仍缺 Cloud Functions Admin + Cloud Run Admin 角色 |
+| 1 | ~~**Badge CSS 缺失**~~ ✅ 已確認 CSS 存在（tracking 文件錯誤，非真實 bug） |
+| 2 | ~~**NotesSection stale closure**~~ ✅ 已修復：`useEffect` 補加 `currentUser.id`、`otherUserId` 依賴 |
+| 3 | ~~**Client 記錄 workout 後 Trainer 無通知**~~ ✅ 已加 `onNewWorkoutLog` Cloud Function |
+| 4 | ~~**Session booking 無提示給 Trainer**~~ ✅ 已更新 `onNewSchedule` — 同時通知 client + trainer |
+| 5 | **Cloud Functions 部署** | CI service account 缺 Cloud Functions Admin + Cloud Run Admin 角色 → 需在 GCP IAM Console 人手加角色 |
 
 ### 🟠 P2 — 高優先（本月）
 

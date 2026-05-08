@@ -104,7 +104,7 @@ exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) =
   });
 });
 
-// ─── New Schedule → Push to client ───
+// ─── New Schedule → Push to client AND trainer ───
 exports.onNewSchedule = onDocumentCreated('schedule/{schedId}', async (event) => {
   const sched = event.data.data();
   if (!sched || !sched.clientId || !sched.trainerId) return;
@@ -114,17 +114,26 @@ exports.onNewSchedule = onDocumentCreated('schedule/{schedId}', async (event) =>
     db.doc(`users/${sched.trainerId}`).get(),
   ]);
 
-  if (!clientSnap.exists) return;
-  const { fcmTokens } = clientSnap.data();
   const trainerName = trainerSnap.exists ? trainerSnap.data().name : 'Your trainer';
+  const clientName = clientSnap.exists ? clientSnap.data().name : 'A client';
+  const data = { type: 'schedule', url: '/#/schedule' };
 
-  await sendPush(sched.clientId, fcmTokens, {
-    title: 'New Session',
-    body: `${trainerName} scheduled ${sched.type} on ${sched.date} at ${sched.time}`,
-  }, {
-    type: 'schedule',
-    url: '/#/schedule',
-  });
+  await Promise.all([
+    // Notify client
+    clientSnap.exists
+      ? sendPush(sched.clientId, clientSnap.data().fcmTokens, {
+          title: 'New Session',
+          body: `${trainerName} scheduled ${sched.type} on ${sched.date} at ${sched.time}`,
+        }, data)
+      : null,
+    // Notify trainer (catches client self-bookings they haven't seen yet)
+    trainerSnap.exists
+      ? sendPush(sched.trainerId, trainerSnap.data().fcmTokens, {
+          title: 'New Session Booking',
+          body: `${clientName} booked ${sched.type} on ${sched.date} at ${sched.time}`,
+        }, data)
+      : null,
+  ]);
 });
 
 // ─── Schedule status change → Push to both parties ───
@@ -175,5 +184,31 @@ exports.onNewWorkoutPlan = onDocumentCreated('workoutPlans/{planId}', async (eve
   }, {
     type: 'plan',
     url: '/#/my-workouts',
+  });
+});
+
+// ─── New Workout Log → Push to trainer ───
+exports.onNewWorkoutLog = onDocumentCreated('workoutLogs/{logId}', async (event) => {
+  const log = event.data.data();
+  if (!log || !log.clientId) return;
+
+  const clientSnap = await db.doc(`users/${log.clientId}`).get();
+  if (!clientSnap.exists) return;
+
+  const trainerId = clientSnap.data().trainerId;
+  if (!trainerId) return;
+
+  const trainerSnap = await db.doc(`users/${trainerId}`).get();
+  if (!trainerSnap.exists) return;
+
+  const clientName = clientSnap.data().name || 'A client';
+
+  await sendPush(trainerId, trainerSnap.data().fcmTokens, {
+    title: 'Workout Logged',
+    body: `${clientName} completed a workout`,
+  }, {
+    type: 'workout_log',
+    url: `/#/clients/${log.clientId}`,
+    clientId: log.clientId,
   });
 });

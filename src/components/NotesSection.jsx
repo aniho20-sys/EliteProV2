@@ -20,7 +20,7 @@ export default function NotesSection({ clientId }) {
   useEffect(() => {
     markMessagesRead(currentUser.id, otherUserId);
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, currentUser.id, otherUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = (e) => {
     e.preventDefault();
