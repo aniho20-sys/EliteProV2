@@ -3194,8 +3194,9 @@ tr:hover { background: var(--bg-card-hover); }
   border-radius: 8px;
 }
 .body-silhouette > * {
-  fill: var(--muscle-body-fill);
-  stroke: none;
+  fill: var(--muscle-idle);
+  stroke: var(--muscle-idle);
+  stroke-width: 0.6;
   pointer-events: none;
 }
 .muscle-region {
@@ -3203,13 +3204,13 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .muscle-region .muscle-shape {
   fill: var(--muscle-idle);
-  stroke: var(--muscle-stroke);
-  stroke-width: 0.7;
-  transition: fill 0.15s, stroke 0.15s;
+  stroke: var(--muscle-idle);
+  stroke-width: 0.6;
+  transition: fill 0.12s, stroke 0.12s;
 }
 .muscle-region:hover .muscle-shape {
   fill: var(--muscle-hover);
-  stroke: var(--primary);
+  stroke: var(--muscle-hover);
 }
 .muscle-region.active .muscle-shape {
   fill: var(--primary);
