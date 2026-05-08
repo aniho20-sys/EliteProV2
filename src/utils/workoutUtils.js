@@ -59,6 +59,14 @@ export function getProgressionSuggestion(logs, exerciseId) {
   return null;
 }
 
+// Coerce a stored set's numeric fields to strings for form inputs
+export function stringifySet(s, unit) {
+  if (unit === 'reps_only') return { reps: String(s.reps || '') };
+  if (unit === 'time') return { seconds: String(s.seconds || '') };
+  if (unit === 'distance') return { metres: String(s.metres || '') };
+  return { weight: String(s.weight || ''), reps: String(s.reps || '') };
+}
+
 // Immutably update one field of one set inside an entries array
 export function applySetUpdate(entries, exIdx, setIdx, field, value) {
   return entries.map((entry, i) =>
