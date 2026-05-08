@@ -3189,28 +3189,23 @@ tr:hover { background: var(--bg-card-hover); }
   width: 100%;
   height: auto;
   display: block;
-}
-.muscle-body-shape > * {
-  fill: var(--muscle-body-fill);
-  stroke: var(--muscle-body-stroke);
-  stroke-width: 0.6;
+  background: #fff;
+  overflow: hidden;
+  border-radius: 8px;
 }
 .muscle-region {
   cursor: pointer;
 }
 .muscle-region .muscle-shape {
-  fill: var(--muscle-idle);
-  stroke: var(--muscle-stroke);
-  stroke-width: 0.6;
-  transition: fill 0.15s, stroke 0.15s;
+  fill: transparent;
+  stroke: none;
+  transition: fill 0.15s;
 }
 .muscle-region:hover .muscle-shape {
-  fill: var(--muscle-hover);
-  stroke: var(--primary);
+  fill: rgba(67, 97, 238, 0.28);
 }
 .muscle-region.active .muscle-shape {
-  fill: var(--primary);
-  stroke: var(--primary-dark, #2845c8);
+  fill: rgba(67, 97, 238, 0.52);
 }
 .muscle-selected-chips {
   display: flex;
