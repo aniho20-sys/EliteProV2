@@ -45,11 +45,9 @@ export default function ExerciseProgress({ clientId }) {
   const logs = getWorkoutLogs(clientId);
   const exerciseLibrary = getExercises();
 
-  // selectedId=null means auto-use the first (most-logged) exercise
   const [selectedId, setSelectedId] = useState(null);
   const [metric, setMetric] = useState('maxWeight');
 
-  // Build list sorted by session count descending — most-logged first
   const exerciseOptions = useMemo(() => {
     const ids = new Set();
     logs.forEach(log => (log.entries || []).forEach(e => ids.add(e.exerciseId)));
@@ -61,13 +59,14 @@ export default function ExerciseProgress({ clientId }) {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [logs, exerciseLibrary]);
 
-  // Default to most-logged exercise when nothing is manually selected
   const activeId = selectedId ?? exerciseOptions[0]?.id ?? null;
 
   const history = useMemo(() => {
     if (!activeId) return [];
     return buildHistory(logs, activeId);
   }, [logs, activeId]);
+
+  const reversedHistory = useMemo(() => [...history].reverse(), [history]);
 
   const selectedMetric = EX_METRICS.find(m => m.key === metric);
   const chartData = history.map(h => ({ date: h.date, shortDate: h.shortDate, value: h[metric] }));
@@ -184,7 +183,7 @@ export default function ExerciseProgress({ clientId }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...history].reverse().map((h, i, arr) => {
+                    {reversedHistory.map((h, i, arr) => {
                       const prevSessions = arr.slice(i + 1);
                       const prevMax = prevSessions.length ? Math.max(...prevSessions.map(x => x.maxWeight)) : 0;
                       const isPR = h.maxWeight > 0 && h.maxWeight > prevMax;

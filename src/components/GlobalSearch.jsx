@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Search, X } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function GlobalSearch({ onSelect }) {
 
   const q = query.toLowerCase().trim();
 
-  const results = q ? [
+  const results = useMemo(() => !q ? [] : [
     ...clients
       .filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
       .slice(0, 4)
@@ -30,7 +30,7 @@ export default function GlobalSearch({ onSelect }) {
       .filter(p => p.name.toLowerCase().includes(q))
       .slice(0, 3)
       .map(p => ({ type: 'Plan', label: p.name, sub: p.day, action: () => navigate('/plans') })),
-  ] : [];
+  ], [q, clients, exercises, plans, navigate]);
 
   const handleSelect = (result) => {
     result.action();
@@ -43,7 +43,6 @@ export default function GlobalSearch({ onSelect }) {
     if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
 
-  // Close on escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') { setOpen(false); setQuery(''); } };
     document.addEventListener('keydown', handler);
@@ -52,7 +51,6 @@ export default function GlobalSearch({ onSelect }) {
 
   return (
     <>
-      {/* Sidebar search */}
       <div className="global-search-bar">
         <Search size={15} className="global-search-icon" />
         <input
@@ -66,7 +64,6 @@ export default function GlobalSearch({ onSelect }) {
         {query && <button className="global-search-clear" onClick={() => { setQuery(''); setOpen(false); }}><X size={14} /></button>}
       </div>
 
-      {/* Results dropdown */}
       {open && results.length > 0 && (
         <div className="global-search-results">
           {results.map((r, i) => (
@@ -87,7 +84,6 @@ export default function GlobalSearch({ onSelect }) {
         </div>
       )}
 
-      {/* Click outside to close */}
       {open && <div className="global-search-backdrop" onClick={() => { setOpen(false); setQuery(''); }} />}
     </>
   );

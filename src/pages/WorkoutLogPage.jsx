@@ -5,7 +5,7 @@ import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, 
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
-import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet, getProgressionSuggestion } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, UNIT_OPTIONS, emptySet, hasValue, formatSet, getProgressionSuggestion } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 import { localToday } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
@@ -214,6 +214,7 @@ export default function WorkoutLogPage() {
   const [timerActive, setTimerActive] = useState(false);
   const timerRef = useRef(null);
 
+  const logDraftKey = `elitepro_active_log_${targetClientId}`;
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
@@ -232,7 +233,7 @@ export default function WorkoutLogPage() {
     if (draftRestoredRef.current || location.state?.planId) return;
     draftRestoredRef.current = true;
     try {
-      const raw = localStorage.getItem('elitepro_active_log_' + targetClientId);
+      const raw = localStorage.getItem(logDraftKey);
       if (!raw) return;
       const draft = JSON.parse(raw);
       if (!draft.entries?.length) return;
@@ -247,7 +248,7 @@ export default function WorkoutLogPage() {
       setShowLog(true);
       toast('Workout session restored', 'info');
     } catch {
-      localStorage.removeItem('elitepro_active_log_' + targetClientId);
+      localStorage.removeItem(logDraftKey);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -256,7 +257,7 @@ export default function WorkoutLogPage() {
   useEffect(() => {
     if (!showLog) return;
     try {
-      localStorage.setItem('elitepro_active_log_' + targetClientId, JSON.stringify({
+      localStorage.setItem(logDraftKey, JSON.stringify({
         isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds,
         completedSets: [...completedSets],
       }));
@@ -371,16 +372,9 @@ export default function WorkoutLogPage() {
   };
 
   const fillFromLast = (exIdx, lastEntry, unit) => {
-    setEntries(prev => prev.map((entry, i) => {
-      if (i !== exIdx) return entry;
-      const sets = lastEntry.sets.map(s => {
-        if (unit === 'reps_only') return { reps: String(s.reps || '') };
-        if (unit === 'time') return { seconds: String(s.seconds || '') };
-        if (unit === 'distance') return { metres: String(s.metres || '') };
-        return { weight: String(s.weight || ''), reps: String(s.reps || '') };
-      });
-      return { ...entry, sets };
-    }));
+    setEntries(prev => prev.map((entry, i) =>
+      i !== exIdx ? entry : { ...entry, sets: lastEntry.sets.map(s => stringifySet(s, unit)) }
+    ));
   };
 
   const removeSet = (exIdx, setIdx) => {
@@ -443,9 +437,9 @@ export default function WorkoutLogPage() {
     }
   };
 
-  const loadFromPlan = (plan) => {
+  const buildPlanEntries = (plan) => {
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
-    const planEntries = plan.exercises.map(ex => {
+    return plan.exercises.map(ex => {
       const exercise = exerciseLibrary.find(e => e.id === ex.exerciseId);
       const unit = exercise?.unit || 'weight_reps';
       const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
@@ -457,48 +451,23 @@ export default function WorkoutLogPage() {
         rest: ex.rest || 90,
         sets: planSets.map((ps, i) => {
           const prev = lastEntry?.sets?.[i];
-          if (prev) {
-            if (unit === 'reps_only') return { reps: String(prev.reps || '') };
-            if (unit === 'time') return { seconds: String(prev.seconds || '') };
-            if (unit === 'distance') return { metres: String(prev.metres || '') };
-            return { weight: String(prev.weight || ''), reps: String(prev.reps || '') };
-          }
+          if (prev) return stringifySet(prev, unit);
           if (unit === 'weight_reps') return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
           return emptySet(unit);
         }),
       };
     });
-    setEntries(prev => [...prev, ...planEntries]);
+  };
+
+  const loadFromPlan = (plan) => {
+    setEntries(prev => [...prev, ...buildPlanEntries(plan)]);
     setShowPlanPicker(false);
   };
 
   const startLog = (plan) => {
     setIsFreeWorkout(false);
     setSelectedPlan(plan);
-    const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
-    setEntries(plan.exercises.map(ex => {
-      const exercise = exerciseLibrary.find(e => e.id === ex.exerciseId);
-      const unit = exercise?.unit || 'weight_reps';
-      const lastEntry = lastLog?.entries?.find(e => e.exerciseId === ex.exerciseId);
-      const planSets = normalizeSets(ex);
-      return {
-        exerciseId: ex.exerciseId,
-        name: ex.name || getExerciseName(ex.exerciseId),
-        unit,
-        rest: ex.rest || 90,
-        sets: planSets.map((ps, i) => {
-          const prev = lastEntry?.sets?.[i];
-          if (prev) {
-            if (unit === 'reps_only') return { reps: String(prev.reps || '') };
-            if (unit === 'time') return { seconds: String(prev.seconds || '') };
-            if (unit === 'distance') return { metres: String(prev.metres || '') };
-            return { weight: String(prev.weight || ''), reps: String(prev.reps || '') };
-          }
-          if (unit === 'weight_reps') return { weight: ps.weight > 0 ? String(ps.weight) : '', reps: ps.reps || '' };
-          return emptySet(unit);
-        }),
-      };
-    }));
+    setEntries(buildPlanEntries(plan));
     setRpe(7);
     setNotes('');
     setRestSeconds(90);
@@ -623,7 +592,7 @@ export default function WorkoutLogPage() {
       });
       const newBadges = await checkAndAwardBadges(targetClientId).catch(() => []);
       const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
-      localStorage.removeItem('elitepro_active_log_' + targetClientId);
+      localStorage.removeItem(logDraftKey);
       setShowLog(false);
       setIsFreeWorkout(false);
       setCompletedSets(new Set());
@@ -774,7 +743,7 @@ export default function WorkoutLogPage() {
               {isFreeWorkout && plans.length > 0 && (
                 <button className="btn btn-outline btn-sm" onClick={() => setShowPlanPicker(true)}>Load Plan</button>
               )}
-              <button className="btn btn-outline" onClick={() => { localStorage.removeItem('elitepro_active_log_' + targetClientId); setShowLog(false); setIsFreeWorkout(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { localStorage.removeItem(logDraftKey); setShowLog(false); setIsFreeWorkout(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>
