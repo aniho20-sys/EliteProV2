@@ -509,7 +509,16 @@ export default function WorkoutLogPage() {
   };
 
   const updateSet = (exIdx, setIdx, field, value) => {
-    setEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
+    setEntries(prev => prev.map((entry, i) => {
+      if (i !== exIdx) return entry;
+      const sets = entry.sets.map((s, j) => {
+        if (j === setIdx) return { ...s, [field]: value };
+        if (j > 0 && setIdx === 0 && value !== '' && (s[field] === '' || s[field] == null))
+          return { ...s, [field]: value };
+        return s;
+      });
+      return { ...entry, sets };
+    }));
   };
 
   const isNewPR = (entry) => {
