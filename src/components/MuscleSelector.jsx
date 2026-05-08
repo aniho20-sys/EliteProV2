@@ -1,114 +1,56 @@
 import { X } from 'lucide-react';
 
+/*
+  Body proportions (viewBox 0 0 100 200):
+  Head:    cy=11, ry=10.5
+  Neck:    y=21-28
+  Torso:   y=27-112, wide at shoulders (x28-72), narrow at waist (x37-63), hip (x33-67)
+  Upper arm: cx=19/81, cy=47, rx=6.5, ry=14
+  Forearm:   cx=17/83, cy=79, rx=5.5, ry=12
+  Thigh:     cx=40/60, cy=136, rx=9, ry=24
+  Calf:      cx=39/61, cy=174, rx=7, ry=16
+*/
+
 function BodyOutline({ view }) {
-  if (view === 'front') {
-    return (
-      <g className="muscle-body-shape">
-        {/* Head */}
-        <ellipse cx="50" cy="10" rx="8.5" ry="10" />
-        {/* Neck */}
-        <path d="M46,19.5 C46,19.5 44,23 44,26 L56,26 C56,23 54,19.5 54,19.5 Z" />
-        {/* Body outline: torso + arms + legs */}
-        <path d="
-          M44,26
-          C40,26 34,27 30,29
-          C24,31 18,32 16,36
-          C14,40 14,46 16,50
-          C18,54 22,56 25,56
-          C26,57 27,58 27,60
-          C24,64 22,70 20,80
-          C18,90 17,100 17,105
-          C17,108 18,110 20,110
-          C22,110 24,108 25,105
-          C26,100 27,92 28,86
-          C29,80 30,76 31,74
-          C32,78 33,88 34,100
-          C35,110 35,116 36,120
-          L35,122
-          C33,128 32,140 32,152
-          C32,162 33,172 34,180
-          C35,185 37,188 40,188
-          C43,188 45,185 46,180
-          C47,172 47,162 47,152
-          C47,142 46,133 46,128
-          L50,128
-          C50,133 54,142 54,152
-          C54,162 53,172 54,180
-          C55,185 57,188 60,188
-          C63,188 65,185 66,180
-          C67,172 68,162 68,152
-          C68,140 67,128 65,122
-          L64,120
-          C65,116 65,110 66,100
-          C67,88 68,78 69,74
-          C70,76 71,80 72,86
-          C73,92 74,100 75,105
-          C76,108 78,110 80,110
-          C82,110 83,108 83,105
-          C83,100 82,90 80,80
-          C78,70 76,64 73,60
-          C73,58 74,57 75,56
-          C78,56 82,54 84,50
-          C86,46 86,40 84,36
-          C82,32 76,31 70,29
-          C66,27 60,26 56,26
-          Z
-        " />
-      </g>
-    );
-  }
+  const isBack = view === 'back';
   return (
     <g className="muscle-body-shape">
-      {/* Head */}
-      <ellipse cx="50" cy="10" rx="8.5" ry="10" />
+      {/* Head — blank oval, no features */}
+      <ellipse cx="50" cy="11" rx="8.5" ry="10.5" />
+
       {/* Neck */}
-      <path d="M46,19.5 C46,19.5 44,23 44,26 L56,26 C56,23 54,19.5 54,19.5 Z" />
-      {/* Body outline back: wider shoulders, rounder glutes */}
-      <path d="
-        M44,26
-        C40,26 33,27 29,29
-        C23,31 17,33 15,37
-        C13,41 13,47 15,51
-        C17,55 21,57 25,57
-        C26,58 27,59 27,61
-        C24,65 22,71 20,81
-        C18,91 17,101 17,106
-        C17,109 18,111 20,111
-        C22,111 24,109 25,106
-        C26,101 27,93 28,87
-        C29,81 30,77 31,75
-        C32,80 33,92 34,104
-        C35,114 35,120 36,124
-        L35,126
-        C32,132 31,144 31,156
-        C31,166 32,175 33,182
-        C34,187 36,190 39,190
-        C42,190 44,187 45,182
-        C46,175 46,165 46,155
-        C46,146 45,137 45,131
-        L50,131
-        C50,137 55,146 55,155
-        C55,165 54,175 55,182
-        C56,187 58,190 61,190
-        C64,190 66,187 67,182
-        C68,175 69,166 69,156
-        C69,144 68,132 65,126
-        L64,124
-        C65,120 65,114 66,104
-        C67,92 68,80 69,75
-        C70,77 71,81 72,87
-        C73,93 74,101 75,106
-        C76,109 78,111 80,111
-        C82,111 83,109 83,106
-        C83,101 82,91 80,81
-        C78,71 76,65 73,61
-        C73,59 74,58 75,57
-        C79,57 83,55 85,51
-        C87,47 87,41 85,37
-        C83,33 77,31 71,29
-        C67,27 60,26 56,26
-        Z
-      " />
+      <rect x="45.5" y="21" width="9" height="8" rx="2.5" />
+
+      {/* Torso — V-taper: wide shoulders, narrow waist, medium hips */}
+      <path d={
+        isBack
+          ? 'M50,25 C43,25 35,26 29,29 C25,31 24,35 24,42 L24,72 C24,80 26,88 29,97 C31,104 32,108 33,112 L67,112 C68,108 69,104 71,97 C74,88 76,80 76,72 L76,42 C76,35 75,31 71,29 C65,26 57,25 50,25 Z'
+          : 'M50,25 C43,25 35,26 30,29 C26,31 25,35 25,42 L25,72 C25,80 27,88 30,97 C32,104 33,108 34,112 L66,112 C67,108 68,104 70,97 C73,88 75,80 75,72 L75,42 C75,35 74,31 70,29 C65,26 57,25 50,25 Z'
+      } />
+
+      {/* Upper arms */}
+      <ellipse cx="19" cy="47" rx="6.5" ry="14" />
+      <ellipse cx="81" cy="47" rx="6.5" ry="14" />
+
+      {/* Forearms */}
+      <ellipse cx="17" cy="79" rx="5.5" ry="12" />
+      <ellipse cx="83" cy="79" rx="5.5" ry="12" />
+
+      {/* Hands */}
+      <ellipse cx="16" cy="96" rx="4.5" ry="5" />
+      <ellipse cx="84" cy="96" rx="4.5" ry="5" />
+
+      {/* Thighs */}
+      <ellipse cx="40" cy="136" rx="9" ry="24" />
+      <ellipse cx="60" cy="136" rx="9" ry="24" />
+
+      {/* Lower legs */}
+      <ellipse cx="39" cy="174" rx="7" ry="16" />
+      <ellipse cx="61" cy="174" rx="7" ry="16" />
+
+      {/* Feet */}
+      <ellipse cx="38" cy="193" rx="8" ry="5" />
+      <ellipse cx="62" cy="193" rx="8" ry="5" />
     </g>
   );
 }
@@ -144,65 +86,65 @@ export default function MuscleSelector({ selected = [], onChange }) {
           <svg viewBox="0 0 100 200" className="muscle-svg">
             <BodyOutline view="front" />
 
-            {/* Chest — 2 fan shapes with sternum gap */}
+            {/* Chest — 2 fan shapes meeting at sternum */}
             <Muscle name="Chest" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M50,30 C44,29 38,30 33,33 C28,36 26,41 27,47 C28,51 31,55 37,57 C41,58 46,58 50,57 Z" />
-              <path className="muscle-shape" d="M50,30 C56,29 62,30 67,33 C72,36 74,41 73,47 C72,51 69,55 63,57 C59,58 54,58 50,57 Z" />
+              <path className="muscle-shape" d="M50,32 C46,31 40,32 35,36 C30,39 29,45 30,51 C31,55 35,58 41,59 C45,60 48,60 50,59 Z" />
+              <path className="muscle-shape" d="M50,32 C54,31 60,32 65,36 C70,39 71,45 70,51 C69,55 65,58 59,59 C55,60 52,60 50,59 Z" />
             </Muscle>
 
             {/* Traps — small V visible at neck/shoulder from front */}
             <Muscle name="Traps" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M46,25 C42,26 37,30 34,35 L50,42 L66,35 C63,30 58,26 54,25 Z" />
+              <path className="muscle-shape" d="M46,26 C42,27 37,31 34,36 L50,43 L66,36 C63,31 58,27 54,26 Z" />
             </Muscle>
 
-            {/* Shoulders — front deltoids, teardrop shape */}
+            {/* Shoulders — front deltoids, teardrop cap */}
             <Muscle name="Shoulders" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M29,27 C24,26 18,29 16,36 C14,41 15,47 19,50 C22,52 26,51 29,46 C32,41 32,33 29,27 Z" />
-              <path className="muscle-shape" d="M71,27 C76,26 82,29 84,36 C86,41 85,47 81,50 C78,52 74,51 71,46 C68,41 68,33 71,27 Z" />
+              <path className="muscle-shape" d="M28,28 C23,27 17,31 15,37 C13,43 14,50 18,53 C22,55 26,53 28,48 C31,43 31,34 28,28 Z" />
+              <path className="muscle-shape" d="M72,28 C77,27 83,31 85,37 C87,43 86,50 82,53 C78,55 74,53 72,48 C69,43 69,34 72,28 Z" />
             </Muscle>
 
-            {/* Biceps */}
+            {/* Biceps — lower half of upper arm */}
             <Muscle name="Biceps" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M17,51 C14,53 13,58 13,63 C13,68 15,73 18,74 C21,75 24,72 25,67 C26,62 25,56 22,52 Z" />
-              <path className="muscle-shape" d="M83,51 C86,53 87,58 87,63 C87,68 85,73 82,74 C79,75 76,72 75,67 C74,62 75,56 78,52 Z" />
+              <path className="muscle-shape" d="M13,50 C12,53 12,58 13,63 C14,67 17,70 21,69 C24,68 26,65 26,60 C26,55 24,50 20,48 Z" />
+              <path className="muscle-shape" d="M87,50 C88,53 88,58 87,63 C86,67 83,70 79,69 C76,68 74,65 74,60 C74,55 76,50 80,48 Z" />
             </Muscle>
 
             {/* Forearms */}
             <Muscle name="Forearms" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M14,76 C12,79 11,84 12,90 C13,96 16,101 19,102 C21,103 23,101 24,97 C25,92 24,85 22,79 Z" />
-              <path className="muscle-shape" d="M86,76 C88,79 89,84 88,90 C87,96 84,101 81,102 C79,103 77,101 76,97 C75,92 76,85 78,79 Z" />
+              <path className="muscle-shape" d="M12,67 C11,71 11,77 12,83 C13,88 16,92 19,91 C22,90 23,86 23,81 C23,75 21,69 18,67 Z" />
+              <path className="muscle-shape" d="M88,67 C89,71 89,77 88,83 C87,88 84,92 81,91 C78,90 77,86 77,81 C77,75 79,69 82,67 Z" />
             </Muscle>
 
-            {/* Core — 6 abs + obliques */}
+            {/* Core — 6-block abs + obliques */}
             <Muscle name="Core" selected={selected} onToggle={toggle}>
               {/* Left oblique */}
-              <path className="muscle-shape" d="M33,58 C30,60 29,65 29,70 C29,76 31,82 34,86 C36,88 38,87 39,84 C40,80 40,73 38,66 Z" />
+              <path className="muscle-shape" d="M33,59 C30,62 29,68 30,74 C30,80 33,86 36,89 C38,91 40,90 41,87 C42,83 41,75 39,68 Z" />
               {/* Right oblique */}
-              <path className="muscle-shape" d="M67,58 C70,60 71,65 71,70 C71,76 69,82 66,86 C64,88 62,87 61,84 C60,80 60,73 62,66 Z" />
-              {/* Abs — 6 blocks (3 rows × 2 cols) */}
-              <rect className="muscle-shape" x="42" y="57" width="7" height="8" rx="2" />
-              <rect className="muscle-shape" x="51" y="57" width="7" height="8" rx="2" />
-              <rect className="muscle-shape" x="42" y="67" width="7" height="8" rx="2" />
-              <rect className="muscle-shape" x="51" y="67" width="7" height="8" rx="2" />
-              <rect className="muscle-shape" x="42" y="77" width="7" height="8" rx="2" />
-              <rect className="muscle-shape" x="51" y="77" width="7" height="8" rx="2" />
+              <path className="muscle-shape" d="M67,59 C70,62 71,68 70,74 C70,80 67,86 64,89 C62,91 60,90 59,87 C58,83 59,75 61,68 Z" />
+              {/* Abs: 3 rows × 2 cols */}
+              <rect className="muscle-shape" x="42" y="60" width="7.5" height="8.5" rx="2" />
+              <rect className="muscle-shape" x="50.5" y="60" width="7.5" height="8.5" rx="2" />
+              <rect className="muscle-shape" x="42" y="70.5" width="7.5" height="8.5" rx="2" />
+              <rect className="muscle-shape" x="50.5" y="70.5" width="7.5" height="8.5" rx="2" />
+              <rect className="muscle-shape" x="42" y="81" width="7.5" height="8.5" rx="2" />
+              <rect className="muscle-shape" x="50.5" y="81" width="7.5" height="8.5" rx="2" />
             </Muscle>
 
-            {/* Quadriceps */}
+            {/* Quadriceps — front of thigh + vastus medialis teardrop */}
             <Muscle name="Quadriceps" selected={selected} onToggle={toggle}>
-              {/* Left quad */}
-              <path className="muscle-shape" d="M36,122 C33,124 31,130 31,138 C31,147 33,156 36,160 C38,163 41,163 43,161 C45,159 46,153 46,145 C46,136 44,127 41,123 Z" />
-              {/* Left vastus medialis teardrop near knee */}
-              <path className="muscle-shape" d="M37,158 C35,160 35,164 37,166 C39,168 42,167 43,164 C44,161 43,158 41,157 Z" />
-              {/* Right quad */}
-              <path className="muscle-shape" d="M64,122 C67,124 69,130 69,138 C69,147 67,156 64,160 C62,163 59,163 57,161 C55,159 54,153 54,145 C54,136 56,127 59,123 Z" />
+              {/* Left quad body */}
+              <path className="muscle-shape" d="M33,114 C30,117 29,125 29,133 C29,143 31,153 35,159 C37,162 40,163 43,161 C46,158 47,151 47,142 C47,132 45,122 42,115 Z" />
+              {/* Left vastus medialis teardrop */}
+              <path className="muscle-shape" d="M36,157 C34,160 35,165 37,167 C39,169 42,168 43,165 C44,162 43,158 41,157 Z" />
+              {/* Right quad body */}
+              <path className="muscle-shape" d="M67,114 C70,117 71,125 71,133 C71,143 69,153 65,159 C63,162 60,163 57,161 C54,158 53,151 53,142 C53,132 55,122 58,115 Z" />
               {/* Right vastus medialis teardrop */}
-              <path className="muscle-shape" d="M63,158 C65,160 65,164 63,166 C61,168 58,167 57,164 C56,161 57,158 59,157 Z" />
+              <path className="muscle-shape" d="M64,157 C66,160 65,165 63,167 C61,169 58,168 57,165 C56,162 57,158 59,157 Z" />
             </Muscle>
 
-            {/* Adductors — inner thigh */}
+            {/* Adductors — inner thigh strip */}
             <Muscle name="Adductors" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M47,122 C45,124 44,130 44,138 C44,146 45,153 47,157 C48,159 49,159 50,159 C51,159 52,159 53,157 C55,153 56,146 56,138 C56,130 55,124 53,122 C52,121 51,121 50,121 C49,121 48,121 47,122 Z" />
+              <path className="muscle-shape" d="M48,113 C46,116 45,123 45,132 C45,141 46,150 48,157 C49,160 50,160 50,160 C50,160 51,160 52,157 C54,150 55,141 55,132 C55,123 54,116 52,113 C51,112 50,112 50,112 C50,112 49,112 48,113 Z" />
             </Muscle>
 
           </svg>
@@ -214,71 +156,73 @@ export default function MuscleSelector({ selected = [], onChange }) {
           <svg viewBox="0 0 100 200" className="muscle-svg">
             <BodyOutline view="back" />
 
-            {/* Trapezius — large kite/diamond from neck to mid-back */}
+            {/* Trapezius — large kite from neck to mid-back */}
             <Muscle name="Traps" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M50,24 C58,24 66,27 71,34 C75,40 74,48 68,54 C62,58 56,60 50,60 C44,60 38,58 32,54 C26,48 25,40 29,34 C34,27 42,24 50,24 Z" />
+              <path className="muscle-shape" d="M50,25 C58,25 67,28 72,36 C76,43 74,52 68,58 C62,62 56,64 50,64 C44,64 38,62 32,58 C26,52 24,43 28,36 C33,28 42,25 50,25 Z" />
             </Muscle>
 
             {/* Shoulders — rear deltoids */}
             <Muscle name="Shoulders" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M29,27 C24,26 18,29 16,36 C14,41 15,47 19,50 C22,52 26,51 29,46 C32,41 32,33 29,27 Z" />
-              <path className="muscle-shape" d="M71,27 C76,26 82,29 84,36 C86,41 85,47 81,50 C78,52 74,51 71,46 C68,41 68,33 71,27 Z" />
+              <path className="muscle-shape" d="M28,28 C23,27 17,31 15,37 C13,43 14,50 18,53 C22,55 26,53 28,48 C31,43 31,34 28,28 Z" />
+              <path className="muscle-shape" d="M72,28 C77,27 83,31 85,37 C87,43 86,50 82,53 C78,55 74,53 72,48 C69,43 69,34 72,28 Z" />
             </Muscle>
 
-            {/* Lats — wide fan shapes, from armpit down to lower waist */}
+            {/* Lats — wide fan from armpit to lower waist */}
             <Muscle name="Lats" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M32,48 C28,52 26,60 26,70 C26,80 28,90 31,96 C34,100 38,100 42,96 C46,92 48,84 49,74 C49,64 48,54 44,49 Z" />
-              <path className="muscle-shape" d="M68,48 C72,52 74,60 74,70 C74,80 72,90 69,96 C66,100 62,100 58,96 C54,92 52,84 51,74 C51,64 52,54 56,49 Z" />
+              <path className="muscle-shape" d="M31,48 C27,53 25,62 25,72 C25,83 27,93 31,99 C34,103 38,104 42,100 C46,95 48,86 48,75 C48,64 47,53 43,48 Z" />
+              <path className="muscle-shape" d="M69,48 C73,53 75,62 75,72 C75,83 73,93 69,99 C66,103 62,104 58,100 C54,95 52,86 52,75 C52,64 53,53 57,48 Z" />
             </Muscle>
 
             {/* Upper Back — rhomboids between shoulder blades */}
             <Muscle name="Upper Back" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M42,56 C40,58 39,62 40,67 C41,71 44,73 50,73 C56,73 59,71 60,67 C61,62 60,58 58,56 C55,54 52,53 50,53 C48,53 45,54 42,56 Z" />
+              <path className="muscle-shape" d="M42,58 C39,61 39,66 40,71 C41,75 45,77 50,77 C55,77 59,75 60,71 C61,66 61,61 58,58 C55,55 52,54 50,54 C48,54 45,55 42,58 Z" />
             </Muscle>
 
             {/* Lower Back — erector spinae */}
             <Muscle name="Lower Back" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M42,96 C40,98 39,102 39,108 C39,114 41,118 44,119 C46,120 48,120 50,120 C52,120 54,120 56,119 C59,118 61,114 61,108 C61,102 60,98 58,96 C55,94 52,93 50,93 C48,93 45,94 42,96 Z" />
+              <path className="muscle-shape" d="M43,97 C40,100 39,105 39,110 C39,116 42,120 46,121 C48,122 50,122 50,122 C50,122 52,122 54,121 C58,120 61,116 61,110 C61,105 60,100 57,97 C54,94 52,93 50,93 C48,93 46,94 43,97 Z" />
             </Muscle>
 
-            {/* Triceps */}
+            {/* Triceps — back of upper arm */}
             <Muscle name="Triceps" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M17,51 C14,53 13,58 13,63 C13,68 15,73 18,74 C21,75 24,72 25,67 C26,62 25,56 22,52 Z" />
-              <path className="muscle-shape" d="M83,51 C86,53 87,58 87,63 C87,68 85,73 82,74 C79,75 76,72 75,67 C74,62 75,56 78,52 Z" />
+              <path className="muscle-shape" d="M13,50 C12,53 12,58 13,63 C14,67 17,70 21,69 C24,68 26,65 26,60 C26,55 24,50 20,48 Z" />
+              <path className="muscle-shape" d="M87,50 C88,53 88,58 87,63 C86,67 83,70 79,69 C76,68 74,65 74,60 C74,55 76,50 80,48 Z" />
             </Muscle>
 
             {/* Forearms */}
             <Muscle name="Forearms" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M14,76 C12,79 11,84 12,90 C13,96 16,101 19,102 C21,103 23,101 24,97 C25,92 24,85 22,79 Z" />
-              <path className="muscle-shape" d="M86,76 C88,79 89,84 88,90 C87,96 84,101 81,102 C79,103 77,101 76,97 C75,92 76,85 78,79 Z" />
+              <path className="muscle-shape" d="M12,67 C11,71 11,77 12,83 C13,88 16,92 19,91 C22,90 23,86 23,81 C23,75 21,69 18,67 Z" />
+              <path className="muscle-shape" d="M88,67 C89,71 89,77 88,83 C87,88 84,92 81,91 C78,90 77,86 77,81 C77,75 79,69 82,67 Z" />
             </Muscle>
 
-            {/* Glutes — 2 rounded shapes with central divide */}
+            {/* Glutes — two rounded gluteus maximus shapes */}
             <Muscle name="Glutes" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M32,118 C29,120 28,126 29,133 C30,139 34,144 39,145 C43,146 47,144 49,140 C50,137 50,132 49,127 C48,121 45,117 41,116 C37,115 34,116 32,118 Z" />
-              <path className="muscle-shape" d="M68,118 C71,120 72,126 71,133 C70,139 66,144 61,145 C57,146 53,144 51,140 C50,137 50,132 51,127 C52,121 55,117 59,116 C63,115 66,116 68,118 Z" />
+              <path className="muscle-shape" d="M33,112 C29,115 28,122 29,130 C30,137 34,143 39,144 C43,145 47,142 49,137 C50,133 50,127 49,120 C47,113 43,110 39,109 C36,108 34,110 33,112 Z" />
+              <path className="muscle-shape" d="M67,112 C71,115 72,122 71,130 C70,137 66,143 61,144 C57,145 53,142 51,137 C50,133 50,127 51,120 C53,113 57,110 61,109 C64,108 66,110 67,112 Z" />
             </Muscle>
 
             {/* Abductors — outer hip / gluteus medius */}
             <Muscle name="Abductors" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M28,110 C25,113 24,118 25,124 C26,129 29,132 33,131 C36,130 37,126 37,120 C37,115 35,110 32,108 Z" />
-              <path className="muscle-shape" d="M72,110 C75,113 76,118 75,124 C74,129 71,132 67,131 C64,130 63,126 63,120 C63,115 65,110 68,108 Z" />
+              <path className="muscle-shape" d="M27,108 C24,112 24,119 25,126 C26,131 30,134 34,133 C37,132 38,128 38,122 C38,115 36,109 32,107 Z" />
+              <path className="muscle-shape" d="M73,108 C76,112 76,119 75,126 C74,131 70,134 66,133 C63,132 62,128 62,122 C62,115 64,109 68,107 Z" />
             </Muscle>
 
-            {/* Hamstrings */}
+            {/* Hamstrings — back of thigh */}
             <Muscle name="Hamstrings" selected={selected} onToggle={toggle}>
-              <path className="muscle-shape" d="M35,146 C32,149 31,155 31,163 C31,171 33,179 36,182 C38,184 41,183 43,181 C45,178 46,172 46,163 C46,154 44,147 41,145 Z" />
-              <path className="muscle-shape" d="M65,146 C68,149 69,155 69,163 C69,171 67,179 64,182 C62,184 59,183 57,181 C55,178 54,172 54,163 C54,154 56,147 59,145 Z" />
+              <path className="muscle-shape" d="M33,114 C30,117 29,125 29,133 C29,143 31,153 35,159 C37,162 40,163 43,161 C46,158 47,151 47,142 C47,132 45,122 42,115 Z" />
+              <path className="muscle-shape" d="M67,114 C70,117 71,125 71,133 C71,143 69,153 65,159 C63,162 60,163 57,161 C54,158 53,151 53,142 C53,132 55,122 58,115 Z" />
             </Muscle>
 
-            {/* Calves — inverted heart (two-headed gastrocnemius) */}
+            {/* Calves — two-headed gastrocnemius */}
             <Muscle name="Calves" selected={selected} onToggle={toggle}>
-              {/* Left calf */}
-              <path className="muscle-shape" d="M33,182 C31,184 30,188 31,193 C32,197 35,199 38,199 C40,199 42,197 42,194 C43,191 42,186 40,183 C38,181 36,180 34,181 Z" />
-              <path className="muscle-shape" d="M43,182 C45,184 46,188 45,193 C44,197 41,199 39,199 C38,199 38,197 38,194 C38,191 39,186 41,183 Z" />
-              {/* Right calf */}
-              <path className="muscle-shape" d="M57,182 C55,184 54,188 55,193 C56,197 59,199 62,199 C64,199 66,197 66,194 C67,191 66,186 64,183 C62,181 60,180 58,181 Z" />
-              <path className="muscle-shape" d="M67,182 C69,184 70,188 69,193 C68,197 65,199 63,199 C62,199 62,197 62,194 C62,191 63,186 65,183 Z" />
+              {/* Left medial head */}
+              <path className="muscle-shape" d="M32,161 C29,164 28,170 29,177 C30,183 34,188 38,188 C41,188 43,185 43,181 C44,176 42,169 40,163 Z" />
+              {/* Left lateral head */}
+              <path className="muscle-shape" d="M44,163 C46,167 46,173 45,179 C44,184 42,188 40,188 C39,186 39,182 40,177 C41,171 43,165 44,163 Z" />
+              {/* Right medial head */}
+              <path className="muscle-shape" d="M56,163 C54,167 54,173 55,179 C56,184 58,188 60,188 C61,186 61,182 60,177 C59,171 57,165 56,163 Z" />
+              {/* Right lateral head */}
+              <path className="muscle-shape" d="M68,161 C71,164 72,170 71,177 C70,183 66,188 62,188 C59,188 57,185 57,181 C56,176 58,169 60,163 Z" />
             </Muscle>
 
           </svg>
