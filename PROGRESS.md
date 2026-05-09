@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-05-08（Session 27）
+> 最後更新：2026-05-09（Session 28）
 
 ---
 
@@ -44,13 +44,17 @@
 - Volume Analytics Chart（ProgressPage + ClientDetailPage）
 - Business Analytics（/analytics：月收入、sessions、30日 retention、Top clients）
 - Profile（invite code、shareable link、working hours、connect to trainer）
-- **互動人體肌肉模型**（完全自定義 SVG + 真實解剖圖 PNG overlay，16個肌肉組，clipPath 精確對準）
-- Smart Progression Suggestions（plateau 時顯示 +2.5kg 建議）
+- **互動人體肌肉模型**（vulovix/body-muscles Apache 2.0 SVG 路徑 + 完整身體輪廓 silhouette，front + back 各 6 形狀連接，肌肉組別深灰/輪廓淺灰形成對比）
+- Smart Progression Suggestions（plateau 時顯示 +2.5kg 建議，可一鍵 Apply）
+- **Workout Log 快速輸入**（inputMode decimal/numeric、Enter 自動跳焦點、+/− Stepper、Fill 填入上次、Apply 套用進階建議、Add Set 複製上一 set）
+- **Exercise Picker 優化**（橫向 muscle chip 篩選、高度自適應 `clamp()`、空結果提示、自訂動作兩步確認）
+- **iOS 字型放大修復**（`@media ≤640px font-size: 16px`）
+- **Trainer 手機主導航**（Plans 升至主 tab，Schedule 移至 More）
 - Session Recap 一鍵發送（Mark Complete → recap modal → 發送 message 給 client）
 - Badge System Phase 1（1/10/50/100 次里程碑；ClientDashboard + ClientDetailPage 顯示）
 - Trainer 全客戶進度概覽頁（sparkline、排序）
 - Mobile More 抽屜（底部導航 4 tab + slide-up sheet）
-- Global Search、EmptyState、Skeleton、Toast、Error Boundary
+- Global Search（`useMemo` 優化、clients 穩定 ref）、EmptyState、Skeleton、Toast、Error Boundary
 - Privacy Policy + Terms of Service（GDPR compliant，contact: Elitepro616@gmail.com）
 - Firebase Auth（Google、Email/Password、Forgot Password、Demo Coach）
 - Firestore real-time sync（8 collections）、IndexedDB offline persistence
@@ -67,7 +71,7 @@
 | `workoutLogs` + `messages` 禁止 delete | 保護紀錄完整性；GDPR delete 靠 Cloud Function |
 | `workoutLogs` 用 `createdBy` 做 edit 權限 | `trainerId` 係 record-keeping，唔能做權限判斷 |
 | `badges` 一旦 award 唔自動撤銷 | 防止數據錯誤誤撤；只有教練人手移除 |
-| MuscleSelector 換成完全自定義 SVG | `react-body-highlighter` 座標系固定，無法對準真實解剖圖；改用 PNG overlay + clipPath，16個肌肉組座標由 PIL 像素分析推導 |
+| MuscleSelector 換成完全自定義 SVG | `react-body-highlighter` 座標系固定，無法對準真實解剖圖；Session 28 改用 vulovix/body-muscles（Apache 2.0）SVG 路徑 + 6個幾何輪廓形狀（head + torso + 2 arms + 2 legs）組成完整 silhouette |
 | HashRouter | Firebase Hosting SPA 需要 |
 | CI deploy Hosting only | Service account HTTP 403（缺 Cloud Datastore Admin 角色）；Firestore rules 需手動在 Firebase Console 發布 |
 | Firestore rules 手動發布 | Test Mode 90天限制；rules 已在 Firebase Console 更新；完整版待 CI 權限修復 |
