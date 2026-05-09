@@ -12,7 +12,8 @@ export default function GlobalSearch({ onSelect }) {
   const inputRef = useRef(null);
 
   const exercises = getExercises();
-  const clients = isTrainer ? getClients(currentUser.id) : [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const clients = useMemo(() => isTrainer ? getClients(currentUser.id) : [], [isTrainer, currentUser?.id]);
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
 
   const q = query.toLowerCase().trim();

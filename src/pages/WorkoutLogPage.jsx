@@ -20,7 +20,7 @@ const CLOSING_MESSAGES = [
 ];
 
 function WorkoutCompleteScreen({ data, onDone }) {
-  const msg = CLOSING_MESSAGES[Math.floor(Math.random() * CLOSING_MESSAGES.length)];
+  const [msg] = useState(() => CLOSING_MESSAGES[Math.floor(Math.random() * CLOSING_MESSAGES.length)]);
   return (
     <div className="workout-complete">
       <div className="workout-complete-check">
@@ -261,7 +261,7 @@ export default function WorkoutLogPage() {
         isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds,
         completedSets: [...completedSets],
       }));
-    } catch {}
+    } catch { /* ignore localStorage quota errors */ }
   }, [showLog, isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds, targetClientId]);
 
   // Stop timer when leaving workout view
@@ -304,12 +304,7 @@ export default function WorkoutLogPage() {
         osc.start(ctx.currentTime + t);
         osc.stop(ctx.currentTime + t + 0.25);
       });
-    } catch {}
-  };
-
-  const setRestDuration = (s) => {
-    setRestSeconds(s);
-    if (!timerActive) setTimeLeft(s);
+    } catch { /* AudioContext not available */ }
   };
 
   const toggleTimer = () => {
