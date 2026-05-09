@@ -705,6 +705,15 @@ body {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 .form-input::placeholder { color: var(--text-muted); }
+.form-input.error, .form-select.error, .form-textarea.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+.form-field-error {
+  color: var(--danger);
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
 .form-input[type="date"],
 .form-input[type="time"] {
   -webkit-appearance: none;

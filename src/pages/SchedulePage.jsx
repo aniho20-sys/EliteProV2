@@ -38,6 +38,7 @@ export default function SchedulePage() {
   const [recapNote, setRecapNote] = useState('');
   const [recapSend, setRecapSend] = useState(true);
   const [savingRecap, setSavingRecap] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(null);
 
   const [bannerDismissed, setBannerDismissed] = useState(
     () => !!localStorage.getItem('elitepro_wh_banner_dismissed')
@@ -115,6 +116,13 @@ export default function SchedulePage() {
       return;
     }
 
+    const targetClientId = isTrainer ? form.clientId : currentUser.id;
+    const { remaining } = getSessionStats(targetClientId);
+    if (remaining !== null && remaining <= 0) {
+      toast('Session quota exceeded — add more sessions in client settings', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       await addScheduleItem({
@@ -147,6 +155,8 @@ export default function SchedulePage() {
   };
 
   const updateStatus = async (itemId, status) => {
+    if (updatingStatus === itemId) return;
+    setUpdatingStatus(itemId);
     try {
       await updateScheduleItem(itemId, { status });
       if (status === 'confirmed') toast('Session confirmed');
@@ -154,6 +164,8 @@ export default function SchedulePage() {
       else toast(`Session ${status}`);
     } catch (err) {
       toast(`Failed to update: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -216,16 +228,16 @@ export default function SchedulePage() {
           <span>Set your working hours so clients can only book within your availability.</span>
           <div className="flex gap-8" style={{ flexShrink: 0 }}>
             <button className="btn btn-sm btn-primary" onClick={() => navigate('/profile')}>Set Hours</button>
-            <button className="btn-icon" onClick={dismissBanner} title="Dismiss"><X size={16} /></button>
+            <button className="btn-icon" onClick={dismissBanner} title="Dismiss" aria-label="Dismiss banner"><X size={16} /></button>
           </div>
         </div>
       )}
 
       {/* Date selector */}
       <div className="date-selector-nav">
-        <button className="btn-icon" onClick={() => setDateOffset(p => p - 7)} title="Previous week"><ChevronLeft size={18} /></button>
+        <button className="btn-icon" onClick={() => setDateOffset(p => p - 7)} title="Previous week" aria-label="Previous week"><ChevronLeft size={18} /></button>
         <span className="date-selector-month" style={{ margin: 0 }}>{selectedMonth}</span>
-        <button className="btn-icon" onClick={() => setDateOffset(p => p + 7)} title="Next week"><ChevronRight size={18} /></button>
+        <button className="btn-icon" onClick={() => setDateOffset(p => p + 7)} title="Next week" aria-label="Next week"><ChevronRight size={18} /></button>
         {dateOffset !== 0 && (
           <button className="btn btn-sm btn-outline" onClick={() => { setDateOffset(0); setSelectedDate(today); }}>Today</button>
         )}
@@ -281,17 +293,17 @@ export default function SchedulePage() {
                   <div className="flex gap-8">
                     {isTrainer && s.status === 'pending' && (
                       <>
-                        <button className="btn-icon" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm"><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                        <button className="btn-icon" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel"><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                        <button className="btn-icon" aria-label="Confirm session" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm" disabled={updatingStatus === s.id}><Check size={16} style={{ color: 'var(--accent)' }} /></button>
+                        <button className="btn-icon" aria-label="Cancel session" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel" disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger)' }} /></button>
                       </>
                     )}
                     {isTrainer && s.status === 'confirmed' && (
-                      <button className="btn-icon" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
+                      <button className="btn-icon" aria-label="Mark session complete" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
                     )}
                     {!isTrainer && s.status === 'pending' && (
-                      <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
+                      <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} disabled={updatingStatus === s.id} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
                     )}
-                    <button className="btn-icon" onClick={() => setDeleteModal(s.id)} title="Delete session" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                    <button className="btn-icon" aria-label="Delete session" onClick={() => setDeleteModal(s.id)} title="Delete session" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
                   </div>
                 </div>
               </div>

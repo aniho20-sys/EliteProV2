@@ -45,6 +45,7 @@ export function AppProvider({ children }) {
   const [templates, setTemplates] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
   const [firebaseUser, setFirebaseUser] = useState(undefined);
@@ -85,14 +86,17 @@ export function AppProvider({ children }) {
     }
 
     setLoading(true);
+    setDataError(null);
     loadedRef.current = new Set();
     const unsubs = [];
     const uid = firebaseUser.uid;
 
+    const onErr = (name) => () => { setDataError('Failed to load data. Check your connection and refresh.'); markLoaded(name); };
+
     unsubs.push(onSnapshot(
       query(collection(db, 'users'), or(where('id', '==', uid), where('trainerId', '==', uid))),
       (snap) => { setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id }))); markLoaded('users'); },
-      () => markLoaded('users'),
+      onErr('users'),
     ));
 
     markLoaded('bodyStats'); // bodyStats handled via per-client subcollection listeners below
@@ -100,29 +104,29 @@ export function AppProvider({ children }) {
     unsubs.push(onSnapshot(query(collection(db, 'workoutPlans'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setWorkoutPlans(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutPlans');
-    }, () => markLoaded('workoutPlans')));
+    }, onErr('workoutPlans')));
 
     unsubs.push(onSnapshot(query(collection(db, 'workoutLogs'), or(where('clientId', '==', uid), where('trainerId', '==', uid))), (snap) => {
       setWorkoutLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutLogs');
-    }, () => markLoaded('workoutLogs')));
+    }, onErr('workoutLogs')));
 
     unsubs.push(onSnapshot(query(collection(db, 'schedule'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
       setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('schedule');
-    }, () => markLoaded('schedule')));
+    }, onErr('schedule')));
 
     unsubs.push(onSnapshot(query(collection(db, 'messages'), or(where('from', '==', uid), where('to', '==', uid))), (snap) => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('messages');
-    }, () => markLoaded('messages')));
+    }, onErr('messages')));
 
     markLoaded('exercises'); // exercises handled separately below
 
     unsubs.push(onSnapshot(
       query(collection(db, 'invoices'), or(where('trainerId', '==', uid), where('clientId', '==', uid))),
       (snap) => { setInvoices(snap.docs.map(d => ({ ...d.data(), id: d.id }))); markLoaded('invoices'); },
-      () => markLoaded('invoices'),
+      onErr('invoices'),
     ));
 
     return () => unsubs.forEach(fn => fn());
@@ -731,7 +735,7 @@ export function AppProvider({ children }) {
   const needsProfile = firebaseUser && !loading && !users.find(u => u.id === firebaseUser?.uid);
 
   const value = {
-    currentUser, logout, loading,
+    currentUser, logout, loading, dataError,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,

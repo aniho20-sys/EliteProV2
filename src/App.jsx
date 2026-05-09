@@ -39,7 +39,7 @@ function LoadingScreen() {
 }
 
 function AppRoutes() {
-  const { currentUser, loading, authReady, needsProfile } = useApp();
+  const { currentUser, loading, authReady, needsProfile, dataError } = useApp();
   const location = useLocation();
 
   // Public pages — accessible without authentication
@@ -52,6 +52,11 @@ function AppRoutes() {
 
   return (
     <Suspense fallback={<LoadingScreen />}>
+      {dataError && (
+        <div role="alert" style={{ background: 'var(--danger)', color: '#fff', padding: '10px 16px', textAlign: 'center', fontSize: '0.875rem' }}>
+          {dataError} <button onClick={() => window.location.reload()} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', padding: '2px 10px', borderRadius: 4, cursor: 'pointer' }}>Refresh</button>
+        </div>
+      )}
       {needsProfile ? (
         <RoleSelectPage />
       ) : !currentUser ? (

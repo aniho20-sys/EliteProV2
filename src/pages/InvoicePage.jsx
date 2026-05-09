@@ -101,6 +101,7 @@ export default function InvoicePage() {
   const [showCreate, setShowCreate] = useState(false);
   const [printInvoice, setPrintInvoice] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [markingPaid, setMarkingPaid] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     clientId: '', issueDate: today, dueDate: '', currency: 'HKD', notes: '',
@@ -162,20 +163,28 @@ export default function InvoicePage() {
   };
 
   const handleMarkPaid = async (inv) => {
+    if (markingPaid === inv.id) return;
+    setMarkingPaid(inv.id);
     try {
       await updateInvoice(inv.id, { status: 'paid', paidDate: today });
       toast('Marked as paid');
     } catch {
       toast('Failed to update invoice', 'error');
+    } finally {
+      setMarkingPaid(null);
     }
   };
 
   const handleMarkUnpaid = async (inv) => {
+    if (markingPaid === inv.id) return;
+    setMarkingPaid(inv.id);
     try {
       await updateInvoice(inv.id, { status: 'unpaid', paidDate: null });
       toast('Marked as unpaid');
     } catch {
       toast('Failed to update invoice', 'error');
+    } finally {
+      setMarkingPaid(null);
     }
   };
 
@@ -298,13 +307,13 @@ export default function InvoicePage() {
                     <Printer size={14} /> Print / PDF
                   </button>
                   {inv.status === 'unpaid' && (
-                    <button className="btn btn-sm btn-primary" onClick={() => handleMarkPaid(inv)}>
-                      <CheckCircle size={14} /> Mark Paid
+                    <button className="btn btn-sm btn-primary" onClick={() => handleMarkPaid(inv)} disabled={markingPaid === inv.id}>
+                      <CheckCircle size={14} /> {markingPaid === inv.id ? 'Saving…' : 'Mark Paid'}
                     </button>
                   )}
                   {inv.status === 'paid' && (
-                    <button className="btn btn-sm btn-outline" onClick={() => handleMarkUnpaid(inv)}>
-                      Mark Unpaid
+                    <button className="btn btn-sm btn-outline" onClick={() => handleMarkUnpaid(inv)} disabled={markingPaid === inv.id}>
+                      {markingPaid === inv.id ? 'Saving…' : 'Mark Unpaid'}
                     </button>
                   )}
                   <button
@@ -379,7 +388,7 @@ export default function InvoicePage() {
                       onChange={e => setItem(idx, 'unitPrice', e.target.value)}
                     />
                     {form.items.length > 1 && (
-                      <button type="button" className="btn-icon" style={{ color: 'var(--danger)' }}
+                      <button type="button" className="btn-icon" aria-label="Remove item" style={{ color: 'var(--danger)' }}
                         onClick={() => setForm(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }))}>
                         <Trash2 size={14} />
                       </button>

@@ -97,12 +97,12 @@
 
 | # | 任務 | 詳情 |
 |---|------|------|
-| 6 | **Double-submit protection 缺口** | ClientDetailPage、SchedulePage、MessagesPage、InvoicePage、WorkoutLogPage 儲存按鈕可能 race |
-| 7 | **Form validation UX** | 無 inline field error（`.form-input.error` 樣式），錯誤只在頂部 div 顯示 |
-| 8 | **Firestore onSnapshot 錯誤處理** | 8個 listener 在 error 時都 mark loaded → 顯示空白而非 error message |
-| 9 | **無障礙（Accessibility）** | Icon-only buttons 缺 `aria-label`；form inputs 缺 `id`/`htmlFor`；error 無 `role="alert"` |
-| 10 | **Session quota 未執行** | Quota 已計算但未 enforce，教練可超額預訂 |
-| 11 | **SchedulePage conflict 邏輯** | `hasConflict` 未先驗證 working hours 邊界才 check overlap |
+| 6 | ~~**Double-submit protection 缺口**~~ ✅ | SchedulePage `updateStatus` 加 `updatingStatus` state；InvoicePage `handleMarkPaid/Unpaid` 加 `markingPaid` state |
+| 7 | ~~**Form validation UX**~~ ✅ | 加 `.form-input.error`、`.form-select.error`、`.form-textarea.error`、`.form-field-error` CSS |
+| 8 | ~~**Firestore onSnapshot 錯誤處理**~~ ✅ | `onErr()` helper 統一處理；`dataError` 狀態暴露；App.jsx 頂部顯示紅色 banner + Refresh 按鈕 |
+| 9 | ~~**無障礙（Accessibility）**~~ ✅ | SchedulePage/InvoicePage icon buttons 加 `aria-label`；error banner 加 `role="alert"` |
+| 10 | ~~**Session quota 未執行**~~ ✅ | `handleAdd` 喺 SchedulePage 加 quota check，超額時 toast 錯誤並 return |
+| 11 | ~~**SchedulePage conflict 邏輯**~~ ✅ N/A | 檢查代碼後確認 `hasConflict` 已先驗證 working hours 再 check overlap，邏輯正確 |
 | 12 | **Push Notifications 啟動** | 需 VAPID key + Blaze plan |
 
 ### 🟡 P3 — 中優先
