@@ -73,7 +73,7 @@
 | `badges` 一旦 award 唔自動撤銷 | 防止數據錯誤誤撤；只有教練人手移除 |
 | MuscleSelector 換成完全自定義 SVG | `react-body-highlighter` 座標系固定，無法對準真實解剖圖；Session 28 改用 vulovix/body-muscles（Apache 2.0）SVG 路徑 + 6個幾何輪廓形狀（head + torso + 2 arms + 2 legs）組成完整 silhouette |
 | HashRouter | Firebase Hosting SPA 需要 |
-| CI deploy Hosting only | Service account HTTP 403（缺 Cloud Datastore Admin 角色）；Firestore rules 需手動在 Firebase Console 發布 |
+| CI deploy Hosting only | Service account HTTP 403（缺 Cloud Datastore Admin 角色）；Firestore rules 需手動在 Firebase Console 發布。Functions 改用 `FIREBASE_TOKEN` 認證 |
 | Firestore rules 手動發布 | Test Mode 90天限制；rules 已在 Firebase Console 更新；完整版待 CI 權限修復 |
 | Mobile nav 4 + More drawer | 底部 tab 上限 5，無法容納全部頁面 |
 | 移除 Firebase App Check | reCAPTCHA 喺 iOS Safari 載唔到，令 Google 登入完全失效 |
@@ -91,7 +91,7 @@
 | 2 | ~~**NotesSection stale closure**~~ ✅ 已修復：`useEffect` 補加 `currentUser.id`、`otherUserId` 依賴 |
 | 3 | ~~**Client 記錄 workout 後 Trainer 無通知**~~ ✅ 已加 `onNewWorkoutLog` Cloud Function |
 | 4 | ~~**Session booking 無提示給 Trainer**~~ ✅ 已更新 `onNewSchedule` — 同時通知 client + trainer |
-| 5 | **Cloud Functions 部署** | CI service account 缺 Cloud Functions Admin + Cloud Run Admin 角色 → 需在 GCP IAM Console 人手加角色 |
+| 5 | **Cloud Functions 部署** | 改用 `FIREBASE_TOKEN`（`firebase login:ci`）認證，繞過 service account IAM 限制 → **只需在 GitHub Secrets 加 `FIREBASE_TOKEN`**（見下方說明） |
 
 ### 🟠 P2 — 高優先（本月）
 
