@@ -91,7 +91,7 @@
 | 2 | ~~**NotesSection stale closure**~~ ✅ 已修復：`useEffect` 補加 `currentUser.id`、`otherUserId` 依賴 |
 | 3 | ~~**Client 記錄 workout 後 Trainer 無通知**~~ ✅ 已加 `onNewWorkoutLog` Cloud Function |
 | 4 | ~~**Session booking 無提示給 Trainer**~~ ✅ 已更新 `onNewSchedule` — 同時通知 client + trainer |
-| 5 | **Cloud Functions 部署** | 改用 `FIREBASE_TOKEN`（`firebase login:ci`）認證，繞過 service account IAM 限制 → **只需在 GitHub Secrets 加 `FIREBASE_TOKEN`**（見下方說明） |
+| 5 | ~~**Cloud Functions 部署**~~ ✅ | Service account 加 `roles/editor` + `roles/iam.serviceAccountUser`；CI 成功部署所有 6 個 Cloud Functions |
 
 ### 🟠 P2 — 高優先（本月）
 
