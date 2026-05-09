@@ -47,4 +47,4 @@ jobs:
         run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
         continue-on-error: true
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
