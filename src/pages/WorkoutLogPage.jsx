@@ -620,6 +620,21 @@ export default function WorkoutLogPage() {
         }} />
       ) : !showLog ? (
         <>
+          <div className="rest-timer-bar mb-16">
+            <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
+            <div className="rest-timer-right">
+              <span className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}>
+                {timerDisplay}
+              </span>
+              <button className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`} onClick={toggleTimer}>
+                {timerActive ? 'Pause' : timerDone ? 'Restart' : timerStarted ? 'Resume' : 'Start'}
+              </button>
+              {timerStarted && !timerActive && !timerDone && (
+                <button className="btn btn-outline btn-sm" onClick={resetTimer} title="Reset">↺</button>
+              )}
+            </div>
+          </div>
+
           {prCount > 0 && (
             <div className="card mb-16 pr-summary-card">
               <div className="card-header">

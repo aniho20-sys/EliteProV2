@@ -34,29 +34,25 @@ export function NotificationProvider({ children }) {
   }, []);
 
   const setupMessaging = useCallback(async (userId) => {
-    try {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      const messaging = getMessaging(app);
-      const fcmToken = await getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: registration,
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const messaging = getMessaging(app);
+    const fcmToken = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration,
+    });
+    if (!fcmToken) throw new Error('FCM token empty — VAPID key may be incorrect');
+    if (userId) {
+      await updateDoc(doc(db, 'users', userId), {
+        fcmTokens: arrayUnion(fcmToken),
       });
-      if (fcmToken && userId) {
-        await updateDoc(doc(db, 'users', userId), {
-          fcmTokens: arrayUnion(fcmToken),
-        });
-        setToken(fcmToken);
-      }
-    } catch (err) {
-      console.error('FCM setup failed:', err);
+      setToken(fcmToken);
     }
   }, []);
 
   // Auto-register token if permission already granted
   useEffect(() => {
     if (!supported || permission !== 'granted' || !currentUser || !VAPID_KEY) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setupMessaging(currentUser.id);
+    setupMessaging(currentUser.id).catch(err => console.error('FCM auto-setup failed:', err));
   }, [supported, permission, currentUser, setupMessaging]);
 
   // Request notification permission
@@ -75,8 +71,13 @@ export function NotificationProvider({ children }) {
       setPermission(result);
 
       if (result === 'granted') {
-        await setupMessaging(userId);
-        toastRef.current('Notifications enabled!');
+        try {
+          await setupMessaging(userId);
+          toastRef.current('Notifications enabled!');
+        } catch (err) {
+          console.error('FCM token setup failed:', err);
+          toastRef.current('Permission granted but token setup failed — try again', 'error');
+        }
         return token;
       } else if (result === 'denied') {
         toastRef.current('Notifications blocked. Check browser settings to enable.', 'error');
@@ -101,8 +102,8 @@ export function NotificationProvider({ children }) {
         const { title, body } = payload.notification || {};
         toastRef.current(body || title || 'New notification', 'info');
 
-        // Also show native notification (app is in foreground but maybe different tab)
-        if (document.hidden && Notification.permission === 'granted') {
+        // Always show native OS notification (even when app is in foreground)
+        if (Notification.permission === 'granted') {
           new Notification(title || 'ElitePro', {
             body: body || '',
             icon: '/favicon.svg',
