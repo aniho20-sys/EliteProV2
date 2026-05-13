@@ -86,6 +86,9 @@ export default function ClientDetailPage() {
   const [sessionsInput, setSessionsInput] = useState('');
   const [offsetInput, setOffsetInput] = useState('');
   const [savingSessions, setSavingSessions] = useState(false);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [savingTopUp, setSavingTopUp] = useState(false);
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
   const [savingNoteId, setSavingNoteId] = useState(null);
@@ -185,6 +188,22 @@ export default function ClientDetailPage() {
       toast('Failed to update sessions', 'error');
     } finally {
       setSavingSessions(false);
+    }
+  };
+
+  const handleTopUp = async () => {
+    const qty = Number(topUpAmount);
+    if (!qty || qty <= 0) return;
+    setSavingTopUp(true);
+    try {
+      await updateClient(clientId, { totalSessions: (client?.totalSessions ?? 0) + qty });
+      setTopUpOpen(false);
+      setTopUpAmount('');
+      toast(`Added ${qty} sessions`);
+    } catch {
+      toast('Failed to update sessions', 'error');
+    } finally {
+      setSavingTopUp(false);
     }
   };
 
@@ -463,21 +482,28 @@ export default function ClientDetailPage() {
               <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
                 <span className="text-sm fw-bold">Sessions</span>
                 {!editingSessions && (
-                  <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setOffsetInput(client?.sessionOffset ?? ''); setEditingSessions(true); }}>
-                    {sessTotal === null ? 'Set Total' : 'Edit'}
-                  </button>
+                  <div className="flex gap-8">
+                    {sessTotal !== null && (
+                      <button className="btn btn-primary btn-sm" onClick={() => { setTopUpAmount(''); setTopUpOpen(true); }}>
+                        + Top Up
+                      </button>
+                    )}
+                    <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setOffsetInput(client?.sessionOffset ?? ''); setEditingSessions(true); }}>
+                      {sessTotal === null ? 'Set Total' : 'Edit'}
+                    </button>
+                  </div>
                 )}
               </div>
               {editingSessions ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                    <span className="text-sm text-muted" style={{ minWidth: 148 }}>Total purchased:</span>
-                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
+                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>Total sessions:</span>
+                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" inputMode="numeric" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
                     <span className="text-sm text-muted">sessions</span>
                   </div>
                   <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                    <span className="text-sm text-muted" style={{ minWidth: 148 }}>Used before app:</span>
-                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" value={offsetInput} onChange={e => setOffsetInput(e.target.value)} />
+                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>Sessions used:</span>
+                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" inputMode="numeric" value={offsetInput} onChange={e => setOffsetInput(e.target.value)} />
                     <span className="text-sm text-muted">sessions</span>
                   </div>
                   <div className="flex gap-8">
@@ -923,6 +949,45 @@ export default function ClientDetailPage() {
             </div>
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => { setShowLogExPicker(false); setLogExSearch(''); setLogExMuscles([]); setShowLogExMuscleFilter(false); }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {topUpOpen && (
+        <div className="modal-overlay" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
+            <h3 className="modal-title">+ Top Up Sessions</h3>
+            <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
+              Currently: <strong>{sessUsed} used</strong> / <strong>{sessTotal} total</strong> — <span style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</span>
+            </p>
+            <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
+              {[5, 10, 20].map(n => (
+                <button key={n} className={`btn btn-sm ${topUpAmount === String(n) ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpAmount(String(n))}>+{n}</button>
+              ))}
+            </div>
+            <div className="flex gap-8 mb-12" style={{ alignItems: 'center' }}>
+              <span className="text-sm text-muted">Custom:</span>
+              <input
+                className="form-input"
+                style={{ width: 72, padding: '4px 8px' }}
+                type="number" min="1" inputMode="numeric"
+                placeholder="0"
+                value={topUpAmount}
+                onChange={e => setTopUpAmount(e.target.value)}
+              />
+              <span className="text-sm text-muted">sessions</span>
+            </div>
+            {Number(topUpAmount) > 0 && (
+              <p className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>
+                After top-up: {(sessRemaining ?? 0) + Number(topUpAmount)} remaining
+              </p>
+            )}
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }} disabled={savingTopUp}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleTopUp} disabled={savingTopUp || !Number(topUpAmount) || Number(topUpAmount) <= 0}>
+                {savingTopUp ? 'Saving…' : 'Confirm'}
+              </button>
             </div>
           </div>
         </div>
