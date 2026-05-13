@@ -39,10 +39,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setError('');
     setAuthLoading(true);
-    signInWithGoogle(); // fires redirect synchronously — page navigates away
+    try {
+      await signInWithGoogle();
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e) => {

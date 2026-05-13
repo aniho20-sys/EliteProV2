@@ -11,12 +11,10 @@ import {
   sendPasswordResetEmail,
   signOut, deleteUser,
 } from 'firebase/auth';
-import {
-  sampleBodyStats, sampleWorkoutPlans, sampleWorkoutLogs,
-  sampleSchedule, sampleMessages,
-} from '../data/sampleData';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 import { localToday } from '../utils/dateUtils';
+import { seedDemoDataForCoach } from './demoSeed';
+import { getNewBadges } from './badgeUtils';
 
 const AppContext = createContext();
 const googleProvider = new GoogleAuthProvider();
@@ -208,98 +206,21 @@ export function AppProvider({ children }) {
     if (profile) setCurrentUser(profile);
   }, [users, firebaseUser]);
 
-  // ========== Seeding demo data for the coach ==========
-  // Creates ghost clients + plans/stats/logs/schedule/messages scoped to trainerUid
-  const seedDemoDataForCoach = async (trainerUid) => {
-    const batch = writeBatch(db);
-
-    // Generate stable ghost client IDs tied to the trainer
-    const c1 = `${trainerUid}-c1`;
-    const c2 = `${trainerUid}-c2`;
-    const c3 = `${trainerUid}-c3`;
-    const idMap = { 'client-1': c1, 'client-2': c2, 'client-3': c3, 'trainer-1': trainerUid };
-
-    // Ghost clients
-    batch.set(doc(db, 'users', c1), {
-      id: c1, name: 'David Chan', email: 'david@demo.local', role: 'client',
-      trainerId: trainerUid, age: 28, height: 175,
-      goals: 'Build muscle, improve strength',
-      notes: 'Previous shoulder injury - avoid heavy overhead pressing',
-      joinDate: '2026-01-15', isDemo: true, totalSessions: 20,
-    });
-    batch.set(doc(db, 'users', c2), {
-      id: c2, name: 'Sarah Wong', email: 'sarah@demo.local', role: 'client',
-      trainerId: trainerUid, age: 32, height: 163,
-      goals: 'Fat loss, toning', notes: 'Beginner - focus on form',
-      joinDate: '2026-02-01', isDemo: true, totalSessions: 6,
-    });
-    batch.set(doc(db, 'users', c3), {
-      id: c3, name: 'Michael Lee', email: 'michael@demo.local', role: 'client',
-      trainerId: trainerUid, age: 24, height: 180,
-      goals: 'Powerlifting competition prep',
-      notes: 'Advanced lifter, targets: S:200kg B:140kg D:240kg',
-      joinDate: '2026-02-20', isDemo: true, totalSessions: 15,
-    });
-
-    // Body stats — subcollection: bodyStats/{clientId}/entries/{auto-id}
-    Object.entries(sampleBodyStats).forEach(([origId, entries]) => {
-      const cid = idMap[origId];
-      if (cid) entries.forEach(entry =>
-        batch.set(doc(collection(db, 'bodyStats', cid, 'entries')), entry)
-      );
-    });
-
-    // Workout plans
-    sampleWorkoutPlans.forEach((p, i) => {
-      const newId = `${trainerUid}-plan-${i + 1}`;
-      batch.set(doc(db, 'workoutPlans', newId), {
-        ...p, id: newId,
-        trainerId: trainerUid,
-        clientId: idMap[p.clientId] || p.clientId,
-      });
-    });
-
-    // Workout logs
-    sampleWorkoutLogs.forEach((l, i) => {
-      const newId = `${trainerUid}-log-${i + 1}`;
-      batch.set(doc(db, 'workoutLogs', newId), {
-        ...l, id: newId,
-        clientId: idMap[l.clientId] || l.clientId,
-        trainerId: trainerUid,
-      });
-    });
-
-    // Schedule
-    sampleSchedule.forEach((s, i) => {
-      const newId = `${trainerUid}-sched-${i + 1}`;
-      batch.set(doc(db, 'schedule', newId), {
-        ...s, id: newId,
-        trainerId: trainerUid,
-        clientId: idMap[s.clientId] || s.clientId,
-      });
-    });
-
-    // Messages
-    sampleMessages.forEach((m, i) => {
-      const newId = `${trainerUid}-msg-${i + 1}`;
-      batch.set(doc(db, 'messages', newId), {
-        ...m, id: newId,
-        from: idMap[m.from] || m.from,
-        to: idMap[m.to] || m.to,
-      });
-    });
-
-    await batch.commit();
-  };
+  // seedDemoDataForCoach extracted to ./demoSeed.js
 
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
-  // No await — redirect must fire synchronously in user-gesture context
-  // (Safari blocks navigation triggered after async operations)
+  // Try popup first (avoids third-party cookie issues with redirect flow).
+  // If popup is blocked by the browser, fall back to redirect.
   const signInWithGoogle = () => {
-    signInWithRedirect(auth, googleProvider);
-    return null;
+    return signInWithPopup(auth, googleProvider).catch((err) => {
+      if (err.code === 'auth/popup-blocked') {
+        signInWithRedirect(auth, googleProvider);
+      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        setGoogleAuthError(err);
+      }
+    });
   };
 
   const signUpEmail = async (email, password) => {
@@ -670,32 +591,16 @@ export function AppProvider({ children }) {
     await deleteDoc(doc(db, 'templates', templateId));
   };
 
-  // ========== Badges ==========
-  const BADGE_MILESTONES = [
-    { id: 'first_session', name: 'First Step', icon: '🏃', threshold: 1 },
-    { id: 'sessions_10', name: '10 Sessions', icon: '🔥', threshold: 10 },
-    { id: 'sessions_50', name: '50 Sessions', icon: '⚡', threshold: 50 },
-    { id: 'sessions_100', name: 'Century Club', icon: '🏆', threshold: 100 },
-  ];
+  // ========== Badges (milestones/utils extracted to ./badgeUtils.js) ==========
+  const getBadges = (clientId) => (users.find(u => u.id === clientId)?.badges || []);
 
-  const getBadges = (clientId) => {
-    const client = users.find(u => u.id === clientId);
-    return client?.badges || [];
-  };
-
-  // Checks session count milestones and awards any new badges; returns newly awarded badges.
   const checkAndAwardBadges = async (clientId) => {
     const client = users.find(u => u.id === clientId);
     if (!client) return [];
     const existing = client.badges || [];
-    const existingIds = new Set(existing.map(b => b.id));
-    const sessionCount = workoutLogs.filter(l => l.clientId === clientId).length + 1; // +1 for the new log being saved
-    const newBadges = BADGE_MILESTONES.filter(
-      m => sessionCount >= m.threshold && !existingIds.has(m.id)
-    );
-    if (newBadges.length === 0) return [];
-    const awardedAt = new Date().toISOString().split('T')[0];
-    const toAdd = newBadges.map(b => ({ id: b.id, name: b.name, icon: b.icon, awardedAt }));
+    const sessionCount = workoutLogs.filter(l => l.clientId === clientId).length + 1;
+    const toAdd = getNewBadges(existing, sessionCount);
+    if (toAdd.length === 0) return [];
     await updateDoc(doc(db, 'users', clientId), { badges: [...existing, ...toAdd] });
     return toAdd;
   };
