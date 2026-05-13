@@ -98,7 +98,7 @@ export default function ClientDashboard() {
             <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessColor }} />
           </div>
           <div className="flex-between">
-            <span className="text-sm text-muted">{sessUsed} sessions completed</span>
+            <span className="text-sm text-muted">{sessUsed} sessions used</span>
             <span className="text-sm" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</span>
           </div>
         </div>
