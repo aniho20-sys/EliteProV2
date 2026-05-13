@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -14,12 +14,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-
-// Enable offline persistence so app works without internet
-enableIndexedDbPersistence(db).catch(() => {
-  // Multiple tabs open or browser doesn't support — ignore
+// persistentLocalCache replaces deprecated enableIndexedDbPersistence
+// persistentMultipleTabManager allows multiple browser tabs to share the cache
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
+export const auth = getAuth(app);
 
 export default app;
