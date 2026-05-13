@@ -1891,6 +1891,25 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 0;
 }
 .plan-card-toggle:hover { opacity: 0.85; }
+.bulk-client-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.bulk-client-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.bulk-client-item input[type="checkbox"] { accent-color: var(--primary); width: 15px; height: 15px; cursor: pointer; }
 .plan-client-section-header {
   display: flex;
   align-items: center;

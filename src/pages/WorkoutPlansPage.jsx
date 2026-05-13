@@ -21,6 +21,8 @@ export default function WorkoutPlansPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', clientId: '', day: '', exercises: [] });
+  const [bulkAssign, setBulkAssign] = useState(false);
+  const [bulkClientIds, setBulkClientIds] = useState([]);
   const [exFilter, setExFilter] = useState('');
   const [exEquipFilter, setExEquipFilter] = useState('');
   const exFilterRef = useRef('');
@@ -193,8 +195,9 @@ export default function WorkoutPlansPage() {
       toast('Please enter a plan name', 'error');
       return;
     }
-    if (!form.clientId) {
-      toast('Please select a client', 'error');
+    const targetClientIds = bulkAssign ? bulkClientIds : (form.clientId ? [form.clientId] : []);
+    if (targetClientIds.length === 0) {
+      toast(bulkAssign ? 'Please select at least one client' : 'Please select a client', 'error');
       return;
     }
 
@@ -221,14 +224,18 @@ export default function WorkoutPlansPage() {
     }
 
     try {
-      await addWorkoutPlan({ ...form, exercises, trainerId: currentUser.id });
+      await Promise.all(
+        targetClientIds.map(clientId => addWorkoutPlan({ ...form, clientId, exercises, trainerId: currentUser.id }))
+      );
       setForm({ name: '', clientId: '', day: '', exercises: [] });
+      setBulkClientIds([]);
+      setBulkAssign(false);
       updateExFilter('');
       setExEquipFilter('');
       setShowCreate(false);
       setShowCustomForm(false);
       setCustomForm(EMPTY_CUSTOM);
-      toast('Workout plan created');
+      toast(targetClientIds.length > 1 ? `Plan assigned to ${targetClientIds.length} clients` : 'Workout plan created');
     } catch (err) {
       toast('Failed to create plan: ' + (err.message || 'Unknown error'), 'error');
     }
@@ -570,11 +577,32 @@ export default function WorkoutPlansPage() {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Client</label>
-                  <select className="form-select" value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
-                    <option value="">Select client</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Client
+                    {clients.length > 1 && (
+                      <button type="button" className="btn btn-sm btn-outline" style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                        onClick={() => { setBulkAssign(v => !v); setBulkClientIds([]); setForm(f => ({ ...f, clientId: '' })); }}>
+                        {bulkAssign ? 'Single' : 'Bulk Assign'}
+                      </button>
+                    )}
+                  </label>
+                  {bulkAssign ? (
+                    <div className="bulk-client-checklist">
+                      {clients.map(c => (
+                        <label key={c.id} className="bulk-client-item">
+                          <input type="checkbox" checked={bulkClientIds.includes(c.id)}
+                            onChange={e => setBulkClientIds(prev => e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id))} />
+                          {c.name}
+                        </label>
+                      ))}
+                      {bulkClientIds.length > 0 && <span className="text-sm text-muted">{bulkClientIds.length} selected</span>}
+                    </div>
+                  ) : (
+                    <select className="form-select" value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
+                      <option value="">Select client</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>

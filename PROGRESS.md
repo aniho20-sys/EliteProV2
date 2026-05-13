@@ -109,11 +109,11 @@
 
 | # | 任務 | 詳情 |
 |---|------|------|
-| 13 | **Navigation array 整合** | 4個獨立 link array（desktop/mobile × trainer/client）有重複 |
-| 14 | **VAPID key 移入 .env** | FCM VAPID key 現時 hardcode 在 NotificationContext，應改為 `VITE_VAPID_KEY` |
-| 15 | **Message rate limiter cleanup** | `msgTimestampsRef` 在 session 生命週期持續累積 |
-| 16 | **Bulk Assign Plan** | 無法一次過將 plan assign 給多個 clients |
-| 17 | **AppContext 拆分** | 現時 660+ lines，應按功能域拆分 |
+| 13 | ~~**Navigation array 整合**~~ ✅ | 8個獨立 array → `LINK_DEFS` 單一 source of truth + `NAV_CONFIG` + `makeLinks()`，Navigation.jsx 大幅簡化 |
+| 14 | ~~**VAPID key 移入 .env**~~ ✅ | `VAPID_KEY = import.meta.env.VITE_VAPID_KEY \|\| ''`；需在 GitHub Secrets 加 `VITE_VAPID_KEY` |
+| 15 | ~~**Message rate limiter cleanup**~~ ✅ N/A | 審查代碼確認 `msgTimestampsRef` 每次 `sendMessage` 都 filter + reassign，最多保留 10 條，無實際累積問題 |
+| 16 | ~~**Bulk Assign Plan**~~ ✅ | WorkoutPlansPage 加 `bulkAssign` toggle + checkbox multi-select + `Promise.all` 批量建立；有 2+ 客戶時顯示 "Bulk Assign" 按鈕 |
+| 17 | ~~**AppContext 拆分**~~ ✅ | `seedDemoDataForCoach`（80行）提取至 `context/demoSeed.js`；badge 邏輯提取至 `context/badgeUtils.js`；AppContext 精簡 ~90 行 |
 
 ### 🟢 低優先（長遠）
 

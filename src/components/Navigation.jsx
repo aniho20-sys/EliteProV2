@@ -9,77 +9,47 @@ import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
 
-// Primary sidebar links (desktop) — most-used, always visible
-const trainerLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/schedule', icon: Calendar, label: 'Schedule' },
-  { to: '/messages', icon: MessageSquare, label: 'Messages' },
-];
+// Single source of truth for all navigation links
+const LINK_DEFS = {
+  '/':                { icon: LayoutDashboard, label: 'Dashboard',        mobileLabel: 'Home' },
+  '/clients':         { icon: Users,           label: 'Clients' },
+  '/schedule':        { icon: Calendar,        label: 'Schedule' },
+  '/messages':        { icon: MessageSquare,   label: 'Messages' },
+  '/plans':           { icon: ClipboardList,   label: 'Workout Plans',    mobileLabel: 'Plans' },
+  '/progress-overview':{ icon: BarChart2,      label: 'Progress Overview' },
+  '/invoices':        { icon: Receipt,         label: 'Invoices' },
+  '/analytics':       { icon: PieChart,        label: 'Analytics' },
+  '/exercises':       { icon: BookOpen,        label: 'Exercise Library' },
+  '/log':             { icon: Dumbbell,        label: 'Workout Log',      mobileLabel: 'Log' },
+  '/progress':        { icon: TrendingUp,      label: 'Progress',         mobileLabel: 'My Progress' },
+  '/my-workouts':     { icon: ClipboardList,   label: 'My Plans' },
+  '/profile':         { icon: UserCircle,      label: 'Profile' },
+};
 
-// Secondary sidebar links (desktop) — shown in collapsible "More" section
-const trainerSecondaryLinks = [
-  { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
-  { to: '/plans', icon: ClipboardList, label: 'Workout Plans' },
-  { to: '/invoices', icon: Receipt, label: 'Invoices' },
-  { to: '/analytics', icon: PieChart, label: 'Analytics' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
-];
+const makeLinks = (paths, mobile = false) =>
+  paths.map(to => ({ to, icon: LINK_DEFS[to].icon, label: mobile && LINK_DEFS[to].mobileLabel ? LINK_DEFS[to].mobileLabel : LINK_DEFS[to].label }));
 
-const clientLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/log', icon: Dumbbell, label: 'Workout Log' },
-  { to: '/progress', icon: TrendingUp, label: 'Progress' },
-  { to: '/messages', icon: MessageSquare, label: 'Messages' },
-];
-
-const clientSecondaryLinks = [
-  { to: '/my-workouts', icon: ClipboardList, label: 'My Plans' },
-  { to: '/schedule', icon: Calendar, label: 'Schedule' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
-];
-
-// Primary bottom nav (4 items) — most-used, always visible
-const trainerPrimaryLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Home' },
-  { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/plans', icon: ClipboardList, label: 'Plans' },
-  { to: '/messages', icon: MessageSquare, label: 'Messages' },
-];
-
-const clientPrimaryLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Home' },
-  { to: '/log', icon: Dumbbell, label: 'Log' },
-  { to: '/schedule', icon: Calendar, label: 'Schedule' },
-  { to: '/messages', icon: MessageSquare, label: 'Messages' },
-];
-
-// "More" sheet links — secondary features
-const trainerMoreLinks = [
-  { to: '/schedule', icon: Calendar, label: 'Schedule' },
-  { to: '/invoices', icon: Receipt, label: 'Invoices' },
-  { to: '/analytics', icon: PieChart, label: 'Analytics' },
-  { to: '/progress-overview', icon: BarChart2, label: 'Progress Overview' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
-  { to: '/profile', icon: UserCircle, label: 'Profile' },
-];
-
-const clientMoreLinks = [
-  { to: '/my-workouts', icon: ClipboardList, label: 'My Plans' },
-  { to: '/progress', icon: TrendingUp, label: 'My Progress' },
-  { to: '/exercises', icon: BookOpen, label: 'Exercise Library' },
-  { to: '/profile', icon: UserCircle, label: 'Profile' },
-];
+const NAV_CONFIG = {
+  trainer: {
+    desktop:  { primary: ['/', '/clients', '/schedule', '/messages'], secondary: ['/progress-overview', '/plans', '/invoices', '/analytics', '/exercises'] },
+    mobile:   { primary: ['/', '/clients', '/plans', '/messages'],   more: ['/schedule', '/invoices', '/analytics', '/progress-overview', '/exercises', '/profile'] },
+  },
+  client: {
+    desktop:  { primary: ['/', '/log', '/progress', '/messages'],    secondary: ['/my-workouts', '/schedule', '/exercises'] },
+    mobile:   { primary: ['/', '/log', '/schedule', '/messages'],    more: ['/my-workouts', '/progress', '/exercises', '/profile'] },
+  },
+};
 
 export default function Navigation() {
   const { currentUser, logout, getUnreadCount } = useApp();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const links = currentUser?.role === 'trainer' ? trainerLinks : clientLinks;
-  const secondaryLinks = currentUser?.role === 'trainer' ? trainerSecondaryLinks : clientSecondaryLinks;
-  const primaryLinks = currentUser?.role === 'trainer' ? trainerPrimaryLinks : clientPrimaryLinks;
-  const moreLinks = currentUser?.role === 'trainer' ? trainerMoreLinks : clientMoreLinks;
+  const role = currentUser?.role === 'trainer' ? 'trainer' : 'client';
+  const links        = makeLinks(NAV_CONFIG[role].desktop.primary);
+  const secondaryLinks = makeLinks(NAV_CONFIG[role].desktop.secondary);
+  const primaryLinks = makeLinks(NAV_CONFIG[role].mobile.primary, true);
+  const moreLinks    = makeLinks(NAV_CONFIG[role].mobile.more, true);
   const unreadCount = getUnreadCount(currentUser?.id);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
