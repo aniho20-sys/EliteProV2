@@ -6,7 +6,13 @@ const isInStandaloneMode = () =>
   window.matchMedia('(display-mode: standalone)').matches ||
   window.navigator.standalone === true;
 
-const DISMISSED_KEY = 'elitepro_install_dismissed';
+const DISMISSED_KEY = 'elitepro_install_dismissed_until';
+const DISMISS_DAYS = 7;
+
+function isDismissed() {
+  const until = localStorage.getItem(DISMISSED_KEY);
+  return until && Date.now() < Number(until);
+}
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -15,7 +21,7 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     if (isInStandaloneMode()) return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    if (isDismissed()) return;
 
     if (isIOS()) {
       const timer = setTimeout(() => setShow(true), 4000);
@@ -46,7 +52,7 @@ export default function InstallPrompt() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, '1');
+    localStorage.setItem(DISMISSED_KEY, String(Date.now() + DISMISS_DAYS * 86400_000));
     setShow(false);
     setShowIOSModal(false);
   };
@@ -60,8 +66,8 @@ export default function InstallPrompt() {
           <img src="/favicon.svg" alt="ElitePro" width={32} height={32} />
         </div>
         <div className="install-banner-text">
-          <strong>Add ElitePro to Home Screen</strong>
-          <span>Works offline · Full-screen app</span>
+          <strong>Add to Home Screen for offline use</strong>
+          <span>Use without internet · Push notifications</span>
         </div>
         <button className="btn btn-sm btn-primary install-banner-cta" onClick={handleInstall}>
           {isIOS() ? 'How?' : <><Download size={14} /> Install</>}
@@ -78,6 +84,7 @@ export default function InstallPrompt() {
               <h3>Add to Home Screen</h3>
               <button className="btn-icon" onClick={() => setShowIOSModal(false)}><X size={20} /></button>
             </div>
+            <p className="text-sm text-muted mb-16">iOS Safari requires the app to be on your Home Screen to work offline and receive push notifications.</p>
             <div className="ios-install-steps">
               <div className="ios-install-step">
                 <div className="ios-install-step-num">1</div>
