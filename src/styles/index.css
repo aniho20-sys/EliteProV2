@@ -56,11 +56,8 @@
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Muscle selector */
-  --muscle-body-fill: #d4d8e2;
-  --muscle-body-stroke: #a0a8b8;
-  --muscle-idle: #bcc2ce;
+
   --muscle-stroke: #8e96a4;
-  --muscle-hover: #7c9ee8;
 }
 
 /* Dark theme */
@@ -84,11 +81,7 @@
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 
-  --muscle-body-fill: #2a2f3d;
-  --muscle-body-stroke: #444c60;
-  --muscle-idle: #383e50;
   --muscle-stroke: #555f72;
-  --muscle-hover: #5577cc;
 }
 [data-theme="dark"] .login-page {
   background: linear-gradient(135deg, #0f1117 0%, #161926 40%, #1a1520 100%);
@@ -3189,90 +3182,44 @@ tr:hover { background: var(--bg-card-hover); }
 .trainer-note-readonly .trainer-note-text { font-size: 0.85rem; line-height: 1.5; }
 
 /* Muscle Selector */
-.muscle-selector {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px 12px;
-  background: var(--bg);
-}
-.muscle-bodies {
+.muscle-chip-selector {
   display: flex;
-  gap: 8px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
 }
-.muscle-body-col {
-  flex: 1;
-  min-width: 0;
-}
-.muscle-body-label {
-  display: block;
-  text-align: center;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.muscle-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-  overflow: visible;
-  border-radius: 8px;
-}
-.body-silhouette > * {
-  fill: var(--muscle-body-fill);
-  stroke: var(--muscle-body-stroke);
-  stroke-width: 0.8;
-  pointer-events: none;
-}
-.muscle-region {
-  cursor: pointer;
-}
-.muscle-region .muscle-shape {
-  fill: var(--muscle-idle);
-  stroke: var(--muscle-idle);
-  stroke-width: 0.5;
-  transition: fill 0.12s, stroke 0.12s;
-}
-.muscle-region:hover .muscle-shape {
-  fill: var(--muscle-hover);
-  stroke: var(--muscle-hover);
-}
-.muscle-region.active .muscle-shape {
-  fill: var(--primary);
-  stroke: var(--primary);
-}
-.muscle-selected-chips {
+.muscle-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
+  gap: 6px;
 }
 .muscle-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px 3px 10px;
-  background: var(--primary);
-  color: #fff;
+  padding: 5px 13px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.muscle-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.muscle-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
   font-weight: 500;
 }
-.muscle-chip-remove {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.75);
-  cursor: pointer;
-  padding: 0;
+.muscle-chip-add {
   display: flex;
+  gap: 8px;
   align-items: center;
-  line-height: 1;
-  transition: color 0.1s;
 }
-.muscle-chip-remove:hover { color: #fff; }
+
 
 /* ===== INVOICES ===== */
 .invoice-list { display: flex; flex-direction: column; gap: 12px; }
