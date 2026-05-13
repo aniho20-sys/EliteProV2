@@ -2823,11 +2823,16 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .rest-timer-display.rest-timer-active { color: var(--accent); }
 .rest-timer-display.rest-timer-done { color: var(--warning); }
-.rest-timer-input {
+.rest-timer-edit {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.rest-timer-split-input {
   font-size: 1.8rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  width: 72px;
+  width: 44px;
   text-align: center;
   background: transparent;
   border: none;
@@ -2835,6 +2840,15 @@ tr:hover { background: var(--bg-card-hover); }
   color: var(--text);
   outline: none;
   padding: 0;
+  -moz-appearance: textfield;
+}
+.rest-timer-split-input::-webkit-inner-spin-button,
+.rest-timer-split-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.rest-timer-split-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-right: 4px;
 }
 
 .plan-exercise-pr {

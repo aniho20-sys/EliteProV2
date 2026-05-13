@@ -213,7 +213,8 @@ export default function WorkoutLogPage() {
   const [timeLeft, setTimeLeft] = useState(90);
   const [timerActive, setTimerActive] = useState(false);
   const [timerEditing, setTimerEditing] = useState(false);
-  const [timerInputVal, setTimerInputVal] = useState('');
+  const [timerMins, setTimerMins] = useState(1);
+  const [timerSecs, setTimerSecs] = useState(30);
   const timerRef = useRef(null);
 
   const logDraftKey = `elitepro_active_log_${targetClientId}`;
@@ -318,19 +319,13 @@ export default function WorkoutLogPage() {
 
   const startEditTimer = () => {
     if (timerActive) return;
-    setTimerInputVal(`${Math.floor(restSeconds / 60)}:${String(restSeconds % 60).padStart(2, '0')}`);
+    setTimerMins(Math.floor(restSeconds / 60));
+    setTimerSecs(restSeconds % 60);
     setTimerEditing(true);
   };
   const applyTimerInput = () => {
     setTimerEditing(false);
-    const parts = timerInputVal.trim().split(':');
-    let total;
-    if (parts.length === 2) {
-      total = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
-    } else {
-      total = parseInt(parts[0], 10) || 0;
-    }
-    total = Math.max(5, Math.min(3600, total));
+    const total = Math.max(5, Math.min(3600, timerMins * 60 + timerSecs));
     setRestSeconds(total);
     setTimeLeft(total);
     setTimerActive(false);
@@ -646,15 +641,27 @@ export default function WorkoutLogPage() {
             <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
             <div className="rest-timer-right">
               {timerEditing ? (
-                <input
-                  className="rest-timer-input"
-                  value={timerInputVal}
-                  onChange={e => setTimerInputVal(e.target.value)}
-                  onBlur={applyTimerInput}
+                <div
+                  className="rest-timer-edit"
+                  onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) applyTimerInput(); }}
                   onKeyDown={e => { if (e.key === 'Enter') applyTimerInput(); if (e.key === 'Escape') setTimerEditing(false); }}
-                  autoFocus
-                  placeholder="M:SS"
-                />
+                >
+                  <input
+                    className="rest-timer-split-input"
+                    type="number" inputMode="numeric" min="0" max="59"
+                    value={timerMins}
+                    onChange={e => setTimerMins(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                    autoFocus
+                  />
+                  <span className="rest-timer-split-label">m</span>
+                  <input
+                    className="rest-timer-split-input"
+                    type="number" inputMode="numeric" min="0" max="59"
+                    value={timerSecs}
+                    onChange={e => setTimerSecs(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                  />
+                  <span className="rest-timer-split-label">s</span>
+                </div>
               ) : (
                 <span
                   className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}
@@ -957,15 +964,27 @@ export default function WorkoutLogPage() {
             <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
             <div className="rest-timer-right">
               {timerEditing ? (
-                <input
-                  className="rest-timer-input"
-                  value={timerInputVal}
-                  onChange={e => setTimerInputVal(e.target.value)}
-                  onBlur={applyTimerInput}
+                <div
+                  className="rest-timer-edit"
+                  onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) applyTimerInput(); }}
                   onKeyDown={e => { if (e.key === 'Enter') applyTimerInput(); if (e.key === 'Escape') setTimerEditing(false); }}
-                  autoFocus
-                  placeholder="M:SS"
-                />
+                >
+                  <input
+                    className="rest-timer-split-input"
+                    type="number" inputMode="numeric" min="0" max="59"
+                    value={timerMins}
+                    onChange={e => setTimerMins(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                    autoFocus
+                  />
+                  <span className="rest-timer-split-label">m</span>
+                  <input
+                    className="rest-timer-split-input"
+                    type="number" inputMode="numeric" min="0" max="59"
+                    value={timerSecs}
+                    onChange={e => setTimerSecs(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                  />
+                  <span className="rest-timer-split-label">s</span>
+                </div>
               ) : (
                 <span
                   className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}
