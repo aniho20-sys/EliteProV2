@@ -212,6 +212,8 @@ export default function WorkoutLogPage() {
   const [restSeconds, setRestSeconds] = useState(90);
   const [timeLeft, setTimeLeft] = useState(90);
   const [timerActive, setTimerActive] = useState(false);
+  const [timerEditing, setTimerEditing] = useState(false);
+  const [timerInputVal, setTimerInputVal] = useState('');
   const timerRef = useRef(null);
 
   const logDraftKey = `elitepro_active_log_${targetClientId}`;
@@ -313,6 +315,26 @@ export default function WorkoutLogPage() {
   };
 
   const resetTimer = () => { setTimerActive(false); setTimeLeft(restSeconds); };
+
+  const startEditTimer = () => {
+    if (timerActive) return;
+    setTimerInputVal(`${Math.floor(restSeconds / 60)}:${String(restSeconds % 60).padStart(2, '0')}`);
+    setTimerEditing(true);
+  };
+  const applyTimerInput = () => {
+    setTimerEditing(false);
+    const parts = timerInputVal.trim().split(':');
+    let total;
+    if (parts.length === 2) {
+      total = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    } else {
+      total = parseInt(parts[0], 10) || 0;
+    }
+    total = Math.max(5, Math.min(3600, total));
+    setRestSeconds(total);
+    setTimeLeft(total);
+    setTimerActive(false);
+  };
 
   const startFreeWorkout = () => {
     setSelectedPlan(null);
@@ -623,9 +645,26 @@ export default function WorkoutLogPage() {
           <div className="rest-timer-bar mb-16">
             <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
             <div className="rest-timer-right">
-              <span className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}>
-                {timerDisplay}
-              </span>
+              {timerEditing ? (
+                <input
+                  className="rest-timer-input"
+                  value={timerInputVal}
+                  onChange={e => setTimerInputVal(e.target.value)}
+                  onBlur={applyTimerInput}
+                  onKeyDown={e => { if (e.key === 'Enter') applyTimerInput(); if (e.key === 'Escape') setTimerEditing(false); }}
+                  autoFocus
+                  placeholder="M:SS"
+                />
+              ) : (
+                <span
+                  className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}
+                  onClick={startEditTimer}
+                  title={!timerActive ? 'Tap to set time' : undefined}
+                  style={!timerActive ? { cursor: 'pointer' } : {}}
+                >
+                  {timerDisplay}
+                </span>
+              )}
               <button className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`} onClick={toggleTimer}>
                 {timerActive ? 'Pause' : timerDone ? 'Restart' : timerStarted ? 'Resume' : 'Start'}
               </button>
@@ -917,9 +956,26 @@ export default function WorkoutLogPage() {
           <div className="rest-timer-bar mb-16">
             <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
             <div className="rest-timer-right">
-              <span className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}>
-                {timerDisplay}
-              </span>
+              {timerEditing ? (
+                <input
+                  className="rest-timer-input"
+                  value={timerInputVal}
+                  onChange={e => setTimerInputVal(e.target.value)}
+                  onBlur={applyTimerInput}
+                  onKeyDown={e => { if (e.key === 'Enter') applyTimerInput(); if (e.key === 'Escape') setTimerEditing(false); }}
+                  autoFocus
+                  placeholder="M:SS"
+                />
+              ) : (
+                <span
+                  className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}
+                  onClick={startEditTimer}
+                  title={!timerActive ? 'Tap to set time' : undefined}
+                  style={!timerActive ? { cursor: 'pointer' } : {}}
+                >
+                  {timerDisplay}
+                </span>
+              )}
               <button className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`} onClick={toggleTimer}>
                 {timerActive ? 'Pause' : timerDone ? 'Restart' : timerStarted ? 'Resume' : 'Start'}
               </button>

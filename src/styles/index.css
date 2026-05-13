@@ -2823,6 +2823,19 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .rest-timer-display.rest-timer-active { color: var(--accent); }
 .rest-timer-display.rest-timer-done { color: var(--warning); }
+.rest-timer-input {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  width: 72px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--primary);
+  color: var(--text);
+  outline: none;
+  padding: 0;
+}
 
 .plan-exercise-pr {
   background: rgba(245, 158, 11, 0.06) !important;
