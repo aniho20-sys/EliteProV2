@@ -34,7 +34,9 @@ export function NotificationProvider({ children }) {
   }, []);
 
   const setupMessaging = useCallback(async (userId) => {
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+      scope: '/firebase-cloud-messaging-push-scope',
+    });
     const messaging = getMessaging(app);
     const fcmToken = await getToken(messaging, {
       vapidKey: VAPID_KEY,
