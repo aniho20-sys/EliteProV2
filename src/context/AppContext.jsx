@@ -48,6 +48,9 @@ export function AppProvider({ children }) {
   // Firebase Auth state: undefined = checking, null = no user, object = authenticated
   const [firebaseUser, setFirebaseUser] = useState(undefined);
   const [googleAuthError, setGoogleAuthError] = useState(null);
+  // Redirect result must be checked before declaring auth ready, to prevent
+  // a flash of the login page when returning from Google OAuth redirect.
+  const [redirectChecked, setRedirectChecked] = useState(false);
 
   const loadedRef = useRef(new Set());
 
@@ -58,12 +61,16 @@ export function AppProvider({ children }) {
 
   // --- Firebase Auth listener ---
   useEffect(() => {
-    // Complete redirect sign-in if returning from Google OAuth
-    getRedirectResult(auth).catch((err) => {
-      if (err.code !== 'auth/no-current-user') {
-        setGoogleAuthError(err);
-      }
-    });
+    // Process any pending Google redirect sign-in before declaring auth ready.
+    // This prevents a login-page flash when returning from Google OAuth.
+    getRedirectResult(auth)
+      .catch((err) => {
+        if (err.code !== 'auth/no-current-user') {
+          setGoogleAuthError(err);
+        }
+      })
+      .finally(() => setRedirectChecked(true));
+
     const unsub = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
@@ -211,11 +218,21 @@ export function AppProvider({ children }) {
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
-  // Try popup first (avoids third-party cookie issues with redirect flow).
-  // If popup is blocked by the browser, fall back to redirect.
+  // Mobile / PWA: use redirect (popup is unreliable — iOS suspends app when popup opens).
+  // Desktop: use popup (avoids third-party cookie issues with redirect).
   const signInWithGoogle = () => {
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    if (isMobile || isPwa) {
+      // Redirect must fire synchronously in the user-gesture context.
+      signInWithRedirect(auth, googleProvider);
+      return Promise.resolve();
+    }
+
     return signInWithPopup(auth, googleProvider).catch((err) => {
-      if (err.code === 'auth/popup-blocked') {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/internal-error') {
         signInWithRedirect(auth, googleProvider);
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
         setGoogleAuthError(err);
@@ -639,7 +656,7 @@ export function AppProvider({ children }) {
 
   const value = {
     currentUser, logout, loading, dataError,
-    firebaseUser, needsProfile, authReady: firebaseUser !== undefined,
+    firebaseUser, needsProfile, authReady: firebaseUser !== undefined && redirectChecked,
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
