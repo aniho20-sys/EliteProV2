@@ -186,6 +186,7 @@ export default function WorkoutLogPage() {
   const toast = useToast();
   const [showLog, setShowLog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [logDate, setLogDate] = useState(localToday());
   const [entries, setEntries] = useState([]);
   const [rpe, setRpe] = useState(7);
   const [notes, setNotes] = useState('');
@@ -234,6 +235,7 @@ export default function WorkoutLogPage() {
       const draft = JSON.parse(raw);
       if (!draft.entries?.length) return;
       setSelectedPlan(draft.selectedPlan ?? null);
+      setLogDate(draft.logDate ?? localToday());
       setEntries(draft.entries);
       setRpe(draft.rpe ?? 7);
       setNotes(draft.notes ?? '');
@@ -253,11 +255,11 @@ export default function WorkoutLogPage() {
     if (!showLog) return;
     try {
       localStorage.setItem(logDraftKey, JSON.stringify({
-        selectedPlan, entries, rpe, notes, restSeconds,
+        selectedPlan, logDate, entries, rpe, notes, restSeconds,
         completedSets: [...completedSets],
       }));
     } catch { /* ignore localStorage quota errors */ }
-  }, [showLog, selectedPlan, entries, rpe, notes, restSeconds, targetClientId]);
+  }, [showLog, selectedPlan, logDate, entries, rpe, notes, restSeconds, targetClientId]);
 
   // Stop timer when leaving workout view
   useEffect(() => {
@@ -415,6 +417,7 @@ export default function WorkoutLogPage() {
 
   const startLog = (plan) => {
     setSelectedPlan(plan);
+    setLogDate(localToday());
     setEntries(buildPlanEntries(plan));
     setRpe(7);
     setNotes('');
@@ -531,7 +534,7 @@ export default function WorkoutLogPage() {
         clientId: targetClientId,
         ...(loggingForClient && { trainerId: currentUser.id, createdBy: currentUser.id, logType: 'pt_session' }),
         planId: selectedPlan.id,
-        date: localToday(),
+        date: logDate,
         completed: completedCount > 0,
         entries: logEntries,
         rpe,
@@ -724,7 +727,17 @@ export default function WorkoutLogPage() {
       ) : (
         <div>
           <div className="log-top-bar mb-16">
-            <h2 className="page-title">{selectedPlan.name}</h2>
+            <div className="log-top-title">
+              <h2 className="page-title">{selectedPlan.name}</h2>
+              <input
+                type="date"
+                className="form-input log-date-input"
+                value={logDate}
+                max={localToday()}
+                onChange={e => e.target.value && setLogDate(e.target.value)}
+                disabled={saving}
+              />
+            </div>
             <div className="log-top-actions">
               <button className="btn btn-outline" onClick={() => { localStorage.removeItem(logDraftKey); setShowLog(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>

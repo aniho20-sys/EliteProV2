@@ -1999,6 +1999,8 @@ tr:hover { background: var(--bg-card-hover); }
   flex-wrap: wrap;
 }
 .log-top-actions { display: flex; gap: 8px; }
+.log-top-title { display: flex; flex-direction: column; gap: 6px; }
+.log-date-input { width: auto; font-size: 0.85rem; padding: 5px 10px; }
 .log-card-header { margin-bottom: 16px; }
 .log-card-title {
   display: flex;
