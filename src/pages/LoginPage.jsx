@@ -39,19 +39,16 @@ export default function LoginPage() {
     }
   };
 
-  const isMobileOrPwa =
-    /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
-
   const handleGoogleSignIn = async () => {
     setError('');
     setAuthLoading(true);
     try {
       await signInWithGoogle();
-      // On mobile/PWA the above triggers a redirect — page navigates away.
-      // On desktop, the popup resolves here; clear loading if no navigation.
-      if (!isMobileOrPwa) setAuthLoading(false);
+      // signInWithGoogle always uses popup (or redirect as last resort if popup blocked).
+      // If popup succeeded, onAuthStateChanged has already fired; loading state in
+      // AppContext will take over — just clear local loading here.
+      // If redirect fired, the page navigates away so this line is never reached.
+      setAuthLoading(false);
     } catch {
       setAuthLoading(false);
     }

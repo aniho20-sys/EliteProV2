@@ -225,21 +225,15 @@ export function AppProvider({ children }) {
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
-  // Mobile / PWA: use redirect (popup is unreliable — iOS suspends app when popup opens).
-  // Desktop: use popup (avoids third-party cookie issues with redirect).
+  // Always attempt popup first on all platforms (desktop, mobile, PWA).
+  // On iOS PWA, signInWithRedirect opens Google in external Safari; when Google
+  // redirects back to the app URL, iOS opens it in Safari rather than the PWA,
+  // so getRedirectResult in the PWA never fires — the user appears stuck at LoginPage.
+  // Popup keeps the OAuth flow within the original browsing context and avoids this.
   const signInWithGoogle = () => {
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
-
-    if (isMobile || isPwa) {
-      // Redirect must fire synchronously in the user-gesture context.
-      signInWithRedirect(auth, googleProvider);
-      return Promise.resolve();
-    }
-
     return signInWithPopup(auth, googleProvider).catch((err) => {
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/internal-error') {
+        // Popup blocked by browser — fall back to redirect as last resort.
         signInWithRedirect(auth, googleProvider);
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
         setGoogleAuthError(err);
