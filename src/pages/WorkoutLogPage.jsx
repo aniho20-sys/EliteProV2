@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Plus, X, Search, Info } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Info } from 'lucide-react';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -171,7 +171,7 @@ function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canR
 }
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, getPersonalRecords, checkAndAwardBadges, muscleGroups } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, getPersonalRecords, checkAndAwardBadges } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const location = useLocation();
   const navigate = useNavigate();
@@ -192,15 +192,8 @@ export default function WorkoutLogPage() {
 
   const [completedData, setCompletedData] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [isFreeWorkout, setIsFreeWorkout] = useState(false);
   const [completedSets, setCompletedSets] = useState(new Set());
-  const [customUnit, setCustomUnit] = useState('weight_reps');
-  const [pendingCustomUnit, setPendingCustomUnit] = useState(null);
   const [detailExercise, setDetailExercise] = useState(null);
-  const [showExercisePicker, setShowExercisePicker] = useState(false);
-  const [exerciseSearch, setExerciseSearch] = useState('');
-  const [pickerMuscles, setPickerMuscles] = useState([]);
-  const [showPlanPicker, setShowPlanPicker] = useState(false);
 
   const [editingLog, setEditingLog] = useState(null);
   const [editEntries, setEditEntries] = useState([]);
@@ -240,7 +233,6 @@ export default function WorkoutLogPage() {
       if (!raw) return;
       const draft = JSON.parse(raw);
       if (!draft.entries?.length) return;
-      setIsFreeWorkout(draft.isFreeWorkout ?? false);
       setSelectedPlan(draft.selectedPlan ?? null);
       setEntries(draft.entries);
       setRpe(draft.rpe ?? 7);
@@ -261,11 +253,11 @@ export default function WorkoutLogPage() {
     if (!showLog) return;
     try {
       localStorage.setItem(logDraftKey, JSON.stringify({
-        isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds,
+        selectedPlan, entries, rpe, notes, restSeconds,
         completedSets: [...completedSets],
       }));
     } catch { /* ignore localStorage quota errors */ }
-  }, [showLog, isFreeWorkout, selectedPlan, entries, rpe, notes, restSeconds, targetClientId]);
+  }, [showLog, selectedPlan, entries, rpe, notes, restSeconds, targetClientId]);
 
   // Stop timer when leaving workout view
   useEffect(() => {
@@ -331,43 +323,6 @@ export default function WorkoutLogPage() {
     setTimerActive(false);
   };
 
-  const startFreeWorkout = () => {
-    setSelectedPlan(null);
-    setIsFreeWorkout(true);
-    setEntries([]);
-    setRpe(7);
-    setNotes('');
-    setRestSeconds(90);
-    setTimeLeft(90);
-    setTimerActive(false);
-    setCompletedSets(new Set());
-    setCustomUnit('weight_reps');
-    setShowLog(true);
-  };
-
-  const addExerciseToLog = (exercise) => {
-    const unit = exercise.unit || 'weight_reps';
-    setEntries(prev => [...prev, {
-      exerciseId: exercise.id,
-      name: exercise.name,
-      unit,
-      rest: 90,
-      sets: [emptySet(unit)],
-    }]);
-    setShowExercisePicker(false);
-    setExerciseSearch('');
-  };
-
-  const addCustomExerciseToLog = (name, unit = 'weight_reps') => {
-    const id = 'custom-' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    setEntries(prev => [...prev, { exerciseId: id, name: name.trim(), unit, rest: 90, sets: [emptySet(unit)] }]);
-    setShowExercisePicker(false);
-    setExerciseSearch('');
-    setCustomUnit('weight_reps');
-    const exists = exerciseLibrary.some(e => e.id === id);
-    if (!exists) addExercise({ id, name: name.trim(), unit, muscle: '', equipment: '', description: '', instructions: '' }).catch(() => {});
-  };
-
   const addSet = (exIdx) => {
     setEntries(prev => prev.map((entry, i) => {
       if (i !== exIdx) return entry;
@@ -400,19 +355,6 @@ export default function WorkoutLogPage() {
         if (ex !== exIdx) { next.add(key); return; }
         if (set < setIdx) next.add(key);
         else if (set > setIdx) next.add(`${ex}-${set - 1}`);
-      });
-      return next;
-    });
-  };
-
-  const removeExercise = (exIdx) => {
-    setEntries(prev => prev.filter((_, i) => i !== exIdx));
-    setCompletedSets(prev => {
-      const next = new Set();
-      prev.forEach(key => {
-        const [ex, set] = key.split('-').map(Number);
-        if (ex < exIdx) next.add(key);
-        else if (ex > exIdx) next.add(`${ex - 1}-${set}`);
       });
       return next;
     });
@@ -471,13 +413,7 @@ export default function WorkoutLogPage() {
     });
   };
 
-  const loadFromPlan = (plan) => {
-    setEntries(prev => [...prev, ...buildPlanEntries(plan)]);
-    setShowPlanPicker(false);
-  };
-
   const startLog = (plan) => {
-    setIsFreeWorkout(false);
     setSelectedPlan(plan);
     setEntries(buildPlanEntries(plan));
     setRpe(7);
@@ -594,8 +530,7 @@ export default function WorkoutLogPage() {
       await addWorkoutLog({
         clientId: targetClientId,
         ...(loggingForClient && { trainerId: currentUser.id, createdBy: currentUser.id, logType: 'pt_session' }),
-        planId: isFreeWorkout ? null : selectedPlan.id,
-        ...(isFreeWorkout && { workoutName: 'Custom Workout' }),
+        planId: selectedPlan.id,
         date: localToday(),
         completed: completedCount > 0,
         entries: logEntries,
@@ -603,10 +538,9 @@ export default function WorkoutLogPage() {
         notes,
       });
       const newBadges = await checkAndAwardBadges(targetClientId).catch(() => []);
-      const displayName = isFreeWorkout ? 'Custom Workout' : selectedPlan.name;
+      const displayName = selectedPlan.name;
       localStorage.removeItem(logDraftKey);
       setShowLog(false);
-      setIsFreeWorkout(false);
       setCompletedSets(new Set());
       setCompletedData({ planName: displayName, exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe, newBadges });
     } catch {
@@ -703,22 +637,18 @@ export default function WorkoutLogPage() {
 
           <div className="card mb-16">
             <h3 className="card-title mb-16">Start a Workout</h3>
-            {plans.length > 0 && (
-              <>
-                <div className="grid-3">
-                  {plans.map(p => (
-                    <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
-                      <div className="fw-bold">{p.name}</div>
-                      <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
-                    </button>
-                  ))}
-                </div>
-                <div className="free-workout-divider"><span>or</span></div>
-              </>
+            {plans.length > 0 ? (
+              <div className="grid-3">
+                {plans.map(p => (
+                  <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
+                    <div className="fw-bold">{p.name}</div>
+                    <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted text-sm">No plans assigned yet. Ask your coach to assign a plan.</p>
             )}
-            <button className="btn btn-outline" style={{ width: '100%' }} onClick={startFreeWorkout}>
-              <Plus size={16} /> Start Custom Workout
-            </button>
           </div>
 
           <h3 className="mb-16">History</h3>
@@ -728,7 +658,7 @@ export default function WorkoutLogPage() {
               title="No workouts logged yet"
               description={
                 isTrainer
-                  ? 'Tap "Start Custom Workout" to begin a session with the rest timer.'
+                  ? 'Assign a workout plan to your client first, then log it here.'
                   : !currentUser.trainerId
                     ? 'Connect to a coach first — they will assign workout plans for you to follow.'
                     : plans.length > 0
@@ -794,86 +724,14 @@ export default function WorkoutLogPage() {
       ) : (
         <div>
           <div className="log-top-bar mb-16">
-            <h2 className="page-title">{isFreeWorkout ? 'Custom Workout' : selectedPlan.name}</h2>
+            <h2 className="page-title">{selectedPlan.name}</h2>
             <div className="log-top-actions">
-              {isFreeWorkout && plans.length > 0 && (
-                <button className="btn btn-outline btn-sm" onClick={() => setShowPlanPicker(true)}>Load Plan</button>
-              )}
-              <button className="btn btn-outline" onClick={() => { localStorage.removeItem(logDraftKey); setShowLog(false); setIsFreeWorkout(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { localStorage.removeItem(logDraftKey); setShowLog(false); setCompletedSets(new Set()); }} disabled={saving}>Cancel</button>
               <button className="btn btn-accent" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Workout'}</button>
             </div>
           </div>
 
-          {isFreeWorkout ? (
-            <>
-              {entries.length === 0 && (
-                <div className="card mb-16" style={{ textAlign: 'center', padding: '32px 16px' }}>
-                  <p className="text-muted">No exercises yet — tap Add Exercise to get started.</p>
-                </div>
-              )}
-              {entries.map((entry, exIdx) => {
-                const currentPR = prs[entry.exerciseId];
-                const exercise = getExercise(entry.exerciseId);
-                const gotNewPR = isNewPR(entry);
-                return (
-                  <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
-                    <div className="log-card-header">
-                      <div className="log-card-title">
-                        <h3 className="card-title">
-                          {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                          {entry.name}
-                          {exercise && <button className="ex-info-btn" onClick={() => setDetailExercise(exercise)} title="Exercise details"><Info size={14} /></button>}
-                        </h3>
-                        <div className="log-card-tags">
-                          {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
-                          {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
-                        </div>
-                      </div>
-                      <div className="log-unit-picker" style={{ marginBottom: 8 }}>
-                        {UNIT_OPTIONS.map(o => (
-                          <button key={o.value} type="button"
-                            className={`log-unit-pill${(entry.unit || 'weight_reps') === o.value ? ' active' : ''}`}
-                            onClick={() => updateExerciseUnit(exIdx, o.value)}
-                          >{o.label}</button>
-                        ))}
-                      </div>
-                      <div className="log-exercise-rest">
-                        <Timer size={11} />
-                        <select className="log-rest-select" value={entry.rest || 90} onChange={e => updateExerciseRest(exIdx, Number(e.target.value))}>
-                          {REST_OPTIONS.map(s => <option key={s} value={s}>{formatRest(s)}</option>)}
-                        </select>
-                      </div>
-                      <button className="btn btn-outline btn-sm btn-icon" onClick={() => removeExercise(exIdx)} title="Remove exercise">
-                        <X size={14} />
-                      </button>
-                    </div>
-                    {exercise?.videoUrl && isSafeUrl(exercise.videoUrl) && (
-                      <a href={exercise.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
-                        <Play size={14} /> Watch Demo
-                      </a>
-                    )}
-                    {entry.sets.map((set, setIdx) => (
-                      <SetInputs key={setIdx} set={set} setIdx={setIdx}
-                        unit={entry.unit || 'weight_reps'}
-                        onUpdate={(field, val) => updateSet(exIdx, setIdx, field, val)}
-                        onRemove={() => removeSet(exIdx, setIdx)}
-                        canRemove={entry.sets.length > 1}
-                        done={completedSets.has(`${exIdx}-${setIdx}`)}
-                        onComplete={() => handleCompleteSet(exIdx, setIdx)}
-                      />
-                    ))}
-                    <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={() => addSet(exIdx)}>
-                      <Plus size={13} /> Add Set
-                    </button>
-                  </div>
-                );
-              })}
-              <button className="btn btn-primary" style={{ width: '100%', marginBottom: 16 }} onClick={() => setShowExercisePicker(true)}>
-                <Plus size={16} /> Add Exercise
-              </button>
-            </>
-          ) : (
-            entries.map((entry, exIdx) => {
+          {entries.map((entry, exIdx) => {
               const planEx = selectedPlan.exercises[exIdx];
               const currentPR = prs[entry.exerciseId];
               const exercise = getExercise(entry.exerciseId);
@@ -956,8 +814,7 @@ export default function WorkoutLogPage() {
                   ))}
                 </div>
               );
-            })
-          )}
+          })}
 
           {/* Rest Timer */}
           <div className="rest-timer-bar mb-16">
@@ -1016,102 +873,6 @@ export default function WorkoutLogPage() {
             <button className="btn btn-accent" onClick={handleSave} style={{ width: '100%' }} disabled={saving}>
               {saving ? 'Saving…' : 'Save Workout'}
             </button>
-          </div>
-        </div>
-      )}
-      {showExercisePicker && (
-        <div className="modal-overlay" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); setPickerMuscles([]); setPendingCustomUnit(null); }}>
-          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Add Exercise</h3>
-            <div className="form-group" style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-              <input
-                className="form-input"
-                style={{ paddingLeft: 36 }}
-                placeholder="Search by name or muscle…"
-                value={exerciseSearch}
-                onChange={e => { setExerciseSearch(e.target.value); setPendingCustomUnit(null); }}
-              />
-            </div>
-            <div className="picker-muscle-chips">
-              {muscleGroups.map(m => (
-                <button
-                  key={m} type="button"
-                  className={`picker-chip${pickerMuscles.includes(m) ? ' picker-chip-active' : ''}`}
-                  onClick={() => setPickerMuscles(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
-                >{m}</button>
-              ))}
-            </div>
-            <div className="exercise-picker-list" style={{ maxHeight: 'clamp(160px, 38vh, 320px)' }}>
-              {(() => {
-                const filtered = exerciseLibrary.filter(e => {
-                  const matchText = !exerciseSearch ||
-                    e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-                    e.muscle?.toLowerCase().includes(exerciseSearch.toLowerCase());
-                  const matchMuscle = pickerMuscles.length === 0 ||
-                    pickerMuscles.some(m => e.muscle?.toLowerCase().includes(m.toLowerCase()));
-                  return matchText && matchMuscle;
-                });
-                return (<>
-                  {filtered.length === 0 && !exerciseSearch.trim() && (
-                    <p className="picker-empty">Search or filter to find exercises</p>
-                  )}
-                  {filtered.length === 0 && exerciseSearch.trim() && !pendingCustomUnit && (
-                    <p className="picker-empty">No results for "{exerciseSearch.trim()}" — add as custom below</p>
-                  )}
-                  {filtered.map(exercise => (
-                    <button key={exercise.id} className="exercise-picker-item" onClick={() => addExerciseToLog(exercise)}>
-                      <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{exercise.name}</span>
-                      <span className="text-sm text-muted">{exercise.muscle}</span>
-                    </button>
-                  ))}
-                </>);
-              })()}
-            </div>
-            {exerciseSearch.trim() && (
-              <div className="exercise-picker-custom-wrap">
-                <span className="exercise-picker-custom-label">+ Add "{exerciseSearch.trim()}" as custom:</span>
-                {!pendingCustomUnit ? (
-                  <div className="log-unit-picker">
-                    {UNIT_OPTIONS.map(opt => (
-                      <button key={opt.value} type="button"
-                        className={`log-unit-pill${customUnit === opt.value ? ' active' : ''}`}
-                        onClick={() => { setCustomUnit(opt.value); setPendingCustomUnit(opt.value); }}
-                      >{opt.label}</button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="picker-custom-confirm">
-                    <span>Add <strong>"{exerciseSearch.trim()}"</strong> ({UNIT_OPTIONS.find(o => o.value === pendingCustomUnit)?.label})?</span>
-                    <button className="btn btn-primary btn-sm" onClick={() => addCustomExerciseToLog(exerciseSearch.trim(), pendingCustomUnit)}>Add</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => setPendingCustomUnit(null)}>Back</button>
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setShowExercisePicker(false); setExerciseSearch(''); setPickerMuscles([]); setPendingCustomUnit(null); }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPlanPicker && (
-        <div className="modal-overlay" onClick={() => setShowPlanPicker(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Load from Plan</h3>
-            <p className="text-sm text-muted" style={{ marginBottom: 16 }}>Exercises will be added to your current session.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {plans.map(p => (
-                <button key={p.id} className="exercise-picker-item" onClick={() => loadFromPlan(p)}>
-                  <span className="fw-bold" style={{ fontSize: '0.9rem' }}>{p.name}</span>
-                  <span className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</span>
-                </button>
-              ))}
-            </div>
-            <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setShowPlanPicker(false)}>Cancel</button>
-            </div>
           </div>
         </div>
       )}
