@@ -65,13 +65,20 @@ export function AppProvider({ children }) {
     // This prevents a login-page flash when returning from Google OAuth.
     getRedirectResult(auth)
       .catch((err) => {
-        if (err.code !== 'auth/no-current-user') {
-          setGoogleAuthError(err);
-        }
+        const silent = [
+          'auth/no-current-user',
+          'auth/redirect-cancelled-by-user',
+          'auth/user-cancelled',
+        ];
+        if (!silent.includes(err.code)) setGoogleAuthError(err);
       })
       .finally(() => setRedirectChecked(true));
 
     const unsub = onAuthStateChanged(auth, (user) => {
+      // Set loading=true together with firebaseUser so the Firestore listener
+      // useEffect and the auth state change land in the same render batch,
+      // preventing a one-frame flash of LoginPage / RoleSelectPage.
+      if (user) setLoading(true);
       setFirebaseUser(user || null);
       if (!user) setCurrentUser(null);
     });
