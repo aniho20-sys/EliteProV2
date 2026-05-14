@@ -39,19 +39,19 @@ function LoadingScreen() {
 }
 
 function AppRoutes() {
-  const { currentUser, loading, authReady, needsProfile, dataError, firebaseUser } = useApp();
+  const { currentUser, loading, authReady, needsProfile, dataError, firebaseUser, signingIn } = useApp();
   const location = useLocation();
 
   // Public pages — accessible without authentication
   if (location.pathname === '/privacy') return <Suspense fallback={<LoadingScreen />}><PrivacyPolicyPage /></Suspense>;
   if (location.pathname === '/terms') return <Suspense fallback={<LoadingScreen />}><TermsPage /></Suspense>;
 
-  // Keep loading screen up while:
-  // 1. Firestore data is loading, OR auth check not complete.
-  // 2. firebaseUser is set but currentUser hasn't been synced from the users list yet
-  //    (one render gap between Firestore users snapshot and the currentUser sync effect).
-  //    Exception: needsProfile case — new user genuinely has no profile yet, show RoleSelectPage.
-  if (loading || !authReady || (firebaseUser && !currentUser && !needsProfile)) return <LoadingScreen />;
+  // Keep loading screen up while auth or data is unsettled:
+  // - signingIn: Google sign-in popup in progress — prevents cross-component render race
+  // - loading / !authReady: Firestore loading or redirect check pending
+  // - firebaseUser set but currentUser not yet synced (one render gap before sync effect runs)
+  //   Exception: needsProfile — new user has no profile yet, show RoleSelectPage instead
+  if (signingIn || loading || !authReady || (firebaseUser && !currentUser && !needsProfile)) return <LoadingScreen />;
 
   const isTrainer = currentUser?.role === 'trainer';
 

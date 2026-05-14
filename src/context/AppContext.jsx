@@ -51,6 +51,9 @@ export function AppProvider({ children }) {
   // Redirect result must be checked before declaring auth ready, to prevent
   // a flash of the login page when returning from Google OAuth redirect.
   const [redirectChecked, setRedirectChecked] = useState(false);
+  // True from the moment signInWithGoogle() is called until onAuthStateChanged
+  // fires with the result. Keeps the LoadingScreen up regardless of batch timing.
+  const [signingIn, setSigningIn] = useState(false);
 
   const loadedRef = useRef(new Set());
 
@@ -75,6 +78,9 @@ export function AppProvider({ children }) {
       .finally(() => setRedirectChecked(true));
 
     const unsub = onAuthStateChanged(auth, (user) => {
+      // Clear signingIn first so it lands in the same render batch as the
+      // auth state change, eliminating any cross-component timing gap.
+      setSigningIn(false);
       // Set loading=true together with firebaseUser so the Firestore listener
       // useEffect and the auth state change land in the same render batch,
       // preventing a one-frame flash of LoginPage / RoleSelectPage.
@@ -231,12 +237,19 @@ export function AppProvider({ children }) {
   // so getRedirectResult in the PWA never fires — the user appears stuck at LoginPage.
   // Popup keeps the OAuth flow within the original browsing context and avoids this.
   const signInWithGoogle = () => {
+    setSigningIn(true);
     return signInWithPopup(auth, googleProvider).catch((err) => {
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/internal-error') {
-        // Popup blocked by browser — fall back to redirect as last resort.
+        // Popup blocked — fall back to redirect. Page will reload so signingIn
+        // state resets automatically; don't clear it here.
         signInWithRedirect(auth, googleProvider);
-      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setGoogleAuthError(err);
+      } else {
+        // All other cases (popup closed by user, cancelled, real errors):
+        // auth state won't change, so clear signingIn manually.
+        setSigningIn(false);
+        if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+          setGoogleAuthError(err);
+        }
       }
     });
   };
@@ -658,6 +671,7 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, logout, loading, dataError,
     firebaseUser, needsProfile, authReady: firebaseUser !== undefined && redirectChecked,
+    signingIn,
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
