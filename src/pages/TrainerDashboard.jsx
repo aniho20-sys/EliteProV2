@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -97,15 +97,29 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
   );
 }
 
+const INACTIVE_DAYS = 7;
+
+function buildDefaultMsg(client, reasons) {
+  const first = client.name.split(' ')[0];
+  if (reasons.lowSessions) {
+    const n = reasons.remaining;
+    return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
+  }
+  return `Hey ${first}, just checking in! Haven't seen a workout log in a while — everything okay? 🏋️`;
+}
+
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient } = useApp();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient, getSessionStats } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
   const [recapNote, setRecapNote] = useState('');
   const [recapSend, setRecapSend] = useState(true);
   const [savingRecap, setSavingRecap] = useState(false);
+  const [quickMsgClient, setQuickMsgClient] = useState(null);
+  const [quickMsgText, setQuickMsgText] = useState('');
+  const [sendingQuick, setSendingQuick] = useState(false);
 
   const openRecap = (e, session) => {
     e.preventDefault();
@@ -138,9 +152,29 @@ export default function TrainerDashboard() {
       setSavingRecap(false);
     }
   };
+  const handleOpenQuickMsg = (client, reasons) => {
+    setQuickMsgText(buildDefaultMsg(client, reasons));
+    setQuickMsgClient({ client, reasons });
+  };
+
+  const handleSendQuickMsg = async () => {
+    if (!quickMsgClient || !quickMsgText.trim()) return;
+    setSendingQuick(true);
+    try {
+      await sendMessage(currentUser.id, quickMsgClient.client.id, quickMsgText.trim());
+      toast('Message sent');
+      setQuickMsgClient(null);
+    } catch {
+      toast('Failed to send message', 'error');
+    } finally {
+      setSendingQuick(false);
+    }
+  };
+
   const clients = getClients(currentUser.id);
   const totalPlans = getWorkoutPlans({ trainerId: currentUser.id }).length;
   const today = localToday();
+  const todayMs = new Date(today).getTime();
   const todaySchedule = getSchedule({ trainerId: currentUser.id, date: today });
   const unread = getUnreadCount(currentUser.id);
   const recentMessages = getMessages(currentUser.id)
@@ -150,6 +184,25 @@ export default function TrainerDashboard() {
   const weekDays = getWeekDays();
   const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date));
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
+
+  const atRiskClients = clients.reduce((acc, client) => {
+    const logs = getWorkoutLogs(client.id);
+    const latest = logs.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    const daysSince = latest
+      ? Math.floor((todayMs - new Date(latest.date).getTime()) / 86400000)
+      : null;
+    const { remaining } = getSessionStats(client.id);
+    const inactive = daysSince === null || daysSince >= INACTIVE_DAYS;
+    const lowSessions = remaining !== null && remaining <= 2;
+    if (inactive || lowSessions) {
+      acc.push({ client, daysSince, reasons: { inactive, lowSessions, remaining } });
+    }
+    return acc;
+  }, []).sort((a, b) => {
+    const aScore = (a.reasons.lowSessions ? 2 : 0) + (a.reasons.inactive ? 1 : 0);
+    const bScore = (b.reasons.lowSessions ? 2 : 0) + (b.reasons.inactive ? 1 : 0);
+    return bScore - aScore;
+  });
 
   return (
     <div>
@@ -202,6 +255,46 @@ export default function TrainerDashboard() {
           <div className="stat-label">Workout Plans</div>
         </Link>
       </div>
+
+      {/* At Risk Clients */}
+      {atRiskClients.length > 0 && (
+        <div className="at-risk-panel mb-16">
+          <div className="at-risk-header">
+            <AlertTriangle size={16} />
+            <span>{atRiskClients.length} Client{atRiskClients.length !== 1 ? 's' : ''} Need Attention</span>
+          </div>
+          <div className="at-risk-list">
+            {atRiskClients.map(({ client, daysSince, reasons }) => (
+              <div key={client.id} className="at-risk-item">
+                <Link to={`/clients/${client.id}`} className="at-risk-identity">
+                  <div className="at-risk-avatar">{client.name[0]}</div>
+                  <span className="at-risk-name">{client.name}</span>
+                </Link>
+                <div className="at-risk-reasons">
+                  {reasons.inactive && (
+                    <span className="at-risk-tag at-risk-tag-inactive">
+                      {daysSince === null ? 'No logs yet' : `Inactive ${daysSince}d`}
+                    </span>
+                  )}
+                  {reasons.lowSessions && (
+                    <span className="at-risk-tag at-risk-tag-low">
+                      {reasons.remaining === 0 ? 'Sessions used up' : `${reasons.remaining} session${reasons.remaining === 1 ? '' : 's'} left`}
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="btn btn-sm at-risk-msg-btn"
+                  onClick={() => handleOpenQuickMsg(client, reasons)}
+                  title="Send follow-up message"
+                >
+                  <MessageSquare size={13} />
+                  Message
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Today + Messages */}
       <div className="grid-2 mb-16">
@@ -311,6 +404,32 @@ export default function TrainerDashboard() {
           )}
         </div>
       </div>
+
+      {quickMsgClient && (
+        <div className="modal-overlay" onClick={() => !sendingQuick && setQuickMsgClient(null)}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Follow-up Message</h3>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>
+              To: <strong>{quickMsgClient.client.name}</strong>
+            </p>
+            <div className="form-group">
+              <textarea
+                className="form-textarea"
+                rows={4}
+                value={quickMsgText}
+                onChange={e => setQuickMsgText(e.target.value)}
+                disabled={sendingQuick}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setQuickMsgClient(null)} disabled={sendingQuick}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSendQuickMsg} disabled={sendingQuick || !quickMsgText.trim()}>
+                {sendingQuick ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {recapSession && (
         <div className="modal-overlay" onClick={() => !savingRecap && setRecapSession(null)}>
