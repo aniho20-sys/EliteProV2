@@ -5,8 +5,9 @@ import { useToast } from '../context/ToastContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
+import SessionDateList from '../components/SessionDateList';
 import { EMPTY_STAT_FORM } from '../data/metrics';
-import { localToday, parseLocalDate } from '../utils/dateUtils';
+import { localToday } from '../utils/dateUtils';
 
 function VolumeChart({ logs }) {
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -140,37 +141,7 @@ export default function ProgressPage() {
       {activeTab === 'history' && (
         <div className="card">
           <h2 className="card-title mb-16">Session History</h2>
-          {completedSessions.length === 0 ? (
-            <p className="text-sm text-muted">No completed sessions yet.</p>
-          ) : (
-            <div className="session-date-groups">
-              {Object.entries(
-                completedSessions.reduce((acc, s) => {
-                  const [y, m] = s.date.split('-');
-                  const key = `${y}-${m}`;
-                  if (!acc[key]) acc[key] = [];
-                  acc[key].push(s.date);
-                  return acc;
-                }, {})
-              ).map(([key, dates]) => {
-                const [y, m] = key.split('-');
-                const monthLabel = new Date(parseInt(y), parseInt(m) - 1, 1)
-                  .toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                return (
-                  <div key={key} className="session-date-group">
-                    <div className="session-date-month">{monthLabel}</div>
-                    <div className="session-date-chips">
-                      {dates.map(date => {
-                        const d = parseLocalDate(date);
-                        const label = d.toLocaleString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
-                        return <span key={date} className="session-date-chip">{label}</span>;
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <SessionDateList sessions={completedSessions} />
         </div>
       )}
 

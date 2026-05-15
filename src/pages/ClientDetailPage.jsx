@@ -8,12 +8,13 @@ import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
-import { localToday, parseLocalDate } from '../utils/dateUtils';
+import { localToday } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
 import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import EmptyState from '../components/EmptyState';
+import SessionDateList from '../components/SessionDateList';
 import { useToast } from '../context/ToastContext';
 
 
@@ -60,37 +61,6 @@ function VolumeChart({ logs }) {
           </BarChart>
         </ResponsiveContainer>
       )}
-    </div>
-  );
-}
-
-function SessionDateList({ sessions }) {
-  const groups = sessions.reduce((acc, s) => {
-    const [y, m] = s.date.split('-');
-    const key = `${y}-${m}`;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(s.date);
-    return acc;
-  }, {});
-  return (
-    <div className="session-date-groups">
-      {Object.entries(groups).map(([key, dates]) => {
-        const [y, m] = key.split('-');
-        const monthLabel = new Date(parseInt(y), parseInt(m) - 1, 1)
-          .toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        return (
-          <div key={key} className="session-date-group">
-            <div className="session-date-month">{monthLabel}</div>
-            <div className="session-date-chips">
-              {dates.map(date => {
-                const d = parseLocalDate(date);
-                const label = d.toLocaleString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
-                return <span key={date} className="session-date-chip">{label}</span>;
-              })}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
