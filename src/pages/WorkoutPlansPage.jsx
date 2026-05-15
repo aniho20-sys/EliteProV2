@@ -377,7 +377,6 @@ export default function WorkoutPlansPage() {
                     <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className="plan-card-actions">
-                    {p.day && <span className="tag tag-primary">{p.day}</span>}
                     {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
                 </button>
@@ -420,7 +419,6 @@ export default function WorkoutPlansPage() {
                   <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="plan-card-actions">
-                  {p.day && <span className="tag tag-primary">{p.day}</span>}
                   <button className="btn-icon" title="Save as Template" onClick={e => { e.stopPropagation(); handleSaveAsTemplate(p.id); }} disabled={savingTemplate === p.id}><Bookmark size={15} style={savingTemplate === p.id ? { opacity: 0.4 } : {}} /></button>
                   <button className="btn-icon" title="Duplicate" onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
                   <button className="btn-icon" title="Delete" style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
@@ -469,7 +467,7 @@ export default function WorkoutPlansPage() {
                   <div className="plan-card-header">
                     <div className="plan-card-info">
                       <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{t.name}</h3>
-                      <span className="text-sm text-muted">{t.exercises.length} exercise{t.exercises.length !== 1 ? 's' : ''} · {t.day}</span>
+                      <span className="text-sm text-muted">{t.exercises.length} exercise{t.exercises.length !== 1 ? 's' : ''}</span>
                     </div>
                     <div className="plan-card-actions">
                       <button
@@ -598,10 +596,6 @@ export default function WorkoutPlansPage() {
                       {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                  <input className="form-input" value={form.day} onChange={e => setForm({ ...form, day: e.target.value })} placeholder="e.g. Monday, Push, Day 1" />
                 </div>
               </div>
 
