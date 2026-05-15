@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, Bookmark, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, Bookmark, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
@@ -11,7 +11,7 @@ import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, getTemplates, saveAsTemplate, deleteTemplate, equipmentTypes } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, getTemplates, saveAsTemplate, deleteTemplate, equipmentTypes } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -36,12 +36,29 @@ export default function WorkoutPlansPage() {
   const [savingTemplate, setSavingTemplate] = useState(null); // planId currently being saved
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [expandedPlans, setExpandedPlans] = useState(new Set());
+  const [editPlanId, setEditPlanId] = useState(null);
 
   const togglePlan = (planId) => setExpandedPlans(prev => {
     const next = new Set(prev);
     next.has(planId) ? next.delete(planId) : next.add(planId);
     return next;
   });
+
+  const openEdit = (plan) => {
+    setEditPlanId(plan.id);
+    setForm({
+      name: plan.name,
+      clientId: plan.clientId,
+      day: plan.day || '',
+      exercises: plan.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })),
+    });
+    setSelectedTemplate('');
+    setShowCustomForm(false);
+    setCustomForm(EMPTY_CUSTOM);
+    updateExFilter('');
+    setExEquipFilter('');
+    setShowCreate(true);
+  };
 
   // Custom exercise form state
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -241,6 +258,47 @@ export default function WorkoutPlansPage() {
     }
   };
 
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    const pending = exFilterRef.current.trim();
+    let exercises = form.exercises;
+
+    if (!form.name.trim()) { toast('Please enter a plan name', 'error'); return; }
+
+    if (pending) {
+      updateExFilter('');
+      const exact = exerciseLibrary.find(ex => ex.name.toLowerCase() === pending.toLowerCase());
+      let newEx;
+      if (exact) {
+        newEx = exact;
+      } else {
+        try {
+          newEx = await addExercise({ name: pending, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
+        } catch {
+          toast('Failed to create exercise', 'error');
+          return;
+        }
+      }
+      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }];
+    }
+
+    if (exercises.length === 0) { toast('Please add at least one exercise', 'error'); return; }
+
+    try {
+      await updateWorkoutPlan(editPlanId, { name: form.name, exercises });
+      setShowCreate(false);
+      setEditPlanId(null);
+      setForm({ name: '', clientId: '', day: '', exercises: [] });
+      updateExFilter('');
+      setExEquipFilter('');
+      setShowCustomForm(false);
+      setCustomForm(EMPTY_CUSTOM);
+      toast('Plan updated');
+    } catch (err) {
+      toast('Failed to update plan: ' + (err.message || 'Unknown error'), 'error');
+    }
+  };
+
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
@@ -260,6 +318,7 @@ export default function WorkoutPlansPage() {
   };
 
   const duplicatePlan = (plan) => {
+    setEditPlanId(null);
     setForm({
       name: `${plan.name} (Copy)`,
       clientId: '',
@@ -349,7 +408,7 @@ export default function WorkoutPlansPage() {
           <h1 className="page-title">Workout Plans</h1>
           <p className="page-subtitle">{plans.length} plans</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => { setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
+        {isTrainer && <button className="btn btn-primary" onClick={() => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
       </div>
 
       {plans.length === 0 ? (
@@ -361,7 +420,7 @@ export default function WorkoutPlansPage() {
             : 'Your coach will create plans for you soon.'}
           action={isTrainer ? {
             label: 'Create Plan',
-            onClick: () => { setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }
+            onClick: () => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }
           } : undefined}
         />
       ) : (() => {
@@ -419,6 +478,7 @@ export default function WorkoutPlansPage() {
                   <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="plan-card-actions">
+                  <button className="btn-icon" title="Edit" onClick={e => { e.stopPropagation(); openEdit(p); }}><Pencil size={15} /></button>
                   <button className="btn-icon" title="Save as Template" onClick={e => { e.stopPropagation(); handleSaveAsTemplate(p.id); }} disabled={savingTemplate === p.id}><Bookmark size={15} style={savingTemplate === p.id ? { opacity: 0.4 } : {}} /></button>
                   <button className="btn-icon" title="Duplicate" onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
                   <button className="btn-icon" title="Delete" style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
@@ -547,11 +607,11 @@ export default function WorkoutPlansPage() {
       )}
 
       {showCreate && (
-        <div className="modal-overlay" onClick={() => setShowCreate(false)}>
+        <div className="modal-overlay" onClick={() => { setShowCreate(false); setEditPlanId(null); }}>
           <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Create Workout Plan</h3>
-            <form onSubmit={handleCreate}>
-              {templates.length > 0 && (
+            <h3 className="modal-title">{editPlanId ? 'Edit Workout Plan' : 'Create Workout Plan'}</h3>
+            <form onSubmit={editPlanId ? handleUpdate : handleCreate}>
+              {!editPlanId && templates.length > 0 && (
                 <div className="form-group">
                   <label className="form-label">Load from Template <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
                   <select
@@ -568,6 +628,7 @@ export default function WorkoutPlansPage() {
                 <label className="form-label">Plan Name</label>
                 <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Upper Body A" />
               </div>
+              {!editPlanId && (
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -598,6 +659,7 @@ export default function WorkoutPlansPage() {
                   )}
                 </div>
               </div>
+              )}
 
               {/* Exercise search */}
               <div className="form-group">
@@ -788,8 +850,8 @@ export default function WorkoutPlansPage() {
               )}
 
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowCreate(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Create Plan</button>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowCreate(false); setEditPlanId(null); }}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{editPlanId ? 'Save Changes' : 'Create Plan'}</button>
               </div>
             </form>
           </div>
