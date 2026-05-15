@@ -208,6 +208,7 @@ export default function WorkoutLogPage() {
   const [editRpe, setEditRpe] = useState(7);
   const [editNotes, setEditNotes] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editExSearch, setEditExSearch] = useState('');
 
   // Rest timer state
   const [restSeconds, setRestSeconds] = useState(90);
@@ -530,6 +531,35 @@ export default function WorkoutLogPage() {
 
   const updateEditSet = (exIdx, setIdx, field, value) => {
     setEditEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
+  };
+
+  const addEditSet = (exIdx) => {
+    setEditEntries(prev => prev.map((entry, i) => {
+      if (i !== exIdx) return entry;
+      const last = entry.sets[entry.sets.length - 1] || { weight: '', reps: '', seconds: '', metres: '' };
+      return { ...entry, sets: [...entry.sets, { ...last }] };
+    }));
+  };
+
+  const removeEditSet = (exIdx, setIdx) => {
+    setEditEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: entry.sets.filter((_, j) => j !== setIdx) } : entry
+    ));
+  };
+
+  const removeEditExercise = (exIdx) => {
+    setEditEntries(prev => prev.filter((_, i) => i !== exIdx));
+  };
+
+  const addEditExercise = (exercise) => {
+    const unit = exercise.unit || 'weight_reps';
+    setEditEntries(prev => [...prev, {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      unit,
+      sets: [{ weight: '', reps: '', seconds: '', metres: '' }],
+    }]);
+    setEditExSearch('');
   };
 
   const handleSaveEdit = async () => {
@@ -1134,24 +1164,58 @@ export default function WorkoutLogPage() {
       )}
 
       {editingLog && (
-        <div className="modal-overlay" onClick={() => setEditingLog(null)}>
+        <div className="modal-overlay" onClick={() => { setEditingLog(null); setEditExSearch(''); }}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Edit Workout — {editingLog.date}</h3>
             {editEntries.map((entry, exIdx) => (
-              <div key={exIdx} className="mb-16">
-                <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
+              <div key={exIdx} className="mb-16" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span className="fw-bold text-sm">{entry.name || getExerciseName(entry.exerciseId)}</span>
+                  <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditExercise(exIdx)} title="Remove exercise"><X size={14} /></button>
+                </div>
                 {entry.sets.length === 0
                   ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
                   : entry.sets.map((set, setIdx) => (
                     <SetInputs key={setIdx} set={set} setIdx={setIdx}
                       unit={entry.unit || 'weight_reps'}
                       onUpdate={(field, val) => updateEditSet(exIdx, setIdx, field, val)}
-                      canRemove={false}
+                      onRemove={() => removeEditSet(exIdx, setIdx)}
+                      canRemove={entry.sets.length > 1}
                     />
                   ))
                 }
+                <button className="btn btn-outline btn-sm" style={{ marginTop: 6 }} onClick={() => addEditSet(exIdx)}>
+                  <Plus size={13} /> Add Set
+                </button>
               </div>
             ))}
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Add Exercise</label>
+              <input
+                className="form-input"
+                placeholder="Search exercises..."
+                value={editExSearch}
+                onChange={e => setEditExSearch(e.target.value)}
+              />
+              {editExSearch.trim() && (
+                <div className="ex-search-results">
+                  {exerciseLibrary
+                    .filter(e => e.name.toLowerCase().includes(editExSearch.toLowerCase()))
+                    .slice(0, 8)
+                    .map(ex => (
+                      <div key={ex.id} className="contact-item" onClick={() => addEditExercise(ex)}>
+                        <span className="text-sm">{ex.name}</span>
+                        <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
+                      </div>
+                    ))}
+                  {exerciseLibrary.filter(e => e.name.toLowerCase().includes(editExSearch.toLowerCase())).length === 0 && (
+                    <div className="plan-ex-no-results">No matches found</div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
               <label className="form-label">RPE — {editRpe}/10</label>
               <input type="range" min="1" max="10" value={editRpe} onChange={e => setEditRpe(Number(e.target.value))} style={{ width: '100%' }} />
@@ -1161,7 +1225,7 @@ export default function WorkoutLogPage() {
               <textarea className="form-textarea" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Session notes…" rows={3} />
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setEditingLog(null)}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setEditingLog(null); setEditExSearch(''); }}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </div>

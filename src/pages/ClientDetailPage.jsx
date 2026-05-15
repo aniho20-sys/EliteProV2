@@ -118,6 +118,7 @@ export default function ClientDetailPage() {
   const [editLogRpe, setEditLogRpe] = useState(7);
   const [editLogNotes, setEditLogNotes] = useState('');
   const [savingEditLog, setSavingEditLog] = useState(false);
+  const [editLogExSearch, setEditLogExSearch] = useState('');
   const [intakeForm, setIntakeForm] = useState(undefined); // undefined = not loaded yet
 
   useEffect(() => {
@@ -303,6 +304,35 @@ export default function ClientDetailPage() {
 
   const updateEditLogSet = (exIdx, setIdx, field, value) => {
     setEditLogEntries(prev => applySetUpdate(prev, exIdx, setIdx, field, value));
+  };
+
+  const addEditLogSet = (exIdx) => {
+    setEditLogEntries(prev => prev.map((entry, i) => {
+      if (i !== exIdx) return entry;
+      const last = entry.sets[entry.sets.length - 1] || { weight: '', reps: '', seconds: '', metres: '' };
+      return { ...entry, sets: [...entry.sets, { ...last }] };
+    }));
+  };
+
+  const removeEditLogSet = (exIdx, setIdx) => {
+    setEditLogEntries(prev => prev.map((entry, i) =>
+      i === exIdx ? { ...entry, sets: entry.sets.filter((_, j) => j !== setIdx) } : entry
+    ));
+  };
+
+  const removeEditLogExercise = (exIdx) => {
+    setEditLogEntries(prev => prev.filter((_, i) => i !== exIdx));
+  };
+
+  const addEditLogExercise = (exercise) => {
+    const unit = exercise.unit || 'weight_reps';
+    setEditLogEntries(prev => [...prev, {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      unit,
+      sets: [{ weight: '', reps: '', seconds: '', metres: '' }],
+    }]);
+    setEditLogExSearch('');
   };
 
   const handleSaveEditLog = async () => {
@@ -771,7 +801,7 @@ export default function ClientDetailPage() {
       )}
 
       {editingLogId && (
-        <div className="modal-overlay" onClick={() => setEditingLogId(null)}>
+        <div className="modal-overlay" onClick={() => { setEditingLogId(null); setEditLogExSearch(''); }}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Edit PT Session</h3>
             <div className="form-group">
@@ -781,8 +811,11 @@ export default function ClientDetailPage() {
             {editLogEntries.map((entry, exIdx) => {
               const unit = entry.unit || 'weight_reps';
               return (
-                <div key={exIdx} className="mb-16">
-                  <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
+                <div key={exIdx} className="mb-16" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span className="fw-bold text-sm">{entry.name || getExerciseName(entry.exerciseId)}</span>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogExercise(exIdx)} title="Remove exercise"><X size={14} /></button>
+                  </div>
                   {entry.sets.length === 0
                     ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
                     : entry.sets.map((set, setIdx) => (
@@ -805,12 +838,45 @@ export default function ClientDetailPage() {
                           <input className="form-input log-set-input" type="number" placeholder="m" value={set.metres ?? ''} onChange={e => updateEditLogSet(exIdx, setIdx, 'metres', e.target.value)} />
                           <span className="text-sm text-muted">m</span>
                         </>)}
+                        {entry.sets.length > 1 && (
+                          <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogSet(exIdx, setIdx)} title="Remove set"><X size={12} /></button>
+                        )}
                       </div>
                     ))
                   }
+                  <button className="btn btn-outline btn-sm" style={{ marginTop: 6 }} onClick={() => addEditLogSet(exIdx)}>
+                    <Plus size={13} /> Add Set
+                  </button>
                 </div>
               );
             })}
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Add Exercise</label>
+              <input
+                className="form-input"
+                placeholder="Search exercises..."
+                value={editLogExSearch}
+                onChange={e => setEditLogExSearch(e.target.value)}
+              />
+              {editLogExSearch.trim() && (
+                <div className="ex-search-results">
+                  {exerciseLibrary
+                    .filter(e => e.name.toLowerCase().includes(editLogExSearch.toLowerCase()))
+                    .slice(0, 8)
+                    .map(ex => (
+                      <div key={ex.id} className="contact-item" onClick={() => addEditLogExercise(ex)}>
+                        <span className="text-sm">{ex.name}</span>
+                        <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
+                      </div>
+                    ))}
+                  {exerciseLibrary.filter(e => e.name.toLowerCase().includes(editLogExSearch.toLowerCase())).length === 0 && (
+                    <div className="plan-ex-no-results">No matches found</div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
               <label className="form-label">RPE — {editLogRpe}/10</label>
               <input type="range" min="1" max="10" value={editLogRpe} onChange={e => setEditLogRpe(Number(e.target.value))} style={{ width: '100%' }} />
@@ -820,7 +886,7 @@ export default function ClientDetailPage() {
               <textarea className="form-textarea" value={editLogNotes} onChange={e => setEditLogNotes(e.target.value)} placeholder="Session notes…" rows={3} />
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setEditingLogId(null)}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setEditingLogId(null); setEditLogExSearch(''); }}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveEditLog} disabled={savingEditLog}>{savingEditLog ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </div>
