@@ -8,7 +8,7 @@ import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
-import { localToday } from '../utils/dateUtils';
+import { localToday, parseLocalDate } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
 import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
@@ -64,16 +64,50 @@ function VolumeChart({ logs }) {
   );
 }
 
+function SessionDateList({ sessions }) {
+  const groups = sessions.reduce((acc, s) => {
+    const [y, m] = s.date.split('-');
+    const key = `${y}-${m}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s.date);
+    return acc;
+  }, {});
+  return (
+    <div className="session-date-groups">
+      {Object.entries(groups).map(([key, dates]) => {
+        const [y, m] = key.split('-');
+        const monthLabel = new Date(parseInt(y), parseInt(m) - 1, 1)
+          .toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        return (
+          <div key={key} className="session-date-group">
+            <div className="session-date-month">{monthLabel}</div>
+            <div className="session-date-chips">
+              {dates.map(date => {
+                const d = parseLocalDate(date);
+                const label = d.toLocaleString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+                return <span key={date} className="session-date-chip">{label}</span>;
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges, getSchedule } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
   const stats = getBodyStats(clientId);
   const plans = getWorkoutPlans({ clientId });
   const logs = getWorkoutLogs(clientId);
+  const completedSessions = getSchedule({ clientId })
+    .filter(s => s.status === 'completed')
+    .sort((a, b) => b.date.localeCompare(a.date));
   const [tab, setTab] = useState('overview');
   const [progressTab, setProgressTab] = useState('body');
   const [showStatModal, setShowStatModal] = useState(false);
@@ -329,6 +363,7 @@ export default function ClientDetailPage() {
       </div>
 
       {tab === 'overview' && (
+        <>
         <div className="grid-2">
           <div className="card">
             <h3 className="card-title mb-16">Latest Body Stats</h3>
@@ -443,6 +478,15 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
+        <div className="card mt-16">
+          <h3 className="card-title mb-12">Session Dates</h3>
+          {completedSessions.length === 0 ? (
+            <p className="text-sm text-muted">No completed sessions yet.</p>
+          ) : (
+            <SessionDateList sessions={completedSessions} />
+          )}
+        </div>
+        </>
       )}
 
       {tab === 'progress' && (

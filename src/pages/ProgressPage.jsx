@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import { EMPTY_STAT_FORM } from '../data/metrics';
-import { localToday } from '../utils/dateUtils';
+import { localToday, parseLocalDate } from '../utils/dateUtils';
 
 function VolumeChart({ logs }) {
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -53,9 +53,12 @@ function VolumeChart({ logs }) {
 }
 
 export default function ProgressPage() {
-  const { currentUser, getBodyStats, addBodyStat, updateBodyStat, getWorkoutLogs } = useApp();
+  const { currentUser, getBodyStats, addBodyStat, updateBodyStat, getWorkoutLogs, getSchedule } = useApp();
   const logs = getWorkoutLogs(currentUser.id);
   const stats = getBodyStats(currentUser.id);
+  const completedSessions = getSchedule({ clientId: currentUser.id })
+    .filter(s => s.status === 'completed')
+    .sort((a, b) => b.date.localeCompare(a.date));
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('body');
   const [showModal, setShowModal] = useState(false);
@@ -118,7 +121,7 @@ export default function ProgressPage() {
       </div>
 
       <div className="tabs mb-16">
-        {[['body', 'Body Composition'], ['exercise', 'Exercise Progress'], ['volume', 'Volume']].map(([key, label]) => (
+        {[['body', 'Body Composition'], ['exercise', 'Exercise Progress'], ['volume', 'Volume'], ['history', 'Session History']].map(([key, label]) => (
           <button key={key} className={`tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
             {label}
           </button>
@@ -133,6 +136,42 @@ export default function ProgressPage() {
       )}
       {activeTab === 'volume' && (
         <VolumeChart logs={logs} />
+      )}
+      {activeTab === 'history' && (
+        <div className="card">
+          <h2 className="card-title mb-16">Session History</h2>
+          {completedSessions.length === 0 ? (
+            <p className="text-sm text-muted">No completed sessions yet.</p>
+          ) : (
+            <div className="session-date-groups">
+              {Object.entries(
+                completedSessions.reduce((acc, s) => {
+                  const [y, m] = s.date.split('-');
+                  const key = `${y}-${m}`;
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(s.date);
+                  return acc;
+                }, {})
+              ).map(([key, dates]) => {
+                const [y, m] = key.split('-');
+                const monthLabel = new Date(parseInt(y), parseInt(m) - 1, 1)
+                  .toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                return (
+                  <div key={key} className="session-date-group">
+                    <div className="session-date-month">{monthLabel}</div>
+                    <div className="session-date-chips">
+                      {dates.map(date => {
+                        const d = parseLocalDate(date);
+                        const label = d.toLocaleString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+                        return <span key={date} className="session-date-chip">{label}</span>;
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {showModal && (
