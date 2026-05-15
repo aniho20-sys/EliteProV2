@@ -661,6 +661,95 @@ export default function WorkoutPlansPage() {
               </div>
               )}
 
+              {form.exercises.length > 0 && (
+                <div className="mb-16">
+                  <label className="form-label">Exercises ({form.exercises.length})</label>
+                  {form.exercises.map((ex, i) => (
+                    <div
+                      key={i}
+                      className={`plan-exercise-builder ${dragIdx === i ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={() => setDragIdx(i)}
+                      onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) reorderExercise(dragIdx, i); setDragIdx(i); }}
+                      onDragEnd={() => setDragIdx(null)}
+                    >
+                      <div className="plan-exercise plan-exercise-drag">
+                        <GripVertical size={14} className="drag-handle desktop-only" />
+                        <div className="reorder-btns">
+                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i - 1)} disabled={i === 0} title="Move up"><ArrowUp size={13} /></button>
+                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i + 1)} disabled={i === form.exercises.length - 1} title="Move down"><ArrowDown size={13} /></button>
+                        </div>
+                        <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
+                        {ex.customMuscle && (
+                          <span className="tag" style={{ fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ex.customMuscle}>
+                            {ex.customMuscle.split(',')[0].trim()}{ex.customMuscle.includes(',') ? '…' : ''}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
+                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
+                      </div>
+                      <div className="log-unit-picker plan-unit-picker">
+                        {UNIT_OPTIONS.map(opt => (
+                          <button key={opt.value} type="button"
+                            className={`log-unit-pill${(ex.unit || 'weight_reps') === opt.value ? ' active' : ''}`}
+                            onClick={() => changeExUnit(i, opt.value)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                      <div className="plan-sets-list">
+                        {ex.sets.map((s, si) => (
+                          <div key={si} className="plan-set-row">
+                            <span className="plan-set-label">Set {si + 1}</span>
+                            {(ex.unit || 'weight_reps') === 'weight_reps' && (<>
+                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
+                              <span className="text-xs text-muted">reps</span>
+                            </>)}
+                            {ex.unit === 'reps_only' && (<>
+                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
+                              <span className="text-xs text-muted">reps</span>
+                            </>)}
+                            {ex.unit === 'time' && (<>
+                              <input className="form-input log-set-input" type="number" value={s.seconds || ''} onChange={e => updateSet(i, si, 'seconds', Number(e.target.value) || 0)} placeholder="30" title="Seconds" />
+                              <span className="text-xs text-muted">sec</span>
+                            </>)}
+                            {ex.unit === 'distance' && (<>
+                              <input className="form-input log-set-input" type="number" value={s.metres || ''} onChange={e => updateSet(i, si, 'metres', Number(e.target.value) || 0)} placeholder="100" title="Metres" />
+                              <span className="text-xs text-muted">m</span>
+                            </>)}
+                            {ex.sets.length > 1 && (
+                              <button type="button" className="btn-icon" onClick={() => removeSet(i, si)} title="Remove set"><Trash2 size={12} /></button>
+                            )}
+                          </div>
+                        ))}
+                        <button type="button" className="btn btn-sm btn-outline plan-add-set-btn" onClick={() => addSet(i)}>
+                          <Plus size={14} /> New Set
+                        </button>
+                      </div>
+                      <input
+                        className="form-input plan-ex-notes-input"
+                        placeholder="Notes for this exercise (optional)"
+                        value={ex.notes || ''}
+                        onChange={e => setExNotes(i, e.target.value)}
+                      />
+                      <div className="plan-video-input-row">
+                        <Link2 size={12} style={{ color: ex.videoUrl ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }} />
+                        <input
+                          className="form-input"
+                          placeholder="Custom video URL (overrides library default)"
+                          value={ex.videoUrl || ''}
+                          onChange={e => updateExVideoUrl(i, e.target.value)}
+                        />
+                        {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
+                          <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Preview link">
+                            {isYouTube(ex.videoUrl) ? <Play size={12} style={{ color: 'var(--danger)' }} /> : <ExternalLink size={12} style={{ color: 'var(--primary)' }} />}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Exercise search */}
               <div className="form-group">
                 <label className="form-label">Add Exercises</label>
@@ -759,95 +848,6 @@ export default function WorkoutPlansPage() {
                   </div>
                 )}
               </div>
-
-              {form.exercises.length > 0 && (
-                <div className="mb-16">
-                  <label className="form-label">Exercises ({form.exercises.length})</label>
-                  {form.exercises.map((ex, i) => (
-                    <div
-                      key={i}
-                      className={`plan-exercise-builder ${dragIdx === i ? 'dragging' : ''}`}
-                      draggable
-                      onDragStart={() => setDragIdx(i)}
-                      onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) reorderExercise(dragIdx, i); setDragIdx(i); }}
-                      onDragEnd={() => setDragIdx(null)}
-                    >
-                      <div className="plan-exercise plan-exercise-drag">
-                        <GripVertical size={14} className="drag-handle desktop-only" />
-                        <div className="reorder-btns">
-                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i - 1)} disabled={i === 0} title="Move up"><ArrowUp size={13} /></button>
-                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i + 1)} disabled={i === form.exercises.length - 1} title="Move down"><ArrowDown size={13} /></button>
-                        </div>
-                        <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
-                        {ex.customMuscle && (
-                          <span className="tag" style={{ fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ex.customMuscle}>
-                            {ex.customMuscle.split(',')[0].trim()}{ex.customMuscle.includes(',') ? '…' : ''}
-                          </span>
-                        )}
-                        <span className="text-xs text-muted" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
-                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
-                      </div>
-                      <div className="log-unit-picker plan-unit-picker">
-                        {UNIT_OPTIONS.map(opt => (
-                          <button key={opt.value} type="button"
-                            className={`log-unit-pill${(ex.unit || 'weight_reps') === opt.value ? ' active' : ''}`}
-                            onClick={() => changeExUnit(i, opt.value)}
-                          >{opt.label}</button>
-                        ))}
-                      </div>
-                      <div className="plan-sets-list">
-                        {ex.sets.map((s, si) => (
-                          <div key={si} className="plan-set-row">
-                            <span className="plan-set-label">Set {si + 1}</span>
-                            {(ex.unit || 'weight_reps') === 'weight_reps' && (<>
-                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
-                              <span className="text-xs text-muted">reps</span>
-                            </>)}
-                            {ex.unit === 'reps_only' && (<>
-                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
-                              <span className="text-xs text-muted">reps</span>
-                            </>)}
-                            {ex.unit === 'time' && (<>
-                              <input className="form-input log-set-input" type="number" value={s.seconds || ''} onChange={e => updateSet(i, si, 'seconds', Number(e.target.value) || 0)} placeholder="30" title="Seconds" />
-                              <span className="text-xs text-muted">sec</span>
-                            </>)}
-                            {ex.unit === 'distance' && (<>
-                              <input className="form-input log-set-input" type="number" value={s.metres || ''} onChange={e => updateSet(i, si, 'metres', Number(e.target.value) || 0)} placeholder="100" title="Metres" />
-                              <span className="text-xs text-muted">m</span>
-                            </>)}
-                            {ex.sets.length > 1 && (
-                              <button type="button" className="btn-icon" onClick={() => removeSet(i, si)} title="Remove set"><Trash2 size={12} /></button>
-                            )}
-                          </div>
-                        ))}
-                        <button type="button" className="btn btn-sm btn-outline plan-add-set-btn" onClick={() => addSet(i)}>
-                          <Plus size={14} /> New Set
-                        </button>
-                      </div>
-                      <input
-                        className="form-input plan-ex-notes-input"
-                        placeholder="Notes for this exercise (optional)"
-                        value={ex.notes || ''}
-                        onChange={e => setExNotes(i, e.target.value)}
-                      />
-                      <div className="plan-video-input-row">
-                        <Link2 size={12} style={{ color: ex.videoUrl ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }} />
-                        <input
-                          className="form-input"
-                          placeholder="Custom video URL (overrides library default)"
-                          value={ex.videoUrl || ''}
-                          onChange={e => updateExVideoUrl(i, e.target.value)}
-                        />
-                        {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
-                          <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Preview link">
-                            {isYouTube(ex.videoUrl) ? <Play size={12} style={{ color: 'var(--danger)' }} /> : <ExternalLink size={12} style={{ color: 'var(--primary)' }} />}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => { setShowCreate(false); setEditPlanId(null); }}>Cancel</button>
