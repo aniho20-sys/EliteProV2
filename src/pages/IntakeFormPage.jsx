@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 
-const GOALS = ['減脂', '增肌', '提升體能', '運動表現'];
-const FREQUENCIES = ['1次', '2次', '3次', '4次', '5次或以上'];
+const GOALS = ['Weight Loss', 'Muscle Gain', 'Improve Fitness', 'Athletic Performance'];
+const FREQUENCIES = ['1x', '2x', '3x', '4x', '5x or more'];
 const EXPERIENCES = [
-  { value: '初學者', label: '初學者（少於1年）' },
-  { value: '有基礎', label: '有基礎（1–3年）' },
-  { value: '資深', label: '資深（3年以上）' },
+  { value: 'Beginner', label: 'Beginner (less than 1 year)' },
+  { value: 'Intermediate', label: 'Intermediate (1–3 years)' },
+  { value: 'Advanced', label: 'Advanced (3+ years)' },
 ];
 
 export default function IntakeFormPage() {
@@ -40,15 +40,15 @@ export default function IntakeFormPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (goals.length === 0 && !goalsOther.trim()) {
-      toast('請選擇至少一個訓練目標', 'error');
+      toast('Please select at least one training goal', 'error');
       return;
     }
     if (!frequency) {
-      toast('請選擇每週訓練次數', 'error');
+      toast('Please select your training frequency', 'error');
       return;
     }
     if (!experience) {
-      toast('請選擇訓練經驗', 'error');
+      toast('Please select your experience level', 'error');
       return;
     }
     setSaving(true);
@@ -64,7 +64,7 @@ export default function IntakeFormPage() {
         weight: weight ? Number(weight) : null,
       });
     } catch {
-      toast('儲存失敗，請重試', 'error');
+      toast('Failed to save, please try again', 'error');
       setSaving(false);
     }
   };
@@ -73,13 +73,13 @@ export default function IntakeFormPage() {
     <div className="intake-page">
       <div className="intake-card">
         <div className="intake-header">
-          <h1 className="intake-title">歡迎加入！</h1>
-          <p className="intake-subtitle">讓教練更了解你，只需 2 分鐘，幫助度身訂造訓練計劃</p>
+          <h1 className="intake-title">Welcome!</h1>
+          <p className="intake-subtitle">Help your coach tailor a programme just for you. Takes 2 minutes.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">訓練目標（可多選）</label>
+            <label className="form-label">Training Goals <span className="text-muted" style={{ fontWeight: 400 }}>(select all that apply)</span></label>
             <div className="intake-chips">
               {GOALS.map(g => (
                 <button key={g} type="button"
@@ -90,11 +90,11 @@ export default function IntakeFormPage() {
               <button type="button"
                 className={`intake-chip${goals.includes('other') ? ' active' : ''}`}
                 onClick={() => toggleGoal('other')}
-              >其他</button>
+              >Other</button>
             </div>
             {goals.includes('other') && (
               <input className="form-input" style={{ marginTop: 8 }}
-                placeholder="請說明..."
+                placeholder="Please specify..."
                 value={goalsOther}
                 onChange={e => setGoalsOther(e.target.value)}
               />
@@ -102,7 +102,7 @@ export default function IntakeFormPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">每週可以訓練幾次？</label>
+            <label className="form-label">How many times per week can you train?</label>
             <div className="intake-chips">
               {FREQUENCIES.map(f => (
                 <button key={f} type="button"
@@ -114,7 +114,7 @@ export default function IntakeFormPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">訓練經驗</label>
+            <label className="form-label">Training Experience</label>
             <div className="intake-radio-group">
               {EXPERIENCES.map(exp => (
                 <label key={exp.value} className="intake-radio">
@@ -130,12 +130,12 @@ export default function IntakeFormPage() {
                   checked={experience === 'other'}
                   onChange={() => setExperience('other')}
                 />
-                其他
+                Other
               </label>
             </div>
             {experience === 'other' && (
               <input className="form-input" style={{ marginTop: 8 }}
-                placeholder="請說明..."
+                placeholder="Please specify..."
                 value={experienceOther}
                 onChange={e => setExperienceOther(e.target.value)}
               />
@@ -144,11 +144,11 @@ export default function IntakeFormPage() {
 
           <div className="form-group">
             <label className="form-label">
-              有冇傷患或需注意的身體狀況？
-              <span className="text-muted" style={{ fontWeight: 400 }}> （選填）</span>
+              Any injuries or physical conditions to be aware of?
+              <span className="text-muted" style={{ fontWeight: 400 }}> (Optional)</span>
             </label>
             <textarea className="form-textarea" rows={3}
-              placeholder="例：左膝舊患、腰背痛、對乳膠過敏..."
+              placeholder="e.g. Left knee injury, lower back pain, latex allergy..."
               value={injuries}
               onChange={e => setInjuries(e.target.value)}
             />
@@ -156,12 +156,12 @@ export default function IntakeFormPage() {
 
           <div className="form-group">
             <label className="form-label">
-              初始身體數據
-              <span className="text-muted" style={{ fontWeight: 400 }}> （選填，可由教練幫你量度）</span>
+              Initial Body Stats
+              <span className="text-muted" style={{ fontWeight: 400 }}> (Optional — your coach can measure these for you)</span>
             </label>
             <div className="form-row">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">身高</label>
+                <label className="form-label">Height</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input className="form-input" type="number" min="100" max="250" step="0.1"
                     value={height} onChange={e => setHeight(e.target.value)} placeholder="170" />
@@ -169,7 +169,7 @@ export default function IntakeFormPage() {
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">體重</label>
+                <label className="form-label">Weight</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input className="form-input" type="number" min="20" max="300" step="0.1"
                     value={weight} onChange={e => setWeight(e.target.value)} placeholder="65" />
@@ -181,11 +181,11 @@ export default function IntakeFormPage() {
 
           <div className="intake-actions">
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={saving}>
-              {saving ? '儲存中…' : '完成並開始'}
+              {saving ? 'Saving…' : 'Get Started'}
             </button>
             <button type="button" className="btn btn-outline" style={{ width: '100%' }}
               onClick={handleSkip} disabled={saving}>
-              稍後填寫（跳過）
+              Skip for now
             </button>
           </div>
         </form>

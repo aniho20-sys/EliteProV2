@@ -670,13 +670,13 @@ export default function ClientDetailPage() {
           {intakeForm === null && <p className="text-sm text-muted">This client has not completed the intake questionnaire yet.</p>}
           {intakeForm && !intakeForm.skipped && (
             <div className="intake-view">
-              <IntakeRow label="訓練目標" value={[...intakeForm.goals || [], ...(intakeForm.goalsOther ? [`其他: ${intakeForm.goalsOther}`] : [])].join('、') || '—'} />
-              <IntakeRow label="每週訓練" value={intakeForm.frequency || '—'} />
-              <IntakeRow label="訓練經驗" value={intakeForm.experience === 'other' ? `其他: ${intakeForm.experienceOther || ''}` : intakeForm.experience || '—'} />
-              <IntakeRow label="傷患 / 注意事項" value={intakeForm.injuries || '無'} />
-              <IntakeRow label="身高" value={intakeForm.height ? `${intakeForm.height} cm` : '未填'} />
-              <IntakeRow label="體重" value={intakeForm.weight ? `${intakeForm.weight} kg` : '未填'} />
-              <IntakeRow label="填寫日期" value={intakeForm.completedAt || '—'} />
+              <IntakeRow label="Goals" value={[...intakeForm.goals || [], ...(intakeForm.goalsOther ? [`Other: ${intakeForm.goalsOther}`] : [])].join(', ') || '—'} />
+              <IntakeRow label="Weekly Frequency" value={intakeForm.frequency || '—'} />
+              <IntakeRow label="Experience" value={intakeForm.experience === 'other' ? `Other: ${intakeForm.experienceOther || ''}` : intakeForm.experience || '—'} />
+              <IntakeRow label="Injuries / Notes" value={intakeForm.injuries || 'None'} />
+              <IntakeRow label="Height" value={intakeForm.height ? `${intakeForm.height} cm` : 'Not provided'} />
+              <IntakeRow label="Weight" value={intakeForm.weight ? `${intakeForm.weight} kg` : 'Not provided'} />
+              <IntakeRow label="Completed On" value={intakeForm.completedAt || '—'} />
             </div>
           )}
           {intakeForm && intakeForm.skipped && (
