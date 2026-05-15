@@ -962,11 +962,15 @@ export default function WorkoutLogPage() {
                     <SetInputs key={setIdx} set={set} setIdx={setIdx}
                       unit={entry.unit || 'weight_reps'}
                       onUpdate={(field, val) => updateSet(exIdx, setIdx, field, val)}
-                      canRemove={false}
+                      onRemove={() => removeSet(exIdx, setIdx)}
+                      canRemove={entry.sets.length > 1}
                       done={completedSets.has(`${exIdx}-${setIdx}`)}
                       onComplete={() => handleCompleteSet(exIdx, setIdx)}
                     />
                   ))}
+                  <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={() => addSet(exIdx)}>
+                    <Plus size={13} /> Add Set
+                  </button>
                 </div>
               );
             })
