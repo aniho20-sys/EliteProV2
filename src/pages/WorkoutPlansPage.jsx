@@ -255,13 +255,8 @@ export default function WorkoutPlansPage() {
       return allSame ? `${sets.length} × ${sets[0].reps || 0} reps` : sets.map(s => s.reps || 0).join('/') + ' reps';
     }
     const reps = sets.map(s => s.reps);
-    const weights = sets.map(s => s.weight);
     const allSameReps = reps.every(r => r === reps[0]);
-    const allSameWeight = weights.every(w => w === weights[0]);
-    const hasWeight = weights.some(w => Number(w) > 0);
-    let detail = allSameReps ? `${sets.length} × ${reps[0] || 0}` : reps.join('/') + ' reps';
-    if (hasWeight) detail += allSameWeight ? ` @ ${weights[0]}kg` : ` | ${weights.join('/')}kg`;
-    return detail;
+    return allSameReps ? `${sets.length} × ${reps[0] || 0} reps` : reps.join('/') + ' reps';
   };
 
   const duplicatePlan = (plan) => {
@@ -749,8 +744,6 @@ export default function WorkoutPlansPage() {
                           <div key={si} className="plan-set-row">
                             <span className="plan-set-label">Set {si + 1}</span>
                             {(ex.unit || 'weight_reps') === 'weight_reps' && (<>
-                              <input className="form-input log-set-input" type="number" value={s.weight || ''} onChange={e => updateSet(i, si, 'weight', Number(e.target.value) || 0)} placeholder="0" title="Weight (kg)" />
-                              <span className="text-xs text-muted">kg ×</span>
                               <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
                               <span className="text-xs text-muted">reps</span>
                             </>)}
