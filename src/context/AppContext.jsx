@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { db, auth } from '../firebase';
 import {
-  collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, writeBatch, getDocs, query, where, or, orderBy,
 } from 'firebase/firestore';
 import {
@@ -665,6 +665,41 @@ export function AppProvider({ children }) {
     await seedDemoDataForCoach(uid);
   };
 
+  // ========== Intake Forms ==========
+
+  const saveIntakeForm = async (clientId, data) => {
+    const userUpdates = { intakeCompleted: true };
+    if (!data.skipped && data.height) userUpdates.height = Number(data.height);
+
+    await Promise.all([
+      setDoc(doc(db, 'intakeForms', clientId), {
+        ...data,
+        clientId,
+        completedAt: localToday(),
+      }),
+      updateDoc(doc(db, 'users', clientId), userUpdates),
+    ]);
+
+    if (!data.skipped && data.weight) {
+      await addDoc(collection(db, 'bodyStats', clientId, 'entries'), {
+        id: `stat-${Date.now()}`,
+        date: localToday(),
+        weight: Number(data.weight),
+        bodyFat: 0,
+        chest: 0,
+        waist: 0,
+        hips: 0,
+        arms: 0,
+        legs: 0,
+      });
+    }
+  };
+
+  const getIntakeForm = async (clientId) => {
+    const snap = await getDoc(doc(db, 'intakeForms', clientId));
+    return snap.exists() ? snap.data() : null;
+  };
+
   // Derived: Firebase auth user exists but no Firestore profile yet
   const needsProfile = firebaseUser && !loading && !users.find(u => u.id === firebaseUser?.uid);
 
@@ -688,6 +723,7 @@ export function AppProvider({ children }) {
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, findTrainerByCode, connectToTrainer,
     getBadges, checkAndAwardBadges,
+    saveIntakeForm, getIntakeForm,
     resetData,
   };
 

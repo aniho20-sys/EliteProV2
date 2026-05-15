@@ -26,6 +26,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ClientProgressOverviewPage = lazy(() => import('./pages/ClientProgressOverviewPage'));
 const InvoicePage = lazy(() => import('./pages/InvoicePage'));
 const BusinessAnalyticsPage = lazy(() => import('./pages/BusinessAnalyticsPage'));
+const IntakeFormPage = lazy(() => import('./pages/IntakeFormPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 
@@ -66,6 +67,8 @@ function AppRoutes() {
         <RoleSelectPage />
       ) : !currentUser ? (
         <LoginPage />
+      ) : (currentUser.role === 'client' && !currentUser.intakeCompleted) ? (
+        <IntakeFormPage />
       ) : (
         <div className="app-layout">
           <Navigation />

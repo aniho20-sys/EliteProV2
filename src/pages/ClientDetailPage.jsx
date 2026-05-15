@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
@@ -18,6 +18,15 @@ import SessionDateList from '../components/SessionDateList';
 import { useToast } from '../context/ToastContext';
 
 
+
+function IntakeRow({ label, value }) {
+  return (
+    <div className="intake-view-row">
+      <span className="intake-view-label">{label}</span>
+      <span className="intake-view-value">{value}</span>
+    </div>
+  );
+}
 
 function VolumeChart({ logs }) {
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -68,7 +77,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges, getSchedule } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges, getSchedule, getIntakeForm } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -109,6 +118,13 @@ export default function ClientDetailPage() {
   const [editLogRpe, setEditLogRpe] = useState(7);
   const [editLogNotes, setEditLogNotes] = useState('');
   const [savingEditLog, setSavingEditLog] = useState(false);
+  const [intakeForm, setIntakeForm] = useState(undefined); // undefined = not loaded yet
+
+  useEffect(() => {
+    if (tab !== 'intake') return;
+    if (intakeForm !== undefined) return;
+    getIntakeForm(clientId).then(data => setIntakeForm(data || null));
+  }, [tab, clientId, intakeForm, getIntakeForm]);
 
   if (!client) {
     return (
@@ -325,7 +341,7 @@ export default function ClientDetailPage() {
       </div>
 
       <div className="tabs">
-        {['overview', 'progress', 'workout plans', 'workout logs', 'notes'].map(t => (
+        {['overview', 'progress', 'workout plans', 'workout logs', 'notes', 'intake'].map(t => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -644,6 +660,28 @@ export default function ClientDetailPage() {
       {tab === 'notes' && (
         <div className="card">
           <NotesSection clientId={clientId} />
+        </div>
+      )}
+
+      {tab === 'intake' && (
+        <div className="card">
+          <h3 className="card-title mb-16">Intake Questionnaire</h3>
+          {intakeForm === undefined && <p className="text-sm text-muted">Loading…</p>}
+          {intakeForm === null && <p className="text-sm text-muted">This client has not completed the intake questionnaire yet.</p>}
+          {intakeForm && !intakeForm.skipped && (
+            <div className="intake-view">
+              <IntakeRow label="訓練目標" value={[...intakeForm.goals || [], ...(intakeForm.goalsOther ? [`其他: ${intakeForm.goalsOther}`] : [])].join('、') || '—'} />
+              <IntakeRow label="每週訓練" value={intakeForm.frequency || '—'} />
+              <IntakeRow label="訓練經驗" value={intakeForm.experience === 'other' ? `其他: ${intakeForm.experienceOther || ''}` : intakeForm.experience || '—'} />
+              <IntakeRow label="傷患 / 注意事項" value={intakeForm.injuries || '無'} />
+              <IntakeRow label="身高" value={intakeForm.height ? `${intakeForm.height} cm` : '未填'} />
+              <IntakeRow label="體重" value={intakeForm.weight ? `${intakeForm.weight} kg` : '未填'} />
+              <IntakeRow label="填寫日期" value={intakeForm.completedAt || '—'} />
+            </div>
+          )}
+          {intakeForm && intakeForm.skipped && (
+            <p className="text-sm text-muted">Client skipped the intake questionnaire on {intakeForm.completedAt}.</p>
+          )}
         </div>
       )}
 

@@ -179,5 +179,14 @@ service cloud.firestore {
         && request.resource.data.trainerId == resource.data.trainerId;
       allow delete: if isTrainer() && resource.data.trainerId == request.auth.uid;
     }
+
+    // ── Intake Forms ──
+    // Client writes own onboarding questionnaire; client and their trainer can read.
+    match /intakeForms/{clientId} {
+      allow read: if isOwner(clientId) || isTrainerOf(clientId);
+      allow create: if isOwner(clientId);
+      allow update: if isOwner(clientId);
+      allow delete: if false;
+    }
   }
 }

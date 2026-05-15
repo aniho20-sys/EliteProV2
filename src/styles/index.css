@@ -4027,4 +4027,127 @@ tr:hover { background: var(--bg-card-hover); }
   border-radius: 4px;
   transition: color 0.12s;
 }
+
+/* ── Intake Form Page ── */
+.intake-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px 48px;
+  background: var(--bg);
+}
+.intake-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 32px 28px;
+}
+.intake-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.intake-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.intake-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.intake-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.intake-chip {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.intake-chip:hover {
+  border-color: var(--primary);
+}
+.intake-chip.active {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+  color: var(--primary);
+  font-weight: 600;
+}
+.intake-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.intake-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-input);
+  transition: border-color 0.15s, background 0.15s;
+}
+.intake-radio:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+.intake-radio input[type="radio"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.intake-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+@media (max-width: 480px) {
+  .intake-card {
+    padding: 24px 16px;
+  }
+}
+.intake-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.intake-view-row {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+.intake-view-row:last-child {
+  border-bottom: none;
+}
+.intake-view-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  min-width: 120px;
+  flex-shrink: 0;
+}
+.intake-view-value {
+  font-size: 0.875rem;
+  color: var(--text);
+  font-weight: 500;
+}
 .ex-info-btn:hover { color: var(--primary); }
