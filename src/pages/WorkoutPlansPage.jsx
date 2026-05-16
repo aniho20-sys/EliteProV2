@@ -696,6 +696,7 @@ export default function WorkoutPlansPage() {
                           >{opt.label}</button>
                         ))}
                       </div>
+                      <p className="text-xs text-muted" style={{ marginBottom: 6 }}>Sets how clients log this exercise</p>
                       <div className="plan-sets-list">
                         {ex.sets.map((s, si) => (
                           <div key={si} className="plan-set-row">
