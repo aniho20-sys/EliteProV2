@@ -689,14 +689,13 @@ export default function WorkoutPlansPage() {
                         <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
                       </div>
                       <div className="log-unit-picker plan-unit-picker">
-                        {UNIT_OPTIONS.map(opt => (
+                        {UNIT_OPTIONS.filter(o => o.value !== 'weight_reps').map(opt => (
                           <button key={opt.value} type="button"
-                            className={`log-unit-pill${(ex.unit || 'weight_reps') === opt.value ? ' active' : ''}`}
+                            className={`log-unit-pill${(ex.unit === 'weight_reps' ? 'reps_only' : (ex.unit || 'reps_only')) === opt.value ? ' active' : ''}`}
                             onClick={() => changeExUnit(i, opt.value)}
                           >{opt.label}</button>
                         ))}
                       </div>
-                      <p className="text-xs text-muted" style={{ marginBottom: 6 }}>Sets how clients log this exercise</p>
                       <div className="plan-sets-list">
                         {ex.sets.map((s, si) => (
                           <div key={si} className="plan-set-row">
