@@ -34,7 +34,7 @@ export default function SchedulePage() {
   const [deleteModal, setDeleteModal] = useState(null); // { id, isBlocked }
   const [deleting, setDeleting] = useState(false);
   const [showBlock, setShowBlock] = useState(false);
-  const [blockForm, setBlockForm] = useState({ date: localToday(), startTime: '09:00', endTime: '10:00', label: '' });
+  const [blockForm, setBlockForm] = useState({ date: localToday(), time: '', duration: 60, label: '' });
   const [savingBlock, setSavingBlock] = useState(false);
   const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
   const [recapSession, setRecapSession] = useState(null); // schedule item to recap
@@ -80,7 +80,7 @@ export default function SchedulePage() {
   const sessionOverlaps = (s, startMin, endMin) => {
     if (s.status === 'cancelled') return false;
     const sStart = toMin(s.time);
-    const sEnd = s.isBlocked && s.endTime ? toMin(s.endTime) : sStart + (s.duration || 60);
+    const sEnd = sStart + (s.duration || 60);
     return startMin < sEnd && endMin > sStart;
   };
 
@@ -159,10 +159,7 @@ export default function SchedulePage() {
 
   const handleBlock = async (e) => {
     e.preventDefault();
-    if (toMin(blockForm.endTime) <= toMin(blockForm.startTime)) {
-      toast('End time must be after start time', 'error');
-      return;
-    }
+    if (!blockForm.time) { toast('Please select a time slot', 'error'); return; }
     setSavingBlock(true);
     try {
       await addScheduleItem({
@@ -170,8 +167,8 @@ export default function SchedulePage() {
         clientId: '',
         isBlocked: true,
         date: blockForm.date,
-        time: blockForm.startTime,
-        endTime: blockForm.endTime,
+        time: blockForm.time,
+        duration: Number(blockForm.duration),
         type: 'Blocked',
         status: 'blocked',
         notes: blockForm.label,
@@ -325,7 +322,7 @@ export default function SchedulePage() {
               return (
                 <div key={s.id} className="schedule-item schedule-item-blocked">
                   <div className="schedule-item-top">
-                    <div className="schedule-time">{s.time}{s.endTime ? ` – ${s.endTime}` : ''}</div>
+                    <div className="schedule-time">{s.time}{s.duration ? ` – ${Math.floor((toMin(s.time) + s.duration) / 60).toString().padStart(2,'0')}:${((toMin(s.time) + s.duration) % 60).toString().padStart(2,'0')}` : ''}</div>
                     <div className="schedule-info">
                       <div className="schedule-client">Blocked</div>
                       {s.notes && <div className="schedule-type">{s.notes}</div>}
@@ -387,26 +384,44 @@ export default function SchedulePage() {
 
       {showBlock && (
         <div className="modal-overlay" onClick={() => setShowBlock(false)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Block Time</h3>
             <form onSubmit={handleBlock}>
-              <div className="form-group">
-                <label className="form-label">Date</label>
-                <input className="form-input" type="date" required value={blockForm.date} onChange={e => setBlockForm(f => ({ ...f, date: e.target.value }))} />
+              <div className="book-form-row">
+                <div className="form-group book-form-date">
+                  <label className="form-label">Date</label>
+                  <input className="form-input" type="date" required value={blockForm.date}
+                    onChange={e => {
+                      const newDate = e.target.value;
+                      const slots = availableBookingSlots(blockForm.duration, newDate);
+                      setBlockForm(f => ({ ...f, date: newDate, time: slots.includes(f.time) ? f.time : (slots[0] || '') }));
+                    }} />
+                </div>
+                <div className="form-group book-form-time">
+                  <label className="form-label">Time</label>
+                  <select className="form-select" required value={blockForm.time}
+                    onChange={e => setBlockForm(f => ({ ...f, time: e.target.value }))}>
+                    {!blockForm.time && <option value="">Select time</option>}
+                    {BOOKING_SLOTS.filter(s => toMin(s) + Number(blockForm.duration) <= toMin(whEnd)).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Start Time</label>
-                  <input className="form-input" type="time" required value={blockForm.startTime} onChange={e => setBlockForm(f => ({ ...f, startTime: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">End Time</label>
-                  <input className="form-input" type="time" required value={blockForm.endTime} onChange={e => setBlockForm(f => ({ ...f, endTime: e.target.value }))} />
-                </div>
+              <div className="form-group">
+                <label className="form-label">Duration</label>
+                <select className="form-select" value={blockForm.duration}
+                  onChange={e => setBlockForm(f => ({ ...f, duration: Number(e.target.value) }))}>
+                  <option value={30}>30 min</option>
+                  <option value={60}>60 min</option>
+                  <option value={90}>90 min</option>
+                  <option value={120}>120 min</option>
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <input className="form-input" placeholder="e.g. Lunch, Personal, Meeting" value={blockForm.label} onChange={e => setBlockForm(f => ({ ...f, label: e.target.value }))} />
+                <input className="form-input" placeholder="e.g. Lunch, Personal, Meeting" value={blockForm.label}
+                  onChange={e => setBlockForm(f => ({ ...f, label: e.target.value }))} />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowBlock(false)} disabled={savingBlock}>Cancel</button>
