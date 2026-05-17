@@ -33,10 +33,8 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // { id, isBlocked }
   const [deleting, setDeleting] = useState(false);
-  const [showBlock, setShowBlock] = useState(false);
-  const [blockForm, setBlockForm] = useState({ date: localToday(), time: '', duration: 60, label: '' });
-  const [savingBlock, setSavingBlock] = useState(false);
-  const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
+  const [bookMode, setBookMode] = useState('session'); // 'session' | 'block'
+  const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
   const [recapSession, setRecapSession] = useState(null); // schedule item to recap
   const [recapNote, setRecapNote] = useState('');
   const [recapSend, setRecapSend] = useState(true);
@@ -103,6 +101,32 @@ export default function SchedulePage() {
   const handleAdd = async (e) => {
     e.preventDefault();
 
+    if (bookMode === 'block') {
+      if (!form.time) { toast('Please select a time slot', 'error'); return; }
+      setSaving(true);
+      try {
+        await addScheduleItem({
+          trainerId: currentUser.id,
+          clientId: '',
+          isBlocked: true,
+          date: form.date,
+          time: form.time,
+          duration: Number(form.duration),
+          type: 'Blocked',
+          status: 'blocked',
+          notes: form.label || '',
+        });
+        setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
+        setShowAdd(false);
+        toast('Time blocked');
+      } catch (err) {
+        toast(`Failed to block time: ${err?.message || 'unknown error'}`, 'error');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     // Validate: client must be connected to a trainer before booking
     if (!isTrainer && !trainerId) {
       toast('Connect to a coach first from your Profile before booking', 'error');
@@ -133,8 +157,9 @@ export default function SchedulePage() {
         trainerId,
         clientId: isTrainer ? form.clientId : currentUser.id,
       });
-      setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
+      setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
       setShowAdd(false);
+      setBookMode('session');
       toast('Session booked');
     } catch (err) {
       toast(`Failed to book session: ${err?.message || 'unknown error'}`, 'error');
@@ -157,30 +182,6 @@ export default function SchedulePage() {
     }
   };
 
-  const handleBlock = async (e) => {
-    e.preventDefault();
-    if (!blockForm.time) { toast('Please select a time slot', 'error'); return; }
-    setSavingBlock(true);
-    try {
-      await addScheduleItem({
-        trainerId: currentUser.id,
-        clientId: '',
-        isBlocked: true,
-        date: blockForm.date,
-        time: blockForm.time,
-        duration: Number(blockForm.duration),
-        type: 'Blocked',
-        status: 'blocked',
-        notes: blockForm.label,
-      });
-      setShowBlock(false);
-      toast('Time blocked');
-    } catch (err) {
-      toast(`Failed to block time: ${err?.message || 'unknown error'}`, 'error');
-    } finally {
-      setSavingBlock(false);
-    }
-  };
 
   const updateStatus = async (itemId, status) => {
     if (updatingStatus === itemId) return;
@@ -239,21 +240,14 @@ export default function SchedulePage() {
           <h1 className="page-title">Schedule</h1>
           <p className="page-subtitle">Manage your appointments</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {isTrainer && (
-            <button className="btn btn-outline" onClick={() => setShowBlock(true)}>
-              <Lock size={16} /> Block Time
-            </button>
-          )}
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowAdd(true)}
-            disabled={!isTrainer && !trainerId}
-            title={!isTrainer && !trainerId ? 'Connect a coach first' : undefined}
-          >
-            <Plus size={18} /> Book Session
-          </button>
-        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => { setBookMode('session'); setShowAdd(true); }}
+          disabled={!isTrainer && !trainerId}
+          title={!isTrainer && !trainerId ? 'Connect a coach first' : undefined}
+        >
+          <Plus size={18} /> Book Session
+        </button>
       </div>
 
       {/* Working hours banner for trainers who haven't set theirs yet */}
@@ -382,55 +376,6 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {showBlock && (
-        <div className="modal-overlay" onClick={() => setShowBlock(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Block Time</h3>
-            <form onSubmit={handleBlock}>
-              <div className="book-form-row">
-                <div className="form-group book-form-date">
-                  <label className="form-label">Date</label>
-                  <input className="form-input" type="date" required value={blockForm.date}
-                    onChange={e => {
-                      const newDate = e.target.value;
-                      const slots = availableBookingSlots(blockForm.duration, newDate);
-                      setBlockForm(f => ({ ...f, date: newDate, time: slots.includes(f.time) ? f.time : (slots[0] || '') }));
-                    }} />
-                </div>
-                <div className="form-group book-form-time">
-                  <label className="form-label">Time</label>
-                  <select className="form-select" required value={blockForm.time}
-                    onChange={e => setBlockForm(f => ({ ...f, time: e.target.value }))}>
-                    {!blockForm.time && <option value="">Select time</option>}
-                    {BOOKING_SLOTS.filter(s => toMin(s) + Number(blockForm.duration) <= toMin(whEnd)).map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Duration</label>
-                <select className="form-select" value={blockForm.duration}
-                  onChange={e => setBlockForm(f => ({ ...f, duration: Number(e.target.value) }))}>
-                  <option value={30}>30 min</option>
-                  <option value={60}>60 min</option>
-                  <option value={90}>90 min</option>
-                  <option value={120}>120 min</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <input className="form-input" placeholder="e.g. Lunch, Personal, Meeting" value={blockForm.label}
-                  onChange={e => setBlockForm(f => ({ ...f, label: e.target.value }))} />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowBlock(false)} disabled={savingBlock}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={savingBlock}>{savingBlock ? 'Saving…' : 'Block Time'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {recapSession && (
         <div className="modal-overlay" onClick={() => !savingRecap && setRecapSession(null)}>
@@ -468,11 +413,17 @@ export default function SchedulePage() {
       )}
 
       {showAdd && (
-        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+        <div className="modal-overlay" onClick={() => { setShowAdd(false); setBookMode('session'); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Book Session</h3>
+            <h3 className="modal-title">{bookMode === 'block' ? 'Block Time' : 'Book Session'}</h3>
+            {isTrainer && (
+              <div className="log-unit-picker" style={{ marginBottom: 16 }}>
+                <button type="button" className={`log-unit-pill${bookMode === 'session' ? ' active' : ''}`} onClick={() => setBookMode('session')}>Book Session</button>
+                <button type="button" className={`log-unit-pill${bookMode === 'block' ? ' active' : ''}`} onClick={() => setBookMode('block')}><Lock size={13} style={{ marginRight: 4 }} />Block Time</button>
+              </div>
+            )}
             <form onSubmit={handleAdd}>
-              {isTrainer ? (
+              {bookMode === 'session' && (isTrainer ? (
                 <div className="form-group">
                   <label className="form-label">Client</label>
                   <select className="form-select" required value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
@@ -485,8 +436,8 @@ export default function SchedulePage() {
                   <label className="form-label">Coach</label>
                   <input className="form-input" disabled value={getClient(trainerId)?.name || 'Your Coach'} />
                 </div>
-              )}
-              {(() => {
+              ))}
+              {bookMode === 'session' && (() => {
                 const cId = isTrainer ? form.clientId : currentUser.id;
                 if (!cId) return null;
                 const { used, total, remaining } = getSessionStats(cId);
@@ -518,13 +469,23 @@ export default function SchedulePage() {
                   </select>
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Type</label>
-                <input className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
-              </div>
+              {bookMode === 'session' && (
+                <div className="form-group">
+                  <label className="form-label">Type</label>
+                  <input className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} />
+                </div>
+              )}
+              {bookMode === 'block' && (
+                <div className="form-group">
+                  <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                  <input className="form-input" placeholder="e.g. Lunch, Personal, Meeting" value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} />
+                </div>
+              )}
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)} disabled={saving}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Booking…' : 'Book'}</button>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowAdd(false); setBookMode('session'); }} disabled={saving}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? (bookMode === 'block' ? 'Blocking…' : 'Booking…') : (bookMode === 'block' ? 'Block Time' : 'Book')}
+                </button>
               </div>
             </form>
           </div>
