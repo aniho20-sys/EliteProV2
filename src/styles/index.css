@@ -1532,6 +1532,8 @@ tr:hover { background: var(--bg-card-hover); }
   flex-wrap: wrap;
 }
 .schedule-item:hover { background: var(--bg-elevated); }
+.schedule-item-blocked { opacity: 0.7; border-left: 3px solid var(--border); }
+.schedule-item-blocked .schedule-client { color: var(--text-muted); font-weight: 500; }
 .schedule-item-link { text-decoration: none; color: inherit; cursor: pointer; }
 .schedule-item-link:hover { background: var(--bg-elevated); }
 

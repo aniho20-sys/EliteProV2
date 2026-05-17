@@ -102,7 +102,11 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.trainerId == request.auth.uid) ||
         // Client books with their own trainer only
         (request.resource.data.clientId == request.auth.uid &&
-         userDoc().trainerId == request.resource.data.trainerId)
+         userDoc().trainerId == request.resource.data.trainerId) ||
+        // Trainer blocks their own time (no client)
+        (isTrainer() && request.resource.data.trainerId == request.auth.uid
+         && request.resource.data.isBlocked == true
+         && request.resource.data.clientId == '')
       );
       // trainerId and clientId are immutable — only status/notes/time/type may change
       allow update: if isAuth() && (

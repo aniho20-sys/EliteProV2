@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -31,8 +31,11 @@ export default function SchedulePage() {
   const [dateOffset, setDateOffset] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(null); // schedId
+  const [deleteModal, setDeleteModal] = useState(null); // { id, isBlocked }
   const [deleting, setDeleting] = useState(false);
+  const [showBlock, setShowBlock] = useState(false);
+  const [blockForm, setBlockForm] = useState({ date: localToday(), startTime: '09:00', endTime: '10:00', label: '' });
+  const [savingBlock, setSavingBlock] = useState(false);
   const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session' });
   const [recapSession, setRecapSession] = useState(null); // schedule item to recap
   const [recapNote, setRecapNote] = useState('');
@@ -77,7 +80,7 @@ export default function SchedulePage() {
   const sessionOverlaps = (s, startMin, endMin) => {
     if (s.status === 'cancelled') return false;
     const sStart = toMin(s.time);
-    const sEnd = sStart + (s.duration || 60);
+    const sEnd = s.isBlocked && s.endTime ? toMin(s.endTime) : sStart + (s.duration || 60);
     return startMin < sEnd && endMin > sStart;
   };
 
@@ -144,13 +147,41 @@ export default function SchedulePage() {
     if (!deleteModal) return;
     setDeleting(true);
     try {
-      await deleteScheduleItem(deleteModal);
-      toast('Session deleted', 'info');
+      await deleteScheduleItem(deleteModal.id);
+      toast(deleteModal.isBlocked ? 'Block removed' : 'Session deleted', 'info');
       setDeleteModal(null);
     } catch (err) {
       toast(`Failed to delete: ${err?.message || 'unknown error'}`, 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleBlock = async (e) => {
+    e.preventDefault();
+    if (toMin(blockForm.endTime) <= toMin(blockForm.startTime)) {
+      toast('End time must be after start time', 'error');
+      return;
+    }
+    setSavingBlock(true);
+    try {
+      await addScheduleItem({
+        trainerId: currentUser.id,
+        clientId: '',
+        isBlocked: true,
+        date: blockForm.date,
+        time: blockForm.startTime,
+        endTime: blockForm.endTime,
+        type: 'Blocked',
+        status: 'blocked',
+        notes: blockForm.label,
+      });
+      setShowBlock(false);
+      toast('Time blocked');
+    } catch (err) {
+      toast(`Failed to block time: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setSavingBlock(false);
     }
   };
 
@@ -211,14 +242,21 @@ export default function SchedulePage() {
           <h1 className="page-title">Schedule</h1>
           <p className="page-subtitle">Manage your appointments</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowAdd(true)}
-          disabled={!isTrainer && !trainerId}
-          title={!isTrainer && !trainerId ? 'Connect a coach first' : undefined}
-        >
-          <Plus size={18} /> Book Session
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {isTrainer && (
+            <button className="btn btn-outline" onClick={() => setShowBlock(true)}>
+              <Lock size={16} /> Block Time
+            </button>
+          )}
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowAdd(true)}
+            disabled={!isTrainer && !trainerId}
+            title={!isTrainer && !trainerId ? 'Connect a coach first' : undefined}
+          >
+            <Plus size={18} /> Book Session
+          </button>
+        </div>
       </div>
 
       {/* Working hours banner for trainers who haven't set theirs yet */}
@@ -278,6 +316,28 @@ export default function SchedulePage() {
           />
         ) : (
           schedule.sort((a, b) => a.time.localeCompare(b.time)).map(s => {
+            if (s.isBlocked) {
+              // Hide block if a real session already occupies that time
+              const blockStart = toMin(s.time);
+              const blockEnd = s.endTime ? toMin(s.endTime) : blockStart + 60;
+              const hidden = schedule.some(r => !r.isBlocked && r.status !== 'cancelled' && toMin(r.time) < blockEnd && (toMin(r.time) + (r.duration || 60)) > blockStart);
+              if (hidden) return null;
+              return (
+                <div key={s.id} className="schedule-item schedule-item-blocked">
+                  <div className="schedule-item-top">
+                    <div className="schedule-time">{s.time}{s.endTime ? ` – ${s.endTime}` : ''}</div>
+                    <div className="schedule-info">
+                      <div className="schedule-client">Blocked</div>
+                      {s.notes && <div className="schedule-type">{s.notes}</div>}
+                    </div>
+                  </div>
+                  <div className="schedule-item-bottom">
+                    <span className="tag">unavailable</span>
+                    <button className="btn-icon" aria-label="Remove block" onClick={() => setDeleteModal({ id: s.id, isBlocked: true })} title="Remove block" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                  </div>
+                </div>
+              );
+            }
             const client = getClient(s.clientId);
             return (
               <div key={s.id} className="schedule-item">
@@ -303,7 +363,7 @@ export default function SchedulePage() {
                     {!isTrainer && s.status === 'pending' && (
                       <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} disabled={updatingStatus === s.id} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
                     )}
-                    <button className="btn-icon" aria-label="Delete session" onClick={() => setDeleteModal(s.id)} title="Delete session" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                    <button className="btn-icon" aria-label="Delete session" onClick={() => setDeleteModal({ id: s.id, isBlocked: false })} title="Delete session" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
                   </div>
                 </div>
               </div>
@@ -315,12 +375,44 @@ export default function SchedulePage() {
       {deleteModal && (
         <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
           <div className="modal" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Delete Session</h3>
-            <p className="text-sm text-muted mb-16">This will permanently remove this session. This cannot be undone.</p>
+            <h3 className="modal-title">{deleteModal.isBlocked ? 'Remove Block' : 'Delete Session'}</h3>
+            <p className="text-sm text-muted mb-16">{deleteModal.isBlocked ? 'This time slot will become available again.' : 'This will permanently remove this session. This cannot be undone.'}</p>
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setDeleteModal(null)} disabled={deleting}>Cancel</button>
-              <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete'}</button>
+              <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Removing…' : deleteModal.isBlocked ? 'Remove' : 'Delete'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showBlock && (
+        <div className="modal-overlay" onClick={() => setShowBlock(false)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Block Time</h3>
+            <form onSubmit={handleBlock}>
+              <div className="form-group">
+                <label className="form-label">Date</label>
+                <input className="form-input" type="date" required value={blockForm.date} onChange={e => setBlockForm(f => ({ ...f, date: e.target.value }))} />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Start Time</label>
+                  <input className="form-input" type="time" required value={blockForm.startTime} onChange={e => setBlockForm(f => ({ ...f, startTime: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Time</label>
+                  <input className="form-input" type="time" required value={blockForm.endTime} onChange={e => setBlockForm(f => ({ ...f, endTime: e.target.value }))} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Label <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                <input className="form-input" placeholder="e.g. Lunch, Personal, Meeting" value={blockForm.label} onChange={e => setBlockForm(f => ({ ...f, label: e.target.value }))} />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setShowBlock(false)} disabled={savingBlock}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingBlock}>{savingBlock ? 'Saving…' : 'Block Time'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
