@@ -4,6 +4,22 @@
 
 ---
 
+## 🚀 即時行動清單（推廣前必須完成）
+
+> 目標：搵第一位 Founding Member 前，以下全部 ✅
+
+| 優先 | 任務 | 負責 | 狀態 |
+|------|------|------|------|
+| 🔴 | 更新 Landing Page copy → 首5位 Founding Member，3個月免費 | 員工B | ⬜ |
+| 🔴 | 手機打開 `/#/landing` 確認版面效果 | 自己 | ⬜ |
+| 🔴 | Firebase Console → Functions 確認 6 個 functions 存在 | 自己 | ⬜ |
+| 🔴 | Firebase Console → Firestore Rules 確認係最新版本 | 自己 | ⬜ |
+| 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | ⬜ |
+| 🟠 | iOS Safari + Android Chrome 各測試一次 | 自己 | ⬜ |
+| 🟡 | 寫 WhatsApp 邀請訊息，直接搵5個教練朋友 | 員工X + 自己 | ⬜ |
+
+---
+
 ## 🎯 競品對比
 
 | 功能 | Hevy Coach | ElitePro |
