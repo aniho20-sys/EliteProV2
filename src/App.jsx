@@ -29,6 +29,7 @@ const BusinessAnalyticsPage = lazy(() => import('./pages/BusinessAnalyticsPage')
 const IntakeFormPage = lazy(() => import('./pages/IntakeFormPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 function LoadingScreen() {
   return (
@@ -44,6 +45,7 @@ function AppRoutes() {
   const location = useLocation();
 
   // Public pages — accessible without authentication
+  if (location.pathname === '/landing') return <Suspense fallback={<LoadingScreen />}><LandingPage /></Suspense>;
   if (location.pathname === '/privacy') return <Suspense fallback={<LoadingScreen />}><PrivacyPolicyPage /></Suspense>;
   if (location.pathname === '/terms') return <Suspense fallback={<LoadingScreen />}><TermsPage /></Suspense>;
 
