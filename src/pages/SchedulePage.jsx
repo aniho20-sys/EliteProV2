@@ -21,7 +21,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage } = useApp();
+  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, updateClient, sendMessage } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const isTrainer = currentUser.role === 'trainer';
@@ -210,6 +210,10 @@ export default function SchedulePage() {
     setSavingRecap(true);
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
+      const client = getClient(recapSession.clientId);
+      if (client?.totalSessions != null) {
+        await updateClient(recapSession.clientId, { sessionOffset: (client.sessionOffset ?? 0) + 1 });
+      }
       if (recapSend && recapNote.trim()) {
         const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
         await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
