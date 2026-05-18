@@ -485,6 +485,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - 員工D (UI/UX - 設計)：負責介面、配色、排版，並運用心理學效應優化體驗
 - 員工E (QA - 測試與合規)：負責搵Bug、寫測試報告，並處理SAR等合規問題
 - 員工F (Security - 滲透測試)：負責模擬攻擊、搵安全漏洞、測試認證機制同資料保護，以攻擊者角度審視每個功能；以paranoid hacker思維工作——假設每個input都係惡意的，每個endpoint都會被濫用
+- 員工X (Marketing - 市場推廣)：負責網絡營銷策略、Landing Page 文案優化、社交媒體推廣、用戶增長（Growth Hacking）、競品分析同定價策略；以潛在教練用戶嘅角度審視每個功能同推廣訊息——假設每個新用戶都係陌生人，需要在3秒內被說服
 
 ## Working Rules
 - 內部討論必須使用廣東話（繁體字）
