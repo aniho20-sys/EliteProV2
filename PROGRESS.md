@@ -69,6 +69,7 @@
 ### 商業功能
 - Invoice / 收費管理
 - Business Analytics（/analytics：月收入、sessions、30日 retention、Top clients）
+- **學生流失預警**（Trainer Dashboard：7 天無 workout log 標 `Inactive Xd`；sessions remaining ≤ 2 標紅；雙 tag 排序顯示最高風險客戶）
 - In-app Messaging（unread badges、real-time sync、rate limiting 10條/分鐘）
 
 ### 其他
@@ -89,9 +90,9 @@
 | # | 任務 | 詳情 |
 |---|------|------|
 | 1 | **Push 通知實際運作確認** | GitHub Actions → Deploy Functions 確認冇 error；Firebase Console → Functions 確認 6 個 functions 存在；確認 VAPID key 吻合；雙方去 Profile → Enable Notifications |
-| 2 | **學生流失預警** | Trainer Dashboard 顯示 N 天無 workout 的客戶清單；sessions remaining ≤ 2 時標紅；一鍵發 message follow up |
-| 3 | **堂數用完自動 Push 通知** | Cloud Function：client sessions remaining ≤ 2 時自動 push 通知 trainer |
-| 4 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles；提供模板下載；預覽確認後批量建立 |
+| 2 | **堂數用完自動 Push 通知** | Cloud Function：client sessions remaining ≤ 2 時自動 push 通知 trainer |
+| 3 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles；提供模板下載；預覽確認後批量建立 |
+| 3 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles；提供模板下載；預覽確認後批量建立 |
 
 ### 🟠 P2 — 高優先
 
