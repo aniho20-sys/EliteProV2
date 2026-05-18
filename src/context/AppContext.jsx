@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { db, auth } from '../firebase';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs, query, where, or, orderBy,
+  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, increment,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -389,6 +389,10 @@ export function AppProvider({ children }) {
     await updateDoc(doc(db, 'users', clientId), updates);
   };
 
+  const incrementSessionOffset = async (clientId) => {
+    await updateDoc(doc(db, 'users', clientId), { sessionOffset: increment(1) });
+  };
+
   // Removes client from trainer's roster by clearing trainerId.
   // Cannot delete user docs per Firestore rules — orphan instead.
   const removeClient = async (clientId) => {
@@ -710,7 +714,7 @@ export function AppProvider({ children }) {
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     loginDemoCoach, deleteAccount,
-    getClients, getClient, updateClient, removeClient,
+    getClients, getClient, updateClient, incrementSessionOffset, removeClient,
     getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
