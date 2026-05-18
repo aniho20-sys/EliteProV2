@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-05-13（Session 29）
+> 最後更新：2026-05-18（Session 30）
 
 ---
 
@@ -67,6 +67,9 @@
 - **堂數 Top-Up 功能**（+5/+10/+20 快捷鍵 + 自訂數量 modal；預覽 remaining 計算）
 - **堂數「Sessions used」直接手動輸入**（移除 auto-count from schedule completions；`used = sessionOffset` 教練直接控制）
 - **MuscleSelector 改為 chip 文字選擇**（移除 SVG body model；predefined chips + custom input；同一 API）
+- **Plan editor 移除 Wt+Reps pill**（Plan 只訂 Reps / Time / Distance 目標；weight_reps 動作自動顯示 Reps 作 active）
+- **Block Time 合併入 Book Session modal**（同一 modal 頂部 toggle：Book Session ｜ Block Time；共用日期 + 時段 picker；Blocked slot 若已有真實 session 自動隱藏）
+- **完成課堂自動扣堂數**（Mark Complete → Firestore `increment(1)` 原子操作更新 `sessionOffset`；無論有否設配額均計數）
 
 ---
 
@@ -86,7 +89,7 @@
 | authDomain 用 `firebaseapp.com`（非 `.web.app`） | Firebase 自動 register 呢個 domain 嘅 Google OAuth redirect URI |
 | Google 登入：手機/PWA 用 redirect、桌面用 popup（Session 29） | iOS PWA 喺 popup 開啟時會 suspend 主進程，popup 完成後 token 遺失；redirect 係最可靠方案 |
 | `getRedirectResult` 先 resolve 才設 `authReady`（Session 29） | `onAuthStateChanged` 喺 redirect 返回前 fire `null` → 閃現 Login 頁；加 `redirectChecked` state 解決 |
-| Session 堂數計算純手動（Session 29） | 自動從 schedule completions 計算 + 教練手動改兩個來源衝突，容易對唔到數；純手動 `sessionOffset` 最清晰 |
+| Session 堂數計算：Mark Complete 自動扣（Session 30） | Session 29 改為純手動後發現唔夠直觀；Session 30 改回：Mark Complete → `increment(1)` 原子更新 `sessionOffset`；教練仍可手動覆蓋 |
 | VAPID key hardcode 為 fallback（Session 29） | VAPID Web Push public key 非 secret，可安全 hardcode；`VITE_VAPID_KEY` env var 優先，fallback 確保 push 可用 |
 | Apple Watch 整合需 Capacitor 原生化 | PWA 無法存取 iOS HealthKit；Android Health Connect 只支援原生 app；Capacitor 係最低成本路徑 |
 
@@ -104,9 +107,10 @@
 | 4 | ~~**Session booking 無提示給 Trainer**~~ ✅ 已更新 `onNewSchedule` — 同時通知 client + trainer |
 | 5 | ~~**Cloud Functions 部署**~~ ✅ | Service account 加 `roles/editor` + `roles/iam.serviceAccountUser`；CI 成功部署所有 6 個 Cloud Functions |
 | 6 | ~~**Google 登入失效**~~ ✅（Session 29）| 桌面 popup + 手機/PWA redirect；`redirectChecked` 解決 auth race condition |
-| 7 | **學生流失預警** | Trainer Dashboard 顯示 N 天無 workout 的客戶清單；sessions remaining ≤ 2 時標紅；一鍵發 message follow up |
-| 8 | **堂數用完自動 Push 通知** | Cloud Function：client sessions remaining ≤ 2 時自動 push 通知 trainer；需更新 `onNewSchedule` 或獨立 scheduled function |
-| 9 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles（Firestore `users` docs，無 Firebase Auth）；提供模板下載；預覽確認後批量建立；大幅降低新教練 onboarding 摩擦 |
+| 7 | **Push 通知實際運作確認** | 到 GitHub Actions → Deploy Functions 確認冇 error；到 Firebase Console → Functions 確認 6 個 functions 存在；確認 VAPID key 吻合；雙方去 Profile → Enable Notifications |
+| 8 | **學生流失預警** | Trainer Dashboard 顯示 N 天無 workout 的客戶清單；sessions remaining ≤ 2 時標紅；一鍵發 message follow up |
+| 9 | **堂數用完自動 Push 通知** | Cloud Function：client sessions remaining ≤ 2 時自動 push 通知 trainer；需更新 `onNewSchedule` 或獨立 scheduled function |
+| 10 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles（Firestore `users` docs，無 Firebase Auth）；提供模板下載；預覽確認後批量建立；大幅降低新教練 onboarding 摩擦 |
 
 ### 🟠 P2 — 高優先（本月）
 
@@ -149,6 +153,7 @@
 | 34 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple、iOS/Android push 更可靠） |
 | 35 | **Trainer announcements / broadcast**（群發訊息） |
 | 36 | **Group Class 管理**（多 client 同一 session） |
+| 37 | **Gym啦 三方平台**（Studio × 教練 × 學生；Flow A 教練搵場地、Flow B 學生搵教練；訂閱制；extend ElitePro；計劃已完成，等待開始 Sprint 1） |
 
 ---
 
@@ -177,10 +182,10 @@
 | Firestore 欄位 | 意思 | 誰改 |
 |---------------|------|------|
 | `totalSessions` | 學員購買總堂數（可 Top-Up）| 教練（Set Total / Top-Up） |
-| `sessionOffset` | 已用堂數（手動填）| 教練（Sessions used input） |
+| `sessionOffset` | 已用堂數 | **自動**：Mark Complete +1；教練亦可手動覆蓋（Sessions used input） |
 | remaining | `totalSessions - sessionOffset` | 系統自動計算，唔儲存 |
 
-> Mark Complete（Schedule）只係歷史記錄，**不再影響堂數計算**。
+> Mark Complete（Schedule）→ Firestore `increment(1)` **自動**更新 `sessionOffset`。教練仍可在 ClientDetailPage 手動修正。
 
 ### CI / Deployment 限制
 
@@ -195,7 +200,8 @@ CI service account（`FIREBASE_SERVICE_ACCOUNT`）只有 **Firebase Hosting Admi
 | 項目 | 狀態 | 詳情 |
 |------|------|------|
 | VAPID Key | ✅ 已配置 | hardcode fallback 於 `NotificationContext.jsx`；`VITE_VAPID_KEY` env var 優先 |
-| Cloud Functions | ✅ 已部署 | `onNewWorkoutLog` + `onNewSchedule` + 4個其他 functions |
+| Cloud Functions | ⚠️ 待確認 | CI `continue-on-error: true`，deploy 失敗唔報紅；需在 Firebase Console → Functions 確認 6 個 functions 存在 |
 | iOS 支援 | ⚠️ 限制 | 需 PWA 模式（Add to Home Screen）；Safari 16.4+ 才支援 Web Push |
 | Android Chrome | ✅ 直接支援 | 無需 PWA 模式 |
-| Blaze Plan | ✅ 已啟用 | Cloud Functions 已部署 |
+| Blaze Plan | ✅ 已啟用 | 用戶確認 |
+| 用戶 FCM token | ⚠️ 需手動 | 教練 + 學生須各自去 Profile → Enable Notifications |
