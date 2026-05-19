@@ -33,6 +33,8 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // { id, isBlocked }
   const [deleting, setDeleting] = useState(false);
+  const [lateCancelModal, setLateCancelModal] = useState(null); // session object
+  const [cancelingLate, setCancelingLate] = useState(false);
   const [bookMode, setBookMode] = useState('session'); // 'session' | 'block'
   const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
   const [recapSession, setRecapSession] = useState(null); // schedule item to recap
@@ -74,6 +76,35 @@ export default function SchedulePage() {
   );
   // For availability checks: trainers use their own schedule; clients use trainer's full schedule
   const refSchedule = isTrainer ? allSchedule : getTrainerSchedule();
+
+  const isWithin24Hours = (date, time) => {
+    const sessionDt = new Date(`${date}T${time}:00`);
+    const diffHours = (sessionDt - new Date()) / (1000 * 60 * 60);
+    return diffHours >= 0 && diffHours < 24;
+  };
+
+  const handleClientCancel = (session) => {
+    if (isWithin24Hours(session.date, session.time)) {
+      setLateCancelModal(session);
+    } else {
+      updateStatus(session.id, 'cancelled');
+    }
+  };
+
+  const handleLateCancelConfirm = async () => {
+    if (!lateCancelModal) return;
+    setCancelingLate(true);
+    try {
+      await updateScheduleItem(lateCancelModal.id, { status: 'cancelled', lateCancellation: true });
+      await incrementSessionOffset(lateCancelModal.clientId);
+      toast('Session cancelled — the full session fee still applies per our policy.', 'info');
+      setLateCancelModal(null);
+    } catch (err) {
+      toast(`Failed: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      setCancelingLate(false);
+    }
+  };
 
   const sessionOverlaps = (s, startMin, endMin) => {
     if (s.status === 'cancelled') return false;
@@ -341,7 +372,10 @@ export default function SchedulePage() {
                   </div>
                 </div>
                 <div className="schedule-item-bottom">
-                  <span className={`tag ${s.status === 'completed' ? 'tag-accent' : s.status === 'confirmed' ? 'tag-primary' : s.status === 'cancelled' ? 'tag' : 'tag-warning'}`}>{s.status}</span>
+                  <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className={`tag ${s.status === 'completed' ? 'tag-accent' : s.status === 'confirmed' ? 'tag-primary' : s.status === 'cancelled' ? 'tag' : 'tag-warning'}`}>{s.status}</span>
+                    {s.lateCancellation && <span className="tag tag-warning">late cancel</span>}
+                  </div>
                   <div className="flex gap-8">
                     {isTrainer && s.status === 'pending' && (
                       <>
@@ -352,8 +386,8 @@ export default function SchedulePage() {
                     {isTrainer && s.status === 'confirmed' && (
                       <button className="btn-icon" aria-label="Mark session complete" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
                     )}
-                    {!isTrainer && s.status === 'pending' && (
-                      <button className="btn btn-sm btn-outline" onClick={() => updateStatus(s.id, 'cancelled')} disabled={updatingStatus === s.id} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
+                    {!isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
+                      <button className="btn btn-sm btn-outline" onClick={() => handleClientCancel(s)} disabled={updatingStatus === s.id} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>
                     )}
                     <button className="btn-icon" aria-label="Delete session" onClick={() => setDeleteModal({ id: s.id, isBlocked: false })} title="Delete session" style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
                   </div>
@@ -377,6 +411,33 @@ export default function SchedulePage() {
         </div>
       )}
 
+
+      {lateCancelModal && (
+        <div className="modal-overlay" onClick={() => !cancelingLate && setLateCancelModal(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 22 }}>⚠️</span>
+              <h3 className="modal-title" style={{ margin: 0 }}>Late Cancellation Notice</h3>
+            </div>
+            <p className="text-sm" style={{ marginBottom: 8 }}>
+              This session starts in less than <strong>24 hours</strong>:
+            </p>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: '0.9rem' }}>
+              <div><strong>{lateCancelModal.date}</strong> at <strong>{lateCancelModal.time}</strong></div>
+              <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>{lateCancelModal.type}</div>
+            </div>
+            <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+              Per our cancellation policy, <strong>the full session fee still applies</strong> for cancellations made within 24 hours of the scheduled time. Your trainer will be notified.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setLateCancelModal(null)} disabled={cancelingLate}>Go Back</button>
+              <button className="btn btn-danger" onClick={handleLateCancelConfirm} disabled={cancelingLate}>
+                {cancelingLate ? 'Cancelling…' : 'Cancel Anyway'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {recapSession && (
         <div className="modal-overlay" onClick={() => !savingRecap && setRecapSession(null)}>
