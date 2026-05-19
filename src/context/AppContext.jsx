@@ -56,6 +56,8 @@ export function AppProvider({ children }) {
   const [signingIn, setSigningIn] = useState(false);
 
   const loadedRef = useRef(new Set());
+  const [listenerEpoch, setListenerEpoch] = useState(0);
+  const retryCountRef = useRef(0);
 
   const markLoaded = useCallback((name) => {
     loadedRef.current.add(name);
@@ -99,6 +101,7 @@ export function AppProvider({ children }) {
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
       setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]); setTemplates([]);
       loadedRef.current = new Set();
+      retryCountRef.current = 0;
       setLoading(false);
       return;
     }
@@ -109,7 +112,17 @@ export function AppProvider({ children }) {
     const unsubs = [];
     const uid = firebaseUser.uid;
 
-    const onErr = (name) => () => { setDataError('Failed to load data. Check your connection and refresh.'); markLoaded(name); };
+    // Auto-retry on transient Firestore errors (network hiccup, WebSocket drop).
+    // Silently re-subscribes up to 2 times before showing the error banner.
+    const onErr = (name) => () => {
+      markLoaded(name);
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        setTimeout(() => setListenerEpoch(e => e + 1), 2000);
+      } else {
+        setDataError('Failed to load data. Check your connection and refresh.');
+      }
+    };
 
     unsubs.push(onSnapshot(
       query(collection(db, 'users'), or(where('id', '==', uid), where('trainerId', '==', uid))),
@@ -148,7 +161,7 @@ export function AppProvider({ children }) {
     ));
 
     return () => unsubs.forEach(fn => fn());
-  }, [firebaseUser, markLoaded]);
+  }, [firebaseUser, markLoaded, listenerEpoch]);
 
   // --- Exercises: role-aware listener (trainer sees own; client sees trainer's) ---
   useEffect(() => {

@@ -16,14 +16,29 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Null-safe accessors — userDoc() returns null when the Firestore profile
+    // doesn't exist yet (e.g. mid-registration race). Accessing .role/.trainerId
+    // on null would throw in rules evaluation, causing the query to fail.
+    function userRole() {
+      let d = userDoc();
+      return d != null ? d.role : null;
+    }
+
+    function userTrainerId() {
+      let d = userDoc();
+      return d != null ? d.trainerId : null;
+    }
+
     function isTrainer() {
-      return isAuth() && userDoc().role == 'trainer';
+      return isAuth() && userRole() == 'trainer';
     }
 
     function isTrainerOf(clientId) {
+      let cd = get(/databases/$(database)/documents/users/$(clientId)).data;
       return isAuth()
-        && userDoc().role == 'trainer'
-        && get(/databases/$(database)/documents/users/$(clientId)).data.trainerId == request.auth.uid;
+        && userRole() == 'trainer'
+        && cd != null
+        && cd.trainerId == request.auth.uid;
     }
 
     // ── Users ──
@@ -94,7 +109,7 @@ service cloud.firestore {
       allow read: if isAuth() && (
         resource.data.trainerId == request.auth.uid ||
         resource.data.clientId == request.auth.uid ||
-        resource.data.trainerId == userDoc().trainerId
+        resource.data.trainerId == userTrainerId()
       );
       allow create: if isAuth() && (
         // Trainer books for their own client only
@@ -102,7 +117,7 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.trainerId == request.auth.uid) ||
         // Client books with their own trainer only
         (request.resource.data.clientId == request.auth.uid &&
-         userDoc().trainerId == request.resource.data.trainerId) ||
+         userTrainerId() == request.resource.data.trainerId) ||
         // Trainer blocks their own time (no client)
         (isTrainer() && request.resource.data.trainerId == request.auth.uid
          && request.resource.data.isBlocked == true
@@ -146,11 +161,11 @@ service cloud.firestore {
     match /exercises/{exId} {
       allow read: if isAuth() && (
         resource.data.trainerId == request.auth.uid ||
-        userDoc().trainerId == resource.data.trainerId
+        userTrainerId() == resource.data.trainerId
       );
       allow create: if isAuth() && (
         request.resource.data.trainerId == request.auth.uid ||
-        (userDoc().trainerId != null && request.resource.data.trainerId == userDoc().trainerId)
+        (userTrainerId() != null && request.resource.data.trainerId == userTrainerId())
       );
       // trainerId is immutable after creation
       allow update: if isAuth() && resource.data.trainerId == request.auth.uid
