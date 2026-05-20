@@ -1,6 +1,6 @@
 /* global require, exports */
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
-const { onUserDeleted } = require('firebase-functions/v2/identity');
+const auth = require('firebase-functions/v1/auth');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -49,8 +49,8 @@ async function sendPush(userId, tokens, notification, data) {
 // ─── GDPR: Cascaded delete when Firebase Auth user is deleted ───
 // Triggered AFTER client-side deleteAccount() removes users/{uid} + bodyStats/{uid} + Auth user.
 // Admin SDK bypasses Firestore security rules, so it can delete messages + workoutLogs.
-exports.onAccountDelete = onUserDeleted(async (event) => {
-  const uid = event.data.uid;
+exports.onAccountDelete = auth.user().onDelete(async (user) => {
+  const uid = user.uid;
   const batch = db.batch();
 
   // Collect all docs to delete (Admin SDK ignores security rules)
