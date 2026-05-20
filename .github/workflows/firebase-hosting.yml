@@ -40,5 +40,18 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
-      # Functions are deployed manually from a local machine (one-time setup).
-      # Run: firebase deploy --only functions --project elitepro-16718
+      - name: Install Functions dependencies
+        run: cd functions && npm ci
+
+      - name: Deploy Functions
+        id: deploy_functions
+        run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
+        continue-on-error: true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
+      - name: Report Functions deploy result
+        if: steps.deploy_functions.outcome == 'failure'
+        run: |
+          echo "::error::Functions deployment FAILED. Check the Deploy Functions step above for the exact error."
+          exit 1
