@@ -53,9 +53,12 @@ jobs:
       - name: Report Functions deploy result
         if: steps.deploy_functions.outcome == 'failure'
         run: |
-          echo "::warning::Functions deployment FAILED. Check the Deploy Functions step above for the exact error."
-          echo "Common fix: Google Cloud Console → IAM → find the CI service account → add roles:"
-          echo "  - Cloud Functions Admin"
-          echo "  - Cloud Run Admin"
-          echo "  - Artifact Registry Administrator"
+          echo "::error::Functions deployment FAILED. Check the Deploy Functions step above for the exact error."
+          echo ""
+          echo "If error is 'failed to modify the IAM policy':"
+          echo "  GCP Console → IAM → firebase-adminsdk-fbsvc@elitepro-16718.iam.gserviceaccount.com → add:"
+          echo "    roles/resourcemanager.projectIamAdmin  (Project IAM Admin)"
+          echo ""
+          echo "If error is about missing roles for deployment:"
+          echo "  Also add: Cloud Functions Admin, Cloud Run Admin, Artifact Registry Administrator"
           exit 1
