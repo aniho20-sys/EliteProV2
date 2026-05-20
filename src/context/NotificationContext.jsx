@@ -7,7 +7,7 @@ import { useApp } from './AppContext';
 import { useToast } from './ToastContext';
 
 // VAPID Key — set VITE_VAPID_KEY in GitHub Secrets (Firebase Console → Project Settings → Cloud Messaging → Web Push certificates)
-const VAPID_KEY = import.meta.env.VITE_VAPID_KEY || 'z6wTBniu9HxuaDtmxxt6o-AszeGtb3afquGwk_9ULHg';
+const VAPID_KEY = import.meta.env.VITE_VAPID_KEY || 'BF620v_ocN6QLjXAdubM36xUxnS1K1EfiUKOZO0WSdlnjBAaoJI4h0r_Pdj0KhM9dHUvm7d4WIUFhJtmSaIMjl4';
 
 const NotificationContext = createContext();
 // eslint-disable-next-line react-refresh/only-export-components
