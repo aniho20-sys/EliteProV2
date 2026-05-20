@@ -382,11 +382,6 @@ export default function ProfilePage() {
                 <RotateCcw size={14} /> Re-register Token
               </button>
             </div>
-            {fcmToken && (
-              <p className="text-sm text-muted mt-8" style={{ wordBreak: 'break-all', fontSize: '0.72rem' }}>
-                Token: {fcmToken.slice(0, 20)}…{fcmToken.slice(-10)}
-              </p>
-            )}
             {!fcmToken && (
               <p className="text-sm mt-8" style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>
                 ⚠️ Token not registered — tap Re-register Token
