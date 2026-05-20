@@ -78,7 +78,8 @@ export function NotificationProvider({ children }) {
           toastRef.current('Notifications enabled!');
         } catch (err) {
           console.error('FCM token setup failed:', err);
-          toastRef.current('Permission granted but token setup failed — try again', 'error');
+          const detail = err?.message || err?.code || 'unknown';
+          toastRef.current(`Token failed: ${detail}`, 'error');
         }
         return token;
       } else if (result === 'denied') {
