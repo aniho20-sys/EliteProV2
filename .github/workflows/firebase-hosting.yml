@@ -40,25 +40,5 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
-      - name: Install Functions dependencies
-        run: cd functions && npm ci
-
-      - name: Deploy Functions
-        id: deploy_functions
-        run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
-        continue-on-error: true
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
-
-      - name: Report Functions deploy result
-        if: steps.deploy_functions.outcome == 'failure'
-        run: |
-          echo "::error::Functions deployment FAILED. Check the Deploy Functions step above for the exact error."
-          echo ""
-          echo "If error is 'failed to modify the IAM policy':"
-          echo "  GCP Console → IAM → firebase-adminsdk-fbsvc@elitepro-16718.iam.gserviceaccount.com → add:"
-          echo "    roles/resourcemanager.projectIamAdmin  (Project IAM Admin)"
-          echo ""
-          echo "If error is about missing roles for deployment:"
-          echo "  Also add: Cloud Functions Admin, Cloud Run Admin, Artifact Registry Administrator"
-          exit 1
+      # Functions are deployed manually from a local machine (one-time setup).
+      # Run: firebase deploy --only functions --project elitepro-16718
