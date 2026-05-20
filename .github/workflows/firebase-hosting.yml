@@ -44,7 +44,18 @@ jobs:
         run: cd functions && npm ci
 
       - name: Deploy Functions
+        id: deploy_functions
         run: npx firebase-tools@latest deploy --only functions --project elitepro-16718 --non-interactive
         continue-on-error: true
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
+      - name: Report Functions deploy result
+        if: steps.deploy_functions.outcome == 'failure'
+        run: |
+          echo "::warning::Functions deployment FAILED. Check the Deploy Functions step above for the exact error."
+          echo "Common fix: Google Cloud Console → IAM → find the CI service account → add roles:"
+          echo "  - Cloud Functions Admin"
+          echo "  - Cloud Run Admin"
+          echo "  - Artifact Registry Administrator"
+          exit 1
