@@ -19,7 +19,7 @@ export default function ProfilePage() {
   const { currentUser, firebaseUser, updateClient, resetData, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
-  const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission } = useNotifications();
+  const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission, token: fcmToken } = useNotifications();
   const isTrainer = currentUser.role === 'trainer';
   const authProvider = getAuthProvider(firebaseUser);
   // Demo = explicit isDemo flag on profile (seeded demo coach) OR no Firebase Auth at all
@@ -366,9 +366,32 @@ export default function ProfilePage() {
         {!notifSupported ? (
           <p className="text-sm text-muted">Push notifications are not supported on this browser. Try adding the app to your home screen first.</p>
         ) : notifPermission === 'granted' ? (
-          <div className="flex gap-8" style={{ alignItems: 'center' }}>
-            <span className="tag tag-accent">Enabled</span>
-            <span className="text-sm text-muted">You'll receive push notifications for new messages and session updates</span>
+          <div>
+            <div className="flex gap-8 mb-12" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="tag tag-accent">Enabled</span>
+              <span className="text-sm text-muted">You'll receive push notifications for messages and session updates</span>
+            </div>
+            <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
+              <button className="btn btn-sm btn-outline" onClick={() => {
+                new Notification('ElitePro Test 🔔', { body: 'Push notifications are working!', icon: '/favicon.svg' });
+                toast('Test notification sent!');
+              }}>
+                <Bell size={14} /> Send Test
+              </button>
+              <button className="btn btn-sm btn-outline" onClick={() => requestNotifPermission(currentUser.id)}>
+                <RotateCcw size={14} /> Re-register Token
+              </button>
+            </div>
+            {fcmToken && (
+              <p className="text-sm text-muted mt-8" style={{ wordBreak: 'break-all', fontSize: '0.72rem' }}>
+                Token: {fcmToken.slice(0, 20)}…{fcmToken.slice(-10)}
+              </p>
+            )}
+            {!fcmToken && (
+              <p className="text-sm mt-8" style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>
+                ⚠️ Token not registered — tap Re-register Token
+              </p>
+            )}
           </div>
         ) : notifPermission === 'denied' ? (
           <div>
