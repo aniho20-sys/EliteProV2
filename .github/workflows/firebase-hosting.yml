@@ -45,7 +45,7 @@ jobs:
 
       - name: Deploy Functions
         id: deploy_functions
-        run: npx firebase-tools@13 deploy --only functions --project elitepro-16718 --non-interactive
+        run: npx firebase-tools@13 deploy --only functions --project elitepro-16718 --non-interactive --force
         continue-on-error: true
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
