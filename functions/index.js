@@ -1,6 +1,5 @@
 /* global require, exports */
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
-const auth = require('firebase-functions/v1/auth');
+const functions = require('firebase-functions/v1');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
@@ -8,10 +7,6 @@ const { getMessaging } = require('firebase-admin/messaging');
 initializeApp();
 const db = getFirestore();
 
-/**
- * Send push to an array of FCM tokens.
- * Automatically removes invalid tokens from the user's doc.
- */
 async function sendPush(userId, tokens, notification, data) {
   if (!tokens || tokens.length === 0) return;
 
@@ -21,14 +16,11 @@ async function sendPush(userId, tokens, notification, data) {
         token,
         notification,
         data: data || {},
-        webpush: {
-          fcmOptions: { link: data?.url || '/' },
-        },
+        webpush: { fcmOptions: { link: data?.url || '/' } },
       })
     )
   );
 
-  // Clean up stale tokens
   const invalid = [];
   results.forEach((r, i) => {
     if (r.status === 'rejected') {
@@ -47,13 +39,10 @@ async function sendPush(userId, tokens, notification, data) {
 }
 
 // ─── GDPR: Cascaded delete when Firebase Auth user is deleted ───
-// Triggered AFTER client-side deleteAccount() removes users/{uid} + bodyStats/{uid} + Auth user.
-// Admin SDK bypasses Firestore security rules, so it can delete messages + workoutLogs.
-exports.onAccountDelete = auth.user().onDelete(async (user) => {
+exports.onAccountDelete = functions.auth.user().onDelete(async (user) => {
   const uid = user.uid;
   const batch = db.batch();
 
-  // Collect all docs to delete (Admin SDK ignores security rules)
   const [msgFrom, msgTo, logs, schedTrainer, schedClient, plans] = await Promise.all([
     db.collection('messages').where('from', '==', uid).get(),
     db.collection('messages').where('to', '==', uid).get(),
@@ -70,7 +59,6 @@ exports.onAccountDelete = auth.user().onDelete(async (user) => {
   schedClient.docs.forEach(d => batch.delete(d.ref));
   plans.docs.forEach(d => batch.delete(d.ref));
 
-  // exercises owned by this trainer
   const exercises = await db.collection('exercises').where('trainerId', '==', uid).get();
   exercises.docs.forEach(d => batch.delete(d.ref));
 
@@ -79,136 +67,137 @@ exports.onAccountDelete = auth.user().onDelete(async (user) => {
 });
 
 // ─── New Message → Push to recipient ───
-exports.onNewMessage = onDocumentCreated('messages/{messageId}', async (event) => {
-  const msg = event.data.data();
-  if (!msg || !msg.to || !msg.from) return;
+exports.onNewMessage = functions.firestore
+  .document('messages/{messageId}')
+  .onCreate(async (snap) => {
+    const msg = snap.data();
+    if (!msg || !msg.to || !msg.from) return;
 
-  const [recipientSnap, senderSnap] = await Promise.all([
-    db.doc(`users/${msg.to}`).get(),
-    db.doc(`users/${msg.from}`).get(),
-  ]);
+    const [recipientSnap, senderSnap] = await Promise.all([
+      db.doc(`users/${msg.to}`).get(),
+      db.doc(`users/${msg.from}`).get(),
+    ]);
 
-  if (!recipientSnap.exists) return;
-  const { fcmTokens } = recipientSnap.data();
-  const senderName = senderSnap.exists ? senderSnap.data().name : 'Someone';
+    if (!recipientSnap.exists) return;
+    const { fcmTokens } = recipientSnap.data();
+    const senderName = senderSnap.exists ? senderSnap.data().name : 'Someone';
+    const body = msg.text.length > 120 ? msg.text.substring(0, 120) + '…' : msg.text;
 
-  const body = msg.text.length > 120 ? msg.text.substring(0, 120) + '…' : msg.text;
-
-  await sendPush(msg.to, fcmTokens, {
-    title: senderName,
-    body,
-  }, {
-    type: 'message',
-    url: '/#/messages',
-    fromId: msg.from,
+    await sendPush(msg.to, fcmTokens, { title: senderName, body }, {
+      type: 'message',
+      url: '/#/messages',
+      fromId: msg.from,
+    });
   });
-});
 
 // ─── New Schedule → Push to client AND trainer ───
-exports.onNewSchedule = onDocumentCreated('schedule/{schedId}', async (event) => {
-  const sched = event.data.data();
-  if (!sched || !sched.clientId || !sched.trainerId) return;
+exports.onNewSchedule = functions.firestore
+  .document('schedule/{schedId}')
+  .onCreate(async (snap) => {
+    const sched = snap.data();
+    if (!sched || !sched.clientId || !sched.trainerId) return;
 
-  const [clientSnap, trainerSnap] = await Promise.all([
-    db.doc(`users/${sched.clientId}`).get(),
-    db.doc(`users/${sched.trainerId}`).get(),
-  ]);
+    const [clientSnap, trainerSnap] = await Promise.all([
+      db.doc(`users/${sched.clientId}`).get(),
+      db.doc(`users/${sched.trainerId}`).get(),
+    ]);
 
-  const trainerName = trainerSnap.exists ? trainerSnap.data().name : 'Your trainer';
-  const clientName = clientSnap.exists ? clientSnap.data().name : 'A client';
-  const data = { type: 'schedule', url: '/#/schedule' };
+    const trainerName = trainerSnap.exists ? trainerSnap.data().name : 'Your trainer';
+    const clientName = clientSnap.exists ? clientSnap.data().name : 'A client';
+    const data = { type: 'schedule', url: '/#/schedule' };
 
-  await Promise.all([
-    // Notify client
-    clientSnap.exists
-      ? sendPush(sched.clientId, clientSnap.data().fcmTokens, {
-          title: 'New Session',
-          body: `${trainerName} scheduled ${sched.type} on ${sched.date} at ${sched.time}`,
-        }, data)
-      : null,
-    // Notify trainer (catches client self-bookings they haven't seen yet)
-    trainerSnap.exists
-      ? sendPush(sched.trainerId, trainerSnap.data().fcmTokens, {
-          title: 'New Session Booking',
-          body: `${clientName} booked ${sched.type} on ${sched.date} at ${sched.time}`,
-        }, data)
-      : null,
-  ]);
-});
+    await Promise.all([
+      clientSnap.exists
+        ? sendPush(sched.clientId, clientSnap.data().fcmTokens, {
+            title: 'New Session',
+            body: `${trainerName} scheduled ${sched.type} on ${sched.date} at ${sched.time}`,
+          }, data)
+        : null,
+      trainerSnap.exists
+        ? sendPush(sched.trainerId, trainerSnap.data().fcmTokens, {
+            title: 'New Session Booking',
+            body: `${clientName} booked ${sched.type} on ${sched.date} at ${sched.time}`,
+          }, data)
+        : null,
+    ]);
+  });
 
 // ─── Schedule status change → Push to both parties ───
-exports.onScheduleUpdate = onDocumentUpdated('schedule/{schedId}', async (event) => {
-  const before = event.data.before.data();
-  const after = event.data.after.data();
+exports.onScheduleUpdate = functions.firestore
+  .document('schedule/{schedId}')
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
 
-  if (!before || !after || before.status === after.status) return;
+    if (!before || !after || before.status === after.status) return;
 
-  const statusLabel = { confirmed: 'confirmed', cancelled: 'cancelled', completed: 'completed' };
-  const label = statusLabel[after.status];
-  if (!label) return;
+    const statusLabel = { confirmed: 'confirmed', cancelled: 'cancelled', completed: 'completed' };
+    const label = statusLabel[after.status];
+    if (!label) return;
 
-  const [clientSnap, trainerSnap] = await Promise.all([
-    db.doc(`users/${after.clientId}`).get(),
-    db.doc(`users/${after.trainerId}`).get(),
-  ]);
+    const [clientSnap, trainerSnap] = await Promise.all([
+      db.doc(`users/${after.clientId}`).get(),
+      db.doc(`users/${after.trainerId}`).get(),
+    ]);
 
-  const notification = {
-    title: `Session ${label}`,
-    body: `${after.type} on ${after.date} at ${after.time} has been ${label}`,
-  };
-  const data = { type: 'schedule', url: '/#/schedule' };
+    const notification = {
+      title: `Session ${label}`,
+      body: `${after.type} on ${after.date} at ${after.time} has been ${label}`,
+    };
+    const data = { type: 'schedule', url: '/#/schedule' };
 
-  await Promise.all([
-    clientSnap.exists ? sendPush(after.clientId, clientSnap.data().fcmTokens, notification, data) : null,
-    trainerSnap.exists ? sendPush(after.trainerId, trainerSnap.data().fcmTokens, notification, data) : null,
-  ]);
-});
+    await Promise.all([
+      clientSnap.exists ? sendPush(after.clientId, clientSnap.data().fcmTokens, notification, data) : null,
+      trainerSnap.exists ? sendPush(after.trainerId, trainerSnap.data().fcmTokens, notification, data) : null,
+    ]);
+  });
 
 // ─── New Workout Plan assigned → Push to client ───
-exports.onNewWorkoutPlan = onDocumentCreated('workoutPlans/{planId}', async (event) => {
-  const plan = event.data.data();
-  if (!plan || !plan.clientId || !plan.trainerId) return;
+exports.onNewWorkoutPlan = functions.firestore
+  .document('workoutPlans/{planId}')
+  .onCreate(async (snap) => {
+    const plan = snap.data();
+    if (!plan || !plan.clientId || !plan.trainerId) return;
 
-  const [clientSnap, trainerSnap] = await Promise.all([
-    db.doc(`users/${plan.clientId}`).get(),
-    db.doc(`users/${plan.trainerId}`).get(),
-  ]);
+    const [clientSnap, trainerSnap] = await Promise.all([
+      db.doc(`users/${plan.clientId}`).get(),
+      db.doc(`users/${plan.trainerId}`).get(),
+    ]);
 
-  if (!clientSnap.exists) return;
-  const { fcmTokens } = clientSnap.data();
-  const trainerName = trainerSnap.exists ? trainerSnap.data().name : 'Your trainer';
+    if (!clientSnap.exists) return;
+    const { fcmTokens } = clientSnap.data();
+    const trainerName = trainerSnap.exists ? trainerSnap.data().name : 'Your trainer';
 
-  await sendPush(plan.clientId, fcmTokens, {
-    title: 'New Workout Plan',
-    body: `${trainerName} created "${plan.name}" for you`,
-  }, {
-    type: 'plan',
-    url: '/#/my-workouts',
+    await sendPush(plan.clientId, fcmTokens, {
+      title: 'New Workout Plan',
+      body: `${trainerName} created "${plan.name}" for you`,
+    }, { type: 'plan', url: '/#/my-workouts' });
   });
-});
 
 // ─── New Workout Log → Push to trainer ───
-exports.onNewWorkoutLog = onDocumentCreated('workoutLogs/{logId}', async (event) => {
-  const log = event.data.data();
-  if (!log || !log.clientId) return;
+exports.onNewWorkoutLog = functions.firestore
+  .document('workoutLogs/{logId}')
+  .onCreate(async (snap) => {
+    const log = snap.data();
+    if (!log || !log.clientId) return;
 
-  const clientSnap = await db.doc(`users/${log.clientId}`).get();
-  if (!clientSnap.exists) return;
+    const clientSnap = await db.doc(`users/${log.clientId}`).get();
+    if (!clientSnap.exists) return;
 
-  const trainerId = clientSnap.data().trainerId;
-  if (!trainerId) return;
+    const trainerId = clientSnap.data().trainerId;
+    if (!trainerId) return;
 
-  const trainerSnap = await db.doc(`users/${trainerId}`).get();
-  if (!trainerSnap.exists) return;
+    const trainerSnap = await db.doc(`users/${trainerId}`).get();
+    if (!trainerSnap.exists) return;
 
-  const clientName = clientSnap.data().name || 'A client';
+    const clientName = clientSnap.data().name || 'A client';
 
-  await sendPush(trainerId, trainerSnap.data().fcmTokens, {
-    title: 'Workout Logged',
-    body: `${clientName} completed a workout`,
-  }, {
-    type: 'workout_log',
-    url: `/#/clients/${log.clientId}`,
-    clientId: log.clientId,
+    await sendPush(trainerId, trainerSnap.data().fcmTokens, {
+      title: 'Workout Logged',
+      body: `${clientName} completed a workout`,
+    }, {
+      type: 'workout_log',
+      url: `/#/clients/${log.clientId}`,
+      clientId: log.clientId,
+    });
   });
-});
