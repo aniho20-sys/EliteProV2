@@ -494,6 +494,9 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
+        <div className="mt-16">
+          <VolumeChart logs={logs} />
+        </div>
         <div className="card mt-16">
           <h3 className="card-title mb-12">Session Dates</h3>
           {completedSessions.length === 0 ? (
