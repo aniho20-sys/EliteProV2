@@ -4294,3 +4294,19 @@ tr:hover { background: var(--bg-card-hover); }
   }
   .rest-timer-pill:active { transform: translateX(-50%) scale(0.97); }
 }
+
+/* Session Date List */
+.session-date-groups { display: flex; flex-direction: column; gap: 16px; }
+.session-date-group { display: flex; flex-direction: column; gap: 8px; }
+.session-date-month { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.session-date-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.session-date-chip {
+  display: inline-flex; align-items: center;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: var(--text);
+  white-space: nowrap;
+}
