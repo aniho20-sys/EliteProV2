@@ -8,6 +8,19 @@ export function useRestTimer({ stopWhen = false } = {}) {
   const [timerMins, setTimerMins] = useState(1);
   const [timerSecs, setTimerSecs] = useState(30);
   const timerRef = useRef(null);
+  // AudioContext must be created/resumed during a user gesture to pass browser autoplay policy
+  const audioCtxRef = useRef(null);
+
+  const ensureAudioCtx = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+    } catch { /* not available */ }
+  }, []);
 
   useEffect(() => {
     if (stopWhen) {
@@ -18,7 +31,8 @@ export function useRestTimer({ stopWhen = false } = {}) {
 
   const playBeep = useCallback(() => {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
       const pattern = [
         { t: 0,    freq: 880, dur: 0.12, gain: 0.6 },
         { t: 0.18, freq: 880, dur: 0.12, gain: 0.6 },
@@ -56,6 +70,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
   }, [timerActive, playBeep]);
 
   const toggleTimer = useCallback(() => {
+    ensureAudioCtx();
     setTimeLeft(prev => {
       if (prev === 0) {
         setTimerActive(true);
@@ -64,7 +79,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
       setTimerActive(p => !p);
       return prev;
     });
-  }, [restSeconds]);
+  }, [restSeconds, ensureAudioCtx]);
 
   const resetTimer = useCallback(() => {
     setTimerActive(false);
@@ -73,11 +88,12 @@ export function useRestTimer({ stopWhen = false } = {}) {
 
   // Called when a set is marked complete — starts timer with the exercise rest duration
   const startTimer = useCallback((duration) => {
+    ensureAudioCtx();
     const dur = duration || restSeconds;
     setRestSeconds(dur);
     setTimeLeft(dur);
     setTimerActive(true);
-  }, [restSeconds]);
+  }, [restSeconds, ensureAudioCtx]);
 
   const startEditTimer = useCallback(() => {
     if (timerActive) return;
