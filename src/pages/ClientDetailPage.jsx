@@ -32,19 +32,23 @@ function VolumeChart({ logs }) {
   const weeks = Array.from({ length: 8 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (7 - i) * 7);
+    // Week starts Monday (getDay: 0=Sun→6 days back, 1=Mon→0, ..., 6=Sat→5)
+    const dayOfWeek = d.getDay();
+    const daysFromMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const start = new Date(d);
-    start.setDate(start.getDate() - start.getDay());
+    start.setDate(d.getDate() - daysFromMon);
     const end = new Date(start);
-    end.setDate(end.getDate() + 6);
+    end.setDate(start.getDate() + 6);
     const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
     const label = start.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    const endLabel = end.toLocaleDateString('en', { month: 'short', day: 'numeric' });
     const volume = logs
       .filter(l => l.date >= fmt(start) && l.date <= fmt(end))
       .reduce((sum, l) => sum + (l.entries || []).reduce((s2, e) => {
         if ((e.unit || 'weight_reps') !== 'weight_reps') return s2;
         return s2 + (e.sets || []).reduce((s3, s) => s3 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
       }, 0), 0);
-    return { label, volume };
+    return { label, endLabel, volume };
   });
 
   const hasData = weeks.some(w => w.volume > 0);
@@ -65,6 +69,11 @@ function VolumeChart({ logs }) {
             <Tooltip
               contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
               formatter={v => [`${v.toLocaleString()} kg`, 'Volume']}
+              labelFormatter={(label, payload) => {
+                if (!payload?.length) return label;
+                const { endLabel } = payload[0].payload;
+                return `${label} – ${endLabel}`;
+              }}
             />
             <Bar dataKey="volume" fill="var(--primary)" radius={[4, 4, 0, 0]} />
           </BarChart>
