@@ -1,13 +1,35 @@
 import { useApp } from '../context/AppContext';
-import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers } from 'lucide-react';
+import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers, Play, ChevronRight } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 
+function WeightSparkline({ stats }) {
+  const recent = stats.slice(-10);
+  if (recent.length < 2) return null;
+  const weights = recent.map(s => s.weight);
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+  const range = max - min || 1;
+  const W = 72, H = 22;
+  const points = weights.map((wt, i) => {
+    const x = (i / (weights.length - 1)) * W;
+    const y = H - ((wt - min) / range) * (H - 2) - 1;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const trending = weights[weights.length - 1] <= weights[0] ? 'var(--success)' : 'var(--accent)';
+  return (
+    <svg width={W} height={H} className="weight-sparkline" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={trending} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function ClientDashboard() {
+  const navigate = useNavigate();
   const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getBadges } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
@@ -17,6 +39,10 @@ export default function ClientDashboard() {
   const stats = getBodyStats(currentUser.id);
   const today = localToday();
   const todaySchedule = getSchedule({ clientId: currentUser.id, date: today });
+
+  const lastLoggedPlanId = [...logs].reverse().find(l => l.planId)?.planId;
+  const suggestedPlan = plans.find(p => p.id === lastLoggedPlanId) || plans[0] || null;
+  const loggedToday = logs.some(l => l.date === today);
 
   const latestStat = stats[stats.length - 1];
   const prevStat = stats[stats.length - 2];
@@ -77,8 +103,23 @@ export default function ClientDashboard() {
           <div className="stat-value">{latestStat ? `${latestStat.weight}kg` : '--'}</div>
           <div className="stat-label">Current Weight</div>
           {weightChange && <div className={`stat-change ${parseFloat(weightChange) > 0 ? 'positive' : 'negative'}`}>{weightChange > 0 ? '+' : ''}{weightChange}kg</div>}
+          {stats.length >= 2 && <WeightSparkline stats={stats} />}
         </Link>
       </div>
+
+      {suggestedPlan && (
+        <button
+          className="workout-cta-card mb-16"
+          onClick={() => navigate('/log', { state: { planId: suggestedPlan.id } })}
+        >
+          <div className="workout-cta-icon"><Play size={20} /></div>
+          <div className="workout-cta-text">
+            <div className="workout-cta-label">{loggedToday ? 'Log another session' : "Start today's training"}</div>
+            <div className="workout-cta-plan">{suggestedPlan.name}</div>
+          </div>
+          <ChevronRight size={20} className="workout-cta-arrow" />
+        </button>
+      )}
 
       {sessTotal !== null && (
         <div className="card mb-16">

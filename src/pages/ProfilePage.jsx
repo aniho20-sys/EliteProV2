@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
@@ -387,6 +387,19 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* Founding Members Offer — trainer only */}
+      {isTrainer && !currentUser.subscription?.tier && (
+        <a
+          className="founding-member-banner mb-16"
+          href={`mailto:aniho20@gmail.com?subject=Founding Member Interest&body=Hi, I'd like to join ElitePro as a Founding Member.%0A%0AName: ${encodeURIComponent(currentUser.name)}%0AEmail: ${encodeURIComponent(currentUser.email)}`}
+        >
+          <div className="founding-member-badge"><Star size={14} /> Founding Member</div>
+          <h3 className="founding-member-title">Join before spots run out</h3>
+          <p className="founding-member-desc">First 50 trainers get 6 months free + 50% off forever when we launch paid plans.</p>
+          <div className="founding-member-cta">Express Interest <ChevronRight size={16} /></div>
+        </a>
+      )}
 
       {/* Account Info */}
       <div className="card mb-16">
