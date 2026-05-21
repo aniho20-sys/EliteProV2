@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, Bookmark, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
@@ -11,13 +11,12 @@ import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
-  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, getTemplates, saveAsTemplate, deleteTemplate, equipmentTypes } = useApp();
+  const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, equipmentTypes } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
   const clients = isTrainer ? getClients(currentUser.id) : [];
   const plans = getWorkoutPlans(isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id });
-  const templates = isTrainer ? getTemplates() : [];
 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', clientId: '', day: '', exercises: [] });
@@ -33,8 +32,6 @@ export default function WorkoutPlansPage() {
   const [savingLink, setSavingLink] = useState(false);
   const [deletePlanModal, setDeletePlanModal] = useState(null); // planId
   const [deleting, setDeleting] = useState(false);
-  const [savingTemplate, setSavingTemplate] = useState(null); // planId currently being saved
-  const [selectedTemplate, setSelectedTemplate] = useState('');
   const [expandedPlans, setExpandedPlans] = useState(new Set());
   const [editPlanId, setEditPlanId] = useState(null);
 
@@ -52,7 +49,6 @@ export default function WorkoutPlansPage() {
       day: plan.day || '',
       exercises: plan.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })),
     });
-    setSelectedTemplate('');
     setShowCustomForm(false);
     setCustomForm(EMPTY_CUSTOM);
     updateExFilter('');
@@ -343,41 +339,6 @@ export default function WorkoutPlansPage() {
     }
   };
 
-  const handleSaveAsTemplate = async (planId) => {
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
-    setSavingTemplate(planId);
-    try {
-      await saveAsTemplate(plan);
-      toast('Saved as template');
-    } catch {
-      toast('Failed to save template', 'error');
-    } finally {
-      setSavingTemplate(null);
-    }
-  };
-
-  const handleDeleteTemplate = async (templateId) => {
-    try {
-      await deleteTemplate(templateId);
-      toast('Template deleted');
-    } catch {
-      toast('Failed to delete template', 'error');
-    }
-  };
-
-  const handleLoadTemplate = (templateId) => {
-    const tmpl = templates.find(t => t.id === templateId);
-    if (!tmpl) return;
-    setForm(prev => ({
-      ...prev,
-      name: prev.name || tmpl.name,
-      day: tmpl.day,
-      exercises: tmpl.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })),
-    }));
-    setSelectedTemplate('');
-  };
-
   const handleSaveLink = async (e) => {
     e.preventDefault();
     if (!addLinkModal) return;
@@ -408,7 +369,7 @@ export default function WorkoutPlansPage() {
           <h1 className="page-title">Workout Plans</h1>
           <p className="page-subtitle">{plans.length} plans</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
+        {isTrainer && <button className="btn btn-primary" onClick={() => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
       </div>
 
       {plans.length === 0 ? (
@@ -420,7 +381,7 @@ export default function WorkoutPlansPage() {
             : 'Your coach will create plans for you soon.'}
           action={isTrainer ? {
             label: 'Create Plan',
-            onClick: () => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setSelectedTemplate(''); setShowCreate(true); }
+            onClick: () => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }
           } : undefined}
         />
       ) : (() => {
@@ -479,7 +440,6 @@ export default function WorkoutPlansPage() {
                 </div>
                 <div className="plan-card-actions">
                   <button className="btn-icon" title="Edit" onClick={e => { e.stopPropagation(); openEdit(p); }}><Pencil size={15} /></button>
-                  <button className="btn-icon" title="Save as Template" onClick={e => { e.stopPropagation(); handleSaveAsTemplate(p.id); }} disabled={savingTemplate === p.id}><Bookmark size={15} style={savingTemplate === p.id ? { opacity: 0.4 } : {}} /></button>
                   <button className="btn-icon" title="Duplicate" onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
                   <button className="btn-icon" title="Delete" style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
                   {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -512,40 +472,6 @@ export default function WorkoutPlansPage() {
 
         return (
           <>
-            <div className="mb-24">
-              <div className="plan-client-section-header">
-                <span className="plan-client-name">Templates</span>
-                {templates.length > 0 && <span className="tag">{templates.length} template{templates.length !== 1 ? 's' : ''}</span>}
-              </div>
-              {templates.length === 0 ? (
-                <div className="card mb-8" style={{ color: 'var(--text-muted)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
-                  <Bookmark size={14} style={{ flexShrink: 0 }} />
-                  Click the bookmark icon on any plan to save it as a reusable template.
-                </div>
-              ) : templates.map(t => (
-                <div key={t.id} className="card mb-8">
-                  <div className="plan-card-header">
-                    <div className="plan-card-info">
-                      <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{t.name}</h3>
-                      <span className="text-sm text-muted">{t.exercises.length} exercise{t.exercises.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="plan-card-actions">
-                      <button
-                        className="btn btn-sm btn-outline"
-                        onClick={() => {
-                          setForm({ name: t.name, clientId: '', day: t.day, exercises: t.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })) });
-                          setSelectedTemplate('');
-                          setShowCustomForm(false);
-                          setCustomForm(EMPTY_CUSTOM);
-                          setShowCreate(true);
-                        }}
-                      >Use</button>
-                      <button className="btn-icon" title="Delete template" style={{ color: 'var(--danger)' }} onClick={() => handleDeleteTemplate(t.id)}><Trash2 size={15} /></button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
             {grouped.map(({ client, plans: cPlans }) => (
               <div key={client.id} className="mb-24">
                 <div className="plan-client-section-header">
@@ -611,19 +537,6 @@ export default function WorkoutPlansPage() {
           <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">{editPlanId ? 'Edit Workout Plan' : 'Create Workout Plan'}</h3>
             <form onSubmit={editPlanId ? handleUpdate : handleCreate}>
-              {!editPlanId && templates.length > 0 && (
-                <div className="form-group">
-                  <label className="form-label">Load from Template <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                  <select
-                    className="form-select"
-                    value={selectedTemplate}
-                    onChange={e => { setSelectedTemplate(e.target.value); if (e.target.value) handleLoadTemplate(e.target.value); }}
-                  >
-                    <option value="">— start fresh —</option>
-                    {templates.map(t => <option key={t.id} value={t.id}>{t.name} ({t.exercises.length} exercises)</option>)}
-                  </select>
-                </div>
-              )}
               <div className="form-group">
                 <label className="form-label">Plan Name</label>
                 <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Upper Body A" />

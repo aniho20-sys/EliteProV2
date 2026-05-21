@@ -77,7 +77,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges, getSchedule, getIntakeForm } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -448,26 +448,6 @@ export default function ClientDetailPage() {
                 <p className="text-sm text-muted">Not set — click &quot;Set Total&quot; to configure</p>
               )}
             </div>
-
-            {/* Badges */}
-            {(() => {
-              const badges = getBadges(clientId);
-              if (!badges.length) return null;
-              return (
-                <div className="mt-16">
-                  <div className="text-sm fw-bold mb-8">🏅 Badges</div>
-                  <div className="badges-grid">
-                    {badges.map(b => (
-                      <div key={b.id} className="badge-item">
-                        <span className="badge-icon">{b.icon}</span>
-                        <span className="badge-name">{b.name}</span>
-                        <span className="badge-date">{b.awardedAt}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* Tags */}
             <div className="mt-16">

@@ -55,17 +55,6 @@ export default function WorkoutCompleteScreen({ data, onDone }) {
           ))}
         </div>
       )}
-      {data.newBadges?.length > 0 && (
-        <div className="workout-complete-prs">
-          <div className="workout-complete-prs-title">🏅 Badge Unlocked!</div>
-          {data.newBadges.map(b => (
-            <div key={b.id} className="workout-complete-pr-item">
-              <span>{b.icon} {b.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
       <p className="workout-complete-quote">&ldquo;{msg}&rdquo;</p>
       <button className="btn btn-accent" onClick={onDone} style={{ width: '100%' }}>
         Done
