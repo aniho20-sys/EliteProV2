@@ -282,7 +282,7 @@ export default function WorkoutLogPage() {
           clearInterval(timerRef.current);
           setTimerActive(false);
           playBeep();
-          if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+          if ('vibrate' in navigator) navigator.vibrate([100, 80, 100, 80, 100, 150, 400]);
           return 0;
         }
         return prev - 1;
@@ -294,16 +294,22 @@ export default function WorkoutLogPage() {
   const playBeep = () => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.35, 0.7].forEach(t => {
+      // 3 short high beeps then 1 long low beep — clearly signals "rest over"
+      const pattern = [
+        { t: 0,    freq: 880, dur: 0.12, gain: 0.6 },
+        { t: 0.18, freq: 880, dur: 0.12, gain: 0.6 },
+        { t: 0.36, freq: 880, dur: 0.12, gain: 0.6 },
+        { t: 0.6,  freq: 660, dur: 0.4,  gain: 0.7 },
+      ];
+      pattern.forEach(({ t, freq, dur, gain }) => {
         const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.4, ctx.currentTime + t);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.25);
+        const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(gain, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + dur);
         osc.start(ctx.currentTime + t);
-        osc.stop(ctx.currentTime + t + 0.25);
+        osc.stop(ctx.currentTime + t + dur);
       });
     } catch { /* AudioContext not available */ }
   };
@@ -918,6 +924,22 @@ export default function WorkoutLogPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Floating rest timer pill — visible during active workout regardless of scroll */}
+      {showLog && (
+        <button
+          className={`rest-timer-pill${timerActive ? ' running' : ''}${timerDone ? ' done' : ''}`}
+          onClick={toggleTimer}
+          title={timerActive ? 'Tap to pause' : timerDone ? 'Tap to restart' : 'Tap to start'}
+        >
+          <Timer size={15} className="rest-timer-pill-icon" />
+          <span className="rest-timer-pill-time">{timerDisplay}</span>
+          <span className="rest-timer-pill-sep" />
+          <span className="rest-timer-pill-action">
+            {timerActive ? 'Pause' : timerDone ? 'Done  ↺' : timerStarted ? 'Resume' : 'Start'}
+          </span>
+        </button>
       )}
 
       {editingLog && (
