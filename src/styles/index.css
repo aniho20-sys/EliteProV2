@@ -4133,3 +4133,80 @@ tr:hover { background: var(--bg-card-hover); }
   font-weight: 600;
   color: #ffd700;
 }
+
+/* ===== EXERCISE SWAP MODAL ===== */
+.swap-exercise-modal {
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+.swap-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.swap-search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.swap-search-wrap {
+  position: relative;
+  flex: 1;
+}
+.swap-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.swap-search-input {
+  padding-left: 32px;
+  width: 100%;
+}
+.swap-muscle-select {
+  width: auto;
+  flex-shrink: 0;
+  max-width: 140px;
+  font-size: 0.82rem;
+}
+.swap-exercise-list {
+  overflow-y: auto;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.swap-exercise-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.swap-exercise-item:last-child { border-bottom: none; }
+.swap-exercise-item:hover:not(:disabled) { background: var(--primary-glow); }
+.swap-exercise-item.current {
+  background: var(--surface);
+  cursor: default;
+  opacity: 0.6;
+}
+.swap-ex-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.swap-ex-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

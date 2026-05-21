@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Info } from 'lucide-react';
+import { Trophy, Play, NotebookPen, UserPlus, Timer, Pencil, CheckCircle, Info, ArrowLeftRight, X, Search } from 'lucide-react';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -171,7 +171,7 @@ function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canR
 }
 
 export default function WorkoutLogPage() {
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, getPersonalRecords, checkAndAwardBadges } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, getPersonalRecords, checkAndAwardBadges, muscleGroups } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const location = useLocation();
   const navigate = useNavigate();
@@ -201,6 +201,10 @@ export default function WorkoutLogPage() {
   const [editRpe, setEditRpe] = useState(7);
   const [editNotes, setEditNotes] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const [swapExIdx, setSwapExIdx] = useState(null);
+  const [swapSearch, setSwapSearch] = useState('');
+  const [swapMuscle, setSwapMuscle] = useState('');
 
   // Rest timer state
   const [restSeconds, setRestSeconds] = useState(90);
@@ -375,6 +379,29 @@ export default function WorkoutLogPage() {
       prev.forEach(key => { if (!key.startsWith(`${exIdx}-`)) next.add(key); });
       return next;
     });
+  };
+
+  const swapExercise = (exIdx, newEx) => {
+    const newUnit = newEx.unit || 'weight_reps';
+    setEntries(prev => prev.map((entry, i) => {
+      if (i !== exIdx) return entry;
+      const unitChanged = newUnit !== (entry.unit || 'weight_reps');
+      return {
+        ...entry,
+        exerciseId: newEx.id,
+        name: newEx.name,
+        unit: newUnit,
+        sets: unitChanged ? entry.sets.map(() => emptySet(newUnit)) : entry.sets,
+      };
+    }));
+    setCompletedSets(prev => {
+      const next = new Set();
+      prev.forEach(key => { if (!key.startsWith(`${exIdx}-`)) next.add(key); });
+      return next;
+    });
+    setSwapExIdx(null);
+    setSwapSearch('');
+    toast(`Swapped to ${newEx.name}`);
   };
 
   const handleCompleteSet = (exIdx, setIdx) => {
@@ -759,6 +786,9 @@ export default function WorkoutLogPage() {
                         {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                         {entry.name || getExerciseName(entry.exerciseId)}
                         {exercise && <button className="ex-info-btn" onClick={() => setDetailExercise(exercise)} title="Exercise details"><Info size={14} /></button>}
+                        <button className="ex-info-btn" onClick={() => { setSwapExIdx(exIdx); setSwapSearch(''); setSwapMuscle(''); }} title="Swap exercise">
+                          <ArrowLeftRight size={14} />
+                        </button>
                       </h3>
                       <div className="log-card-tags">
                         {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
@@ -931,6 +961,59 @@ export default function WorkoutLogPage() {
           onClose={() => setDetailExercise(null)}
         />
       )}
+
+      {swapExIdx !== null && (() => {
+        const swapFiltered = exerciseLibrary.filter(e => {
+          const matchName = !swapSearch || e.name.toLowerCase().includes(swapSearch.toLowerCase());
+          const matchMuscle = !swapMuscle || e.muscle === swapMuscle || (Array.isArray(e.muscles) && e.muscles.includes(swapMuscle));
+          return matchName && matchMuscle;
+        }).slice(0, 60);
+        const currentId = entries[swapExIdx]?.exerciseId;
+        return (
+          <div className="modal-overlay" onClick={() => setSwapExIdx(null)}>
+            <div className="modal swap-exercise-modal" onClick={e => e.stopPropagation()}>
+              <div className="swap-modal-header">
+                <div>
+                  <h3 className="modal-title" style={{ marginBottom: 2 }}>Swap Exercise</h3>
+                  <p className="text-sm text-muted">Replacing: <strong>{entries[swapExIdx]?.name || getExerciseName(currentId)}</strong></p>
+                </div>
+                <button className="btn btn-outline btn-sm btn-icon" onClick={() => setSwapExIdx(null)}><X size={14} /></button>
+              </div>
+              <div className="swap-search-row">
+                <div className="swap-search-wrap">
+                  <Search size={14} className="swap-search-icon" />
+                  <input
+                    className="form-input swap-search-input"
+                    placeholder="Search exercises…"
+                    value={swapSearch}
+                    onChange={e => setSwapSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <select className="form-input swap-muscle-select" value={swapMuscle} onChange={e => setSwapMuscle(e.target.value)}>
+                  <option value="">All muscles</option>
+                  {muscleGroups.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="swap-exercise-list">
+                {swapFiltered.length === 0 ? (
+                  <p className="text-sm text-muted" style={{ padding: '16px', textAlign: 'center' }}>No exercises found</p>
+                ) : swapFiltered.map(ex => (
+                  <button
+                    key={ex.id}
+                    className={`swap-exercise-item${ex.id === currentId ? ' current' : ''}`}
+                    onClick={() => ex.id !== currentId && swapExercise(swapExIdx, ex)}
+                    disabled={ex.id === currentId}
+                  >
+                    <div className="swap-ex-name">{ex.name}</div>
+                    <div className="swap-ex-meta">{ex.muscle}{ex.equipment ? ` · ${ex.equipment}` : ''}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
