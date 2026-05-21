@@ -58,6 +58,7 @@ function VolumeChart({ logs }) {
       <div className="card-header">
         <h3 className="card-title">Weekly Training Volume (kg)</h3>
       </div>
+      <p className="text-sm text-muted" style={{ marginBottom: 8 }}>每個 bar 代表一週（Mon–Sun），X 軸顯示週一日期</p>
       {!hasData ? (
         <p className="text-sm text-muted" style={{ padding: '16px 0' }}>No weight-based logs yet. Volume will appear once workouts are logged.</p>
       ) : (
