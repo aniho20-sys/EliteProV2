@@ -405,6 +405,11 @@ export default function WorkoutLogPage() {
       ) : (
         [...logs].reverse().map(l => {
           const plan = plans.find(p => p.id === l.planId);
+          const totalVolume = (l.entries || []).reduce((sum, e) => {
+            if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
+            return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+          }, 0);
+          const totalSets = (l.entries || []).reduce((sum, e) => sum + (e.sets || []).length, 0);
           return (
             <div key={l.id} className="card mb-16">
               <div className="card-header">
@@ -420,6 +425,22 @@ export default function WorkoutLogPage() {
                   <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEdit(l)} title="Edit workout">
                     <Pencil size={13} />
                   </button>
+                </div>
+              </div>
+              <div className="log-session-stats">
+                {totalVolume > 0 && (
+                  <div className="log-stat-item">
+                    <span className="log-stat-value">{totalVolume.toLocaleString()}<span className="log-stat-unit">kg</span></span>
+                    <span className="log-stat-label">Total Volume</span>
+                  </div>
+                )}
+                <div className="log-stat-item">
+                  <span className="log-stat-value">{totalSets}</span>
+                  <span className="log-stat-label">Sets</span>
+                </div>
+                <div className="log-stat-item">
+                  <span className="log-stat-value">{l.entries.length}</span>
+                  <span className="log-stat-label">Exercises</span>
                 </div>
               </div>
               {l.entries.map((entry, i) => {

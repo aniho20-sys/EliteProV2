@@ -4310,3 +4310,48 @@ tr:hover { background: var(--bg-card-hover); }
   color: var(--text);
   white-space: nowrap;
 }
+
+/* Session log stats bar */
+.log-session-stats {
+  display: flex;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 12px -20px;
+  padding: 10px 20px;
+  background: var(--surface);
+  gap: 0;
+}
+.log-stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+.log-stat-item + .log-stat-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 15%; bottom: 15%;
+  width: 1px;
+  background: var(--border);
+}
+.log-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
+}
+.log-stat-unit {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 2px;
+  vertical-align: baseline;
+}
+.log-stat-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
