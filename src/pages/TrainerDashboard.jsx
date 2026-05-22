@@ -82,7 +82,7 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
         const { label, color, pct } = getActivityMeta(daysSince);
         return (
           <Link key={client.id} to={`/clients/${client.id}`} className="client-activity-item">
-            <div className="client-activity-avatar">{client.name[0]}</div>
+            <div className="client-activity-avatar">{client.name?.[0] || '?'}</div>
             <div className="client-activity-info">
               <div className="client-activity-name">{client.name}</div>
               <div className="client-activity-bar-wrap">
@@ -100,7 +100,7 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
 const INACTIVE_DAYS = 7;
 
 function buildDefaultMsg(client, reasons) {
-  const first = client.name.split(' ')[0];
+  const first = (client.name || 'there').split(' ')[0];
   if (reasons.lowSessions) {
     const n = reasons.remaining;
     return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
@@ -281,7 +281,7 @@ export default function TrainerDashboard() {
             {atRiskClients.map(({ client, daysSince, reasons }) => (
               <div key={client.id} className="at-risk-item">
                 <Link to={`/clients/${client.id}`} className="at-risk-identity">
-                  <div className="at-risk-avatar">{client.name[0]}</div>
+                  <div className="at-risk-avatar">{client.name?.[0] || '?'}</div>
                   <span className="at-risk-name">{client.name}</span>
                 </Link>
                 <div className="at-risk-reasons">

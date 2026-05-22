@@ -6,6 +6,7 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
   const [muscle, setMuscle] = useState('');
 
   const filtered = exerciseLibrary.filter(e => {
+    if (!e || !e.name) return false;
     const matchName = !search || e.name.toLowerCase().includes(search.toLowerCase());
     const matchMuscle = !muscle || e.muscle === muscle || (Array.isArray(e.muscles) && e.muscles.includes(muscle));
     return matchName && matchMuscle;
