@@ -297,18 +297,35 @@ export default function WorkoutLogPage() {
         />
 
         {/* Floating timer pill — always visible regardless of scroll */}
-        <button
-          className={`rest-timer-pill${timer.timerActive ? ' running' : ''}${timer.timerDone ? ' done' : ''}`}
-          onClick={timer.toggleTimer}
-          title={timer.timerActive ? 'Tap to pause' : timer.timerDone ? 'Tap to restart' : 'Tap to start'}
-        >
-          <Timer size={15} className="rest-timer-pill-icon" />
-          <span className="rest-timer-pill-time">{timer.timerDisplay}</span>
+        <div className={`rest-timer-pill${timer.timerActive ? ' running' : ''}${timer.timerDone ? ' done' : ''}`}>
+          <Timer size={17} className="rest-timer-pill-icon" />
+          {timer.timerEditing ? (
+            <div
+              className="rest-timer-pill-edit"
+              onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) timer.applyTimerInput(timer.timerMins, timer.timerSecs); }}
+              onKeyDown={e => { if (e.key === 'Enter') timer.applyTimerInput(timer.timerMins, timer.timerSecs); if (e.key === 'Escape') timer.setTimerEditing(false); }}
+            >
+              <input className="rest-timer-pill-input" type="number" inputMode="numeric" min="0" max="59"
+                value={timer.timerMins} onChange={e => timer.setTimerMins(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} autoFocus />
+              <span className="rest-timer-pill-colon">:</span>
+              <input className="rest-timer-pill-input" type="number" inputMode="numeric" min="0" max="59"
+                value={String(timer.timerSecs).padStart(2, '0')} onChange={e => timer.setTimerSecs(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} />
+            </div>
+          ) : (
+            <span
+              className="rest-timer-pill-time"
+              onClick={!timer.timerActive ? timer.startEditTimer : undefined}
+              style={!timer.timerActive ? { cursor: 'pointer' } : {}}
+              title={!timer.timerActive ? 'Tap to set time' : undefined}
+            >
+              {timer.timerDisplay}
+            </span>
+          )}
           <span className="rest-timer-pill-sep" />
-          <span className="rest-timer-pill-action">
-            {timer.timerActive ? 'Pause' : timer.timerDone ? 'Done  ↺' : timer.timerStarted ? 'Resume' : 'Start'}
-          </span>
-        </button>
+          <button className="rest-timer-pill-action" onClick={timer.toggleTimer}>
+            {timer.timerActive ? 'Pause' : timer.timerDone ? '↺' : timer.timerStarted ? 'Resume' : 'Start'}
+          </button>
+        </div>
 
         {detailExercise && (
           <ExerciseDetailModal exercise={detailExercise} onClose={() => setDetailExercise(null)} />

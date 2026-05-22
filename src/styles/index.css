@@ -4286,20 +4286,17 @@ tr:hover { background: var(--bg-card-hover); }
 
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: 10px;
+  padding: 14px 22px;
   background: var(--bg-card);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-full);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  cursor: pointer;
   white-space: nowrap;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-  /* prevent text selection on repeated taps */
   user-select: none;
   -webkit-user-select: none;
 }
-.rest-timer-pill:active { transform: translateX(-50%) scale(0.97); }
 
 /* Active — pulsing blue border */
 .rest-timer-pill.running {
@@ -4317,6 +4314,7 @@ tr:hover { background: var(--bg-card-hover); }
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
   animation: pill-done-flash 0.6s ease-out 3;
 }
+.rest-timer-pill.running .rest-timer-pill-time { color: var(--primary); }
 .rest-timer-pill.done .rest-timer-pill-time,
 .rest-timer-pill.done .rest-timer-pill-action {
   color: var(--success);
@@ -4330,23 +4328,56 @@ tr:hover { background: var(--bg-card-hover); }
 
 .rest-timer-pill-icon { color: var(--text-muted); flex-shrink: 0; }
 .rest-timer-pill-time {
-  font-size: 1.05rem;
+  font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text);
-  min-width: 38px;
+  min-width: 52px;
   text-align: center;
+  line-height: 1;
 }
 .rest-timer-pill-sep {
   width: 1px;
-  height: 16px;
+  height: 20px;
   background: var(--border);
   flex-shrink: 0;
 }
 .rest-timer-pill-action {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.rest-timer-pill-action:active { opacity: 0.6; }
+.rest-timer-pill-edit {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.rest-timer-pill-input {
+  width: 38px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  padding: 2px 0;
+  -moz-appearance: textfield;
+}
+.rest-timer-pill-input::-webkit-inner-spin-button,
+.rest-timer-pill-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.rest-timer-pill-colon {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 1px;
+  line-height: 1;
 }
 
 /* Desktop: no bottom nav, position differently */
