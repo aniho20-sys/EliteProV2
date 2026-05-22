@@ -168,24 +168,26 @@ export default function WorkoutLogPage() {
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
-    const logEntries = entries.map(e => {
-      const unit = e.unit || 'weight_reps';
-      return {
-        exerciseId: e.exerciseId,
-        name: e.name || getExerciseName(e.exerciseId),
-        unit,
-        sets: e.sets.filter(s => hasValue(s, unit)).map(s => {
-          if (unit === 'reps_only') return { reps: Number(s.reps) };
-          if (unit === 'time') return { seconds: Number(s.seconds) };
-          if (unit === 'distance') return { metres: Number(s.metres) };
-          return { weight: Number(s.weight), reps: Number(s.reps) };
-        }),
-      };
-    });
+    const logEntries = entries
+      .filter(e => e.exerciseId)
+      .map(e => {
+        const unit = e.unit || 'weight_reps';
+        return {
+          exerciseId: e.exerciseId,
+          name: e.name || getExerciseName(e.exerciseId) || e.exerciseId,
+          unit,
+          sets: e.sets.filter(s => hasValue(s, unit)).map(s => {
+            if (unit === 'reps_only') return { reps: Number(s.reps) };
+            if (unit === 'time') return { seconds: Number(s.seconds) };
+            if (unit === 'distance') return { metres: Number(s.metres) };
+            return { weight: Number(s.weight), reps: Number(s.reps) };
+          }),
+        };
+      });
     const completedCount = logEntries.filter(e => e.sets.length > 0).length;
-    const newPRs = entries.filter(e => isNewPR(e)).map(e => ({
+    const newPRs = entries.filter(e => e.exerciseId && isNewPR(e)).map(e => ({
       exerciseId: e.exerciseId,
-      name: e.name || getExerciseName(e.exerciseId),
+      name: e.name || getExerciseName(e.exerciseId) || e.exerciseId,
       weight: Math.max(...e.sets.map(s => Number(s.weight) || 0)),
     }));
     const totalVolume = logEntries.reduce((sum, e) => {
@@ -201,15 +203,17 @@ export default function WorkoutLogPage() {
         date: logDate,
         completed: completedCount > 0,
         entries: logEntries,
-        rpe, notes,
+        rpe: rpe ?? 7,
+        notes: notes ?? '',
       });
       const newBadges = await checkAndAwardBadges(targetClientId).catch(() => []);
       localStorage.removeItem(logDraftKey);
       setShowLog(false);
       setCompletedSets(new Set());
       setCompletedData({ planName: selectedPlan?.name || 'Free Workout', exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe, newBadges });
-    } catch {
-      toast('Failed to save workout', 'error');
+    } catch (err) {
+      console.error('[WorkoutLog] save failed:', err);
+      toast(`Failed to save workout (${err?.code || err?.message || 'unknown error'})`, 'error');
     } finally {
       setSaving(false);
     }
