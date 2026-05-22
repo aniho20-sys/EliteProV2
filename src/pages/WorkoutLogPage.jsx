@@ -327,42 +327,6 @@ export default function WorkoutLogPage() {
         </p>
       </div>
 
-      {/* Rest timer bar on plan-selection screen */}
-      <div className="rest-timer-bar mb-16">
-        <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
-        <div className="rest-timer-right">
-          {timer.timerEditing ? (
-            <div
-              className="rest-timer-edit"
-              onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) timer.applyTimerInput(timer.timerMins, timer.timerSecs); }}
-              onKeyDown={e => { if (e.key === 'Enter') timer.applyTimerInput(timer.timerMins, timer.timerSecs); if (e.key === 'Escape') timer.setTimerEditing(false); }}
-            >
-              <input className="rest-timer-split-input" type="number" inputMode="numeric" min="0" max="59"
-                value={timer.timerMins} onChange={e => timer.setTimerMins(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} autoFocus />
-              <span className="rest-timer-split-label">m</span>
-              <input className="rest-timer-split-input" type="number" inputMode="numeric" min="0" max="59"
-                value={timer.timerSecs} onChange={e => timer.setTimerSecs(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} />
-              <span className="rest-timer-split-label">s</span>
-            </div>
-          ) : (
-            <span
-              className={`rest-timer-display${timer.timerActive ? ' rest-timer-active' : ''}${timer.timerDone ? ' rest-timer-done' : ''}`}
-              onClick={timer.startEditTimer}
-              title={!timer.timerActive ? 'Tap to set time' : undefined}
-              style={!timer.timerActive ? { cursor: 'pointer' } : {}}
-            >
-              {timer.timerDisplay}
-            </span>
-          )}
-          <button className={`btn ${timer.timerActive ? 'btn-outline' : 'btn-accent'}`} onClick={timer.toggleTimer}>
-            {timer.timerActive ? 'Pause' : timer.timerDone ? 'Restart' : timer.timerStarted ? 'Resume' : 'Start'}
-          </button>
-          {timer.timerStarted && !timer.timerActive && !timer.timerDone && (
-            <button className="btn btn-outline btn-sm" onClick={timer.resetTimer} title="Reset">↺</button>
-          )}
-        </div>
-      </div>
-
       {prCount > 0 && (
         <div className="card mb-16 pr-summary-card">
           <div className="card-header">
