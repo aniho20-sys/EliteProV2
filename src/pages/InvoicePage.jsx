@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
-import { Plus, Printer, Trash2, CheckCircle, FileText, AlertCircle, Clock } from 'lucide-react';
+import { Plus, Printer, Trash2, CheckCircle, FileText, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { localToday } from '../utils/dateUtils';
+import { isSafeUrl } from '../utils/urlUtils';
 
 const CURRENCIES = ['HKD', 'USD', 'GBP', 'EUR', 'SGD', 'AUD'];
 const EMPTY_ITEM = { description: '', qty: 1, unitPrice: 0 };
@@ -82,6 +83,15 @@ function InvoicePrint({ invoice, trainer, client, onClose }) {
           </div>
         )}
 
+        {invoice.paymentUrl && isSafeUrl(invoice.paymentUrl) && (
+          <div className="invoice-print-payment">
+            <div className="invoice-print-notes-label">Payment</div>
+            <a href={invoice.paymentUrl} target="_blank" rel="noopener noreferrer" className="invoice-print-pay-link">
+              Pay Now →
+            </a>
+          </div>
+        )}
+
         <div className="invoice-print-status">
           Status: <strong style={{ textTransform: 'uppercase' }}>{invoice.status === 'paid' ? `PAID ${invoice.paidDate ? `on ${invoice.paidDate}` : ''}` : 'UNPAID'}</strong>
         </div>
@@ -104,12 +114,12 @@ export default function InvoicePage() {
   const [markingPaid, setMarkingPaid] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    clientId: '', issueDate: today, dueDate: '', currency: 'HKD', notes: '',
+    clientId: '', issueDate: today, dueDate: '', currency: 'HKD', notes: '', paymentUrl: '',
     items: [{ ...EMPTY_ITEM }],
   });
 
   const resetForm = () => setForm({
-    clientId: '', issueDate: today, dueDate: '', currency: 'HKD', notes: '',
+    clientId: '', issueDate: today, dueDate: '', currency: 'HKD', notes: '', paymentUrl: '',
     items: [{ ...EMPTY_ITEM }],
   });
 
@@ -150,6 +160,7 @@ export default function InvoicePage() {
         items: form.items.map(i => ({ description: i.description, qty: Number(i.qty), unitPrice: Number(i.unitPrice) })),
         status: 'unpaid',
         notes: form.notes,
+        paymentUrl: form.paymentUrl.trim() || null,
         paidDate: null,
       });
       toast('Invoice created');
@@ -306,6 +317,11 @@ export default function InvoicePage() {
                   <button className="btn btn-sm btn-outline" onClick={() => setPrintInvoice(inv)}>
                     <Printer size={14} /> Print / PDF
                   </button>
+                  {inv.paymentUrl && isSafeUrl(inv.paymentUrl) && inv.status !== 'paid' && (
+                    <a href={inv.paymentUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-accent">
+                      <ExternalLink size={14} /> Pay Now
+                    </a>
+                  )}
                   {inv.status === 'unpaid' && (
                     <button className="btn btn-sm btn-primary" onClick={() => handleMarkPaid(inv)} disabled={markingPaid === inv.id}>
                       <CheckCircle size={14} /> {markingPaid === inv.id ? 'Saving…' : 'Mark Paid'}
@@ -405,6 +421,11 @@ export default function InvoicePage() {
               <div className="form-group">
                 <label className="form-label">Notes (optional)</label>
                 <textarea className="form-textarea" rows={2} placeholder="Payment instructions, bank details…" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Payment Link <span className="text-muted">(optional — PayMe / FPS / bank URL)</span></label>
+                <input className="form-input" type="url" placeholder="https://payme.hsbc.com.hk/…" value={form.paymentUrl} onChange={e => setForm(p => ({ ...p, paymentUrl: e.target.value }))} />
               </div>
 
               <div className="modal-actions">

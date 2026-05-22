@@ -3415,6 +3415,8 @@ tr:hover { background: var(--bg-card-hover); }
 .invoice-total-amount { font-weight: 700; font-size: 1.1rem; }
 .invoice-print-notes { background: var(--bg); border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 0.88rem; }
 .invoice-print-notes-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 4px; }
+.invoice-print-payment { background: var(--bg); border-radius: 8px; padding: 14px; margin-bottom: 20px; }
+.invoice-print-pay-link { font-size: 0.9rem; font-weight: 600; color: var(--accent); text-decoration: none; }
 .invoice-print-status { font-size: 0.9rem; color: var(--text-muted); }
 
 /* ── Responsive catch-all: 640px ──────────────────────────────────────────── */
