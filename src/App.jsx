@@ -30,6 +30,10 @@ const IntakeFormPage = lazy(() => import('./pages/IntakeFormPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const OperatorDashboard = lazy(() => import('./pages/OperatorDashboard'));
+const TrainerApplicationPage = lazy(() => import('./pages/TrainerApplicationPage'));
+const StudioManagementPage = lazy(() => import('./pages/StudioManagementPage'));
+const StudioBookingPage = lazy(() => import('./pages/StudioBookingPage'));
 
 function LoadingScreen() {
   return (
@@ -56,6 +60,7 @@ function AppRoutes() {
   //   Exception: needsProfile — new user has no profile yet, show RoleSelectPage instead
   if (signingIn || loading || !authReady || (firebaseUser && !currentUser && !needsProfile)) return <LoadingScreen />;
 
+  const isOperator = currentUser?.role === 'operator';
   const isTrainer = currentUser?.role === 'trainer';
 
   return (
@@ -69,7 +74,7 @@ function AppRoutes() {
         <RoleSelectPage />
       ) : !currentUser ? (
         <LoginPage />
-      ) : (currentUser.role === 'client' && !currentUser.intakeCompleted) ? (
+      ) : (currentUser.role === 'client' && !currentUser.intakeCompleted && !isOperator) ? (
         <IntakeFormPage />
       ) : (
         <div className="app-layout">
@@ -78,7 +83,7 @@ function AppRoutes() {
           <OfflineBanner />
           <main className="main-content">
             <Routes>
-              <Route path="/" element={isTrainer ? <TrainerDashboard /> : <ClientDashboard />} />
+              <Route path="/" element={isOperator ? <OperatorDashboard /> : isTrainer ? <TrainerDashboard /> : <ClientDashboard />} />
               {isTrainer && <Route path="/clients" element={<ClientsPage />} />}
               {isTrainer && <Route path="/clients/:clientId" element={<ClientDetailPage />} />}
               {isTrainer && <Route path="/progress-overview" element={<ClientProgressOverviewPage />} />}
@@ -92,6 +97,9 @@ function AppRoutes() {
               {!isTrainer && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
               <Route path="/log" element={<WorkoutLogPage />} />
               {!isTrainer && <Route path="/progress" element={<ProgressPage />} />}
+              {isOperator && <Route path="/operator/studios" element={<StudioManagementPage />} />}
+              {(isTrainer || isOperator) && <Route path="/apply" element={<TrainerApplicationPage />} />}
+              {isTrainer && <Route path="/studios/book" element={<StudioBookingPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

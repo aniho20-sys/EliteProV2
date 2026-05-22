@@ -33,6 +33,10 @@ service cloud.firestore {
       return isAuth() && userRole() == 'trainer';
     }
 
+    function isOperator() {
+      return isAuth() && userRole() == 'operator';
+    }
+
     function isTrainerOf(clientId) {
       let cd = get(/databases/$(database)/documents/users/$(clientId)).data;
       return isAuth()
@@ -206,6 +210,35 @@ service cloud.firestore {
       allow create: if isOwner(clientId);
       allow update: if isOwner(clientId);
       allow delete: if false;
+    }
+
+    // ── Studios ──
+    // Any authenticated user can read; only operator can write.
+    match /studios/{id} {
+      allow read: if isAuth();
+      allow write: if isOperator();
+    }
+
+    // ── Studio Slots ──
+    // Any authenticated user can read; operator can create/delete;
+    // trainer can book an available slot (update status to 'booked').
+    match /studioSlots/{id} {
+      allow read: if isAuth();
+      allow create, delete: if isOperator();
+      allow update: if isOperator()
+        || (isTrainer() && resource.data.status == 'available'
+            && request.resource.data.trainerId == request.auth.uid
+            && request.resource.data.status == 'booked');
+    }
+
+    // ── Trainer Applications ──
+    // Trainer creates own application; trainer and operator can read;
+    // operator can review (update status); trainer can update own pending application.
+    match /trainerApplications/{appId} {
+      allow create: if isAuth() && isTrainer() && request.auth.uid == appId;
+      allow read: if isAuth() && (request.auth.uid == appId || isOperator());
+      allow update: if isOperator()
+        || (isAuth() && request.auth.uid == appId && resource.data.status == 'pending');
     }
   }
 }
