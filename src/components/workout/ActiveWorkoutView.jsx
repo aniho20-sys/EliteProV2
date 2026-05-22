@@ -281,8 +281,6 @@ export default function ActiveWorkoutView({
         </button>
       )}
 
-      <RestTimerBar timer={timer} />
-
       <div className="card">
         <div className="form-group">
           <label className="form-label">RPE (Rate of Perceived Exertion) — {rpe}/10</label>
