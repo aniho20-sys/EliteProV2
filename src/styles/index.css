@@ -1212,6 +1212,16 @@ tr:hover { background: var(--bg-card-hover); }
   box-shadow: var(--shadow-glow);
 }
 .client-card:hover::after { opacity: 1; }
+.free-workout-card {
+  border: 2px dashed var(--border) !important;
+  background: transparent;
+  text-align: left;
+  color: var(--text-muted);
+}
+.free-workout-card:hover {
+  border-color: var(--accent) !important;
+  color: var(--text);
+}
 .client-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
 .client-meta { color: var(--text-secondary); font-size: 0.8rem; }
 .client-goals { margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }

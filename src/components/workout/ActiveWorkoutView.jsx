@@ -1,4 +1,5 @@
-import { Trophy, Play, Timer, ArrowLeftRight, Info } from 'lucide-react';
+import { useState } from 'react';
+import { Trophy, Play, Timer, ArrowLeftRight, Info, X } from 'lucide-react';
 import { isSafeUrl } from '../../utils/urlUtils';
 import { normalizeSets, UNIT_OPTIONS, emptySet, formatSet, getProgressionSuggestion, stringifySet } from '../../utils/workoutUtils';
 import { localToday } from '../../utils/dateUtils';
@@ -64,6 +65,7 @@ export default function ActiveWorkoutView({
   logDraftKey,
 }) {
   const { startTimer } = timer;
+  const [addingEx, setAddingEx] = useState(false);
 
   const addSet = (exIdx) => {
     setEntries(prev => prev.map((entry, i) => {
@@ -114,6 +116,32 @@ export default function ActiveWorkoutView({
     });
   };
 
+  const removeExercise = (exIdx) => {
+    setEntries(prev => prev.filter((_, i) => i !== exIdx));
+    setCompletedSets(prev => {
+      const next = new Set();
+      prev.forEach(key => {
+        const parts = key.split('-');
+        const eIdx = Number(parts[0]);
+        if (eIdx < exIdx) next.add(key);
+        else if (eIdx > exIdx) next.add(`${eIdx - 1}-${parts[1]}`);
+      });
+      return next;
+    });
+  };
+
+  const addNewExercise = (newEx) => {
+    const unit = newEx.unit || 'weight_reps';
+    setEntries(prev => [...prev, {
+      exerciseId: newEx.id,
+      name: newEx.name,
+      unit,
+      rest: 90,
+      sets: [emptySet(unit)],
+    }]);
+    setAddingEx(false);
+  };
+
   const handleCompleteSet = (exIdx, setIdx) => {
     const key = `${exIdx}-${setIdx}`;
     const isCompleting = !completedSets.has(key);
@@ -131,7 +159,7 @@ export default function ActiveWorkoutView({
     <div>
       <div className="log-top-bar mb-16">
         <div className="log-top-title">
-          <h2 className="page-title">{selectedPlan.name}</h2>
+          <h2 className="page-title">{selectedPlan?.name || 'Free Workout'}</h2>
           <input
             type="date" className="form-input log-date-input"
             value={logDate} max={localToday()}
@@ -150,11 +178,11 @@ export default function ActiveWorkoutView({
       </div>
 
       {entries.map((entry, exIdx) => {
-        const planEx = selectedPlan.exercises[exIdx];
+        const planEx = selectedPlan?.exercises?.[exIdx];
         const currentPR = prs[entry.exerciseId];
         const exercise = getExercise(entry.exerciseId);
         const gotNewPR = isNewPR(entry);
-        const lastLog = [...logs].reverse().find(l => l.planId === selectedPlan.id);
+        const lastLog = selectedPlan?.id ? [...logs].reverse().find(l => l.planId === selectedPlan.id) : null;
         const lastEntry = lastLog?.entries?.find(e => e.exerciseId === entry.exerciseId);
         return (
           <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
@@ -171,10 +199,15 @@ export default function ActiveWorkoutView({
                   <button className="ex-info-btn" onClick={() => setSwapExIdx(exIdx)} title="Swap exercise">
                     <ArrowLeftRight size={14} />
                   </button>
+                  {!selectedPlan && (
+                    <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title="Remove exercise" style={{ color: 'var(--danger)' }}>
+                      <X size={14} />
+                    </button>
+                  )}
                 </h3>
                 <div className="log-card-tags">
                   {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
-                  <span className="text-sm text-muted">{(() => {
+                  {planEx && <span className="text-sm text-muted">{(() => {
                     const sets = normalizeSets(planEx);
                     const reps = sets.map(s => s.reps);
                     const weights = sets.map(s => s.weight);
@@ -183,7 +216,7 @@ export default function ActiveWorkoutView({
                     let detail = allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`;
                     if (hasWeight) detail += ` | ${weights.every(w => w === weights[0]) ? weights[0] + 'kg' : weights.join('/') + 'kg'}`;
                     return detail;
-                  })()}</span>
+                  })()}</span>}
                   {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
                 </div>
               </div>
@@ -242,6 +275,12 @@ export default function ActiveWorkoutView({
         );
       })}
 
+      {!selectedPlan && (
+        <button className="btn btn-outline mb-16" style={{ width: '100%' }} onClick={() => setAddingEx(true)}>
+          + Add Exercise
+        </button>
+      )}
+
       <RestTimerBar timer={timer} />
 
       <div className="card">
@@ -266,6 +305,17 @@ export default function ActiveWorkoutView({
           currentName={entries[swapExIdx]?.name || getExerciseName(entries[swapExIdx]?.exerciseId)}
           onSwap={ex => swapExercise(swapExIdx, ex)}
           onClose={() => setSwapExIdx(null)}
+        />
+      )}
+
+      {addingEx && (
+        <ExerciseSwapModal
+          exerciseLibrary={exerciseLibrary}
+          muscleGroups={muscleGroups}
+          currentId={null}
+          mode="add"
+          onSwap={addNewExercise}
+          onClose={() => setAddingEx(false)}
         />
       )}
     </div>

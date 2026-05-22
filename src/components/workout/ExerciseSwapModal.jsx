@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Search } from 'lucide-react';
 
-export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, currentId, currentName, onSwap, onClose }) {
+export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, currentId, currentName, onSwap, onClose, mode = 'swap' }) {
   const [search, setSearch] = useState('');
   const [muscle, setMuscle] = useState('');
 
@@ -16,8 +16,8 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
       <div className="modal swap-exercise-modal" onClick={e => e.stopPropagation()}>
         <div className="swap-modal-header">
           <div>
-            <h3 className="modal-title" style={{ marginBottom: 2 }}>Swap Exercise</h3>
-            <p className="text-sm text-muted">Replacing: <strong>{currentName}</strong></p>
+            <h3 className="modal-title" style={{ marginBottom: 2 }}>{mode === 'add' ? 'Add Exercise' : 'Swap Exercise'}</h3>
+            {mode === 'swap' && <p className="text-sm text-muted">Replacing: <strong>{currentName}</strong></p>}
           </div>
           <button className="btn btn-outline btn-sm btn-icon" onClick={onClose}><X size={14} /></button>
         </div>

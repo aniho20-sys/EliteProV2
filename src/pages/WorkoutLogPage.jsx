@@ -131,6 +131,16 @@ export default function WorkoutLogPage() {
     setShowLog(true);
   };
 
+  const startFreeWorkout = () => {
+    setSelectedPlan(null);
+    setLogDate(localToday());
+    setEntries([]);
+    setRpe(7);
+    setNotes('');
+    setCompletedSets(new Set());
+    setShowLog(true);
+  };
+
   const isNewPR = (entry) => {
     if ((entry.unit || 'weight_reps') !== 'weight_reps') return false;
     const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
@@ -187,7 +197,7 @@ export default function WorkoutLogPage() {
       await addWorkoutLog({
         clientId: targetClientId,
         ...(loggingForClient && { trainerId: currentUser.id, createdBy: currentUser.id, logType: 'pt_session' }),
-        planId: selectedPlan.id,
+        planId: selectedPlan?.id || '',
         date: logDate,
         completed: completedCount > 0,
         entries: logEntries,
@@ -197,7 +207,7 @@ export default function WorkoutLogPage() {
       localStorage.removeItem(logDraftKey);
       setShowLog(false);
       setCompletedSets(new Set());
-      setCompletedData({ planName: selectedPlan.name, exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe, newBadges });
+      setCompletedData({ planName: selectedPlan?.name || 'Free Workout', exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe, newBadges });
     } catch {
       toast('Failed to save workout', 'error');
     } finally {
@@ -371,18 +381,18 @@ export default function WorkoutLogPage() {
 
       <div className="card mb-16">
         <h3 className="card-title mb-16">Start a Workout</h3>
-        {plans.length > 0 ? (
-          <div className="grid-3">
-            {plans.map(p => (
-              <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
-                <div className="fw-bold">{p.name}</div>
-                <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted text-sm">No plans assigned yet. Ask your coach to assign a plan.</p>
-        )}
+        <div className="grid-3">
+          {plans.map(p => (
+            <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
+              <div className="fw-bold">{p.name}</div>
+              <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
+            </button>
+          ))}
+          <button className="card client-card free-workout-card" onClick={startFreeWorkout}>
+            <div className="fw-bold">Free Workout</div>
+            <div className="text-sm text-muted">Choose your own exercises</div>
+          </button>
+        </div>
       </div>
 
       <h3 className="mb-16">History</h3>
@@ -394,7 +404,7 @@ export default function WorkoutLogPage() {
             isTrainer ? 'Assign a workout plan to your client first, then log it here.'
             : !currentUser.trainerId ? 'Connect to a coach first — they will assign workout plans for you to follow.'
             : plans.length > 0 ? 'Select a plan above to start logging your first session.'
-            : "Your coach hasn't assigned any plans yet. Message them to get started."
+            : "Your coach hasn't assigned any plans yet. You can start a Free Workout above anytime."
           }
           action={
             !isTrainer && !currentUser.trainerId ? { label: 'Connect to a Coach', to: '/profile' }
