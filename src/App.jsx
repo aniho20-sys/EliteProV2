@@ -60,7 +60,9 @@ function AppRoutes() {
   //   Exception: needsProfile — new user has no profile yet, show RoleSelectPage instead
   if (signingIn || loading || !authReady || (firebaseUser && !currentUser && !needsProfile)) return <LoadingScreen />;
 
-  const isOperator = currentUser?.role === 'operator';
+  // gym啦 hidden — set to true when ready to re-enable
+  const GYMLA_ENABLED = false;
+  const isOperator = GYMLA_ENABLED && currentUser?.role === 'operator';
   const isTrainer = currentUser?.role === 'trainer';
 
   return (

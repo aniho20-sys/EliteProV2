@@ -32,18 +32,19 @@ const LINK_DEFS = {
 const makeLinks = (paths, mobile = false) =>
   paths.map(to => ({ to, icon: LINK_DEFS[to].icon, label: mobile && LINK_DEFS[to].mobileLabel ? LINK_DEFS[to].mobileLabel : LINK_DEFS[to].label }));
 
+// gym啦 hidden — remove '/apply' and '/studios/book' from nav, use 'client' fallback for operator
 const NAV_CONFIG = {
   trainer: {
-    desktop:  { primary: ['/', '/clients', '/schedule', '/messages'], secondary: ['/progress-overview', '/plans', '/invoices', '/analytics', '/exercises', '/apply'] },
-    mobile:   { primary: ['/', '/clients', '/plans', '/messages'],   more: ['/schedule', '/invoices', '/analytics', '/progress-overview', '/exercises', '/apply', '/profile'] },
+    desktop:  { primary: ['/', '/clients', '/schedule', '/messages'], secondary: ['/progress-overview', '/plans', '/invoices', '/analytics', '/exercises'] },
+    mobile:   { primary: ['/', '/clients', '/plans', '/messages'],   more: ['/schedule', '/invoices', '/analytics', '/progress-overview', '/exercises', '/profile'] },
   },
   client: {
     desktop:  { primary: ['/', '/log', '/progress', '/messages'],    secondary: ['/my-workouts', '/schedule', '/exercises'] },
     mobile:   { primary: ['/', '/log', '/schedule', '/messages'],    more: ['/my-workouts', '/progress', '/exercises', '/profile'] },
   },
   operator: {
-    desktop:  { primary: ['/', '/operator/studios', '/profile'], secondary: [] },
-    mobile:   { primary: ['/', '/operator/studios', '/profile'], more: [] },
+    desktop:  { primary: ['/', '/profile'], secondary: [] },
+    mobile:   { primary: ['/', '/profile'], more: [] },
   },
 };
 
@@ -52,7 +53,8 @@ export default function Navigation() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const role = currentUser?.role === 'operator' ? 'operator' : currentUser?.role === 'trainer' ? 'trainer' : 'client';
+  // gym啦 hidden — treat operator as trainer for nav purposes
+  const role = currentUser?.role === 'trainer' ? 'trainer' : currentUser?.role === 'client' ? 'client' : 'trainer';
   const links        = makeLinks(NAV_CONFIG[role].desktop.primary);
   const secondaryLinks = makeLinks(NAV_CONFIG[role].desktop.secondary);
   const primaryLinks = makeLinks(NAV_CONFIG[role].mobile.primary, true);
