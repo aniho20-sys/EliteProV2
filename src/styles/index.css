@@ -118,6 +118,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-overflow-scrolling: touch;
+  /* Fix B: prevent browser/OS from auto-scaling text on orientation change or layout reflow */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 #root { min-height: 100vh; display: flex; flex-direction: column; overflow-x: clip; }
@@ -3860,12 +3864,14 @@ tr:hover { background: var(--bg-card-hover); }
   text-align: center;
 }
 
-/* ===== iOS Auto-Zoom Fix =====
-   iOS Safari zooms in when focused input font-size < 16px.
-   Setting 16px on mobile prevents this without disabling user zoom. */
-@media (max-width: 640px) {
+/* ===== Fix A: iOS/Android Auto-Zoom Prevention =====
+   iOS Safari and Android Chrome zoom in when a focused input has font-size < 16px.
+   Applies to all touch-screen breakpoints (phones + iPads) — not just ≤640px.
+   max(16px, 1rem) keeps 16px as a floor while respecting larger system font sizes
+   so users with accessibility large-text settings still see proportional inputs. */
+@media (max-width: 1024px) {
   input, select, textarea {
-    font-size: 16px;
+    font-size: max(16px, 1rem);
   }
 }
 
