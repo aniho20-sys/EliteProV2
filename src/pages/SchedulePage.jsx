@@ -241,21 +241,39 @@ export default function SchedulePage() {
     setSavingRecap(true);
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
+    } catch (err) {
+      toast(`Failed to complete session: ${err?.message || 'unknown error'}`, 'error');
+      setSavingRecap(false);
+      return;
+    }
+
+    // Deduct session count — separate try so a rules failure is clearly surfaced
+    const { remaining: prevRemaining } = getSessionStats(recapSession.clientId);
+    let deducted = false;
+    try {
       await incrementSessionOffset(recapSession.clientId);
-      if (recapSend && recapNote.trim()) {
+      deducted = true;
+    } catch (err) {
+      console.error('[SchedulePage] incrementSessionOffset failed:', err);
+      toast(`Session marked complete but session count could not be deducted (${err?.code || err?.message || 'unknown error'}). Please update manually in client settings.`, 'error');
+    }
+
+    if (recapSend && recapNote.trim()) {
+      try {
         const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
         await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
-        toast('Session complete — recap sent to client');
-      } else {
-        toast('Session marked as complete');
-      }
-      setRecapSession(null);
-      setRecapNote('');
-    } catch (err) {
-      toast(`Failed: ${err?.message || 'unknown error'}`, 'error');
-    } finally {
-      setSavingRecap(false);
+      } catch { /* non-critical */ }
     }
+
+    if (deducted) {
+      const newRemaining = prevRemaining !== null ? prevRemaining - 1 : null;
+      const countMsg = newRemaining !== null ? ` · ${newRemaining} session${newRemaining !== 1 ? 's' : ''} remaining` : '';
+      toast(`Session complete${countMsg}`);
+    }
+
+    setRecapSession(null);
+    setRecapNote('');
+    setSavingRecap(false);
   };
 
   const formatDay = (dateStr) => {
