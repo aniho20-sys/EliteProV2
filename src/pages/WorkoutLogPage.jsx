@@ -97,7 +97,7 @@ export default function WorkoutLogPage() {
         completedSets: [...completedSets],
       }));
     } catch { /* ignore quota errors */ }
-  }, [showLog, selectedPlan, logDate, entries, rpe, notes, timer.restSeconds, targetClientId]);
+  }, [showLog, selectedPlan, logDate, entries, rpe, notes, timer.restSeconds, targetClientId, completedSets]);
 
   const buildPlanEntries = (plan) => {
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);
@@ -434,7 +434,7 @@ export default function WorkoutLogPage() {
                   <span className="log-stat-label">Sets</span>
                 </div>
                 <div className="log-stat-item">
-                  <span className="log-stat-value">{l.entries.length}</span>
+                  <span className="log-stat-value">{(l.entries || []).length}</span>
                   <span className="log-stat-label">Exercises</span>
                 </div>
               </div>

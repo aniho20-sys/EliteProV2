@@ -226,9 +226,16 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create, delete: if isOperator();
       allow update: if isOperator()
+        // Trainer books an available slot: only status/trainerId/bookedAt may change
         || (isTrainer() && resource.data.status == 'available'
             && request.resource.data.trainerId == request.auth.uid
-            && request.resource.data.status == 'booked');
+            && request.resource.data.status == 'booked'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'trainerId', 'bookedAt']))
+        // Trainer cancels their own booked slot: only status/trainerId/bookedAt may change
+        || (isTrainer() && resource.data.status == 'booked'
+            && resource.data.trainerId == request.auth.uid
+            && request.resource.data.status == 'available'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'trainerId', 'bookedAt']));
     }
 
     // ── Trainer Applications ──

@@ -237,7 +237,7 @@ export default function SchedulePage() {
   };
 
   const handleConfirmComplete = async () => {
-    if (!recapSession) return;
+    if (!recapSession || savingRecap) return;
     setSavingRecap(true);
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });

@@ -53,8 +53,7 @@ export default function Navigation() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  // gym啦 hidden — treat operator as trainer for nav purposes
-  const role = currentUser?.role === 'trainer' ? 'trainer' : currentUser?.role === 'client' ? 'client' : 'trainer';
+  const role = currentUser?.role === 'trainer' ? 'trainer' : currentUser?.role === 'operator' ? 'operator' : currentUser?.role === 'client' ? 'client' : 'client';
   const links        = makeLinks(NAV_CONFIG[role].desktop.primary);
   const secondaryLinks = makeLinks(NAV_CONFIG[role].desktop.secondary);
   const primaryLinks = makeLinks(NAV_CONFIG[role].mobile.primary, true);

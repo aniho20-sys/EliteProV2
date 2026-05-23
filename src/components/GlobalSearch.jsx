@@ -20,7 +20,7 @@ export default function GlobalSearch({ onSelect }) {
 
   const results = useMemo(() => !q ? [] : [
     ...clients
-      .filter(c => c && c.name?.toLowerCase().includes(q) || c?.email?.toLowerCase().includes(q))
+      .filter(c => c && (c.name?.toLowerCase().includes(q) || c?.email?.toLowerCase().includes(q)))
       .slice(0, 4)
       .map(c => ({ type: 'Client', label: c.name, sub: c.email, action: () => navigate(`/clients/${c.id}`) })),
     ...exercises

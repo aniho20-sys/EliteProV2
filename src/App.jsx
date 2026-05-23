@@ -96,9 +96,9 @@ function AppRoutes() {
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/exercises" element={<ExerciseLibraryPage />} />
               <Route path="/profile" element={<ProfilePage />} />
-              {!isTrainer && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
-              <Route path="/log" element={<WorkoutLogPage />} />
-              {!isTrainer && <Route path="/progress" element={<ProgressPage />} />}
+              {currentUser?.role === 'client' && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
+              {(isTrainer || currentUser?.role === 'client') && <Route path="/log" element={<WorkoutLogPage />} />}
+              {currentUser?.role === 'client' && <Route path="/progress" element={<ProgressPage />} />}
               {isOperator && <Route path="/operator/studios" element={<StudioManagementPage />} />}
               {(isTrainer || isOperator) && <Route path="/apply" element={<TrainerApplicationPage />} />}
               {isTrainer && <Route path="/studios/book" element={<StudioBookingPage />} />}

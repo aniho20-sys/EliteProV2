@@ -51,8 +51,8 @@ export default function StudioBookingPage() {
   };
 
   const canCancel = (slot) => {
-    const slotDate = new Date(slot.date + 'T00:00:00');
-    const cutoff = new Date(slotDate.getTime() - 24 * 3600 * 1000);
+    const slotStart = new Date(`${slot.date}T${slot.startTime || '00:00'}:00`);
+    const cutoff = new Date(slotStart.getTime() - 24 * 3600 * 1000);
     return new Date() < cutoff;
   };
 
