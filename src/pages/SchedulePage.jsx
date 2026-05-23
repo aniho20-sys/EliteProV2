@@ -383,7 +383,7 @@ export default function SchedulePage() {
                         <button className="btn-icon" aria-label="Cancel session" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel" disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger)' }} /></button>
                       </>
                     )}
-                    {isTrainer && s.status === 'confirmed' && (
+                    {isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
                       <button className="btn-icon" aria-label="Mark session complete" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
                     )}
                     {!isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
