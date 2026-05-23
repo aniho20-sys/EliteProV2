@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-05-18（Session 30）
+> 最後更新：2026-05-23（Session 31）
 
 ---
 
@@ -97,6 +97,23 @@
 - Mobile More 抽屜（底部導航 4 tab + slide-up sheet；Trainer 手機 Plans 升至主 tab）
 - **FCM push notifications 代碼已完成**（VAPID key 已配置；Cloud Functions 已寫好；iOS 需 PWA 模式；實際運作待確認）
 
+### gym啦 Sprint 1（已完成 — commit 82306e3）
+整合入 ElitePro，共用 Firebase project `elitepro-16718`。
+- `operator` role routing + OperatorDashboard
+- Studio 管理（新增 / 編輯 / 停用）
+- Studio Slots 批量開放（1 小時一格）+ `runTransaction` 防 race condition booking
+- 教練申請流程（TrainerApplicationPage）+ Operator 審核（approve / reject）
+- TrainerDashboard gym啦 CTA card（`gymlaStatus === 'none'` 時顯示）
+- Firestore rules（`studios`, `studioSlots`, `trainerApplications`）
+- 新 Pages：`OperatorDashboard.jsx`, `StudioManagementPage.jsx`, `StudioBookingPage.jsx`, `TrainerApplicationPage.jsx`
+
+### WorkoutLog 最新改善（Session 31）
+- **REST TIMER 清理**：移除 ActiveWorkoutView inline RestTimerBar + 移除概覽畫面頂部 REST TIMER block；只保留底部 floating pill
+- **Floating pill 改良**：尺寸放大（padding 14×22px，時間字體 1.5rem）；時間數字可點擊輸入自訂分:秒（edit 模式，分:秒雙 input）
+- **訓練日誌儲存錯誤**：`catch {}` 靜默吞錯改為 `catch(err)` + toast 顯示實際 error code；guard undefined exerciseId 防止 Firestore 拒寫
+- **Client Dashboard**：體重迷你趨勢圖（Sparkline）+ 「今日訓練」CTA（有計劃直接開始 / 無計劃自由訓練）
+- **ProfilePage**：Founding Member banner（Free tier trainer 限定）
+
 ---
 
 ## 📋 待處理事項
@@ -108,7 +125,7 @@
 | 1 | **Push 通知實際運作確認** | GitHub Actions → Deploy Functions 確認冇 error；Firebase Console → Functions 確認 6 個 functions 存在；確認 VAPID key 吻合；雙方去 Profile → Enable Notifications |
 | 2 | **堂數用完自動 Push 通知** | Cloud Function：client sessions remaining ≤ 2 時自動 push 通知 trainer |
 | 3 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles；提供模板下載；預覽確認後批量建立 |
-| 3 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles；提供模板下載；預覽確認後批量建立 |
+| 4 | **訓練日誌儲存錯誤確認** | Fix 已部署（commit aa8a90e），等待用戶測試回報。若 toast 顯示實際 error code，再進一步診斷根本原因 |
 
 ### 🟠 P2 — 高優先
 
@@ -139,7 +156,7 @@
 | 17 | **Trainer announcements / broadcast**（群發訊息） |
 | 18 | **Group Class 管理**（多 client 同一 session） |
 | 19 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple） |
-| 20 | **Gym啦 三方平台**（Studio × 教練 × 學生；Flow A 教練搵場地、Flow B 學生搵教練；訂閱制；計劃已完成，等待開始 Sprint 1） |
+| 20 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成） |
 
 ---
 
