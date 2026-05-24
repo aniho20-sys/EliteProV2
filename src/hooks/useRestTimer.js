@@ -16,7 +16,7 @@ function loadTimer() {
     const { endTime, restSecs } = JSON.parse(raw);
     const remaining = Math.ceil((endTime - Date.now()) / 1000);
     if (remaining > 0) return { endTime, restSecs, remaining };
-    sessionStorage.removeItem(STORAGE_KEY); // expired
+    sessionStorage.removeItem(STORAGE_KEY);
     return null;
   } catch { return null; }
 }
@@ -29,13 +29,23 @@ export function useRestTimer({ stopWhen = false } = {}) {
   const [timerMins, setTimerMins] = useState(1);
   const [timerSecs, setTimerSecs] = useState(30);
 
-  const timerRef   = useRef(null);
-  const endTimeRef = useRef(null);
-
-  // Web Audio — decode WAV into a buffer; play via BufferSource (most reliable on iOS)
-  const audioCtxRef    = useRef(null);
+  const timerRef    = useRef(null);
+  const endTimeRef  = useRef(null);
+  const audioCtxRef = useRef(null);
   const audioBufferRef = useRef(null);
+  // Raw ArrayBuffer fetched eagerly on mount; decoded into audioBufferRef on first gesture
+  const rawWavRef   = useRef(null);
 
+  // Fetch WAV bytes immediately on mount — no gesture required for fetch
+  useEffect(() => {
+    fetch('/sounds/timer-done.wav')
+      .then(r => r.arrayBuffer())
+      .then(buf => { rawWavRef.current = buf; })
+      .catch(() => {});
+  }, []);
+
+  // Called on every user gesture that interacts with the timer.
+  // Creates AudioContext, resumes it, and decodes the WAV into a reusable buffer.
   const ensureAudioReady = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
@@ -43,15 +53,37 @@ export function useRestTimer({ stopWhen = false } = {}) {
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      if (!audioBufferRef.current) {
-        fetch('/sounds/timer-done.wav')
-          .then(r => r.arrayBuffer())
-          .then(buf => ctx.decodeAudioData(buf))
-          .then(decoded => { audioBufferRef.current = decoded; })
-          .catch(() => {});
+      // Decode using callback form — widest iOS compat
+      if (!audioBufferRef.current && rawWavRef.current) {
+        const raw = rawWavRef.current;
+        rawWavRef.current = null;
+        ctx.decodeAudioData(raw,
+          decoded => { audioBufferRef.current = decoded; },
+          () => {}
+        );
       }
-    } catch { /* AudioContext not available */ }
+    } catch { /* AudioContext not supported */ }
   }, []);
+
+  // iOS keep-alive: play a 1-sample silent buffer every 20 s while timer runs.
+  // Without this, iOS suspends AudioContext after ~30 s of silence, making
+  // ctx.resume() fail when called from a non-gesture context (timer callback).
+  useEffect(() => {
+    if (!timerActive) return;
+    const keepAlive = setInterval(() => {
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
+      try {
+        const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+      } catch { /* ignore */ }
+    }, 20000);
+    return () => clearInterval(keepAlive);
+  }, [timerActive]);
 
   const playSynthesised = useCallback((ctx) => {
     const pattern = [
@@ -88,6 +120,8 @@ export function useRestTimer({ stopWhen = false } = {}) {
         }
       } catch { /* ignore */ }
     };
+    // With the keep-alive running, ctx should already be 'running'.
+    // The resume() here is a safety net for edge cases.
     if (ctx.state === 'suspended') ctx.resume().then(doPlay).catch(() => {});
     else doPlay();
   }, [playSynthesised]);
@@ -157,13 +191,11 @@ export function useRestTimer({ stopWhen = false } = {}) {
     ensureAudioReady();
     setTimerActive(prev => {
       if (prev) {
-        // Pause
         clearInterval(timerRef.current);
         endTimeRef.current = null;
         saveTimer(null);
         return false;
       }
-      // Start / resume
       setTimeLeft(tl => {
         const secs = tl === 0 ? restSeconds : tl;
         const endTime = Date.now() + secs * 1000;
