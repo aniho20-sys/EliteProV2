@@ -44,16 +44,24 @@ export function useRestTimer({ stopWhen = false } = {}) {
       .catch(() => {});
   }, []);
 
-  // Called on every user gesture that interacts with the timer.
-  // Creates AudioContext, resumes it, and decodes the WAV into a reusable buffer.
+  // Called synchronously inside every user gesture that touches the timer.
+  // Hard-unlocks iOS AudioContext by playing a 1-sample silent buffer in the
+  // same synchronous call stack as the gesture — the only 100% reliable unlock.
   const ensureAudioReady = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
       const ctx = audioCtxRef.current;
+      // Play a 1-sample silent buffer synchronously — this is the hard-unlock.
+      // ctx.resume() alone is not enough on iOS; actual audio output is required.
+      const silentBuf = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const silentSrc = ctx.createBufferSource();
+      silentSrc.buffer = silentBuf;
+      silentSrc.connect(ctx.destination);
+      silentSrc.start(0);
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      // Decode using callback form — widest iOS compat
+      // Decode WAV (callback form — widest iOS compat)
       if (!audioBufferRef.current && rawWavRef.current) {
         const raw = rawWavRef.current;
         rawWavRef.current = null;
@@ -244,12 +252,6 @@ export function useRestTimer({ stopWhen = false } = {}) {
     setTimerActive(false);
   }, []);
 
-  const testSound = useCallback(() => {
-    ensureAudioReady();
-    // Small delay to let AudioContext resume settle before playing
-    setTimeout(playBeep, 80);
-  }, [ensureAudioReady, playBeep]);
-
   const timerDisplay = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`;
   const timerDone    = timeLeft === 0;
   const timerStarted = timeLeft < restSeconds || timerActive;
@@ -264,6 +266,5 @@ export function useRestTimer({ stopWhen = false } = {}) {
     timerDisplay, timerDone, timerStarted,
     toggleTimer, resetTimer, startTimer,
     startEditTimer, applyTimerInput,
-    testSound,
   };
 }
