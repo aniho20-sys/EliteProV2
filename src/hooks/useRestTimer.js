@@ -8,10 +8,39 @@ export function useRestTimer({ stopWhen = false } = {}) {
   const [timerMins, setTimerMins] = useState(1);
   const [timerSecs, setTimerSecs] = useState(30);
   const timerRef = useRef(null);
-  // AudioContext must be created/resumed during a user gesture to pass browser autoplay policy
+
+  // Primary: <audio> element — more reliable than Web Audio on iOS (bypasses silent-mode in most cases)
+  const audioRef = useRef(null);
+  const audioUnlockedRef = useRef(false);
+
+  // Fallback: Web Audio API (kept for browsers without <audio> support)
   const audioCtxRef = useRef(null);
 
-  const ensureAudioCtx = useCallback(() => {
+  useEffect(() => {
+    const audio = new Audio('/sounds/timer-done.wav');
+    audio.preload = 'auto';
+    audioRef.current = audio;
+    return () => { audioRef.current = null; };
+  }, []);
+
+  // iOS/Android require a user-gesture to unlock <audio> for later non-gesture playback.
+  // Call this inside any user-initiated handler (toggle, startTimer) to silently prime it.
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const prev = audio.volume;
+    audio.volume = 0;
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = prev;
+      audioUnlockedRef.current = true;
+    }).catch(() => {
+      // Unlock failed (no gesture context) — will try again on next interaction
+    });
+
+    // Also prime Web Audio fallback
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -29,15 +58,15 @@ export function useRestTimer({ stopWhen = false } = {}) {
     }
   }, [stopWhen]);
 
-  const playBeep = useCallback(() => {
+  const playWebAudioFallback = useCallback(() => {
     try {
       const ctx = audioCtxRef.current;
       if (!ctx) return;
       const pattern = [
-        { t: 0,    freq: 880, dur: 0.12, gain: 0.6 },
-        { t: 0.18, freq: 880, dur: 0.12, gain: 0.6 },
-        { t: 0.36, freq: 880, dur: 0.12, gain: 0.6 },
-        { t: 0.6,  freq: 660, dur: 0.4,  gain: 0.7 },
+        { t: 0,    freq: 800,  dur: 0.13, gain: 0.6 },
+        { t: 0.21, freq: 950,  dur: 0.13, gain: 0.65 },
+        { t: 0.42, freq: 1150, dur: 0.13, gain: 0.7 },
+        { t: 0.65, freq: 880,  dur: 0.4,  gain: 0.6 },
       ];
       pattern.forEach(({ t, freq, dur, gain }) => {
         const osc = ctx.createOscillator();
@@ -51,6 +80,17 @@ export function useRestTimer({ stopWhen = false } = {}) {
       });
     } catch { /* AudioContext not available */ }
   }, []);
+
+  const playBeep = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.volume = 1;
+      audio.play().catch(() => playWebAudioFallback());
+    } else {
+      playWebAudioFallback();
+    }
+  }, [playWebAudioFallback]);
 
   useEffect(() => {
     if (!timerActive) return;
@@ -70,7 +110,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
   }, [timerActive, playBeep]);
 
   const toggleTimer = useCallback(() => {
-    ensureAudioCtx();
+    unlockAudio();
     setTimeLeft(prev => {
       if (prev === 0) {
         setTimerActive(true);
@@ -79,21 +119,20 @@ export function useRestTimer({ stopWhen = false } = {}) {
       setTimerActive(p => !p);
       return prev;
     });
-  }, [restSeconds, ensureAudioCtx]);
+  }, [restSeconds, unlockAudio]);
 
   const resetTimer = useCallback(() => {
     setTimerActive(false);
     setTimeLeft(restSeconds);
   }, [restSeconds]);
 
-  // Called when a set is marked complete — starts timer with the exercise rest duration
   const startTimer = useCallback((duration) => {
-    ensureAudioCtx();
+    unlockAudio();
     const dur = duration || restSeconds;
     setRestSeconds(dur);
     setTimeLeft(dur);
     setTimerActive(true);
-  }, [restSeconds, ensureAudioCtx]);
+  }, [restSeconds, unlockAudio]);
 
   const startEditTimer = useCallback(() => {
     if (timerActive) return;
