@@ -7,13 +7,15 @@ export function useRestTimer({ stopWhen = false } = {}) {
   const [timerEditing, setTimerEditing] = useState(false);
   const [timerMins, setTimerMins] = useState(1);
   const [timerSecs, setTimerSecs] = useState(30);
-  const timerRef = useRef(null);
 
-  // Primary: <audio> element — more reliable than Web Audio on iOS (bypasses silent-mode in most cases)
+  const timerRef = useRef(null);
+  // Wall-clock end time in ms — lets us sync correctly after screen-off / backgrounding
+  const endTimeRef = useRef(null);
+
+  // Primary: <audio> element — more reliable on iOS than Web Audio (less affected by silent mode)
   const audioRef = useRef(null);
   const audioUnlockedRef = useRef(false);
-
-  // Fallback: Web Audio API (kept for browsers without <audio> support)
+  // Fallback: Web Audio API
   const audioCtxRef = useRef(null);
 
   useEffect(() => {
@@ -23,8 +25,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
     return () => { audioRef.current = null; };
   }, []);
 
-  // iOS/Android require a user-gesture to unlock <audio> for later non-gesture playback.
-  // Call this inside any user-initiated handler (toggle, startTimer) to silently prime it.
+  // Call inside any user-gesture handler to prime <audio> for later non-gesture playback (iOS)
   const unlockAudio = useCallback(() => {
     if (audioUnlockedRef.current) return;
     const audio = audioRef.current;
@@ -36,27 +37,14 @@ export function useRestTimer({ stopWhen = false } = {}) {
       audio.currentTime = 0;
       audio.volume = prev;
       audioUnlockedRef.current = true;
-    }).catch(() => {
-      // Unlock failed (no gesture context) — will try again on next interaction
-    });
-
-    // Also prime Web Audio fallback
+    }).catch(() => {});
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume();
-      }
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
     } catch { /* not available */ }
   }, []);
-
-  useEffect(() => {
-    if (stopWhen) {
-      setTimerActive(false);
-      clearInterval(timerRef.current);
-    }
-  }, [stopWhen]);
 
   const playWebAudioFallback = useCallback(() => {
     try {
@@ -92,36 +80,80 @@ export function useRestTimer({ stopWhen = false } = {}) {
     }
   }, [playWebAudioFallback]);
 
+  const fireComplete = useCallback(() => {
+    clearInterval(timerRef.current);
+    endTimeRef.current = null;
+    setTimerActive(false);
+    setTimeLeft(0);
+    playBeep();
+    if ('vibrate' in navigator) navigator.vibrate([100, 80, 100, 80, 100, 150, 400]);
+  }, [playBeep]);
+
+  // Wall-clock tick: derive remaining from absolute end time to survive throttled intervals
   useEffect(() => {
     if (!timerActive) return;
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          setTimerActive(false);
-          playBeep();
-          if ('vibrate' in navigator) navigator.vibrate([100, 80, 100, 80, 100, 150, 400]);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      if (!endTimeRef.current) return;
+      const remaining = Math.ceil((endTimeRef.current - Date.now()) / 1000);
+      if (remaining <= 0) {
+        fireComplete();
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 500); // 500ms poll — snappier display, still cheap
     return () => clearInterval(timerRef.current);
-  }, [timerActive, playBeep]);
+  }, [timerActive, fireComplete]);
+
+  // Page Visibility API: screen unlocked / app foregrounded — immediately sync with wall clock.
+  // This is the key handler for "timer expired while screen was off".
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!endTimeRef.current) return;
+      const remaining = Math.ceil((endTimeRef.current - Date.now()) / 1000);
+      if (remaining <= 0) {
+        fireComplete();
+      } else {
+        setTimeLeft(remaining);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fireComplete]);
+
+  useEffect(() => {
+    if (stopWhen) {
+      clearInterval(timerRef.current);
+      endTimeRef.current = null;
+      setTimerActive(false);
+    }
+  }, [stopWhen]);
 
   const toggleTimer = useCallback(() => {
     unlockAudio();
-    setTimeLeft(prev => {
-      if (prev === 0) {
-        setTimerActive(true);
-        return restSeconds;
+    setTimerActive(prev => {
+      if (prev) {
+        // Pause — clear end time (timeLeft holds the frozen remaining)
+        endTimeRef.current = null;
+        return false;
       }
-      setTimerActive(p => !p);
-      return prev;
+      // Start / resume — set end time from current timeLeft
+      setTimeLeft(tl => {
+        const secs = tl === 0 ? restSeconds : tl;
+        endTimeRef.current = Date.now() + secs * 1000;
+        if (tl === 0) {
+          // full reset
+          setTimeout(() => setTimeLeft(restSeconds), 0);
+        }
+        return tl === 0 ? restSeconds : tl;
+      });
+      return true;
     });
   }, [restSeconds, unlockAudio]);
 
   const resetTimer = useCallback(() => {
+    clearInterval(timerRef.current);
+    endTimeRef.current = null;
     setTimerActive(false);
     setTimeLeft(restSeconds);
   }, [restSeconds]);
@@ -129,6 +161,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
   const startTimer = useCallback((duration) => {
     unlockAudio();
     const dur = duration || restSeconds;
+    endTimeRef.current = Date.now() + dur * 1000;
     setRestSeconds(dur);
     setTimeLeft(dur);
     setTimerActive(true);
@@ -144,6 +177,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
   const applyTimerInput = useCallback((mins, secs) => {
     setTimerEditing(false);
     const total = Math.max(5, Math.min(3600, mins * 60 + secs));
+    endTimeRef.current = null;
     setRestSeconds(total);
     setTimeLeft(total);
     setTimerActive(false);
