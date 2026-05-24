@@ -322,6 +322,8 @@ export default function WorkoutLogPage() {
             </span>
           )}
           <span className="rest-timer-pill-sep" />
+          <button className="rest-timer-pill-action rest-timer-pill-test" onClick={timer.testSound} title="Test sound">🔔</button>
+          <span className="rest-timer-pill-sep" />
           <button className="rest-timer-pill-action" onClick={timer.toggleTimer}>
             {timer.timerActive ? 'Pause' : timer.timerDone ? '↺' : timer.timerStarted ? 'Resume' : 'Start'}
           </button>

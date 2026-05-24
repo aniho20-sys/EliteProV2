@@ -4358,6 +4358,7 @@ tr:hover { background: var(--bg-card-hover); }
   cursor: pointer;
 }
 .rest-timer-pill-action:active { opacity: 0.6; }
+.rest-timer-pill-test { font-size: 1rem; opacity: 0.55; }
 .rest-timer-pill-edit {
   display: flex;
   align-items: center;

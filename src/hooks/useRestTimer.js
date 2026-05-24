@@ -244,6 +244,12 @@ export function useRestTimer({ stopWhen = false } = {}) {
     setTimerActive(false);
   }, []);
 
+  const testSound = useCallback(() => {
+    ensureAudioReady();
+    // Small delay to let AudioContext resume settle before playing
+    setTimeout(playBeep, 80);
+  }, [ensureAudioReady, playBeep]);
+
   const timerDisplay = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`;
   const timerDone    = timeLeft === 0;
   const timerStarted = timeLeft < restSeconds || timerActive;
@@ -258,5 +264,6 @@ export function useRestTimer({ stopWhen = false } = {}) {
     timerDisplay, timerDone, timerStarted,
     toggleTimer, resetTimer, startTimer,
     startEditTimer, applyTimerInput,
+    testSound,
   };
 }
