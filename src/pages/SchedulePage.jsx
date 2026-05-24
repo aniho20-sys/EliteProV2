@@ -237,25 +237,50 @@ export default function SchedulePage() {
   };
 
   const handleConfirmComplete = async () => {
-    if (!recapSession) return;
+    if (!recapSession || savingRecap) return;
     setSavingRecap(true);
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
-      await incrementSessionOffset(recapSession.clientId);
-      if (recapSend && recapNote.trim()) {
-        const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
-        await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
-        toast('Session complete — recap sent to client');
-      } else {
-        toast('Session marked as complete');
-      }
-      setRecapSession(null);
-      setRecapNote('');
     } catch (err) {
-      toast(`Failed: ${err?.message || 'unknown error'}`, 'error');
-    } finally {
+      toast(`Failed to complete session: ${err?.message || 'unknown error'}`, 'error');
       setSavingRecap(false);
+      return;
     }
+
+    // Deduct session count (skip for sessions without a linked client, e.g. edge cases)
+    const clientId = recapSession.clientId;
+    const { remaining: prevRemaining } = getSessionStats(clientId);
+    let deducted = false;
+    if (clientId) {
+      try {
+        await incrementSessionOffset(clientId);
+        deducted = true;
+      } catch (err) {
+        console.error('[SchedulePage] incrementSessionOffset failed:', err);
+        const errCode = err?.code || err?.message || 'unknown error';
+        toast(`堂數未能自動扣減 (${errCode})。請到客戶頁面手動更新。`, 'error');
+        navigate(`/clients/${clientId}`);
+      }
+    }
+
+    if (recapSend && recapNote.trim()) {
+      try {
+        const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
+        await sendMessage(currentUser.id, clientId, fullMsg);
+      } catch { /* non-critical */ }
+    }
+
+    if (deducted) {
+      const newRemaining = prevRemaining !== null ? prevRemaining - 1 : null;
+      const countMsg = newRemaining !== null ? ` · ${newRemaining} session${newRemaining !== 1 ? 's' : ''} remaining` : '';
+      toast(`Session complete${countMsg}`);
+    } else if (!clientId) {
+      toast('Session complete');
+    }
+
+    setRecapSession(null);
+    setRecapNote('');
+    setSavingRecap(false);
   };
 
   const formatDay = (dateStr) => {
@@ -383,7 +408,7 @@ export default function SchedulePage() {
                         <button className="btn-icon" aria-label="Cancel session" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel" disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger)' }} /></button>
                       </>
                     )}
-                    {isTrainer && s.status === 'confirmed' && (
+                    {isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
                       <button className="btn-icon" aria-label="Mark session complete" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
                     )}
                     {!isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (

@@ -1,10 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
+
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true;
+
+function InstallAppCard() {
+  if (isStandalone()) {
+    return (
+      <div className="card mb-16 install-app-card install-app-done">
+        <Smartphone size={18} style={{ color: 'var(--success)' }} />
+        <div>
+          <div className="fw-bold" style={{ color: 'var(--success)' }}>App Installed</div>
+          <div className="text-sm text-muted">ElitePro is running as a native app on your device.</div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="card mb-16 install-app-card">
+      <div className="install-app-header">
+        <Smartphone size={18} style={{ color: 'var(--primary-light)' }} />
+        <div>
+          <div className="fw-bold">Install as App</div>
+          <div className="text-sm text-muted">Use offline · Faster · Feels native</div>
+        </div>
+      </div>
+      {isIOS() ? (
+        <ol className="install-steps">
+          <li>Tap the <Share2 size={13} style={{ verticalAlign: -2 }} /> <strong>Share</strong> button in Safari</li>
+          <li>Scroll down and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong></li>
+          <li>Tap <strong>&ldquo;Add&rdquo;</strong> in the top-right corner</li>
+        </ol>
+      ) : (
+        <ol className="install-steps">
+          <li>Open the browser <strong>menu (⋮)</strong> in the top-right corner</li>
+          <li>Tap <strong>&ldquo;Add to Home Screen&rdquo;</strong> or <strong>&ldquo;Install App&rdquo;</strong></li>
+          <li>Confirm to install — look for the banner at the top of this page too</li>
+        </ol>
+      )}
+    </div>
+  );
+}
 
 // Detect auth provider from Firebase user object
 function getAuthProvider(firebaseUser) {
@@ -405,6 +448,22 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* Founding Members Offer — trainer only */}
+      {isTrainer && !currentUser.subscription?.tier && (
+        <a
+          className="founding-member-banner mb-16"
+          href={`mailto:aniho20@gmail.com?subject=Founding Member Interest&body=Hi, I'd like to join ElitePro as a Founding Member.%0A%0AName: ${encodeURIComponent(currentUser.name)}%0AEmail: ${encodeURIComponent(currentUser.email)}`}
+        >
+          <div className="founding-member-badge"><Star size={14} /> Founding Member</div>
+          <h3 className="founding-member-title">Join before spots run out</h3>
+          <p className="founding-member-desc">First 50 trainers get 6 months free + 50% off forever when we launch paid plans.</p>
+          <div className="founding-member-cta">Express Interest <ChevronRight size={16} /></div>
+        </a>
+      )}
+
+      {/* Install App */}
+      <InstallAppCard />
 
       {/* Account Info */}
       <div className="card mb-16">

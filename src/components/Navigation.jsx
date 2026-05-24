@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Users, Dumbbell, ClipboardList, Calendar,
   BookOpen, LogOut, TrendingUp, Search, MessageSquare, UserCircle, Sun, Moon, BarChart2, Receipt, PieChart,
-  MoreHorizontal, X, ChevronRight
+  MoreHorizontal, X, ChevronRight, Building2, FileBadge
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import { useTheme } from '../context/ThemeContext';
@@ -24,11 +24,15 @@ const LINK_DEFS = {
   '/progress':        { icon: TrendingUp,      label: 'Progress',         mobileLabel: 'My Progress' },
   '/my-workouts':     { icon: ClipboardList,   label: 'My Plans' },
   '/profile':         { icon: UserCircle,      label: 'Profile' },
+  '/operator/studios': { icon: Building2,     label: 'Studios' },
+  '/apply':           { icon: FileBadge,       label: 'gym啦' },
+  '/studios/book':    { icon: Calendar,        label: 'Book Studio' },
 };
 
 const makeLinks = (paths, mobile = false) =>
   paths.map(to => ({ to, icon: LINK_DEFS[to].icon, label: mobile && LINK_DEFS[to].mobileLabel ? LINK_DEFS[to].mobileLabel : LINK_DEFS[to].label }));
 
+// gym啦 hidden — remove '/apply' and '/studios/book' from nav, use 'client' fallback for operator
 const NAV_CONFIG = {
   trainer: {
     desktop:  { primary: ['/', '/clients', '/schedule', '/messages'], secondary: ['/progress-overview', '/plans', '/invoices', '/analytics', '/exercises'] },
@@ -38,6 +42,10 @@ const NAV_CONFIG = {
     desktop:  { primary: ['/', '/log', '/progress', '/messages'],    secondary: ['/my-workouts', '/schedule', '/exercises'] },
     mobile:   { primary: ['/', '/log', '/schedule', '/messages'],    more: ['/my-workouts', '/progress', '/exercises', '/profile'] },
   },
+  operator: {
+    desktop:  { primary: ['/', '/profile'], secondary: [] },
+    mobile:   { primary: ['/', '/profile'], more: [] },
+  },
 };
 
 export default function Navigation() {
@@ -45,7 +53,7 @@ export default function Navigation() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const role = currentUser?.role === 'trainer' ? 'trainer' : 'client';
+  const role = currentUser?.role === 'trainer' ? 'trainer' : currentUser?.role === 'operator' ? 'operator' : currentUser?.role === 'client' ? 'client' : 'client';
   const links        = makeLinks(NAV_CONFIG[role].desktop.primary);
   const secondaryLinks = makeLinks(NAV_CONFIG[role].desktop.secondary);
   const primaryLinks = makeLinks(NAV_CONFIG[role].mobile.primary, true);

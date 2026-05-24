@@ -20,15 +20,15 @@ export default function GlobalSearch({ onSelect }) {
 
   const results = useMemo(() => !q ? [] : [
     ...clients
-      .filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+      .filter(c => c && (c.name?.toLowerCase().includes(q) || c?.email?.toLowerCase().includes(q)))
       .slice(0, 4)
       .map(c => ({ type: 'Client', label: c.name, sub: c.email, action: () => navigate(`/clients/${c.id}`) })),
     ...exercises
-      .filter(e => e.name.toLowerCase().includes(q) || e.muscle.toLowerCase().includes(q))
+      .filter(e => e && (e.name?.toLowerCase().includes(q) || e.muscle?.toLowerCase().includes(q)))
       .slice(0, 4)
       .map(e => ({ type: 'Exercise', label: e.name, sub: `${e.muscle} / ${e.equipment}`, action: () => navigate('/exercises') })),
     ...plans
-      .filter(p => p.name.toLowerCase().includes(q))
+      .filter(p => p && p.name?.toLowerCase().includes(q))
       .slice(0, 3)
       .map(p => ({ type: 'Plan', label: p.name, sub: p.day, action: () => navigate('/plans') })),
   ], [q, clients, exercises, plans, navigate]);

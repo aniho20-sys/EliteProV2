@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageSquare, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -82,7 +82,7 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
         const { label, color, pct } = getActivityMeta(daysSince);
         return (
           <Link key={client.id} to={`/clients/${client.id}`} className="client-activity-item">
-            <div className="client-activity-avatar">{client.name[0]}</div>
+            <div className="client-activity-avatar">{client.name?.[0] || '?'}</div>
             <div className="client-activity-info">
               <div className="client-activity-name">{client.name}</div>
               <div className="client-activity-bar-wrap">
@@ -100,7 +100,7 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
 const INACTIVE_DAYS = 7;
 
 function buildDefaultMsg(client, reasons) {
-  const first = client.name.split(' ')[0];
+  const first = (client.name || 'there').split(' ')[0];
   if (reasons.lowSessions) {
     const n = reasons.remaining;
     return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
@@ -214,19 +214,33 @@ export default function TrainerDashboard() {
       {clients.length === 0 && (
         <div className="card onboarding-card mb-16">
           <h3 className="card-title">Get Started</h3>
-          <p className="text-sm text-secondary mt-8">Set up your training platform in 3 steps:</p>
+          <p className="text-sm text-secondary mt-8">Your training platform — 3 steps to go live:</p>
+          {currentUser.inviteCode && (
+            <div className="onboarding-invite-block">
+              <span className="text-sm text-muted">Share your invite code with clients:</span>
+              <div className="onboarding-invite-row">
+                <span className="invite-code-badge">{currentUser.inviteCode}</span>
+                <button className="btn btn-sm btn-outline" onClick={() => {
+                  navigator.clipboard.writeText(currentUser.inviteCode).catch(() => {});
+                  toast('Invite code copied!');
+                }}>
+                  <Copy size={13} /> Copy
+                </button>
+              </div>
+            </div>
+          )}
           <div className="onboarding-steps">
             <Link to="/clients" className="onboarding-step">
               <span className="onboarding-num">1</span>
-              <span>Add your first client</span>
+              <span>Client enters code to connect</span>
             </Link>
             <Link to="/plans" className="onboarding-step">
               <span className="onboarding-num">2</span>
-              <span>Create a workout plan</span>
+              <span>Assign a workout plan</span>
             </Link>
             <Link to="/schedule" className="onboarding-step">
               <span className="onboarding-num">3</span>
-              <span>Book a session</span>
+              <span>Book your first session</span>
             </Link>
           </div>
         </div>
@@ -267,7 +281,7 @@ export default function TrainerDashboard() {
             {atRiskClients.map(({ client, daysSince, reasons }) => (
               <div key={client.id} className="at-risk-item">
                 <Link to={`/clients/${client.id}`} className="at-risk-identity">
-                  <div className="at-risk-avatar">{client.name[0]}</div>
+                  <div className="at-risk-avatar">{client.name?.[0] || '?'}</div>
                   <span className="at-risk-name">{client.name}</span>
                 </Link>
                 <div className="at-risk-reasons">

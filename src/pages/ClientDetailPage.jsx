@@ -1,14 +1,14 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
-import { localToday } from '../utils/dateUtils';
+import { localToday, parseLocalDate } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
 import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
@@ -29,44 +29,77 @@ function IntakeRow({ label, value }) {
 }
 
 function VolumeChart({ logs }) {
-  const weeks = Array.from({ length: 8 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (7 - i) * 7);
-    const start = new Date(d);
-    start.setDate(start.getDate() - start.getDay());
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-    const label = start.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-    const volume = logs
-      .filter(l => l.date >= fmt(start) && l.date <= fmt(end))
-      .reduce((sum, l) => sum + (l.entries || []).reduce((s2, e) => {
-        if ((e.unit || 'weight_reps') !== 'weight_reps') return s2;
-        return s2 + (e.sets || []).reduce((s3, s) => s3 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
-      }, 0), 0);
-    return { label, volume };
-  });
+  const sessions = [...logs]
+    .filter(l => (l.entries || []).some(e => (e.unit || 'weight_reps') === 'weight_reps'))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-10)
+    .map(l => {
+      const volume = (l.entries || []).reduce((sum, e) => {
+        if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
+        return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+      }, 0);
+      const d = parseLocalDate(l.date);
+      const label = d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+      const fullDate = d.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
+      return { label, fullDate, volume, rpe: l.rpe };
+    });
 
-  const hasData = weeks.some(w => w.volume > 0);
+  const hasData = sessions.some(s => s.volume > 0);
+  const maxVolume = hasData ? Math.max(...sessions.map(s => s.volume)) : 0;
+
+  const trendUp = sessions.length >= 2
+    ? sessions[sessions.length - 1].volume >= sessions[sessions.length - 2].volume
+    : null;
 
   return (
     <div className="card">
-      <div className="card-header">
-        <h3 className="card-title">Weekly Training Volume (kg)</h3>
+      <div className="card-header" style={{ alignItems: 'flex-start' }}>
+        <div>
+          <h3 className="card-title">Session Volume</h3>
+          <p className="text-sm text-muted" style={{ marginTop: 2 }}>Total kg lifted per session</p>
+        </div>
+        <div className="flex gap-8" style={{ alignItems: 'center' }}>
+          {trendUp !== null && (
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: trendUp ? 'var(--accent)' : 'var(--danger)' }}>
+              {trendUp ? '↑' : '↓'} {trendUp ? 'Trending up' : 'Trending down'}
+            </span>
+          )}
+          {sessions.length > 0 && (
+            <span className="tag">{sessions.length} sessions</span>
+          )}
+        </div>
       </div>
       {!hasData ? (
-        <p className="text-sm text-muted" style={{ padding: '16px 0' }}>No weight-based logs yet. Volume will appear once workouts are logged.</p>
+        <p className="text-sm text-muted" style={{ padding: '12px 0' }}>No weight-based sessions yet.</p>
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={weeks} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={sessions} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="28%">
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} />
-            <Tooltip
-              contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-              formatter={v => [`${v.toLocaleString()} kg`, 'Volume']}
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+              axisLine={false} tickLine={false} width={36}
+              tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
             />
-            <Bar dataKey="volume" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+            <Tooltip
+              cursor={{ fill: 'var(--border)', opacity: 0.5, radius: 6 }}
+              contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+              labelStyle={{ fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}
+              formatter={(v, _name, props) => {
+                const { rpe } = props.payload;
+                return [`${v.toLocaleString()} kg${rpe ? `  ·  RPE ${rpe}` : ''}`, 'Volume'];
+              }}
+              labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullDate ?? _label}
+            />
+            <Bar dataKey="volume" radius={[6, 6, 0, 0]} maxBarSize={40}>
+              {sessions.map((s, i) => (
+                <Cell
+                  key={i}
+                  fill={s.volume === maxVolume ? 'var(--accent)' : 'var(--primary)'}
+                  opacity={s.volume === maxVolume ? 1 : 0.75}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -77,7 +110,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getBadges, getSchedule, getIntakeForm } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -449,26 +482,6 @@ export default function ClientDetailPage() {
               )}
             </div>
 
-            {/* Badges */}
-            {(() => {
-              const badges = getBadges(clientId);
-              if (!badges.length) return null;
-              return (
-                <div className="mt-16">
-                  <div className="text-sm fw-bold mb-8">🏅 Badges</div>
-                  <div className="badges-grid">
-                    {badges.map(b => (
-                      <div key={b.id} className="badge-item">
-                        <span className="badge-icon">{b.icon}</span>
-                        <span className="badge-name">{b.name}</span>
-                        <span className="badge-date">{b.awardedAt}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
             {/* Tags */}
             <div className="mt-16">
               <div className="text-sm fw-bold mb-8">Labels</div>
@@ -493,6 +506,9 @@ export default function ClientDetailPage() {
               </form>
             </div>
           </div>
+        </div>
+        <div className="mt-16">
+          <VolumeChart logs={logs} />
         </div>
         <div className="card mt-16">
           <h3 className="card-title mb-12">Session Dates</h3>
@@ -614,6 +630,11 @@ export default function ClientDetailPage() {
             [...logs].reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);
               const isEditingNote = editingNoteLogId === l.id;
+              const totalVolume = (l.entries || []).reduce((sum, e) => {
+                if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
+                return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+              }, 0);
+              const totalSets = (l.entries || []).reduce((sum, e) => sum + (e.sets || []).length, 0);
               return (
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">
@@ -633,6 +654,22 @@ export default function ClientDetailPage() {
                           <Pencil size={13} />
                         </button>
                       )}
+                    </div>
+                  </div>
+                  <div className="log-session-stats">
+                    {totalVolume > 0 && (
+                      <div className="log-stat-item">
+                        <span className="log-stat-value">{totalVolume.toLocaleString()}<span className="log-stat-unit">kg</span></span>
+                        <span className="log-stat-label">Total Volume</span>
+                      </div>
+                    )}
+                    <div className="log-stat-item">
+                      <span className="log-stat-value">{totalSets}</span>
+                      <span className="log-stat-label">Sets</span>
+                    </div>
+                    <div className="log-stat-item">
+                      <span className="log-stat-value">{l.entries.length}</span>
+                      <span className="log-stat-label">Exercises</span>
                     </div>
                   </div>
                   {l.entries.map((entry, i) => (

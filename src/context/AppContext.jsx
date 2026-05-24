@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { db, auth } from '../firebase';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, increment,
+  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, increment, runTransaction,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -42,6 +42,9 @@ export function AppProvider({ children }) {
   const [exercises, setExercises] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [studios, setStudios] = useState([]);
+  const [studioSlots, setStudioSlots] = useState([]);
+  const [gymApplications, setGymApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -185,6 +188,46 @@ export function AppProvider({ children }) {
       () => {},
     );
     return () => unsub();
+  }, [currentUser?.id, currentUser?.role]);
+
+  // --- gym啦: studios, studioSlots, trainerApplications listeners ---
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsubs = [];
+
+    // Studios: all authenticated users can read
+    unsubs.push(onSnapshot(
+      collection(db, 'studios'),
+      (snap) => setStudios(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+      () => {},
+    ));
+
+    // Studio Slots: all authenticated users can read
+    unsubs.push(onSnapshot(
+      collection(db, 'studioSlots'),
+      (snap) => setStudioSlots(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+      () => {},
+    ));
+
+    // Trainer Applications: operator sees all, trainer sees own doc
+    if (currentUser.role === 'operator') {
+      unsubs.push(onSnapshot(
+        collection(db, 'trainerApplications'),
+        (snap) => setGymApplications(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+        () => {},
+      ));
+    } else if (currentUser.role === 'trainer') {
+      unsubs.push(onSnapshot(
+        doc(db, 'trainerApplications', currentUser.id),
+        (snap) => {
+          if (snap.exists()) setGymApplications([{ ...snap.data(), id: snap.id }]);
+          else setGymApplications([]);
+        },
+        () => {},
+      ));
+    }
+
+    return () => unsubs.forEach(fn => fn());
   }, [currentUser?.id, currentUser?.role]);
 
   // --- Trainer profile for clients: load trainer doc so ProfilePage can show trainer name/inviteCode ---
@@ -717,6 +760,84 @@ export function AppProvider({ children }) {
     return snap.exists() ? snap.data() : null;
   };
 
+  // ========== Studios (operator only write) ==========
+  const getStudios = () => studios;
+  const addStudio = async (studio) => {
+    const id = `studio-${Date.now()}`;
+    await setDoc(doc(db, 'studios', id), { ...studio, id, active: true, createdAt: localToday() });
+  };
+  const updateStudio = async (id, updates) => {
+    await updateDoc(doc(db, 'studios', id), updates);
+  };
+
+  // ========== Studio Slots ==========
+  const getAvailableSlots = ({ studioId, date } = {}) => {
+    return studioSlots.filter(s =>
+      (!studioId || s.studioId === studioId) &&
+      (!date || s.date === date)
+    );
+  };
+  const openStudioSlots = async (studioId, studioName, date, startHour, endHour, priceHKD) => {
+    const existing = studioSlots.filter(s => s.studioId === studioId && s.date === date);
+    const existingTimes = new Set(existing.map(s => s.startTime));
+    const batch = writeBatch(db);
+    let added = 0;
+    for (let h = startHour; h < endHour; h++) {
+      const startTime = `${String(h).padStart(2, '0')}:00`;
+      if (existingTimes.has(startTime)) continue;
+      const id = `slot-${Date.now()}-${h}`;
+      const endTime = `${String(h + 1).padStart(2, '0')}:00`;
+      batch.set(doc(db, 'studioSlots', id), {
+        id, studioId, studioName, date, startTime, endTime,
+        priceHKD: priceHKD || 0, status: 'available',
+        trainerId: null, bookedAt: null,
+        createdAt: localToday(),
+      });
+      added++;
+    }
+    if (added > 0) await batch.commit();
+    return { added, skipped: endHour - startHour - added };
+  };
+  const bookStudioSlot = async (slotId, trainerId) => {
+    await runTransaction(db, async tx => {
+      const slotRef = doc(db, 'studioSlots', slotId);
+      const snap = await tx.get(slotRef);
+      if (!snap.exists()) throw new Error('Slot not found');
+      if (snap.data().status !== 'available') throw new Error('Slot already booked');
+      tx.update(slotRef, { status: 'booked', trainerId, bookedAt: localToday() });
+    });
+  };
+  const cancelSlotBooking = async (slotId) => {
+    await updateDoc(doc(db, 'studioSlots', slotId), { status: 'available', trainerId: null, bookedAt: null });
+  };
+  const getMyBookedSlots = () => {
+    if (!currentUser) return [];
+    return studioSlots.filter(s => s.trainerId === currentUser.id);
+  };
+
+  // ========== Trainer Applications (gym啦) ==========
+  const submitGymApplication = async (application) => {
+    await setDoc(doc(db, 'trainerApplications', currentUser.id), {
+      ...application,
+      id: currentUser.id,
+      trainerName: currentUser.name,
+      email: currentUser.email,
+      status: 'pending',
+      appliedAt: localToday(),
+      reviewedAt: null,
+      reviewNote: null,
+    });
+    await updateDoc(doc(db, 'users', currentUser.id), { gymlaStatus: 'pending' });
+  };
+  const getMyGymApplication = () => gymApplications.find(a => a.id === currentUser?.id) || null;
+  const getGymApplications = () => gymApplications;
+  const reviewGymApplication = async (id, status, note) => {
+    await updateDoc(doc(db, 'trainerApplications', id), {
+      status, reviewNote: note || null, reviewedAt: localToday(),
+    });
+    await updateDoc(doc(db, 'users', id), { gymlaStatus: status });
+  };
+
   // Derived: Firebase auth user exists but no Firestore profile yet
   const needsProfile = firebaseUser && !loading && !users.find(u => u.id === firebaseUser?.uid);
 
@@ -742,6 +863,9 @@ export function AppProvider({ children }) {
     getBadges, checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     resetData,
+    getStudios, addStudio, updateStudio,
+    getAvailableSlots, openStudioSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots,
+    submitGymApplication, getMyGymApplication, getGymApplications, reviewGymApplication,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

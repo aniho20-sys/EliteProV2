@@ -7,7 +7,7 @@ const isInStandaloneMode = () =>
   window.navigator.standalone === true;
 
 const DISMISSED_KEY = 'elitepro_install_dismissed_until';
-const DISMISS_DAYS = 7;
+const DISMISS_DAYS = 3;
 
 function isDismissed() {
   const until = localStorage.getItem(DISMISSED_KEY);
