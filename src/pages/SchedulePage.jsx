@@ -247,21 +247,26 @@ export default function SchedulePage() {
       return;
     }
 
-    // Deduct session count — separate try so a rules failure is clearly surfaced
-    const { remaining: prevRemaining } = getSessionStats(recapSession.clientId);
+    // Deduct session count (skip for sessions without a linked client, e.g. edge cases)
+    const clientId = recapSession.clientId;
+    const { remaining: prevRemaining } = getSessionStats(clientId);
     let deducted = false;
-    try {
-      await incrementSessionOffset(recapSession.clientId);
-      deducted = true;
-    } catch (err) {
-      console.error('[SchedulePage] incrementSessionOffset failed:', err);
-      toast(`Session marked complete but session count could not be deducted (${err?.code || err?.message || 'unknown error'}). Please update manually in client settings.`, 'error');
+    if (clientId) {
+      try {
+        await incrementSessionOffset(clientId);
+        deducted = true;
+      } catch (err) {
+        console.error('[SchedulePage] incrementSessionOffset failed:', err);
+        const errCode = err?.code || err?.message || 'unknown error';
+        toast(`堂數未能自動扣減 (${errCode})。請到客戶頁面手動更新。`, 'error');
+        navigate(`/clients/${clientId}`);
+      }
     }
 
     if (recapSend && recapNote.trim()) {
       try {
         const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
-        await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
+        await sendMessage(currentUser.id, clientId, fullMsg);
       } catch { /* non-critical */ }
     }
 
@@ -269,6 +274,8 @@ export default function SchedulePage() {
       const newRemaining = prevRemaining !== null ? prevRemaining - 1 : null;
       const countMsg = newRemaining !== null ? ` · ${newRemaining} session${newRemaining !== 1 ? 's' : ''} remaining` : '';
       toast(`Session complete${countMsg}`);
+    } else if (!clientId) {
+      toast('Session complete');
     }
 
     setRecapSession(null);

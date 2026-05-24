@@ -57,7 +57,15 @@ service cloud.firestore {
             && request.resource.data.trainerId == request.auth.uid);
       // Role is immutable after creation — prevents client→trainer privilege escalation
       allow update: if (isOwner(userId) || isTrainerOf(userId))
-        && request.resource.data.role == resource.data.role;
+          && request.resource.data.role == resource.data.role
+        // Trainers can increment sessionOffset by 1 on any client doc (e.g. after
+        // client is removed from roster but old sessions still need to be closed out).
+        // Restricted to exactly +1 increment and sessionOffset field only.
+        || (isTrainer()
+            && resource.data.role == 'client'
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sessionOffset'])
+            && request.resource.data.sessionOffset == resource.data.get('sessionOffset', 0) + 1);
       allow delete: if isOwner(userId);
     }
 
