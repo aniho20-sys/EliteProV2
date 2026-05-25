@@ -3,12 +3,14 @@ export const UNIT_OPTIONS = [
   { value: 'reps_only', label: 'Reps' },
   { value: 'time', label: 'Time' },
   { value: 'distance', label: 'Dist' },
+  { value: 'weight_distance', label: 'Wt+Dist' },
 ];
 
 export function emptySet(unit) {
   if (unit === 'reps_only') return { reps: '' };
   if (unit === 'time') return { seconds: '' };
   if (unit === 'distance') return { metres: '' };
+  if (unit === 'weight_distance') return { weight: '', metres: '' };
   return { weight: '', reps: '' };
 }
 
@@ -16,6 +18,7 @@ export function hasValue(s, unit) {
   if (unit === 'reps_only') return Boolean(s.reps);
   if (unit === 'time') return Boolean(s.seconds);
   if (unit === 'distance') return Boolean(s.metres);
+  if (unit === 'weight_distance') return Boolean(s.weight) && Boolean(s.metres);
   return Boolean(s.weight) && Boolean(s.reps);
 }
 
@@ -23,6 +26,7 @@ export function formatSet(s, unit) {
   if (unit === 'reps_only') return `× ${s.reps}`;
   if (unit === 'time') return `${s.seconds}s`;
   if (unit === 'distance') return `${s.metres}m`;
+  if (unit === 'weight_distance') return `${s.weight}kg × ${s.metres}m`;
   return `${s.weight}kg × ${s.reps}`;
 }
 
@@ -64,6 +68,7 @@ export function stringifySet(s, unit) {
   if (unit === 'reps_only') return { reps: String(s.reps || '') };
   if (unit === 'time') return { seconds: String(s.seconds || '') };
   if (unit === 'distance') return { metres: String(s.metres || '') };
+  if (unit === 'weight_distance') return { weight: String(s.weight || ''), metres: String(s.metres || '') };
   return { weight: String(s.weight || ''), reps: String(s.reps || '') };
 }
 
@@ -87,12 +92,14 @@ export function serializeEntries(entries) {
           if (unit === 'reps_only') return Boolean(s.reps);
           if (unit === 'time') return Boolean(s.seconds);
           if (unit === 'distance') return Boolean(s.metres);
+          if (unit === 'weight_distance') return Boolean(s.weight) && Boolean(s.metres);
           return Boolean(s.weight) && Boolean(s.reps);
         })
         .map(s => {
           if (unit === 'reps_only') return { reps: Number(s.reps) };
           if (unit === 'time') return { seconds: Number(s.seconds) };
           if (unit === 'distance') return { metres: Number(s.metres) };
+          if (unit === 'weight_distance') return { weight: Number(s.weight), metres: Number(s.metres) };
           return { weight: Number(s.weight), reps: Number(s.reps) };
         }),
     };

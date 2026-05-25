@@ -3,6 +3,7 @@ import { CheckCircle, X } from 'lucide-react';
 
 export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canRemove, done, onComplete }) {
   const repsRef = useRef(null);
+  const distRef = useRef(null);
   const step = (field, delta, min = 0) => {
     const cur = parseFloat(set[field]) || 0;
     onUpdate(field, String(Math.max(min, Math.round((cur + delta) * 10) / 10)));
@@ -64,6 +65,31 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
         <div className="log-field-group">
           <button className="log-stepper" onClick={() => step('metres', -10, 0)} tabIndex={-1}>−</button>
           <input
+            className="form-input log-set-input" type="number" placeholder="m"
+            inputMode="numeric" enterKeyHint="done"
+            value={set.metres ?? ''} onChange={e => onUpdate('metres', e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && onComplete?.()}
+          />
+          <button className="log-stepper" onClick={() => step('metres', 10)} tabIndex={-1}>+</button>
+        </div>
+        <span className="text-sm text-muted">m</span>
+      </>)}
+      {unit === 'weight_distance' && (<>
+        <div className="log-field-group">
+          <button className="log-stepper" onClick={() => step('weight', -2.5)} tabIndex={-1}>−</button>
+          <input
+            className="form-input log-set-input" type="number" placeholder="kg"
+            inputMode="decimal" enterKeyHint="next"
+            value={set.weight ?? ''} onChange={e => onUpdate('weight', e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && distRef.current?.focus()}
+          />
+          <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1}>+</button>
+        </div>
+        <span className="text-sm text-muted">×</span>
+        <div className="log-field-group">
+          <button className="log-stepper" onClick={() => step('metres', -10, 0)} tabIndex={-1}>−</button>
+          <input
+            ref={distRef}
             className="form-input log-set-input" type="number" placeholder="m"
             inputMode="numeric" enterKeyHint="done"
             value={set.metres ?? ''} onChange={e => onUpdate('metres', e.target.value)}

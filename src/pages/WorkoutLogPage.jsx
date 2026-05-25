@@ -180,6 +180,7 @@ export default function WorkoutLogPage() {
             if (unit === 'reps_only') return { reps: Number(s.reps) };
             if (unit === 'time') return { seconds: Number(s.seconds) };
             if (unit === 'distance') return { metres: Number(s.metres) };
+            if (unit === 'weight_distance') return { weight: Number(s.weight), metres: Number(s.metres) };
             return { weight: Number(s.weight), reps: Number(s.reps) };
           }),
         };
