@@ -4212,6 +4212,27 @@ tr:hover { background: var(--bg-card-hover); }
   flex-direction: column;
   padding: 20px;
 }
+.swap-tab-row {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.swap-tab {
+  flex: 1;
+  padding: 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.swap-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
 .swap-modal-header {
   display: flex;
   justify-content: space-between;

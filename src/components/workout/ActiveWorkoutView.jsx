@@ -138,6 +138,7 @@ export default function ActiveWorkoutView({
       unit,
       rest: 90,
       sets: [emptySet(unit)],
+      addedDuringSession: true,
     }]);
     setAddingEx(false);
   };
@@ -199,7 +200,7 @@ export default function ActiveWorkoutView({
                   <button className="ex-info-btn" onClick={() => setSwapExIdx(exIdx)} title="Swap exercise">
                     <ArrowLeftRight size={14} />
                   </button>
-                  {!selectedPlan && (
+                  {(!selectedPlan || entry.addedDuringSession) && (
                     <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title="Remove exercise" style={{ color: 'var(--danger)' }}>
                       <X size={14} />
                     </button>
@@ -275,11 +276,9 @@ export default function ActiveWorkoutView({
         );
       })}
 
-      {!selectedPlan && (
-        <button className="btn btn-outline mb-16" style={{ width: '100%' }} onClick={() => setAddingEx(true)}>
-          + Add Exercise
-        </button>
-      )}
+      <button className="btn btn-outline mb-16" style={{ width: '100%' }} onClick={() => setAddingEx(true)}>
+        + Add Exercise
+      </button>
 
       <div className="card">
         <div className="form-group">
