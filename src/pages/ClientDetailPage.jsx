@@ -396,7 +396,7 @@ export default function ClientDetailPage() {
         <Link to="/clients" className="btn btn-outline btn-sm"><ArrowLeft size={16} /> Back to Clients</Link>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={() => setShowReport(true)}>
-            <FileText size={14} /> 月度報告
+            <FileText size={14} /> Monthly Report
           </button>
           <button className="btn btn-sm" style={{ color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
             <Trash2 size={15} /> Remove Client
