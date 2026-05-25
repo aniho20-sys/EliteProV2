@@ -247,19 +247,16 @@ export default function SchedulePage() {
       return;
     }
 
-    // Deduct session count (skip for sessions without a linked client, e.g. edge cases)
     const clientId = recapSession.clientId;
-    const { remaining: prevRemaining } = getSessionStats(clientId);
+    const { remaining: prevRemaining, total } = getSessionStats(clientId);
     let deducted = false;
     if (clientId) {
       try {
         await incrementSessionOffset(clientId);
         deducted = true;
       } catch (err) {
-        console.error('[SchedulePage] incrementSessionOffset failed:', err);
         const errCode = err?.code || err?.message || 'unknown error';
         toast(`堂數未能自動扣減 (${errCode})。請到客戶頁面手動更新。`, 'error');
-        navigate(`/clients/${clientId}`);
       }
     }
 
@@ -272,10 +269,12 @@ export default function SchedulePage() {
 
     if (deducted) {
       const newRemaining = prevRemaining !== null ? prevRemaining - 1 : null;
-      const countMsg = newRemaining !== null ? ` · ${newRemaining} session${newRemaining !== 1 ? 's' : ''} remaining` : '';
-      toast(`Session complete${countMsg}`);
-    } else if (!clientId) {
-      toast('Session complete');
+      const countMsg = total !== null && newRemaining !== null
+        ? ` · 剩餘 ${newRemaining} 堂`
+        : ' · 已扣 1 堂';
+      toast(`課堂完成${countMsg}`);
+    } else {
+      toast('課堂完成');
     }
 
     setRecapSession(null);
@@ -472,6 +471,18 @@ export default function SchedulePage() {
               <div className="recap-row"><span className="form-label">Client</span><span>{getClient(recapSession.clientId)?.name || '—'}</span></div>
               <div className="recap-row"><span className="form-label">Date</span><span>{recapSession.date} · {recapSession.time}</span></div>
               <div className="recap-row"><span className="form-label">Type</span><span>{recapSession.type}</span></div>
+              {(() => {
+                const { remaining, total } = getSessionStats(recapSession.clientId);
+                if (total === null) return null;
+                return (
+                  <div className="recap-row">
+                    <span className="form-label">堂數</span>
+                    <span style={{ color: remaining <= 2 ? 'var(--danger)' : 'var(--text)' }}>
+                      {remaining} / {total} 剩餘 → 完成後 {Math.max(0, remaining - 1)} 堂
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="form-group">
               <label className="form-label">Message to client (optional)</label>
