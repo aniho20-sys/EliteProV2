@@ -116,6 +116,24 @@ export default function ActiveWorkoutView({
     });
   };
 
+  const removeSet = (exIdx, setIdx) => {
+    setEntries(prev => prev.map((entry, i) => {
+      if (i !== exIdx || entry.sets.length <= 1) return entry;
+      return { ...entry, sets: entry.sets.filter((_, j) => j !== setIdx) };
+    }));
+    setCompletedSets(prev => {
+      const next = new Set();
+      prev.forEach(key => {
+        const [eStr, sStr] = key.split('-');
+        const e = Number(eStr), s = Number(sStr);
+        if (e !== exIdx) { next.add(key); return; }
+        if (s < setIdx) next.add(key);
+        else if (s > setIdx) next.add(`${e}-${s - 1}`);
+      });
+      return next;
+    });
+  };
+
   const removeExercise = (exIdx) => {
     setEntries(prev => prev.filter((_, i) => i !== exIdx));
     setCompletedSets(prev => {
@@ -266,7 +284,8 @@ export default function ActiveWorkoutView({
               <SetInputs key={setIdx} set={set} setIdx={setIdx}
                 unit={entry.unit || 'weight_reps'}
                 onUpdate={(field, val) => updateSet(exIdx, setIdx, field, val)}
-                canRemove={false}
+                canRemove={entry.sets.length > 1}
+                onRemove={() => removeSet(exIdx, setIdx)}
                 done={completedSets.has(`${exIdx}-${setIdx}`)}
                 onComplete={() => handleCompleteSet(exIdx, setIdx)}
               />
