@@ -201,3 +201,41 @@ exports.onNewWorkoutLog = functions.firestore
       clientId: log.clientId,
     });
   });
+
+// ─── Sessions running low → Push to trainer when remaining drops to ≤ 2 ───
+exports.onSessionsLow = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    if (!after || after.role !== 'client') return;
+    if ((before.sessionOffset ?? 0) === (after.sessionOffset ?? 0)) return;
+
+    const total = after.totalSessions;
+    if (!total || total <= 0) return;
+
+    const remainingBefore = total - (before.sessionOffset ?? 0);
+    const remainingAfter  = total - (after.sessionOffset ?? 0);
+
+    // Only fire when crossing the ≤ 2 threshold for the first time
+    if (remainingAfter > 2 || remainingBefore <= 2) return;
+
+    const trainerId = after.trainerId;
+    if (!trainerId) return;
+
+    const trainerSnap = await db.doc(`users/${trainerId}`).get();
+    if (!trainerSnap.exists) return;
+
+    const clientName = after.name || 'A client';
+    const clientId = change.after.id;
+
+    await sendPush(trainerId, trainerSnap.data().fcmTokens, {
+      title: '⚠️ 堂數不足',
+      body: `${clientName} 只剩 ${remainingAfter} 堂，記得提醒續費`,
+    }, {
+      type: 'sessions_low',
+      url: `/#/clients/${clientId}`,
+      clientId,
+    });
+  });
