@@ -26,6 +26,7 @@ export default function MonthlyReportModal({ client, onClose }) {
   const [month, setMonth] = useState(opts[0].val);
   const [includeInvoice, setIncludeInvoice] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState('');
+  const [invoiceCurrency, setInvoiceCurrency] = useState('HKD');
   const [invoiceDueDate, setInvoiceDueDate] = useState('');
   const [paymentInfo, setPaymentInfo] = useState('');
 
@@ -70,7 +71,7 @@ export default function MonthlyReportModal({ client, onClose }) {
       weightStart, weightEnd, weightChange,
       topPRs, totalVolume, attendancePct,
       monthBooked,
-      includeInvoice, invoiceAmount, invoiceDueDate, paymentInfo,
+      includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo,
       exName,
     });
     const win = window.open('', '_blank');
@@ -120,17 +121,22 @@ export default function MonthlyReportModal({ client, onClose }) {
 
         {includeInvoice && (
           <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', marginBottom: 12 }}>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Amount (HKD)</label>
+            <div className="form-group">
+              <label className="form-label">Amount</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select className="form-input" style={{ width: 90, flexShrink: 0 }} value={invoiceCurrency} onChange={e => setInvoiceCurrency(e.target.value)}>
+                  {['HKD','USD','GBP','EUR','AUD','CAD','SGD','JPY','CNY','TWD','MYR','THB'].map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
                 <input className="form-input" type="number" placeholder="3000" value={invoiceAmount}
                   onChange={e => setInvoiceAmount(e.target.value)} />
               </div>
-              <div className="form-group">
-                <label className="form-label">Due Date</label>
-                <input className="form-input" type="date" value={invoiceDueDate}
-                  onChange={e => setInvoiceDueDate(e.target.value)} />
-              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Due Date</label>
+              <input className="form-input" type="date" value={invoiceDueDate}
+                onChange={e => setInvoiceDueDate(e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Payment Method</label>
@@ -154,7 +160,7 @@ export default function MonthlyReportModal({ client, onClose }) {
 
 function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats,
   weightStart, weightEnd, weightChange, topPRs, totalVolume, attendancePct,
-  monthBooked, includeInvoice, invoiceAmount, invoiceDueDate, paymentInfo, exName }) {
+  monthBooked, includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
 
   const today = new Date().toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -180,7 +186,7 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
     <div class="invoice-section">
       <div class="invoice-header">Fee Summary</div>
       <table class="data-table" style="margin-bottom:12px">
-        <tr><td>${month} Training Services</td><td style="text-align:right;font-weight:600">HKD ${Number(invoiceAmount || 0).toLocaleString()}</td></tr>
+        <tr><td>${month} Training Services</td><td style="text-align:right;font-weight:600">${invoiceCurrency} ${Number(invoiceAmount || 0).toLocaleString()}</td></tr>
         ${invoiceDueDate ? `<tr><td style="color:#6b7280">Due Date</td><td style="text-align:right;color:#6b7280">${invoiceDueDate}</td></tr>` : ''}
       </table>
       ${paymentInfo ? `<div class="payment-info">Payment: ${paymentInfo}</div>` : ''}
