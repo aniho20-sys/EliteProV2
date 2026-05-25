@@ -1,0 +1,309 @@
+import { useState } from 'react';
+import { X, FileText, Printer } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+
+function monthOptions() {
+  const opts = [];
+  const now = new Date();
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long' });
+    opts.push({ val, label });
+  }
+  return opts;
+}
+
+function monthLabel(m) {
+  const [y, mo] = m.split('-');
+  return new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString('zh-HK', { year: 'numeric', month: 'long' });
+}
+
+export default function MonthlyReportModal({ client, onClose }) {
+  const { currentUser, getBodyStats, getWorkoutLogs, getSchedule, getPersonalRecords, getExercises } = useApp();
+
+  const opts = monthOptions();
+  const [month, setMonth] = useState(opts[0].val);
+  const [includeInvoice, setIncludeInvoice] = useState(false);
+  const [invoiceAmount, setInvoiceAmount] = useState('');
+  const [invoiceDueDate, setInvoiceDueDate] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState('');
+
+  const bodyStats   = getBodyStats(client.id);
+  const logs        = getWorkoutLogs(client.id);
+  const allSchedule = getSchedule({ clientId: client.id });
+  const prs         = getPersonalRecords(client.id);
+  const exercises   = getExercises();
+
+  const exName = (id, fallback) => {
+    if (fallback) return fallback;
+    return exercises.find(e => e.id === id)?.name || id || '—';
+  };
+
+  const monthLogs      = logs.filter(l => l.date?.startsWith(month));
+  const monthCompleted = allSchedule.filter(s => s.date?.startsWith(month) && s.status === 'completed' && !s.isBlocked);
+  const monthBooked    = allSchedule.filter(s => s.date?.startsWith(month) && !s.isBlocked);
+  const monthStats     = [...bodyStats].filter(s => s.date?.startsWith(month)).sort((a, b) => a.date > b.date ? 1 : -1);
+
+  const weightStart  = monthStats[0]?.weight;
+  const weightEnd    = monthStats[monthStats.length - 1]?.weight;
+  const weightChange = weightStart && weightEnd && weightStart !== weightEnd
+    ? (weightEnd - weightStart).toFixed(1) : null;
+
+  const topPRs = Object.entries(prs)
+    .filter(([, pr]) => pr.weight > 0)
+    .sort((a, b) => b[1].weight - a[1].weight)
+    .slice(0, 6);
+
+  const totalVolume = Math.round(monthLogs.reduce((t, log) =>
+    t + (log.entries || []).reduce((et, entry) =>
+      et + (entry.sets || []).reduce((st, s) =>
+        st + (s.weight && s.reps ? Number(s.weight) * Number(s.reps) : 0), 0), 0), 0));
+
+  const attendancePct = monthBooked.length > 0
+    ? Math.round((monthCompleted.length / monthBooked.length) * 100) : null;
+
+  const handlePrint = () => {
+    const html = buildHTML({
+      client, trainer: currentUser, month: monthLabel(month),
+      monthCompleted, monthLogs, monthStats,
+      weightStart, weightEnd, weightChange,
+      topPRs, totalVolume, attendancePct,
+      monthBooked,
+      includeInvoice, invoiceAmount, invoiceDueDate, paymentInfo,
+      exName,
+    });
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileText size={18} style={{ color: 'var(--primary)' }} />
+            <h3 className="modal-title" style={{ margin: 0 }}>月度訓練報告</h3>
+          </div>
+          <button className="btn btn-outline btn-sm btn-icon" onClick={onClose}><X size={14} /></button>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">報告月份</label>
+          <select className="form-input" value={month} onChange={e => setMonth(e.target.value)}>
+            {opts.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+          </select>
+        </div>
+
+        {/* Preview stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+          {[
+            { label: '完成課堂', value: `${monthCompleted.length} 堂` },
+            { label: '訓練紀錄', value: `${monthLogs.length} 次` },
+            { label: '總訓練量', value: totalVolume > 0 ? `${(totalVolume / 1000).toFixed(1)}t` : '—' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'var(--surface)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{s.value}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <label className="recap-send-toggle" style={{ marginBottom: 12 }}>
+          <input type="checkbox" checked={includeInvoice} onChange={e => setIncludeInvoice(e.target.checked)} />
+          包含費用摘要
+        </label>
+
+        {includeInvoice && (
+          <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', marginBottom: 12 }}>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">金額 (HKD)</label>
+                <input className="form-input" type="number" placeholder="3000" value={invoiceAmount}
+                  onChange={e => setInvoiceAmount(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">截止日期</label>
+                <input className="form-input" type="date" value={invoiceDueDate}
+                  onChange={e => setInvoiceDueDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">付款方式</label>
+              <input className="form-input" placeholder="轉數快 / PayMe: 9XXX-XXXX"
+                value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} />
+            </div>
+          </div>
+        )}
+
+        <button className="btn btn-accent" style={{ width: '100%', gap: 8 }} onClick={handlePrint}>
+          <Printer size={16} />
+          列印 / 儲存為 PDF
+        </button>
+        <p className="text-sm text-muted" style={{ textAlign: 'center', marginTop: 8 }}>
+          瀏覽器列印視窗 → 「另存為 PDF」
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats,
+  weightStart, weightEnd, weightChange, topPRs, totalVolume, attendancePct,
+  monthBooked, includeInvoice, invoiceAmount, invoiceDueDate, paymentInfo, exName }) {
+
+  const today = new Date().toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const sessionsRows = monthCompleted.map(s =>
+    `<tr><td>${s.date}</td><td>${s.time || '—'}</td><td>${s.type || 'Training'}</td></tr>`
+  ).join('');
+
+  const prRows = topPRs.map(([id, pr]) =>
+    `<tr><td>${exName(id)}</td><td style="font-weight:600;color:#2563eb">${pr.weight} kg</td><td style="color:#6b7280;font-size:0.85em">${pr.date || '—'}</td></tr>`
+  ).join('');
+
+  const logRows = monthLogs.map(l =>
+    `<tr><td>${l.date}</td><td>${(l.entries || []).map(e => exName(e.exerciseId, e.name)).join('、')}</td><td style="color:#6b7280">${l.rpe ? `RPE ${l.rpe}` : '—'}</td></tr>`
+  ).join('');
+
+  const weightRow = weightStart ? `
+    <div class="stat-box">
+      <div class="stat-num" style="color:${weightChange && Number(weightChange) < 0 ? '#16a34a' : Number(weightChange) > 0 ? '#dc2626' : '#2563eb'}">${weightChange ? (Number(weightChange) > 0 ? '+' : '') + weightChange + ' kg' : weightStart + ' kg'}</div>
+      <div class="stat-label">體重${weightChange ? '變化' : '（本月）'}</div>
+    </div>` : '';
+
+  const invoiceSection = includeInvoice ? `
+    <div class="invoice-section">
+      <div class="invoice-header">訓練費用摘要</div>
+      <table class="data-table" style="margin-bottom:12px">
+        <tr><td>${month} 訓練服務</td><td style="text-align:right;font-weight:600">HKD ${Number(invoiceAmount || 0).toLocaleString()}</td></tr>
+        ${invoiceDueDate ? `<tr><td style="color:#6b7280">截止日期</td><td style="text-align:right;color:#6b7280">${invoiceDueDate}</td></tr>` : ''}
+      </table>
+      ${paymentInfo ? `<div class="payment-info">付款方式：${paymentInfo}</div>` : ''}
+    </div>` : '';
+
+  return `<!DOCTYPE html><html lang="zh-HK"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${month} 訓練報告 — ${client.name}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; font-size: 14px; line-height: 1.5; }
+  .page { max-width: 720px; margin: 0 auto; padding: 40px; }
+  /* Header */
+  .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid #2563eb; margin-bottom: 28px; }
+  .report-title { font-size: 1.6rem; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+  .report-subtitle { font-size: 0.85rem; color: #6b7280; margin-top: 2px; }
+  .trainer-info { text-align: right; font-size: 0.85rem; color: #374151; }
+  .trainer-name { font-weight: 700; font-size: 1rem; color: #111; }
+  /* Client strip */
+  .client-strip { background: #f0f7ff; border-radius: 10px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .client-name { font-size: 1.15rem; font-weight: 700; }
+  .client-meta { font-size: 0.8rem; color: #6b7280; margin-top: 2px; }
+  .report-period { text-align: right; }
+  .period-label { font-size: 0.75rem; color: #6b7280; }
+  .period-val { font-size: 1rem; font-weight: 700; color: #2563eb; }
+  /* Stats row */
+  .stats-row { display: flex; gap: 12px; margin-bottom: 28px; }
+  .stat-box { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 1.6rem; font-weight: 800; color: #2563eb; }
+  .stat-label { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+  /* Sections */
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 1rem; font-weight: 700; color: #111; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .data-table th { background: #f3f4f6; text-align: left; padding: 8px 10px; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+  .data-table tr:last-child td { border-bottom: none; }
+  /* Invoice */
+  .invoice-section { margin-top: 32px; padding-top: 20px; border-top: 2px dashed #e5e7eb; }
+  .invoice-header { font-size: 0.8rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+  .payment-info { font-size: 0.85rem; color: #374151; background: #f9fafb; border-radius: 6px; padding: 10px 14px; }
+  /* Footer */
+  .report-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 0.75rem; color: #9ca3af; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 20px; }
+    @page { margin: 1.5cm; }
+  }
+</style>
+</head><body><div class="page">
+
+  <div class="report-header">
+    <div>
+      <div class="report-title">月度訓練報告</div>
+      <div class="report-subtitle">Monthly Training Report</div>
+    </div>
+    <div class="trainer-info">
+      <div class="trainer-name">${trainer.name || '教練'}</div>
+      ${trainer.speciality ? `<div>${trainer.speciality}</div>` : ''}
+      <div style="color:#9ca3af">${today}</div>
+    </div>
+  </div>
+
+  <div class="client-strip">
+    <div>
+      <div class="client-name">${client.name}</div>
+      <div class="client-meta">${client.goals ? '目標：' + client.goals : ''}</div>
+    </div>
+    <div class="report-period">
+      <div class="period-label">報告期間</div>
+      <div class="period-val">${month}</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-num">${monthCompleted.length}</div>
+      <div class="stat-label">完成課堂</div>
+    </div>
+    ${attendancePct !== null ? `<div class="stat-box"><div class="stat-num">${attendancePct}%</div><div class="stat-label">出席率</div></div>` : ''}
+    <div class="stat-box">
+      <div class="stat-num">${monthLogs.length}</div>
+      <div class="stat-label">訓練紀錄</div>
+    </div>
+    ${totalVolume > 0 ? `<div class="stat-box"><div class="stat-num">${(totalVolume / 1000).toFixed(1)}t</div><div class="stat-label">總訓練量</div></div>` : ''}
+    ${weightRow}
+  </div>
+
+  ${topPRs.length > 0 ? `
+  <div class="section">
+    <div class="section-title">🏆 個人最佳紀錄</div>
+    <table class="data-table">
+      <tr><th>動作</th><th>最佳重量</th><th>達成日期</th></tr>
+      ${prRows}
+    </table>
+  </div>` : ''}
+
+  ${monthCompleted.length > 0 ? `
+  <div class="section">
+    <div class="section-title">📋 課堂紀錄</div>
+    <table class="data-table">
+      <tr><th>日期</th><th>時間</th><th>類型</th></tr>
+      ${sessionsRows}
+    </table>
+  </div>` : ''}
+
+  ${monthLogs.length > 0 ? `
+  <div class="section">
+    <div class="section-title">💪 訓練摘要</div>
+    <table class="data-table">
+      <tr><th>日期</th><th>動作</th><th>強度</th></tr>
+      ${logRows}
+    </table>
+  </div>` : ''}
+
+  ${invoiceSection}
+
+  <div class="report-footer">
+    <span>由 ElitePro 生成</span>
+    <span>如有查詢請聯絡教練</span>
+  </div>
+
+</div></body></html>`;
+}

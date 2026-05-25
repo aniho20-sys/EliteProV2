@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer } from 'lucide-react';
+import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer, FileText } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
@@ -10,6 +10,7 @@ import { resolveExerciseName } from '../utils/exerciseUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import { localToday, parseLocalDate } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
+import MonthlyReportModal from '../components/MonthlyReportModal';
 import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
@@ -153,6 +154,7 @@ export default function ClientDetailPage() {
   const [savingEditLog, setSavingEditLog] = useState(false);
   const [editLogExSearch, setEditLogExSearch] = useState('');
   const [intakeForm, setIntakeForm] = useState(undefined); // undefined = not loaded yet
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     if (tab !== 'intake') return;
@@ -392,9 +394,14 @@ export default function ClientDetailPage() {
     <div>
       <div className="flex-between mb-16" style={{ flexWrap: 'wrap', gap: 8 }}>
         <Link to="/clients" className="btn btn-outline btn-sm"><ArrowLeft size={16} /> Back to Clients</Link>
-        <button className="btn btn-sm" style={{ color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
-          <Trash2 size={15} /> Remove Client
-        </button>
+        <div className="flex gap-8">
+          <button className="btn btn-outline btn-sm" onClick={() => setShowReport(true)}>
+            <FileText size={14} /> 月度報告
+          </button>
+          <button className="btn btn-sm" style={{ color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
+            <Trash2 size={15} /> Remove Client
+          </button>
+        </div>
       </div>
 
       <div className="page-header">
@@ -928,6 +935,10 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showReport && (
+        <MonthlyReportModal client={client} onClose={() => setShowReport(false)} />
       )}
 
       {showStatModal && (
