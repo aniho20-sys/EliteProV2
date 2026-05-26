@@ -263,8 +263,9 @@ export default function SchedulePage() {
       await incrementSessionOffset(clientId);
       deducted = true;
     } catch (err) {
-      const errCode = err?.code || err?.message || 'unknown error';
-      toast(`堂數未能自動扣減 (${errCode})。請到客戶頁面手動更新。`, 'error');
+      const errMsg = err?.code || err?.message || String(err) || 'unknown error';
+      console.error('[incrementSessionOffset] failed:', errMsg, 'clientId:', clientId);
+      toast(`堂數未能自動扣減: ${errMsg}`, 'error');
     }
 
     if (recapSend && recapNote.trim()) {

@@ -446,7 +446,13 @@ export function AppProvider({ children }) {
   };
 
   const incrementSessionOffset = async (clientId) => {
-    await updateDoc(doc(db, 'users', clientId), { sessionOffset: increment(1) });
+    const userRef = doc(db, 'users', clientId);
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(userRef);
+      if (!snap.exists()) throw new Error(`User doc not found: ${clientId}`);
+      const current = snap.data().sessionOffset ?? 0;
+      transaction.update(userRef, { sessionOffset: current + 1 });
+    });
   };
 
   // Removes client from trainer's roster by clearing trainerId.
