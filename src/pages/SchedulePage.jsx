@@ -239,6 +239,9 @@ export default function SchedulePage() {
   const handleConfirmComplete = async () => {
     if (!recapSession || savingRecap) return;
     setSavingRecap(true);
+    const clientId = recapSession.clientId;
+    const { remaining: prevRemaining, total, used: prevUsed } = getSessionStats(clientId);
+
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
     } catch (err) {
@@ -247,17 +250,21 @@ export default function SchedulePage() {
       return;
     }
 
-    const clientId = recapSession.clientId;
-    const { remaining: prevRemaining, total } = getSessionStats(clientId);
+    if (!clientId) {
+      toast('課堂完成（未能扣堂：session 缺少 clientId）', 'info');
+      setRecapSession(null);
+      setRecapNote('');
+      setSavingRecap(false);
+      return;
+    }
+
     let deducted = false;
-    if (clientId) {
-      try {
-        await incrementSessionOffset(clientId);
-        deducted = true;
-      } catch (err) {
-        const errCode = err?.code || err?.message || 'unknown error';
-        toast(`堂數未能自動扣減 (${errCode})。請到客戶頁面手動更新。`, 'error');
-      }
+    try {
+      await incrementSessionOffset(clientId);
+      deducted = true;
+    } catch (err) {
+      const errCode = err?.code || err?.message || 'unknown error';
+      toast(`堂數未能自動扣減 (${errCode})。請到客戶頁面手動更新。`, 'error');
     }
 
     if (recapSend && recapNote.trim()) {
@@ -268,13 +275,13 @@ export default function SchedulePage() {
     }
 
     if (deducted) {
-      const newRemaining = prevRemaining !== null ? prevRemaining - 1 : null;
-      const countMsg = total !== null && newRemaining !== null
-        ? ` · 剩餘 ${newRemaining} 堂`
-        : ' · 已扣 1 堂';
+      const newUsed = prevUsed + 1;
+      const countMsg = total !== null
+        ? ` · 剩餘 ${Math.max(0, total - newUsed)} 堂（${newUsed}/${total}）`
+        : ` · 已用 ${newUsed} 堂`;
       toast(`課堂完成${countMsg}`);
     } else {
-      toast('課堂完成');
+      toast('課堂完成（堂數未扣減）', 'info');
     }
 
     setRecapSession(null);
@@ -386,12 +393,19 @@ export default function SchedulePage() {
               );
             }
             const client = getClient(s.clientId);
+            const sessBadge = (() => {
+              if (!isTrainer || s.status === 'completed' || s.status === 'cancelled') return null;
+              const { remaining, total } = getSessionStats(s.clientId);
+              if (total === null) return null;
+              const color = remaining <= 2 ? 'var(--danger)' : remaining <= 5 ? 'var(--warning)' : 'var(--text-muted)';
+              return <span style={{ fontSize: '0.72rem', color, fontWeight: 600, marginLeft: 6 }}>{remaining} left</span>;
+            })();
             return (
               <div key={s.id} className="schedule-item">
                 <div className="schedule-item-top">
                   <div className="schedule-time">{s.time}</div>
                   <div className="schedule-info">
-                    <div className="schedule-client">{isTrainer ? client?.name : s.type}</div>
+                    <div className="schedule-client">{isTrainer ? client?.name : s.type}{sessBadge}</div>
                     <div className="schedule-type">{s.type} - 60 min</div>
                   </div>
                 </div>
@@ -472,13 +486,19 @@ export default function SchedulePage() {
               <div className="recap-row"><span className="form-label">Date</span><span>{recapSession.date} · {recapSession.time}</span></div>
               <div className="recap-row"><span className="form-label">Type</span><span>{recapSession.type}</span></div>
               {(() => {
-                const { remaining, total } = getSessionStats(recapSession.clientId);
-                if (total === null) return null;
+                const { remaining, total, used } = getSessionStats(recapSession.clientId);
+                if (total === null) return (
+                  <div className="recap-row">
+                    <span className="form-label">Sessions</span>
+                    <span className="text-muted" style={{ fontSize: '0.85rem' }}>Used: {used} · No quota set</span>
+                  </div>
+                );
                 return (
                   <div className="recap-row">
-                    <span className="form-label">堂數</span>
-                    <span style={{ color: remaining <= 2 ? 'var(--danger)' : 'var(--text)' }}>
-                      {remaining} / {total} 剩餘 → 完成後 {Math.max(0, remaining - 1)} 堂
+                    <span className="form-label">Sessions</span>
+                    <span style={{ color: remaining <= 2 ? 'var(--danger)' : 'var(--text)', fontWeight: 600 }}>
+                      {remaining} remaining → after: {Math.max(0, remaining - 1)}
+                      {remaining <= 2 && <span style={{ marginLeft: 6, fontSize: '0.8rem' }}>⚠️ Low</span>}
                     </span>
                   </div>
                 );
