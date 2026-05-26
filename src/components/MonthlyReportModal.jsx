@@ -165,23 +165,28 @@ export default function MonthlyReportModal({ client, onClose }) {
   );
 }
 
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats,
   weightStart, weightEnd, weightChange, topPRs, totalVolume, attendancePct,
   includeWorkoutSummary,
   includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
 
   const today = new Date().toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
+  const hasAnyData = monthCompleted.length > 0 || monthLogs.length > 0 || topPRs.length > 0;
 
   const sessionsRows = monthCompleted.map(s =>
-    `<tr><td>${s.date}</td><td>${s.time || '—'}</td><td>${s.type || 'Training'}</td></tr>`
+    `<tr><td>${esc(s.date)}</td><td>${esc(s.time || '—')}</td><td>${esc(s.type || 'Training')}</td></tr>`
   ).join('');
 
   const prRows = topPRs.map(([id, pr]) =>
-    `<tr><td>${exName(id)}</td><td style="font-weight:600;color:#2563eb">${pr.weight} kg</td><td style="color:#6b7280;font-size:0.85em">${pr.date || '—'}</td></tr>`
+    `<tr><td>${esc(exName(id))}</td><td style="font-weight:600;color:#2563eb">${esc(pr.weight)} kg</td><td style="color:#6b7280;font-size:0.85em">${esc(pr.date || '—')}</td></tr>`
   ).join('');
 
   const logRows = monthLogs.map(l =>
-    `<tr><td style="white-space:nowrap">${l.date}</td><td>${(l.entries || []).map(e => exName(e.exerciseId, e.name)).join(', ')}</td><td style="color:#6b7280;white-space:nowrap">${l.rpe ? `RPE ${l.rpe}` : '—'}</td></tr>`
+    `<tr><td style="white-space:nowrap">${esc(l.date)}</td><td>${(l.entries || []).map(e => esc(exName(e.exerciseId, e.name))).join(', ')}</td><td style="color:#6b7280;white-space:nowrap">${l.rpe ? `RPE ${esc(l.rpe)}` : '—'}</td></tr>`
   ).join('');
 
   const weightRow = weightStart ? `
@@ -194,16 +199,16 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
     <div class="invoice-section">
       <div class="invoice-header">Fee Summary</div>
       <table class="data-table" style="margin-bottom:12px">
-        <tr><td>${month} Training Services</td><td style="text-align:right;font-weight:600">${invoiceCurrency} ${Number(invoiceAmount || 0).toLocaleString()}</td></tr>
-        ${invoiceDueDate ? `<tr><td style="color:#6b7280">Due Date</td><td style="text-align:right;color:#6b7280">${invoiceDueDate}</td></tr>` : ''}
+        <tr><td>${esc(month)} Training Services</td><td style="text-align:right;font-weight:600">${esc(invoiceCurrency)} ${Number(invoiceAmount || 0).toLocaleString()}</td></tr>
+        ${invoiceDueDate ? `<tr><td style="color:#6b7280">Due Date</td><td style="text-align:right;color:#6b7280">${esc(invoiceDueDate)}</td></tr>` : ''}
       </table>
-      ${paymentInfo ? `<div class="payment-info">Payment: ${paymentInfo}</div>` : ''}
+      ${paymentInfo ? `<div class="payment-info">Payment: ${esc(paymentInfo)}</div>` : ''}
     </div>` : '';
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${month} Training Report — ${client.name}</title>
+<title>${esc(month)} Training Report — ${esc(client.name)}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; font-size: 14px; line-height: 1.5; }
@@ -224,6 +229,8 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
   .report-period { text-align: right; }
   .period-label { font-size: 0.75rem; color: #6b7280; }
   .period-val { font-size: 1rem; font-weight: 700; color: #2563eb; }
+  /* Tagline */
+  .tagline { font-size: 1rem; font-weight: 600; color: #16a34a; margin-bottom: 20px; }
   /* Stats grid — wraps automatically */
   .stats-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
   .stat-box { flex: 1 1 120px; min-width: 100px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
@@ -262,22 +269,24 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
       <div class="report-subtitle">Progress Summary</div>
     </div>
     <div class="trainer-info">
-      <div class="trainer-name">${trainer.name || 'Trainer'}</div>
-      ${trainer.speciality ? `<div>${trainer.speciality}</div>` : ''}
-      <div style="color:#9ca3af">${today}</div>
+      <div class="trainer-name">${esc(trainer.name || 'Trainer')}</div>
+      ${trainer.speciality ? `<div>${esc(trainer.speciality)}</div>` : ''}
+      <div style="color:#9ca3af">${esc(today)}</div>
     </div>
   </div>
 
   <div class="client-strip">
     <div>
-      <div class="client-name">${client.name}</div>
-      <div class="client-meta">${client.goals ? 'Goal: ' + client.goals : ''}</div>
+      <div class="client-name">${esc(client.name)}</div>
+      <div class="client-meta">${client.goals ? 'Goal: ' + esc(client.goals) : ''}</div>
     </div>
     <div class="report-period">
       <div class="period-label">Report Period</div>
-      <div class="period-val">${month}</div>
+      <div class="period-val">${esc(month)}</div>
     </div>
   </div>
+
+  <div class="tagline">Great work this month, ${esc(client.name.split(' ')[0])}! 🎉</div>
 
   <div class="stats-row">
     <div class="stat-box">
@@ -295,9 +304,9 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
 
   ${topPRs.length > 0 ? `
   <div class="section">
-    <div class="section-title">🏆 Personal Bests</div>
+    <div class="section-title">🏆 All-Time Personal Bests</div>
     <table class="data-table">
-      <tr><th>Exercise</th><th>Best Weight</th><th>Date</th></tr>
+      <tr><th>Exercise</th><th>Best Weight</th><th>Achieved</th></tr>
       ${prRows}
     </table>
   </div>` : ''}
@@ -319,6 +328,8 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
       ${logRows}
     </table>
   </div>` : ''}
+
+  ${!hasAnyData ? `<div style="text-align:center;padding:40px 0;color:#9ca3af;font-size:0.95rem;">No training data recorded for this month yet.</div>` : ''}
 
   ${invoiceSection}
 
