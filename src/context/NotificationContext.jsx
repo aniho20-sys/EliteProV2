@@ -93,6 +93,18 @@ export function NotificationProvider({ children }) {
     }
   }, [supported, token, setupMessaging]);
 
+  // App Badge API — update home screen icon badge with unread message count
+  const { getUnreadCount } = useApp();
+  const unreadCount = currentUser ? getUnreadCount(currentUser.id) : 0;
+  useEffect(() => {
+    if (!('setAppBadge' in navigator)) return;
+    if (unreadCount > 0) {
+      navigator.setAppBadge(unreadCount).catch(() => {});
+    } else {
+      navigator.clearAppBadge().catch(() => {});
+    }
+  }, [unreadCount]);
+
   // Listen for foreground messages → show toast + browser notification
   useEffect(() => {
     if (!supported || permission !== 'granted' || !VAPID_KEY) return;

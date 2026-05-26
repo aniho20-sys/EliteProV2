@@ -18,6 +18,13 @@ const messaging = firebase.messaging();
 // Handle background push notifications (app not in foreground)
 messaging.onBackgroundMessage((payload) => {
   const { title, body } = payload.notification || {};
+  const badgeCount = parseInt(payload.data?.badgeCount) || 1;
+
+  // Update home screen app icon badge
+  if ('setAppBadge' in navigator) {
+    navigator.setAppBadge(badgeCount).catch(() => {});
+  }
+
   self.registration.showNotification(title || 'ElitePro', {
     body: body || 'You have a new notification',
     icon: '/favicon.svg',
@@ -27,9 +34,15 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-// Handle notification click — open the app
+// Handle notification click — open the app and clear badge
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  // Clear badge when user taps the notification
+  if ('clearAppBadge' in navigator) {
+    navigator.clearAppBadge().catch(() => {});
+  }
+
   const urlPath = event.notification.data?.url || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

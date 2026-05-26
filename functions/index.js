@@ -73,20 +73,23 @@ exports.onNewMessage = functions.firestore
     const msg = snap.data();
     if (!msg || !msg.to || !msg.from) return;
 
-    const [recipientSnap, senderSnap] = await Promise.all([
+    const [recipientSnap, senderSnap, unreadSnap] = await Promise.all([
       db.doc(`users/${msg.to}`).get(),
       db.doc(`users/${msg.from}`).get(),
+      db.collection('messages').where('to', '==', msg.to).where('read', '==', false).get(),
     ]);
 
     if (!recipientSnap.exists) return;
     const { fcmTokens } = recipientSnap.data();
     const senderName = senderSnap.exists ? senderSnap.data().name : 'Someone';
     const body = msg.text.length > 120 ? msg.text.substring(0, 120) + '…' : msg.text;
+    const badgeCount = String(unreadSnap.size); // new message is already in the count
 
     await sendPush(msg.to, fcmTokens, { title: senderName, body }, {
       type: 'message',
       url: '/#/messages',
       fromId: msg.from,
+      badgeCount,
     });
   });
 
