@@ -24,6 +24,7 @@ export default function MonthlyReportModal({ client, onClose }) {
 
   const opts = monthOptions();
   const [month, setMonth] = useState(opts[0].val);
+  const [includeWorkoutSummary, setIncludeWorkoutSummary] = useState(false);
   const [includeInvoice, setIncludeInvoice] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState('');
   const [invoiceCurrency, setInvoiceCurrency] = useState('HKD');
@@ -70,7 +71,7 @@ export default function MonthlyReportModal({ client, onClose }) {
       monthCompleted, monthLogs, monthStats,
       weightStart, weightEnd, weightChange,
       topPRs, totalVolume, attendancePct,
-      monthBooked,
+      includeWorkoutSummary,
       includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo,
       exName,
     });
@@ -114,13 +115,19 @@ export default function MonthlyReportModal({ client, onClose }) {
           ))}
         </div>
 
-        <label className="recap-send-toggle" style={{ marginBottom: 12 }}>
-          <input type="checkbox" checked={includeInvoice} onChange={e => setIncludeInvoice(e.target.checked)} />
-          Include fee summary
-        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          <label className="recap-send-toggle">
+            <input type="checkbox" checked={includeWorkoutSummary} onChange={e => setIncludeWorkoutSummary(e.target.checked)} />
+            Include workout summary
+          </label>
+          <label className="recap-send-toggle">
+            <input type="checkbox" checked={includeInvoice} onChange={e => setIncludeInvoice(e.target.checked)} />
+            Include fee summary
+          </label>
+        </div>
 
         {includeInvoice && (
-          <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', marginBottom: 12 }}>
+          <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', marginBottom: 16 }}>
             <div className="form-group">
               <label className="form-label">Amount</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -160,7 +167,8 @@ export default function MonthlyReportModal({ client, onClose }) {
 
 function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats,
   weightStart, weightEnd, weightChange, topPRs, totalVolume, attendancePct,
-  monthBooked, includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
+  includeWorkoutSummary,
+  includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
 
   const today = new Date().toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -173,7 +181,7 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
   ).join('');
 
   const logRows = monthLogs.map(l =>
-    `<tr><td>${l.date}</td><td>${(l.entries || []).map(e => exName(e.exerciseId, e.name)).join(', ')}</td><td style="color:#6b7280">${l.rpe ? `RPE ${l.rpe}` : '—'}</td></tr>`
+    `<tr><td style="white-space:nowrap">${l.date}</td><td>${(l.entries || []).map(e => exName(e.exerciseId, e.name)).join(', ')}</td><td style="color:#6b7280;white-space:nowrap">${l.rpe ? `RPE ${l.rpe}` : '—'}</td></tr>`
   ).join('');
 
   const weightRow = weightStart ? `
@@ -200,38 +208,53 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; font-size: 14px; line-height: 1.5; }
   .page { max-width: 720px; margin: 0 auto; padding: 40px; }
+  /* Close button — screen only */
+  .close-bar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+  .close-btn { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 16px; font-size: 0.85rem; cursor: pointer; color: #374151; }
+  /* Header */
   .report-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid #2563eb; margin-bottom: 28px; }
   .report-title { font-size: 1.6rem; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
   .report-subtitle { font-size: 0.85rem; color: #6b7280; margin-top: 2px; }
   .trainer-info { text-align: right; font-size: 0.85rem; color: #374151; }
   .trainer-name { font-weight: 700; font-size: 1rem; color: #111; }
+  /* Client strip */
   .client-strip { background: #f0f7ff; border-radius: 10px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
   .client-name { font-size: 1.15rem; font-weight: 700; }
   .client-meta { font-size: 0.8rem; color: #6b7280; margin-top: 2px; }
   .report-period { text-align: right; }
   .period-label { font-size: 0.75rem; color: #6b7280; }
   .period-val { font-size: 1rem; font-weight: 700; color: #2563eb; }
-  .stats-row { display: flex; gap: 12px; margin-bottom: 28px; }
-  .stat-box { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
+  /* Stats grid — wraps automatically */
+  .stats-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
+  .stat-box { flex: 1 1 120px; min-width: 100px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
   .stat-num { font-size: 1.6rem; font-weight: 800; color: #2563eb; }
   .stat-label { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+  /* Sections */
   .section { margin-bottom: 28px; }
   .section-title { font-size: 1rem; font-weight: 700; color: #111; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  /* Tables */
   .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .data-table th { background: #f3f4f6; text-align: left; padding: 8px 10px; font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
-  .data-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
   .data-table tr:last-child td { border-bottom: none; }
+  /* Invoice */
   .invoice-section { margin-top: 32px; padding-top: 20px; border-top: 2px dashed #e5e7eb; }
   .invoice-header { font-size: 0.8rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
   .payment-info { font-size: 0.85rem; color: #374151; background: #f9fafb; border-radius: 6px; padding: 10px 14px; }
+  /* Footer */
   .report-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 0.75rem; color: #9ca3af; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page { padding: 20px; }
+    .close-bar { display: none; }
     @page { margin: 1.5cm; }
   }
 </style>
 </head><body><div class="page">
+
+  <div class="close-bar">
+    <button class="close-btn" onclick="window.close()">✕ Close</button>
+  </div>
 
   <div class="report-header">
     <div>
@@ -288,7 +311,7 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
     </table>
   </div>` : ''}
 
-  ${monthLogs.length > 0 ? `
+  ${includeWorkoutSummary && monthLogs.length > 0 ? `
   <div class="section">
     <div class="section-title">💪 Workout Summary</div>
     <table class="data-table">
