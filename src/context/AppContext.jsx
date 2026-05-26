@@ -447,12 +447,18 @@ export function AppProvider({ children }) {
 
   const incrementSessionOffset = async (clientId) => {
     const userRef = doc(db, 'users', clientId);
+    let newOffset;
     await runTransaction(db, async (transaction) => {
       const snap = await transaction.get(userRef);
       if (!snap.exists()) throw new Error(`User doc not found: ${clientId}`);
       const current = snap.data().sessionOffset ?? 0;
-      transaction.update(userRef, { sessionOffset: current + 1 });
+      newOffset = current + 1;
+      transaction.update(userRef, { sessionOffset: newOffset });
     });
+    // Optimistically patch local state so UI updates immediately.
+    // The or() compound query listener may not re-fire synchronously with
+    // IndexedDB persistence enabled, so we apply the change manually.
+    setUsers(prev => prev.map(u => u.id === clientId ? { ...u, sessionOffset: newOffset } : u));
   };
 
   // Removes client from trainer's roster by clearing trainerId.
