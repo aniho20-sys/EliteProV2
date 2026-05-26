@@ -45,7 +45,10 @@ export default function MonthlyReportModal({ client, onClose }) {
   const monthLogs      = logs.filter(l => l.date?.startsWith(month));
   const monthCompleted = allSchedule.filter(s => s.date?.startsWith(month) && s.status === 'completed' && !s.isBlocked);
   const monthBooked    = allSchedule.filter(s => s.date?.startsWith(month) && !s.isBlocked);
-  const monthStats     = [...bodyStats].filter(s => s.date?.startsWith(month)).sort((a, b) => a.date > b.date ? 1 : -1);
+  const sortedStats    = [...bodyStats].sort((a, b) => a.date > b.date ? 1 : -1);
+  const monthStats     = sortedStats.filter(s => s.date?.startsWith(month));
+  // fallback: if no stats this month, use the most recent available entry
+  const latestStat     = sortedStats[sortedStats.length - 1] || null;
 
   const weightStart  = monthStats[0]?.weight;
   const weightEnd    = monthStats[monthStats.length - 1]?.weight;
@@ -68,7 +71,7 @@ export default function MonthlyReportModal({ client, onClose }) {
   const handlePrint = () => {
     const html = buildHTML({
       client, trainer: currentUser, month: monthLabel(month),
-      monthCompleted, monthLogs, monthStats,
+      monthCompleted, monthLogs, monthStats, latestStat,
       weightStart, weightEnd, weightChange,
       topPRs, totalVolume, attendancePct,
       includeWorkoutSummary,
@@ -169,17 +172,21 @@ function esc(str) {
   return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats,
+function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats, latestStat,
   weightStart, weightEnd, weightChange, topPRs, totalVolume, attendancePct,
   includeWorkoutSummary,
   includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
 
   const today = new Date().toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
-  const hasAnyData = monthCompleted.length > 0 || monthLogs.length > 0 || topPRs.length > 0 || monthStats.length > 0;
 
-  // Body composition comparison
-  const statFirst = monthStats[0];
-  const statLast  = monthStats[monthStats.length - 1];
+  // Body composition: prefer within-month start/end comparison; fallback to latest available
+  const statFirst  = monthStats[0] || null;
+  const statEnd    = monthStats.length > 1 ? monthStats[monthStats.length - 1] : null;
+  const displayStat = statFirst || latestStat;
+  const isSnapshot  = !statFirst && !!latestStat; // true = fallback, show as snapshot not comparison
+
+  const hasAnyData = monthCompleted.length > 0 || monthLogs.length > 0 || topPRs.length > 0 || !!displayStat;
+
   const bodyFields = [
     { key: 'weight',  label: 'Weight',   unit: 'kg' },
     { key: 'bodyFat', label: 'Body Fat', unit: '%'  },
@@ -189,15 +196,20 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
     { key: 'arms',    label: 'Arms',     unit: 'cm' },
     { key: 'legs',    label: 'Legs',     unit: 'cm' },
   ];
-  const bodyRows = statFirst ? bodyFields
-    .filter(f => statFirst[f.key] || (statLast && statLast[f.key]))
+
+  const bodyRows = displayStat ? bodyFields
+    .filter(f => displayStat[f.key])
     .map(f => {
-      const start = statFirst[f.key];
-      const end   = statLast && statLast !== statFirst ? statLast[f.key] : null;
+      const start = statFirst ? statFirst[f.key] : null;
+      const end   = statEnd ? statEnd[f.key] : null;
+      const snap  = isSnapshot ? displayStat[f.key] : null;
       const delta = (start && end && end !== start) ? (end - start) : null;
       const deltaStr = delta !== null
         ? `<span style="color:${delta < 0 ? '#16a34a' : '#dc2626'};font-size:0.8em;margin-left:6px">${delta > 0 ? '+' : ''}${delta.toFixed(1)}</span>`
         : '';
+      if (isSnapshot) {
+        return `<tr><td>${esc(f.label)}</td><td>${snap}${f.unit}</td></tr>`;
+      }
       return `<tr>
         <td>${esc(f.label)}</td>
         <td>${start ? start + f.unit : '—'}</td>
@@ -205,11 +217,16 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
       </tr>`;
     }).join('') : '';
 
-  const bodySection = statFirst ? `
+  const bodyHeader = isSnapshot
+    ? `<tr><th>Measurement</th><th>Latest (${esc(latestStat.date)})</th></tr>`
+    : `<tr><th>Measurement</th><th>Start (${esc(statFirst?.date || '')})</th><th>End${statEnd ? ' (' + esc(statEnd.date) + ')' : ''}</th></tr>`;
+
+  const bodySection = displayStat ? `
   <div class="section">
     <div class="section-title">📏 Body Composition</div>
+    ${isSnapshot ? `<p style="font-size:0.78rem;color:#9ca3af;margin-bottom:10px">No measurements recorded this month — showing latest available data.</p>` : ''}
     <table class="data-table">
-      <tr><th>Measurement</th><th>Start (${esc(statFirst.date)})</th><th>End${statLast && statLast !== statFirst ? ' (' + esc(statLast.date) + ')' : ''}</th></tr>
+      ${bodyHeader}
       ${bodyRows}
     </table>
   </div>` : '';
