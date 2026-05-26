@@ -175,7 +175,44 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
   includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
 
   const today = new Date().toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
-  const hasAnyData = monthCompleted.length > 0 || monthLogs.length > 0 || topPRs.length > 0;
+  const hasAnyData = monthCompleted.length > 0 || monthLogs.length > 0 || topPRs.length > 0 || monthStats.length > 0;
+
+  // Body composition comparison
+  const statFirst = monthStats[0];
+  const statLast  = monthStats[monthStats.length - 1];
+  const bodyFields = [
+    { key: 'weight',  label: 'Weight',   unit: 'kg' },
+    { key: 'bodyFat', label: 'Body Fat', unit: '%'  },
+    { key: 'chest',   label: 'Chest',    unit: 'cm' },
+    { key: 'waist',   label: 'Waist',    unit: 'cm' },
+    { key: 'hips',    label: 'Hips',     unit: 'cm' },
+    { key: 'arms',    label: 'Arms',     unit: 'cm' },
+    { key: 'legs',    label: 'Legs',     unit: 'cm' },
+  ];
+  const bodyRows = statFirst ? bodyFields
+    .filter(f => statFirst[f.key] || (statLast && statLast[f.key]))
+    .map(f => {
+      const start = statFirst[f.key];
+      const end   = statLast && statLast !== statFirst ? statLast[f.key] : null;
+      const delta = (start && end && end !== start) ? (end - start) : null;
+      const deltaStr = delta !== null
+        ? `<span style="color:${delta < 0 ? '#16a34a' : '#dc2626'};font-size:0.8em;margin-left:6px">${delta > 0 ? '+' : ''}${delta.toFixed(1)}</span>`
+        : '';
+      return `<tr>
+        <td>${esc(f.label)}</td>
+        <td>${start ? start + f.unit : '—'}</td>
+        <td>${end ? end + f.unit + deltaStr : '—'}</td>
+      </tr>`;
+    }).join('') : '';
+
+  const bodySection = statFirst ? `
+  <div class="section">
+    <div class="section-title">📏 Body Composition</div>
+    <table class="data-table">
+      <tr><th>Measurement</th><th>Start (${esc(statFirst.date)})</th><th>End${statLast && statLast !== statFirst ? ' (' + esc(statLast.date) + ')' : ''}</th></tr>
+      ${bodyRows}
+    </table>
+  </div>` : '';
 
   const sessionsRows = monthCompleted.map(s =>
     `<tr><td>${esc(s.date)}</td><td>${esc(s.time || '—')}</td><td>${esc(s.type || 'Training')}</td></tr>`
@@ -188,12 +225,6 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
   const logRows = monthLogs.map(l =>
     `<tr><td style="white-space:nowrap">${esc(l.date)}</td><td>${(l.entries || []).map(e => esc(exName(e.exerciseId, e.name))).join(', ')}</td><td style="color:#6b7280;white-space:nowrap">${l.rpe ? `RPE ${esc(l.rpe)}` : '—'}</td></tr>`
   ).join('');
-
-  const weightRow = weightStart ? `
-    <div class="stat-box">
-      <div class="stat-num" style="color:${weightChange && Number(weightChange) < 0 ? '#16a34a' : Number(weightChange) > 0 ? '#dc2626' : '#2563eb'}">${weightChange ? (Number(weightChange) > 0 ? '+' : '') + weightChange + ' kg' : weightStart + ' kg'}</div>
-      <div class="stat-label">Weight${weightChange ? ' Change' : ' (this month)'}</div>
-    </div>` : '';
 
   const invoiceSection = includeInvoice ? `
     <div class="invoice-section">
@@ -299,8 +330,9 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
       <div class="stat-label">Workout Logs</div>
     </div>
     ${totalVolume > 0 ? `<div class="stat-box"><div class="stat-num">${(totalVolume / 1000).toFixed(1)}t</div><div class="stat-label">Total Volume</div></div>` : ''}
-    ${weightRow}
   </div>
+
+  ${bodySection}
 
   ${topPRs.length > 0 ? `
   <div class="section">
