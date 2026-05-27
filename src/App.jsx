@@ -7,6 +7,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import InstallPrompt from './components/InstallPrompt';
+import NotifPrompt from './components/NotifPrompt';
 import OfflineBanner from './components/OfflineBanner';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -82,6 +83,7 @@ function AppRoutes() {
         <div className="app-layout">
           <Navigation />
           <InstallPrompt />
+          <NotifPrompt />
           <OfflineBanner />
           <main className="main-content">
             <Routes>
