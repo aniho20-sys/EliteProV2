@@ -16,6 +16,21 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      if (this.props.compact) {
+        return (
+          <div className="page-error-card">
+            <div className="page-error-icon">!</div>
+            <div className="page-error-body">
+              <strong>This page ran into a problem</strong>
+              <span>{this.state.error?.message || 'An unexpected error occurred'}</span>
+            </div>
+            <div className="flex gap-8">
+              <button className="btn btn-sm btn-primary" onClick={this.handleReset}>Try Again</button>
+              <button className="btn btn-sm btn-outline" onClick={() => window.location.reload()}>Reload</button>
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="error-boundary">
           <div className="error-boundary-icon">!</div>

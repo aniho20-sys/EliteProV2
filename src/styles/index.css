@@ -4615,3 +4615,37 @@ tr:hover { background: var(--bg-card-hover); }
   font-size: 0.88rem;
   padding: 48px 16px;
 }
+
+/* ── Per-page compact error card ── */
+.page-error-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 24px;
+  flex-wrap: wrap;
+}
+.page-error-icon {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-error-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.page-error-body strong { font-size: 0.88rem; color: var(--text); }
+.page-error-body span { font-size: 0.78rem; color: var(--text-muted); }

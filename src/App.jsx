@@ -86,6 +86,7 @@ function AppRoutes() {
           <NotifPrompt />
           <OfflineBanner />
           <main className="main-content">
+            <ErrorBoundary key={location.pathname} compact>
             <Routes>
               <Route path="/" element={isOperator ? <OperatorDashboard /> : isTrainer ? <TrainerDashboard /> : <ClientDashboard />} />
               {isTrainer && <Route path="/clients" element={<ClientsPage />} />}
@@ -106,6 +107,7 @@ function AppRoutes() {
               {isTrainer && <Route path="/studios/book" element={<StudioBookingPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </ErrorBoundary>
           </main>
         </div>
       )}
