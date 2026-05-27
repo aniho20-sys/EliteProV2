@@ -862,6 +862,7 @@ export function AppProvider({ children }) {
     loginDemoCoach, deleteAccount,
     getClients, getClient, updateClient, incrementSessionOffset, removeClient,
     getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
+    data: { users, workoutPlans, workoutLogs, schedule, messages, exercises, invoices },
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
     getSchedule, getTrainerSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,

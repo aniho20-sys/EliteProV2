@@ -6,6 +6,7 @@ import {
   MoreHorizontal, X, ChevronRight, Building2, FileBadge
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
+import NotificationCenter from './NotificationCenter';
 import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
 
@@ -108,6 +109,9 @@ export default function Navigation() {
             </div>
           )}
         </nav>
+        <div className="sidebar-notif">
+          <NotificationCenter />
+        </div>
         <div className="sidebar-theme-toggle">
           <button className="btn btn-outline btn-sm" onClick={toggleTheme} style={{ width: '100%' }}>
             {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
@@ -139,6 +143,7 @@ export default function Navigation() {
             <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
               <Search size={20} />
             </button>
+            <NotificationCenter />
             <NavLink to="/profile" className="btn-icon" style={{ textDecoration: 'none', color: 'inherit' }}>
               <UserCircle size={22} />
             </NavLink>
