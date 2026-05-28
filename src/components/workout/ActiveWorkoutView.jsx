@@ -218,11 +218,9 @@ export default function ActiveWorkoutView({
                   <button className="ex-info-btn" onClick={() => setSwapExIdx(exIdx)} title="Swap exercise">
                     <ArrowLeftRight size={14} />
                   </button>
-                  {(!selectedPlan || entry.addedDuringSession) && (
-                    <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title="Remove exercise" style={{ color: 'var(--danger)' }}>
-                      <X size={14} />
-                    </button>
-                  )}
+                  <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title="Remove exercise" style={{ color: 'var(--danger)' }}>
+                    <X size={14} />
+                  </button>
                 </h3>
                 <div className="log-card-tags">
                   {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}

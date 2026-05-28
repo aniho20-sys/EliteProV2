@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, NotebookPen, UserPlus, Timer, Pencil } from 'lucide-react';
+import { Trophy, NotebookPen, UserPlus, Timer, Pencil, X } from 'lucide-react';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -473,7 +473,14 @@ export default function WorkoutLogPage() {
             <h3 className="modal-title">Edit Workout — {editingLog.date}</h3>
             {editEntries.map((entry, exIdx) => (
               <div key={exIdx} className="mb-16">
-                <div className="fw-bold mb-8 text-sm">{entry.name || getExerciseName(entry.exerciseId)}</div>
+                <div className="fw-bold mb-8 text-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>{entry.name || getExerciseName(entry.exerciseId)}</span>
+                  <button className="btn-icon" style={{ color: 'var(--danger)', flexShrink: 0 }}
+                    onClick={() => setEditEntries(prev => prev.filter((_, i) => i !== exIdx))}
+                    title="Remove exercise">
+                    <X size={14} />
+                  </button>
+                </div>
                 {entry.sets.length === 0
                   ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
                   : entry.sets.map((set, setIdx) => (
