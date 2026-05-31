@@ -195,11 +195,26 @@ export default function Navigation() {
               </button>
             </div>
             <nav className="more-sheet-nav">
-              {moreLinks.map(link => (
+              {moreLinks.filter(l => l.to !== '/profile').map(link => (
                 <NavLink
                   key={link.to}
                   to={link.to}
                   end={link.to === '/'}
+                  className={({ isActive }) => `more-sheet-link ${isActive ? 'active' : ''}`}
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <div className="more-sheet-link-icon">
+                    <link.icon size={20} strokeWidth={2} />
+                  </div>
+                  <span className="more-sheet-link-label">{link.label}</span>
+                  <ChevronRight size={16} className="more-sheet-link-chevron" />
+                </NavLink>
+              ))}
+              <div className="more-sheet-divider" />
+              {moreLinks.filter(l => l.to === '/profile').map(link => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
                   className={({ isActive }) => `more-sheet-link ${isActive ? 'active' : ''}`}
                   onClick={() => setMoreOpen(false)}
                 >

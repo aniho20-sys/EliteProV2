@@ -5,6 +5,8 @@ import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRou
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
+import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
+import { auth } from '../firebase';
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = () =>
@@ -85,6 +87,7 @@ export default function ProfilePage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   // Trainer: invite code state
@@ -216,6 +219,15 @@ export default function ProfilePage() {
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
+      const fbUser = auth.currentUser;
+      if (fbUser) {
+        if (authProvider === 'google') {
+          await reauthenticateWithPopup(fbUser, new GoogleAuthProvider());
+        } else if (authProvider === 'email') {
+          const credential = EmailAuthProvider.credential(currentUser.email, deletePassword);
+          await reauthenticateWithCredential(fbUser, credential);
+        }
+      }
       await deleteAccount();
       toast('Account deleted', 'info');
       navigate('/');
@@ -225,6 +237,7 @@ export default function ProfilePage() {
       setDeleting(false);
       setShowDeleteModal(false);
       setDeleteConfirmText('');
+      setDeletePassword('');
     }
   };
 
@@ -569,6 +582,19 @@ export default function ProfilePage() {
               <li>Workout logs and messages will remain (orphaned)</li>
               {isTrainer && <li>Your clients will be disconnected from you</li>}
             </ul>
+            {authProvider === 'email' && (
+              <div className="form-group mt-8">
+                <label className="form-label">Enter your password to confirm</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  value={deletePassword}
+                  onChange={e => setDeletePassword(e.target.value)}
+                  placeholder="Your password"
+                  autoFocus
+                />
+              </div>
+            )}
             <p className="profile-danger-text mt-8">
               Type <code>DELETE</code> to confirm:
             </p>
@@ -577,7 +603,7 @@ export default function ProfilePage() {
               value={deleteConfirmText}
               onChange={e => setDeleteConfirmText(e.target.value)}
               placeholder="DELETE"
-              autoFocus
+              autoFocus={authProvider !== 'email'}
             />
             <div className="modal-actions">
               <button
@@ -591,7 +617,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 className="btn btn-danger"
-                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                disabled={deleteConfirmText !== 'DELETE' || deleting || (authProvider === 'email' && !deletePassword)}
                 onClick={handleDeleteAccount}
               >
                 <Trash2 size={16} /> {deleting ? 'Deleting...' : 'Permanently Delete'}

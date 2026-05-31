@@ -66,12 +66,24 @@ exports.onAccountDelete = functions.auth.user().onDelete(async (user) => {
   console.log(`[GDPR] Deleted all data for uid=${uid}`);
 });
 
-// ─── New Message → Push to recipient ───
+// ─── New Message → server-side rate limit + push to recipient ───
+// Max 20 messages per sender per 60-second window (enforced server-side)
 exports.onNewMessage = functions.firestore
   .document('messages/{messageId}')
   .onCreate(async (snap) => {
     const msg = snap.data();
     if (!msg || !msg.to || !msg.from) return;
+
+    // Server-side rate limit: count messages from this sender in the last 60s
+    const windowStart = new Date(Date.now() - 60_000).toISOString();
+    const recentSnap = await db.collection('messages')
+      .where('from', '==', msg.from)
+      .where('timestamp', '>=', windowStart)
+      .get();
+    if (recentSnap.size > 20) {
+      console.warn(`[rate-limit] sender ${msg.from} sent ${recentSnap.size} msgs in 60s — skipping push`);
+      return;
+    }
 
     const [recipientSnap, senderSnap, unreadSnap] = await Promise.all([
       db.doc(`users/${msg.to}`).get(),
@@ -83,7 +95,7 @@ exports.onNewMessage = functions.firestore
     const { fcmTokens } = recipientSnap.data();
     const senderName = senderSnap.exists ? senderSnap.data().name : 'Someone';
     const body = msg.text.length > 120 ? msg.text.substring(0, 120) + '…' : msg.text;
-    const badgeCount = String(unreadSnap.size); // new message is already in the count
+    const badgeCount = String(unreadSnap.size);
 
     await sendPush(msg.to, fcmTokens, { title: senderName, body }, {
       type: 'message',
