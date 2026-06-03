@@ -2074,6 +2074,46 @@ tr:hover { background: var(--bg-card-hover); }
   font-weight: 700;
   color: var(--success);
 }
+.log-set-wrap {
+  margin-bottom: 10px;
+}
+.log-set-wrap .log-set-row {
+  margin-bottom: 0;
+}
+.weight-delta-pills {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 5px 0 2px 52px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.weight-delta-pills::-webkit-scrollbar { display: none; }
+.weight-delta-pill {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1.5px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1.4;
+}
+.weight-delta-pill:hover {
+  background: var(--primary);
+  color: #fff;
+}
+.weight-delta-pill:active {
+  background: var(--primary);
+  color: #fff;
+  opacity: 0.85;
+  transform: scale(0.94);
+}
 .log-set-row {
   display: flex;
   align-items: center;

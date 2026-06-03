@@ -91,9 +91,12 @@ export default function ActiveWorkoutView({
   const updateSet = (exIdx, setIdx, field, value) => {
     setEntries(prev => prev.map((entry, i) => {
       if (i !== exIdx) return entry;
+      // When editing Set 1, propagate to subsequent sets that share the same value or are empty
+      const prevSet1Value = entry.sets[0]?.[field];
       const sets = entry.sets.map((s, j) => {
         if (j === setIdx) return { ...s, [field]: value };
-        if (j > 0 && setIdx === 0 && value !== '' && (s[field] === '' || s[field] == null))
+        if (j > 0 && setIdx === 0 && value !== '' &&
+            (s[field] === '' || s[field] == null || s[field] === prevSet1Value))
           return { ...s, [field]: value };
         return s;
       });
