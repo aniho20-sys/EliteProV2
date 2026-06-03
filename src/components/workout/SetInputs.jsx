@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { CheckCircle, X } from 'lucide-react';
 
 const WEIGHT_DELTAS = [1.25, 2.5, 5, 10, 15, 20, 25];
@@ -6,6 +6,8 @@ const WEIGHT_DELTAS = [1.25, 2.5, 5, 10, 15, 20, 25];
 export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canRemove, done, onComplete }) {
   const repsRef = useRef(null);
   const distRef = useRef(null);
+  const [weightFocused, setWeightFocused] = useState(false);
+
   const step = (field, delta, min = 0) => {
     const cur = parseFloat(set[field]) || 0;
     onUpdate(field, String(Math.max(min, Math.round((cur + delta) * 10) / 10)));
@@ -23,7 +25,10 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
             <input
               className="form-input log-set-input" type="number" placeholder="kg"
               inputMode="decimal" enterKeyHint="next"
-              value={set.weight ?? ''} onChange={e => onUpdate('weight', e.target.value)}
+              value={set.weight ?? ''}
+              onChange={e => onUpdate('weight', e.target.value)}
+              onFocus={() => setWeightFocused(true)}
+              onBlur={() => setWeightFocused(false)}
               onKeyDown={e => e.key === 'Enter' && repsRef.current?.focus()}
             />
             <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1}>+</button>
@@ -86,7 +91,10 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
             <input
               className="form-input log-set-input" type="number" placeholder="kg"
               inputMode="decimal" enterKeyHint="next"
-              value={set.weight ?? ''} onChange={e => onUpdate('weight', e.target.value)}
+              value={set.weight ?? ''}
+              onChange={e => onUpdate('weight', e.target.value)}
+              onFocus={() => setWeightFocused(true)}
+              onBlur={() => setWeightFocused(false)}
               onKeyDown={e => e.key === 'Enter' && distRef.current?.focus()}
             />
             <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1}>+</button>
@@ -114,10 +122,16 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
           <button className="btn btn-outline btn-sm btn-icon" onClick={onRemove} title="Remove set"><X size={12} /></button>
         )}
       </div>
-      {hasWeight && (
+      {hasWeight && weightFocused && (
         <div className="weight-delta-pills">
           {WEIGHT_DELTAS.map(d => (
-            <button key={d} className="weight-delta-pill" tabIndex={-1} onClick={() => step('weight', d)}>
+            <button
+              key={d}
+              className="weight-delta-pill"
+              tabIndex={-1}
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => step('weight', d)}
+            >
               +{d}
             </button>
           ))}
