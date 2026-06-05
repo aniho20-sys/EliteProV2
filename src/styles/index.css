@@ -3281,6 +3281,52 @@ tr:hover { background: var(--bg-card-hover); }
   flex: 1;
 }
 
+/* Block-time multi-select chip grid */
+.time-slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 4px 0 2px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.time-slot-chip {
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.time-slot-chip:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.time-slot-chip.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.time-slot-chip.busy {
+  opacity: 0.3;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.block-slot-count {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: none;
+  padding: 0;
+}
+
 /* Badge System */
 .badges-grid {
   display: flex;

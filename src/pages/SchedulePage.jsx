@@ -37,6 +37,7 @@ export default function SchedulePage() {
   const [cancelingLate, setCancelingLate] = useState(false);
   const [bookMode, setBookMode] = useState('session'); // 'session' | 'block'
   const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
+  const [blockTimes, setBlockTimes] = useState(new Set());
   const [recapSession, setRecapSession] = useState(null); // schedule item to recap
   const [recapNote, setRecapNote] = useState('');
   const [recapSend, setRecapSend] = useState(true);
@@ -133,23 +134,28 @@ export default function SchedulePage() {
     e.preventDefault();
 
     if (bookMode === 'block') {
-      if (!form.time) { toast('Please select a time slot', 'error'); return; }
+      if (!form.date) { toast('Please select a date', 'error'); return; }
+      if (blockTimes.size === 0) { toast('Please select at least one time slot', 'error'); return; }
+      const count = blockTimes.size;
       setSaving(true);
       try {
-        await addScheduleItem({
-          trainerId: currentUser.id,
-          clientId: '',
-          isBlocked: true,
-          date: form.date,
-          time: form.time,
-          duration: Number(form.duration),
-          type: 'Blocked',
-          status: 'blocked',
-          notes: form.label || '',
-        });
+        await Promise.all([...blockTimes].sort().map(time =>
+          addScheduleItem({
+            trainerId: currentUser.id,
+            clientId: '',
+            isBlocked: true,
+            date: form.date,
+            time,
+            duration: Number(form.duration),
+            type: 'Blocked',
+            status: 'blocked',
+            notes: form.label || '',
+          })
+        ));
+        setBlockTimes(new Set());
         setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
         setShowAdd(false);
-        toast('Time blocked');
+        toast(`${count} time slot${count > 1 ? 's' : ''} blocked`);
       } catch (err) {
         toast(`Failed to block time: ${err?.message || 'unknown error'}`, 'error');
       } finally {
@@ -295,7 +301,7 @@ export default function SchedulePage() {
     return { day: d.toLocaleDateString('en', { weekday: 'short' }), date: d.getDate() };
   };
 
-  const getSessionCount = (date) => allSchedule.filter(s => s.date === date).length;
+  const getSessionCount = (date) => allSchedule.filter(s => s.date === date && !s.isBlocked).length;
 
   return (
     <div>
@@ -532,12 +538,12 @@ export default function SchedulePage() {
       )}
 
       {showAdd && (
-        <div className="modal-overlay" onClick={() => { setShowAdd(false); setBookMode('session'); }}>
+        <div className="modal-overlay" onClick={() => { setShowAdd(false); setBookMode('session'); setBlockTimes(new Set()); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">{bookMode === 'block' ? 'Block Time' : 'Book Session'}</h3>
             {isTrainer && (
               <div className="log-unit-picker" style={{ marginBottom: 16 }}>
-                <button type="button" className={`log-unit-pill${bookMode === 'session' ? ' active' : ''}`} onClick={() => setBookMode('session')}>Book Session</button>
+                <button type="button" className={`log-unit-pill${bookMode === 'session' ? ' active' : ''}`} onClick={() => { setBookMode('session'); setBlockTimes(new Set()); }}>Book Session</button>
                 <button type="button" className={`log-unit-pill${bookMode === 'block' ? ' active' : ''}`} onClick={() => setBookMode('block')}><Lock size={13} style={{ marginRight: 4 }} />Block Time</button>
               </div>
             )}
@@ -569,25 +575,83 @@ export default function SchedulePage() {
                   </div>
                 );
               })()}
-              <div className="book-form-row">
-                <div className="form-group book-form-date">
-                  <label className="form-label">Date</label>
-                  <input className="form-input" type="date" required value={form.date} onChange={e => {
-                    const newDate = e.target.value;
-                    const slots = availableBookingSlots(form.duration, newDate);
-                    setForm(f => ({ ...f, date: newDate, time: slots.includes(f.time) ? f.time : (slots[0] || '09:00') }));
-                  }} />
+              {bookMode === 'session' ? (
+                <div className="book-form-row">
+                  <div className="form-group book-form-date">
+                    <label className="form-label">Date</label>
+                    <input className="form-input" type="date" required value={form.date} onChange={e => {
+                      const newDate = e.target.value;
+                      const slots = availableBookingSlots(form.duration, newDate);
+                      setForm(f => ({ ...f, date: newDate, time: slots.includes(f.time) ? f.time : (slots[0] || '09:00') }));
+                    }} />
+                  </div>
+                  <div className="form-group book-form-time">
+                    <label className="form-label">Time</label>
+                    <select className="form-select" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}>
+                      {!form.time && <option value="">Select time</option>}
+                      {availableBookingSlots(form.duration, form.date).map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="form-group book-form-time">
-                  <label className="form-label">Time</label>
-                  <select className="form-select" required value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}>
-                    {!form.time && <option value="">Select time</option>}
-                    {availableBookingSlots(form.duration, form.date).map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Date</label>
+                    <input className="form-input" type="date" required value={form.date} onChange={e => {
+                      setBlockTimes(new Set());
+                      setForm(f => ({ ...f, date: e.target.value }));
+                    }} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Duration per slot</label>
+                    <select className="form-select" value={form.duration} onChange={e => {
+                      setBlockTimes(new Set());
+                      setForm(f => ({ ...f, duration: Number(e.target.value) }));
+                    }}>
+                      <option value={30}>30 min</option>
+                      <option value={60}>60 min</option>
+                      <option value={90}>90 min</option>
+                      <option value={120}>120 min</option>
+                    </select>
+                  </div>
+                  {form.date && (() => {
+                    const dur = Number(form.duration);
+                    const fittingSlots = BOOKING_SLOTS.filter(s => toMin(s) + dur <= toMin(whEnd));
+                    return (
+                      <div className="form-group">
+                        <label className="form-label">
+                          Time Slots
+                          {blockTimes.size > 0 && <span className="block-slot-count">{blockTimes.size} selected</span>}
+                        </label>
+                        <div className="time-slot-grid">
+                          {fittingSlots.map(slot => {
+                            const slotMin = toMin(slot);
+                            const busy = refSchedule.some(s => s.date === form.date && s.status !== 'cancelled' && sessionOverlaps(s, slotMin, slotMin + dur));
+                            const selected = blockTimes.has(slot);
+                            return (
+                              <button
+                                key={slot}
+                                type="button"
+                                className={`time-slot-chip${selected ? ' selected' : ''}${busy ? ' busy' : ''}`}
+                                disabled={busy}
+                                onClick={() => setBlockTimes(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(slot)) next.delete(slot); else next.add(slot);
+                                  return next;
+                                })}
+                              >
+                                {slot}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
               {bookMode === 'session' && (
                 <div className="form-group">
                   <label className="form-label">Type</label>
@@ -601,9 +665,13 @@ export default function SchedulePage() {
                 </div>
               )}
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => { setShowAdd(false); setBookMode('session'); }} disabled={saving}>Cancel</button>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowAdd(false); setBookMode('session'); setBlockTimes(new Set()); }} disabled={saving}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? (bookMode === 'block' ? 'Blocking…' : 'Booking…') : (bookMode === 'block' ? 'Block Time' : 'Book')}
+                  {saving
+                    ? (bookMode === 'block' ? 'Blocking…' : 'Booking…')
+                    : bookMode === 'block'
+                      ? (blockTimes.size > 0 ? `Block ${blockTimes.size} Slot${blockTimes.size > 1 ? 's' : ''}` : 'Block Time')
+                      : 'Book'}
                 </button>
               </div>
             </form>
