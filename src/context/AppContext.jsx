@@ -127,9 +127,32 @@ export function AppProvider({ children }) {
       }
     };
 
+    // Split into two separate listeners (avoids the or() compound query which is
+    // unreliable with IndexedDB persistence — the stale-cache snapshot can overwrite
+    // the optimistic setUsers patch applied by incrementSessionOffset).
     unsubs.push(onSnapshot(
-      query(collection(db, 'users'), or(where('id', '==', uid), where('trainerId', '==', uid))),
-      (snap) => { setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id }))); markLoaded('users'); },
+      query(collection(db, 'users'), where('id', '==', uid)),
+      (snap) => {
+        setUsers(prev => {
+          const selfDocs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+          const withoutSelf = prev.filter(u => u.id !== uid);
+          return [...withoutSelf, ...selfDocs];
+        });
+        markLoaded('users');
+      },
+      onErr('users'),
+    ));
+    unsubs.push(onSnapshot(
+      query(collection(db, 'users'), where('trainerId', '==', uid)),
+      (snap) => {
+        setUsers(prev => {
+          const clientDocs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+          // Keep own doc only; replace every client doc with the fresh snapshot
+          const ownDoc = prev.filter(u => u.id === uid);
+          return [...ownDoc, ...clientDocs];
+        });
+        markLoaded('users');
+      },
       onErr('users'),
     ));
 
