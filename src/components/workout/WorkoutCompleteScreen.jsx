@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Trophy } from 'lucide-react';
+import { CheckCircle, Trophy, Share2 } from 'lucide-react';
 
 const CLOSING_MESSAGES = [
   'Every rep builds the best version of you.',
@@ -10,8 +10,39 @@ const CLOSING_MESSAGES = [
   'The only bad workout is the one that didn\'t happen.',
 ];
 
+const buildShareText = (data, msg) => {
+  const stats = data.totalVolume > 0
+    ? `${data.totalVolume.toLocaleString()} kg total volume · ${data.exerciseCount} exercises · RPE ${data.rpe}/10`
+    : `${data.totalSets} sets · ${data.exerciseCount} exercises · RPE ${data.rpe}/10`;
+
+  const lines = [
+    `💪 Workout Complete — ${data.planName}`,
+    `📊 ${stats}`,
+  ];
+  if (data.newPRs?.length > 0) {
+    lines.push(`🏆 New PRs: ${data.newPRs.map(pr => `${pr.name} ${pr.weight}kg`).join(', ')}`);
+  }
+  lines.push('', `"${msg}"`, '— Logged with ElitePro');
+  return lines.join('\n');
+};
+
 export default function WorkoutCompleteScreen({ data, onDone }) {
   const [msg] = useState(() => CLOSING_MESSAGES[Math.floor(Math.random() * CLOSING_MESSAGES.length)]);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const text = buildShareText(data, msg);
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Workout Complete', text }); } catch { /* cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch { /* clipboard unavailable */ }
+    }
+  };
+
   return (
     <div className="workout-complete">
       <div className="workout-complete-check">
@@ -55,10 +86,16 @@ export default function WorkoutCompleteScreen({ data, onDone }) {
           ))}
         </div>
       )}
+
       <p className="workout-complete-quote">&ldquo;{msg}&rdquo;</p>
-      <button className="btn btn-accent" onClick={onDone} style={{ width: '100%' }}>
-        Done
-      </button>
+
+      <div className="workout-complete-actions">
+        <button className="btn btn-outline" onClick={handleShare}>
+          <Share2 size={16} />
+          {copied ? 'Copied!' : 'Share'}
+        </button>
+        <button className="btn btn-accent" onClick={onDone}>Done</button>
+      </div>
     </div>
   );
 }

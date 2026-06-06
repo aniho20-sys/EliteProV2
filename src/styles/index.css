@@ -3201,6 +3201,14 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 20px;
   line-height: 1.5;
 }
+.workout-complete-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.workout-complete-actions .btn {
+  flex: 1;
+}
 
 /* Loading Screen */
 .loading-screen {
