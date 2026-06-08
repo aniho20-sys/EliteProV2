@@ -38,7 +38,7 @@ src/
 │   └── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
 ├── context/
 │   ├── AppContext.jsx         # Global state + all Firestore/Auth operations
-│   ├── NotificationContext.jsx # FCM push notifications (code ready, needs Blaze deploy)
+│   ├── NotificationContext.jsx # FCM push notifications (code ready; Blaze plan active — pending Cloud Functions deploy + VAPID key verification)
 │   ├── ThemeContext.jsx       # Light/dark theme toggle (persisted to localStorage)
 │   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss)
 ├── data/
@@ -76,7 +76,7 @@ src/
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (needs Blaze plan to deploy)
+functions/                    # Cloud Functions (sendNotificationOnMessage + sendNotificationOnSchedule; Blaze plan active, ready to deploy)
 ├── index.js                  # sendNotificationOnMessage + sendNotificationOnSchedule
 └── package.json
 
@@ -99,7 +99,8 @@ Top-level config files:
 ## Firebase Configuration
 - **Project ID**: `elitepro-16718`
 - **Config**: hardcoded in `src/firebase.js` (public API key — safe for client-side apps)
-- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (code ready, not deployed), Cloud Functions (code ready, needs Blaze plan)
+- **Billing plan**: Blaze (pay-as-you-go) — active, so Cloud Functions deployment is no longer blocked
+- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (code ready, pending deploy), Cloud Functions (code ready, pending deploy)
 - **Offline**: IndexedDB persistence enabled; app works without internet after first load
 
 ## Authentication Flow
@@ -365,7 +366,7 @@ data                         // raw { users, bodyStats, workoutPlans, workoutLog
 ### Other contexts
 - **ThemeContext**: `{ theme, toggleTheme }` — `'light'` | `'dark'`, persisted to `localStorage` key `elitepro_theme`, applied via `data-theme` attribute on `<html>`
 - **ToastContext**: `addToast(message, type?)` — `type` is `'success'` (default), `'error'`, or `'info'`; auto-dismisses after 3s
-- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready but requires Blaze plan + VAPID key to activate
+- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready; Blaze plan now active — remaining step is deploying `functions/` and verifying the VAPID key is correctly registered in Firebase Console → Cloud Messaging
 
 ## Routing
 Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
@@ -465,7 +466,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 12. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
 13. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
 14. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
-15. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists but needs Blaze plan + VAPID key before deployment
+15. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists and the Blaze plan is now active; remaining step is deploying `functions/` (CI already attempts this on every push, see `firebase-hosting.yml`) and confirming the VAPID key in Firebase Console → Cloud Messaging
 16. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
 17. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
 18. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
