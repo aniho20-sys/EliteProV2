@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Trophy, NotebookPen, UserPlus, Timer, Pencil, X } from 'lucide-react';
+import { Trophy, NotebookPen, UserPlus, Timer, Pencil, X, Share2, CheckCircle } from 'lucide-react';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, emptySet, hasValue, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { localToday } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
+import { pickClosingMessage, buildWorkoutShareText } from '../utils/workoutShareUtils';
 import { useRestTimer } from '../hooks/useRestTimer';
 import WorkoutCompleteScreen from '../components/workout/WorkoutCompleteScreen';
 import SetInputs from '../components/workout/SetInputs';
@@ -45,6 +46,7 @@ export default function WorkoutLogPage() {
   const [editRpe, setEditRpe] = useState(7);
   const [editNotes, setEditNotes] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [copiedLogId, setCopiedLogId] = useState(null);
 
   const timer = useRestTimer({ stopWhen: !showLog });
   const logDraftKey = `elitepro_active_log_${targetClientId}`;
@@ -261,6 +263,19 @@ export default function WorkoutLogPage() {
 
   const prCount = Object.keys(prs).length;
 
+  const handleShareLog = async (log, shareData) => {
+    const text = buildWorkoutShareText(shareData, pickClosingMessage());
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Workout Complete', text }); } catch { /* cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopiedLogId(log.id);
+        setTimeout(() => setCopiedLogId(null), 2000);
+      } catch { /* clipboard unavailable */ }
+    }
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (completedData) {
@@ -400,11 +415,20 @@ export default function WorkoutLogPage() {
           const plan = plans.find(p => p.id === l.planId);
           const totalVolume = calcVolume(l.entries);
           const totalSets = calcSetCount(l.entries);
+          const planName = plan?.name || l.workoutName || 'Custom Workout';
+          const newPRs = (l.entries || [])
+            .filter(entry => entry.sets?.length > 0 && wasPRAtTime(l, entry))
+            .map(entry => ({
+              exerciseId: entry.exerciseId,
+              name: entry.name || getExerciseName(entry.exerciseId),
+              weight: Math.max(...entry.sets.map(s => Number(s.weight) || 0)),
+            }));
+          const shareData = { planName, totalVolume, totalSets, exerciseCount: (l.entries || []).length, rpe: l.rpe, newPRs };
           return (
             <div key={l.id} className="card mb-16">
               <div className="card-header">
                 <div>
-                  <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'}</h3>
+                  <h3 className="card-title">{planName}</h3>
                   <span className="text-sm text-muted">{l.date}</span>
                 </div>
                 <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -412,6 +436,9 @@ export default function WorkoutLogPage() {
                   {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
                   <span className="tag tag-primary">RPE: {l.rpe}/10</span>
                   <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
+                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => handleShareLog(l, shareData)} title={copiedLogId === l.id ? 'Copied!' : 'Share workout'}>
+                    {copiedLogId === l.id ? <CheckCircle size={13} /> : <Share2 size={13} />}
+                  </button>
                   <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEdit(l)} title="Edit workout">
                     <Pencil size={13} />
                   </button>
