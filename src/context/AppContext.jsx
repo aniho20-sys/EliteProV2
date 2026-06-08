@@ -13,14 +13,10 @@ import {
 } from 'firebase/auth';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 import { localToday } from '../utils/dateUtils';
-import { seedDemoDataForCoach } from './demoSeed';
 import { getNewBadges } from './badgeUtils';
 
 const AppContext = createContext();
 const googleProvider = new GoogleAuthProvider();
-
-// Demo account emails — used to trigger auto-seed of sample data
-const DEMO_COACH_EMAIL = 'coach@elitepro.com';
 
 // Generate a short 6-char invite code
 function generateInviteCode() {
@@ -305,8 +301,6 @@ export function AppProvider({ children }) {
     if (profile) setCurrentUser(profile);
   }, [users, firebaseUser]);
 
-  // seedDemoDataForCoach extracted to ./demoSeed.js
-
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
@@ -345,45 +339,6 @@ export function AppProvider({ children }) {
 
   const sendPasswordReset = async (email) => {
     await sendPasswordResetEmail(auth, email);
-  };
-
-  // Demo login: uses Firebase Auth under the hood.
-  // If the demo Auth account doesn't exist yet, sign-up and auto-seed.
-  const loginDemoCoach = async () => {
-    let firstTime = false;
-    try {
-      await signInEmail(DEMO_COACH_EMAIL, 'demo123');
-    } catch (err) {
-      if (err.code === 'auth/user-not-found' ||
-          err.code === 'auth/invalid-credential' ||
-          err.code === 'auth/invalid-login-credentials') {
-        await signUpEmail(DEMO_COACH_EMAIL, 'demo123');
-        firstTime = true;
-      } else {
-        throw err;
-      }
-    }
-    if (firstTime) {
-      const fbUser = auth.currentUser;
-      if (!fbUser) throw new Error('Demo signup failed — no current user');
-      const profile = {
-        id: fbUser.uid,
-        name: 'Coach Alex',
-        email: DEMO_COACH_EMAIL,
-        role: 'trainer',
-        speciality: 'Strength & Conditioning',
-        avatar: null,
-        joinDate: localToday(),
-        inviteCode: generateInviteCode(),
-        isDemo: true,
-      };
-      await setDoc(doc(db, 'users', fbUser.uid), profile);
-      try {
-        await seedDemoDataForCoach(fbUser.uid);
-      } catch (err) {
-        console.warn('Demo seed partial failure:', err.message);
-      }
-    }
   };
 
   // Complete profile for real Firebase Auth users → creates Firestore doc
@@ -441,21 +396,13 @@ export function AppProvider({ children }) {
       }
     } catch { /* may not exist */ }
 
-    // 2. If trainer, orphan ghost clients (clear trainerId so they're not "owned")
-    if (currentUser.role === 'trainer') {
-      const ghosts = users.filter(u => u.isDemo && u.trainerId === uid);
-      for (const g of ghosts) {
-        try { await updateDoc(doc(db, 'users', g.id), { trainerId: null }); } catch { /* ignore */ }
-      }
-    }
-
-    // 3. Delete Firestore user profile
+    // 2. Delete Firestore user profile
     await deleteDoc(doc(db, 'users', uid));
 
-    // 4. Delete Firebase Auth account (may fail if login is too old → caller handles)
+    // 3. Delete Firebase Auth account (may fail if login is too old → caller handles)
     await deleteUser(fbUser);
 
-    // 5. Local cleanup
+    // 4. Local cleanup
     setCurrentUser(null);
     setFirebaseUser(null);
   };
@@ -729,37 +676,6 @@ export function AppProvider({ children }) {
     return toAdd;
   };
 
-  // ========== Reset (demo only) ==========
-  // Wipes only the current user's demo-scoped data, then re-seeds
-  const resetData = async () => {
-    if (!currentUser?.isDemo || currentUser.role !== 'trainer') {
-      throw new Error('Reset is only available for demo accounts');
-    }
-    const uid = currentUser.id;
-    const batch = writeBatch(db);
-    // Delete ghost clients (users whose trainerId == uid and isDemo)
-    users.filter(u => u.isDemo && u.trainerId === uid).forEach(u => {
-      // Rules disallow user delete — we'll orphan them by clearing trainerId instead
-      batch.update(doc(db, 'users', u.id), { trainerId: null });
-    });
-    // Delete plans/logs/schedule/messages created for this trainer
-    workoutPlans.filter(p => p.trainerId === uid).forEach(p => batch.delete(doc(db, 'workoutPlans', p.id)));
-    workoutLogs.filter(l => l.id.startsWith(`${uid}-`)).forEach(() => {
-      // Can't delete logs per rules; skip
-    });
-    schedule.filter(s => s.trainerId === uid).forEach(s => batch.delete(doc(db, 'schedule', s.id)));
-    messages.filter(m => m.id.startsWith(`${uid}-`)).forEach(() => {
-      // Can't delete messages per rules; skip
-    });
-    try {
-      await batch.commit();
-    } catch (err) {
-      console.warn('Partial reset:', err.message);
-    }
-    // Re-seed
-    await seedDemoDataForCoach(uid);
-  };
-
   // ========== Intake Forms ==========
 
   const saveIntakeForm = async (clientId, data) => {
@@ -882,7 +798,7 @@ export function AppProvider({ children }) {
     signingIn,
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
-    loginDemoCoach, deleteAccount,
+    deleteAccount,
     getClients, getClient, updateClient, incrementSessionOffset, removeClient,
     getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
     data: { users, workoutPlans, workoutLogs, schedule, messages, exercises, invoices },
@@ -898,7 +814,6 @@ export function AppProvider({ children }) {
     getInviteCode, findTrainerByCode, connectToTrainer,
     getBadges, checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
-    resetData,
     getStudios, addStudio, updateStudio,
     getAvailableSlots, openStudioSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots,
     submitGymApplication, getMyGymApplication, getGymApplications, reviewGymApplication,

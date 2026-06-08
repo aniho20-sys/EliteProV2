@@ -938,38 +938,6 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .login-popup-hint strong { color: #b45309; }
 .login-popup-hint p { margin: 4px 0 0; }
-.login-demo {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-}
-.login-demo-title {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-weight: 700;
-}
-.login-demo-accounts { display: flex; flex-direction: column; gap: 6px; }
-.login-demo-account {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  background: var(--bg-input);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
-  transition: all 0.2s var(--ease);
-  font-weight: 500;
-}
-.login-demo-account:hover {
-  border-color: var(--primary);
-  background: var(--primary-glow);
-  transform: translateX(4px);
-}
 
 /* Google Sign-In Button */
 .btn-google {
@@ -2368,28 +2336,6 @@ tr:hover { background: var(--bg-card-hover); }
 .auth-badge-email {
   background: var(--primary-glow);
   color: var(--primary);
-}
-.auth-badge-demo {
-  background: var(--warning-glow, rgba(245, 158, 11, 0.15));
-  color: var(--warning);
-}
-
-/* Demo Warning Card */
-.demo-warning {
-  background: var(--warning-glow, rgba(245, 158, 11, 0.08));
-  border: 1px solid var(--warning);
-}
-.demo-warning-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--warning);
-  margin-bottom: 8px;
-}
-.demo-warning p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin: 0;
 }
 
 /* Form input disabled state */

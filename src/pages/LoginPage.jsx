@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
+import { Moon, Sun, Mail, LogIn, KeyRound } from 'lucide-react';
 import { friendlyAuthError } from '../utils/authErrors';
 import { isMobileOrPwa } from '../utils/deviceUtils';
 
 export default function LoginPage() {
-  const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset, googleAuthError, clearGoogleAuthError } = useApp();
+  const { signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, googleAuthError, clearGoogleAuthError } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,18 +27,6 @@ export default function LoginPage() {
       clearGoogleAuthError();
     }
   }, [googleAuthError, clearGoogleAuthError]);
-
-  const handleDemoCoach = async () => {
-    setError('');
-    setAuthLoading(true);
-    try {
-      await loginDemoCoach();
-    } catch (err) {
-      setError(friendlyAuthError(err) || 'Demo login failed. Please try again.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -171,22 +159,6 @@ export default function LoginPage() {
               Forgot password?
             </button>
           )}
-        </div>
-
-        {/* Demo account */}
-        <div className="login-demo">
-          <div className="login-demo-title">Try it out:</div>
-          <button
-            className="btn btn-outline"
-            style={{ width: '100%' }}
-            onClick={handleDemoCoach}
-            disabled={authLoading}
-          >
-            <PlayCircle size={16} /> Explore as Demo Coach
-          </button>
-          <div className="text-sm text-muted mt-8" style={{ textAlign: 'center' }}>
-            Loads pre-filled sample clients, plans & logs
-          </div>
         </div>
       </div>
 
