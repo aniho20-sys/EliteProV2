@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Download, X, Share } from 'lucide-react';
-
-const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const isInStandaloneMode = () =>
-  window.matchMedia('(display-mode: standalone)').matches ||
-  window.navigator.standalone === true;
+import { isIOS, isStandalone as isInStandaloneMode } from '../utils/deviceUtils';
 
 const DISMISSED_KEY = 'elitepro_install_dismissed_until';
 const DISMISS_DAYS = 3;

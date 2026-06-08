@@ -105,3 +105,16 @@ export function serializeEntries(entries) {
     };
   });
 }
+
+// Total weight×reps volume across an entry list's weight_reps exercises
+export function calcVolume(entries) {
+  return (entries || []).reduce((sum, e) => {
+    if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
+    return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+  }, 0);
+}
+
+// Total number of logged sets across an entry list
+export function calcSetCount(entries) {
+  return (entries || []).reduce((sum, e) => sum + (e.sets || []).length, 0);
+}

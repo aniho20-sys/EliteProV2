@@ -246,7 +246,7 @@ export default function SchedulePage() {
     if (!recapSession || savingRecap) return;
     setSavingRecap(true);
     const clientId = recapSession.clientId;
-    const { remaining: prevRemaining, total, used: prevUsed } = getSessionStats(clientId);
+    const { total, used: prevUsed } = getSessionStats(clientId);
 
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });

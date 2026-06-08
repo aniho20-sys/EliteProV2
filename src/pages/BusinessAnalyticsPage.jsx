@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { localToday, localDateAdd } from '../utils/dateUtils';
+import { getInvoiceTotal } from '../utils/invoiceUtils';
 import { TrendingUp, Users, Calendar, DollarSign } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 
@@ -21,10 +22,6 @@ function last6Months() {
   });
 }
 
-function invTotal(inv) {
-  return (inv.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unitPrice) || 0), 0);
-}
-
 export default function BusinessAnalyticsPage() {
   const { currentUser, getClients, getInvoices, getSchedule, getWorkoutLogs } = useApp();
   const today = localToday();
@@ -38,7 +35,7 @@ export default function BusinessAnalyticsPage() {
     month: formatMonthLabel(m),
     revenue: invoices
       .filter(inv => inv.status === 'paid' && getMonthKey(inv.issueDate) === m)
-      .reduce((s, inv) => s + invTotal(inv), 0),
+      .reduce((s, inv) => s + getInvoiceTotal(inv.items), 0),
   }));
 
   // Sessions by month (completed)
@@ -60,13 +57,13 @@ export default function BusinessAnalyticsPage() {
   const currentMonth = today.slice(0, 7);
   const paidThisMonth = invoices
     .filter(inv => inv.status === 'paid' && getMonthKey(inv.issueDate) === currentMonth)
-    .reduce((s, inv) => s + invTotal(inv), 0);
+    .reduce((s, inv) => s + getInvoiceTotal(inv.items), 0);
   const totalUnpaid = invoices
     .filter(inv => inv.status === 'unpaid')
-    .reduce((s, inv) => s + invTotal(inv), 0);
+    .reduce((s, inv) => s + getInvoiceTotal(inv.items), 0);
   const totalPaidYTD = invoices
     .filter(inv => inv.status === 'paid' && inv.issueDate?.startsWith(today.slice(0, 4)))
-    .reduce((s, inv) => s + invTotal(inv), 0);
+    .reduce((s, inv) => s + getInvoiceTotal(inv.items), 0);
 
   // Top clients by completed sessions
   const clientSessionCounts = clients.map(c => ({

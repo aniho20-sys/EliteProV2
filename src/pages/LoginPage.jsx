@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, PlayCircle, KeyRound } from 'lucide-react';
 import { friendlyAuthError } from '../utils/authErrors';
+import { isMobileOrPwa } from '../utils/deviceUtils';
 
 export default function LoginPage() {
   const { signInWithGoogle, signUpEmail, signInEmail, loginDemoCoach, sendPasswordReset, googleAuthError, clearGoogleAuthError } = useApp();
@@ -123,7 +124,7 @@ export default function LoginPage() {
             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          {authLoading ? (isMobileOrPwa ? 'Redirecting to Google…' : 'Signing in…') : 'Continue with Google'}
+          {authLoading ? (isMobileOrPwa() ? 'Redirecting to Google…' : 'Signing in…') : 'Continue with Google'}
         </button>
 
         {/* Divider */}

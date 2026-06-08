@@ -50,11 +50,6 @@ export default function MonthlyReportModal({ client, onClose }) {
   // fallback: if no stats this month, use the most recent available entry
   const latestStat     = sortedStats[sortedStats.length - 1] || null;
 
-  const weightStart  = monthStats[0]?.weight;
-  const weightEnd    = monthStats[monthStats.length - 1]?.weight;
-  const weightChange = weightStart && weightEnd && weightStart !== weightEnd
-    ? (weightEnd - weightStart).toFixed(1) : null;
-
   const topPRs = Object.entries(prs)
     .filter(([, pr]) => pr.weight > 0)
     .sort((a, b) => b[1].weight - a[1].weight)
@@ -72,7 +67,6 @@ export default function MonthlyReportModal({ client, onClose }) {
     const html = buildHTML({
       client, trainer: currentUser, month: monthLabel(month),
       monthCompleted, monthLogs, monthStats, latestStat,
-      weightStart, weightEnd, weightChange,
       topPRs, totalVolume, attendancePct,
       includeWorkoutSummary,
       includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo,
@@ -173,7 +167,7 @@ function esc(str) {
 }
 
 function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthStats, latestStat,
-  weightStart, weightEnd, weightChange, topPRs, totalVolume, attendancePct,
+  topPRs, totalVolume, attendancePct,
   includeWorkoutSummary,
   includeInvoice, invoiceAmount, invoiceCurrency, invoiceDueDate, paymentInfo, exName }) {
 

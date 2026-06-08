@@ -3,7 +3,7 @@ import { CheckCircle, Star, ArrowRight, Dumbbell, Calendar, TrendingUp, Users, A
 
 /* ─── CSS Mockup Components ─── */
 
-function MockHeader({ title }) {
+function MockHeader() {
   return (
     <div className="lp-mock-header">
       <span className="lp-mock-logo">Elite<span>Pro</span></span>

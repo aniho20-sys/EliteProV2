@@ -321,7 +321,6 @@ export default function WorkoutPlansPage() {
       day: plan.day,
       exercises: plan.exercises.map(ex => ({ ...ex, sets: normalizeSets(ex).map(s => ({ ...s })) })),
     });
-    setSelectedTemplate('');
     setShowCreate(true);
   };
 

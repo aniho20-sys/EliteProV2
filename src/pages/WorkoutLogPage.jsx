@@ -5,7 +5,7 @@ import { Trophy, NotebookPen, UserPlus, Timer, Pencil, X } from 'lucide-react';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
-import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, emptySet, hasValue, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { localToday } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { useRestTimer } from '../hooks/useRestTimer';
@@ -191,11 +191,8 @@ export default function WorkoutLogPage() {
       name: e.name || getExerciseName(e.exerciseId) || e.exerciseId,
       weight: Math.max(...e.sets.map(s => Number(s.weight) || 0)),
     }));
-    const totalVolume = logEntries.reduce((sum, e) => {
-      if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
-      return sum + e.sets.reduce((s2, s) => s2 + (s.weight || 0) * (s.reps || 0), 0);
-    }, 0);
-    const totalSets = logEntries.reduce((sum, e) => sum + e.sets.length, 0);
+    const totalVolume = calcVolume(logEntries);
+    const totalSets = calcSetCount(logEntries);
     try {
       await addWorkoutLog({
         clientId: targetClientId,
@@ -401,11 +398,8 @@ export default function WorkoutLogPage() {
       ) : (
         [...logs].reverse().map(l => {
           const plan = plans.find(p => p.id === l.planId);
-          const totalVolume = (l.entries || []).reduce((sum, e) => {
-            if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
-            return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
-          }, 0);
-          const totalSets = (l.entries || []).reduce((sum, e) => sum + (e.sets || []).length, 0);
+          const totalVolume = calcVolume(l.entries);
+          const totalSets = calcSetCount(l.entries);
           return (
             <div key={l.id} className="card mb-16">
               <div className="card-header">

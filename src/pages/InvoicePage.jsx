@@ -5,6 +5,7 @@ import { Plus, Printer, Trash2, CheckCircle, FileText, AlertCircle, Clock, Exter
 import EmptyState from '../components/EmptyState';
 import { localToday } from '../utils/dateUtils';
 import { isSafeUrl } from '../utils/urlUtils';
+import { getInvoiceTotal } from '../utils/invoiceUtils';
 
 const CURRENCIES = ['HKD', 'USD', 'GBP', 'EUR', 'SGD', 'AUD'];
 const EMPTY_ITEM = { description: '', qty: 1, unitPrice: 0 };
@@ -20,7 +21,7 @@ function statusLabel(inv, today) {
 }
 
 function InvoicePrint({ invoice, trainer, client, onClose }) {
-  const total = invoice.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+  const total = getInvoiceTotal(invoice.items);
   return (
     <div className="invoice-print-overlay">
       <div className="invoice-print-actions no-print">
@@ -132,7 +133,7 @@ export default function InvoicePage() {
     return `INV-${String(next).padStart(4, '0')}`;
   };
 
-  const formTotal = form.items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unitPrice) || 0), 0);
+  const formTotal = getInvoiceTotal(form.items);
 
   const setItem = (idx, field, value) => {
     setForm(prev => {
@@ -219,11 +220,11 @@ export default function InvoicePage() {
 
   const unpaidTotal = invoices
     .filter(inv => inv.status === 'unpaid')
-    .reduce((s, inv) => s + inv.items.reduce((t, i) => t + i.qty * i.unitPrice, 0), 0);
+    .reduce((s, inv) => s + getInvoiceTotal(inv.items), 0);
   const overdueCount = invoices.filter(inv => isOverdue(inv, today)).length;
   const paidThisMonth = invoices
     .filter(inv => inv.status === 'paid' && inv.paidDate?.startsWith(today.slice(0, 7)))
-    .reduce((s, inv) => s + inv.items.reduce((t, i) => t + i.qty * i.unitPrice, 0), 0);
+    .reduce((s, inv) => s + getInvoiceTotal(inv.items), 0);
 
   const getClient = (id) => clients.find(c => c.id === id);
 
@@ -295,7 +296,7 @@ export default function InvoicePage() {
         <div className="invoice-list">
           {filtered.map(inv => {
             const client = getClient(inv.clientId);
-            const total = inv.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+            const total = getInvoiceTotal(inv.items);
             const sl = statusLabel(inv, today);
             return (
               <div key={inv.id} className="card invoice-card">

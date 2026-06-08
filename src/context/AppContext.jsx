@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { db, auth } from '../firebase';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, increment, runTransaction,
+  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, runTransaction,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,

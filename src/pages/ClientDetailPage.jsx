@@ -4,11 +4,11 @@ import { useApp } from '../context/AppContext';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer, FileText } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
-import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, emptySet, hasValue, formatSet } from '../utils/workoutUtils';
+import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
-import { localToday, parseLocalDate } from '../utils/dateUtils';
+import { parseLocalDate } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
 import MonthlyReportModal from '../components/MonthlyReportModal';
 import MuscleSelector from '../components/MuscleSelector';
@@ -35,10 +35,7 @@ function VolumeChart({ logs }) {
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-10)
     .map(l => {
-      const volume = (l.entries || []).reduce((sum, e) => {
-        if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
-        return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
-      }, 0);
+      const volume = calcVolume(l.entries);
       const d = parseLocalDate(l.date);
       const label = d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
       const fullDate = d.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -111,7 +108,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, addWorkoutLog, updateWorkoutLog, getExercises, addExercise, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -141,7 +138,6 @@ export default function ClientDetailPage() {
   const [savingNoteId, setSavingNoteId] = useState(null);
   const [tagInput, setTagInput] = useState('');
   const [savingTag, setSavingTag] = useState(false);
-  const today = localToday();
   const [savePlanLog, setSavePlanLog] = useState(null);
   const [savePlanName, setSavePlanName] = useState('');
   const [savePlanDay, setSavePlanDay] = useState('');
@@ -637,11 +633,8 @@ export default function ClientDetailPage() {
             [...logs].reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);
               const isEditingNote = editingNoteLogId === l.id;
-              const totalVolume = (l.entries || []).reduce((sum, e) => {
-                if ((e.unit || 'weight_reps') !== 'weight_reps') return sum;
-                return sum + (e.sets || []).reduce((s2, s) => s2 + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
-              }, 0);
-              const totalSets = (l.entries || []).reduce((sum, e) => sum + (e.sets || []).length, 0);
+              const totalVolume = calcVolume(l.entries);
+              const totalSets = calcSetCount(l.entries);
               return (
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">

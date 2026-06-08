@@ -7,11 +7,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
-
-const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const isStandalone = () =>
-  window.matchMedia('(display-mode: standalone)').matches ||
-  window.navigator.standalone === true;
+import { isIOS, isStandalone } from '../utils/deviceUtils';
 
 function InstallAppCard() {
   if (isStandalone()) {

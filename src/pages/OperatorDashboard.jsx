@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { localToday } from '../utils/dateUtils';
 
 export default function OperatorDashboard() {
-  const { currentUser, getGymApplications, reviewGymApplication, getStudios, getAvailableSlots } = useApp();
+  const { getGymApplications, reviewGymApplication, getStudios, getAvailableSlots } = useApp();
   const addToast = useToast();
   const today = localToday();
 
