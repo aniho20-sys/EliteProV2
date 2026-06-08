@@ -105,7 +105,7 @@ export function NotificationProvider({ children }) {
     }
   }, [unreadCount]);
 
-  // Listen for foreground messages → show toast + browser notification
+  // Listen for foreground messages → show in-app toast (OS notification handled by SW)
   useEffect(() => {
     if (!supported || permission !== 'granted' || !VAPID_KEY) return;
 
@@ -115,16 +115,10 @@ export function NotificationProvider({ children }) {
       const messaging = getMessaging(app);
       unsubscribe = onMessage(messaging, (payload) => {
         const { title, body } = payload.notification || {};
+        // In-app toast only — the service worker's onBackgroundMessage handler
+        // already shows the native OS notification for this same payload, so
+        // also calling `new Notification(...)` here produced a duplicate.
         toastRef.current(body || title || 'New notification', 'info');
-
-        // Always show native OS notification (even when app is in foreground)
-        if (Notification.permission === 'granted') {
-          new Notification(title || 'ElitePro', {
-            body: body || '',
-            icon: '/favicon.svg',
-            tag: payload.data?.type || 'default',
-          });
-        }
       });
     });
 
