@@ -34,14 +34,15 @@ const makeLinks = (paths, mobile = false) =>
   paths.map(to => ({ to, icon: LINK_DEFS[to].icon, label: mobile && LINK_DEFS[to].mobileLabel ? LINK_DEFS[to].mobileLabel : LINK_DEFS[to].label }));
 
 // gym啦 hidden — remove '/apply' and '/studios/book' from nav, use 'client' fallback for operator
+// Messages hidden — remove '/messages' from nav (route stays registered in App.jsx)
 const NAV_CONFIG = {
   trainer: {
-    desktop:  { primary: ['/', '/clients', '/schedule', '/messages'], secondary: ['/progress-overview', '/plans', '/invoices', '/analytics', '/exercises'] },
-    mobile:   { primary: ['/', '/clients', '/plans', '/messages'],   more: ['/schedule', '/invoices', '/analytics', '/progress-overview', '/exercises', '/profile'] },
+    desktop:  { primary: ['/', '/clients', '/schedule', '/plans'], secondary: ['/progress-overview', '/invoices', '/analytics', '/exercises'] },
+    mobile:   { primary: ['/', '/clients', '/plans', '/schedule'],   more: ['/invoices', '/analytics', '/progress-overview', '/exercises', '/profile'] },
   },
   client: {
-    desktop:  { primary: ['/', '/log', '/progress', '/messages'],    secondary: ['/my-workouts', '/schedule', '/exercises'] },
-    mobile:   { primary: ['/', '/log', '/schedule', '/messages'],    more: ['/my-workouts', '/progress', '/exercises', '/profile'] },
+    desktop:  { primary: ['/', '/log', '/progress', '/my-workouts'],    secondary: ['/schedule', '/exercises'] },
+    mobile:   { primary: ['/', '/log', '/schedule', '/my-workouts'],    more: ['/progress', '/exercises', '/profile'] },
   },
   operator: {
     desktop:  { primary: ['/', '/profile'], secondary: [] },
@@ -50,7 +51,7 @@ const NAV_CONFIG = {
 };
 
 export default function Navigation() {
-  const { currentUser, logout, getUnreadCount } = useApp();
+  const { currentUser, logout } = useApp();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,7 +60,6 @@ export default function Navigation() {
   const secondaryLinks = makeLinks(NAV_CONFIG[role].desktop.secondary);
   const primaryLinks = makeLinks(NAV_CONFIG[role].mobile.primary, true);
   const moreLinks    = makeLinks(NAV_CONFIG[role].mobile.more, true);
-  const unreadCount = getUnreadCount(currentUser?.id);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -85,9 +85,6 @@ export default function Navigation() {
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
               <link.icon size={19} strokeWidth={2} />
               {link.label}
-              {link.to === '/messages' && unreadCount > 0 && (
-                <span className="nav-badge">{unreadCount}</span>
-              )}
             </NavLink>
           ))}
           <button
@@ -163,9 +160,6 @@ export default function Navigation() {
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `bottom-nav-link ${isActive ? 'active' : ''}`}>
               <div className="bottom-nav-icon-wrap">
                 <link.icon size={20} strokeWidth={2} />
-                {link.to === '/messages' && unreadCount > 0 && (
-                  <span className="nav-badge-dot" />
-                )}
               </div>
               {link.label}
             </NavLink>

@@ -161,7 +161,10 @@ service cloud.firestore {
         && request.resource.data.to.size() > 0
         && request.resource.data.to != request.auth.uid
         && request.resource.data.keys().hasAll(['id', 'from', 'to', 'text', 'timestamp', 'read'])
-        && request.resource.data.keys().hasOnly(['id', 'from', 'to', 'text', 'timestamp', 'read']);
+        && request.resource.data.keys().hasOnly(['id', 'from', 'to', 'text', 'timestamp', 'read'])
+        // Recipient must be a real coaching contact — sender's trainer or sender's client —
+        // otherwise any authed user could message (and spam) arbitrary strangers
+        && (isTrainerOf(request.resource.data.to) || userTrainerId() == request.resource.data.to);
       allow update: if isAuth() && resource.data.to == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if false;
