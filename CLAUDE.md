@@ -38,15 +38,14 @@ src/
 │   └── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
 ├── context/
 │   ├── AppContext.jsx         # Global state + all Firestore/Auth operations
-│   ├── NotificationContext.jsx # FCM push notifications (code ready, needs Blaze deploy)
+│   ├── NotificationContext.jsx # FCM push notifications (code ready; Blaze plan active — pending Cloud Functions deploy + VAPID key verification)
 │   ├── ThemeContext.jsx       # Light/dark theme toggle (persisted to localStorage)
 │   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss)
 ├── data/
 │   ├── exercises.js          # Static exercise library (seeded into Firestore)
-│   ├── metrics.js            # Body stat metric definitions: METRICS array + EMPTY_STAT_FORM
-│   └── sampleData.js         # Demo seed data (ghost clients, plans, logs, etc.)
+│   └── metrics.js            # Body stat metric definitions: METRICS array + EMPTY_STAT_FORM
 ├── pages/
-│   ├── LoginPage.jsx                 # Auth: Google, email/password, forgot password, demo
+│   ├── LoginPage.jsx                 # Auth: Google, email/password, forgot password
 │   ├── RoleSelectPage.jsx            # Post-auth profile creation (role + invite code)
 │   ├── TrainerDashboard.jsx          # Trainer home: stats overview
 │   ├── ClientDashboard.jsx           # Client home: workout summary + body stats
@@ -76,7 +75,7 @@ src/
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (needs Blaze plan to deploy)
+functions/                    # Cloud Functions (sendNotificationOnMessage + sendNotificationOnSchedule; Blaze plan active, ready to deploy)
 ├── index.js                  # sendNotificationOnMessage + sendNotificationOnSchedule
 └── package.json
 
@@ -99,16 +98,16 @@ Top-level config files:
 ## Firebase Configuration
 - **Project ID**: `elitepro-16718`
 - **Config**: hardcoded in `src/firebase.js` (public API key — safe for client-side apps)
-- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (code ready, not deployed), Cloud Functions (code ready, needs Blaze plan)
+- **Billing plan**: Blaze (pay-as-you-go) — active, so Cloud Functions deployment is no longer blocked
+- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (code ready, pending deploy), Cloud Functions (code ready, pending deploy)
 - **Offline**: IndexedDB persistence enabled; app works without internet after first load
 
 ## Authentication Flow
-1. **LoginPage** shows: Google Sign-In, email/password (sign-in or sign-up), forgot password, demo coach button
+1. **LoginPage** shows: Google Sign-In, email/password (sign-in or sign-up), forgot password
 2. After Firebase Auth, `onAuthStateChanged` fires → sets `firebaseUser`
 3. If `firebaseUser` exists but no Firestore profile (`needsProfile === true`) → **RoleSelectPage** shown
 4. **RoleSelectPage**: user picks trainer or client, enters name, optionally enters trainer invite code → calls `completeProfile()` → creates Firestore `users` doc
 5. Once profile exists → `currentUser` is set from Firestore → main app renders
-6. **Demo coach**: `loginDemoCoach()` uses `coach@elitepro.com` / `demo123`; auto-creates account + seeds ghost clients on first use
 
 ## Firestore Data Model
 
@@ -123,7 +122,6 @@ Top-level config files:
   role: 'trainer' | 'client',
   avatar: string | null,    // photoURL from Google, or null
   joinDate: string,         // 'YYYY-MM-DD'
-  isDemo: boolean,          // true for seeded demo data
   // trainer-only:
   speciality: string,
   inviteCode: string,       // 6-char uppercase alphanumeric
@@ -287,7 +285,6 @@ signUpEmail(email, password)
 signInEmail(email, password)
 sendPasswordReset(email)
 completeProfile(role, name, inviteCode)  // creates Firestore user doc
-loginDemoCoach()             // creates demo account + seeds data on first call
 logout()
 deleteAccount()              // deletes Firestore profile + bodyStats + Firebase Auth user
 
@@ -357,15 +354,13 @@ getInviteCode(trainerId)     // generates + saves if missing
 findTrainerByCode(code)
 connectToTrainer(clientId, inviteCode)
 
-// Demo
-resetData()                  // trainer-only: wipes + re-seeds demo data
 data                         // raw { users, bodyStats, workoutPlans, workoutLogs, schedule, messages, exercises, invoices }
 ```
 
 ### Other contexts
 - **ThemeContext**: `{ theme, toggleTheme }` — `'light'` | `'dark'`, persisted to `localStorage` key `elitepro_theme`, applied via `data-theme` attribute on `<html>`
 - **ToastContext**: `addToast(message, type?)` — `type` is `'success'` (default), `'error'`, or `'info'`; auto-dismisses after 3s
-- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready but requires Blaze plan + VAPID key to activate
+- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready; Blaze plan now active — remaining step is deploying `functions/` and verifying the VAPID key is correctly registered in Firebase Console → Cloud Messaging
 
 ## Routing
 Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
@@ -430,13 +425,6 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - `connectToTrainer(clientId, code)` sets `trainerId` on the client's profile
 - **Shareable link**: `https://elitepro-16718.web.app/#/?invite=XXXXXX` — App.jsx parses `?invite=` from hash on startup and saves to `sessionStorage`; RoleSelectPage reads it on mount to auto-fill the code and pre-select the client role
 
-## Demo Data
-- `loginDemoCoach()` creates a real Firebase Auth account (`coach@elitepro.com`) on first use
-- Ghost clients are created as real Firestore `users` docs with IDs `{trainerUid}-c1`, `-c2`, `-c3`
-- All demo data IDs are scoped to the trainer's UID to avoid collisions between demo users
-- `resetData()` (trainer-only, demo flag required): orphans ghost clients + re-seeds; does NOT delete workout logs or messages (Firestore rules disallow delete)
-- Sample clients (`david@demo.local`, `sarah@demo.local`, `michael@demo.local`) are ghost users, not real auth accounts
-
 ## Deployment
 - **Primary**: Firebase Hosting at `https://elitepro-16718.web.app`
 - **CI branch**: `claude/fitness-app-features-LbxtG` — this is the single source of truth
@@ -453,28 +441,27 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 ## Key Conventions for AI Assistants
 1. **Never bypass AppContext** — all Firestore reads/writes must go through context functions, not direct `db` imports in components
 2. **Check Firestore rules** before adding new write operations — rules enforce role and ownership constraints
-3. **Demo data is scoped** — when adding new collections, seed data should be prefixed with `${trainerUid}-` for demo isolation
-4. **IDs are `Date.now()` strings** — e.g. `plan-${Date.now()}`, `log-${Date.now()}`; not UUIDs
-5. **`markLoaded` tracks 8 collections** — current set: users, bodyStats (manual), workoutPlans, workoutLogs, schedule, messages, exercises (manual), invoices. If adding a new Firestore collection listener, increment the threshold in `markLoaded` (`loadedRef.current.size >= N`)
-6. **Toast not alert** — use `useToast()` for user feedback, never `alert()`
-7. **HashRouter** — links must be hash-compatible; no server-side route handling
-8. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
-9. **No localStorage for app data** — `ThemeContext` uses localStorage for theme; `WorkoutLogPage` uses it for in-progress draft only. All persisted app state lives in Firestore
-10. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
-11. **Always await Firestore writes** — wrap in try/catch with error toast; never fire-and-forget
-12. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
-13. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
-14. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
-15. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists but needs Blaze plan + VAPID key before deployment
-16. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
-17. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
-18. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
-19. **URL safety** — always validate external URLs with `isSafeUrl(url)` from `utils/urlUtils.js` before rendering links or iframes
-20. **Body composition UI** — use `<ProgressView clientId={...} canDelete onAdd={...} onEdit={...} />` as the canonical body composition view; never inline duplicate chart/table/modal markup
-21. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`, auto-selects the most-logged exercise, and sorts the dropdown by session count
-22. **Immutable fields in Firestore updates** — `trainerId`, `clientId`, and `role` must never change after creation; all update rules in `firestore.rules` enforce this
-23. **Navigation architecture** — desktop sidebar has 4 primary links + a collapsible "More" section with secondary links (defined as `trainerLinks`/`trainerSecondaryLinks` and `clientLinks`/`clientSecondaryLinks`). Mobile bottom nav has 4 primary links + "More" sheet (`trainerPrimaryLinks`/`trainerMoreLinks`). Keep primary nav to ≤5 items; add new features to the secondary/More section
-24. **Workout utilities** — `UNIT_OPTIONS`, `emptySet(unit)`, `hasValue(s, unit)`, `formatSet(s, unit)` are all exported from `utils/workoutUtils.js`; never redefine them locally in pages
+3. **IDs are `Date.now()` strings** — e.g. `plan-${Date.now()}`, `log-${Date.now()}`; not UUIDs
+4. **`markLoaded` tracks 8 collections** — current set: users, bodyStats (manual), workoutPlans, workoutLogs, schedule, messages, exercises (manual), invoices. If adding a new Firestore collection listener, increment the threshold in `markLoaded` (`loadedRef.current.size >= N`)
+5. **Toast not alert** — use `useToast()` for user feedback, never `alert()`
+6. **HashRouter** — links must be hash-compatible; no server-side route handling
+7. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
+8. **No localStorage for app data** — `ThemeContext` uses localStorage for theme; `WorkoutLogPage` uses it for in-progress draft only. All persisted app state lives in Firestore
+9. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
+10. **Always await Firestore writes** — wrap in try/catch with error toast; never fire-and-forget
+11. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
+12. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
+13. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
+14. **Push notifications not yet active** — `NotificationContext` + Cloud Functions code exists and the Blaze plan is now active; remaining step is deploying `functions/` (CI already attempts this on every push, see `firebase-hosting.yml`) and confirming the VAPID key in Firebase Console → Cloud Messaging
+15. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
+16. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
+17. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
+18. **URL safety** — always validate external URLs with `isSafeUrl(url)` from `utils/urlUtils.js` before rendering links or iframes
+19. **Body composition UI** — use `<ProgressView clientId={...} canDelete onAdd={...} onEdit={...} />` as the canonical body composition view; never inline duplicate chart/table/modal markup
+20. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`, auto-selects the most-logged exercise, and sorts the dropdown by session count
+21. **Immutable fields in Firestore updates** — `trainerId`, `clientId`, and `role` must never change after creation; all update rules in `firestore.rules` enforce this
+22. **Navigation architecture** — desktop sidebar has primary links + a collapsible "More" section with secondary links (defined per-role in `NAV_CONFIG`). Mobile bottom nav has primary links + "More" sheet. Keep primary nav to ≤5 items; add new features to the secondary/More section
+23. **Workout utilities** — `UNIT_OPTIONS`, `emptySet(unit)`, `hasValue(s, unit)`, `formatSet(s, unit)` are all exported from `utils/workoutUtils.js`; never redefine them locally in pages
 
 ## Team Structure
 

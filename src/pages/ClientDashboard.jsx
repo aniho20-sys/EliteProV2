@@ -1,6 +1,5 @@
 import { useApp } from '../context/AppContext';
-import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Layers, Play, ChevronRight } from 'lucide-react';
-import { getSessionColor } from '../utils/sessionUtils';
+import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Play, ChevronRight } from 'lucide-react';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { Link, useNavigate } from 'react-router-dom';
@@ -49,7 +48,6 @@ export default function ClientDashboard() {
   const weightChange = latestStat && prevStat ? (latestStat.weight - prevStat.weight).toFixed(1) : null;
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
-  const sessColor = getSessionColor(sessRemaining);
 
   const totalWorkouts = logs.length;
   const thisWeekLogs = logs.filter(l => l.date >= localDateAdd(today, -7));
@@ -121,25 +119,22 @@ export default function ClientDashboard() {
       )}
 
       {sessTotal !== null && (
-        <div className="card mb-16">
-          <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
-            <div className="flex gap-8" style={{ alignItems: 'center' }}>
-              <Layers size={18} style={{ color: sessColor }} />
-              <h3 className="card-title" style={{ margin: 0 }}>Sessions</h3>
-            </div>
-            <div className="flex gap-8" style={{ alignItems: 'center' }}>
-              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: sessColor, lineHeight: 1 }}>
-                {sessUsed}<span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '1rem' }}> / {sessTotal}</span>
+        <div className="hero-card mb-16">
+          <div className="hero-card-inner">
+            <div className="flex-between mb-12" style={{ alignItems: 'baseline' }}>
+              <span className="hero-card-label">Your package</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
+                {sessRemaining}
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> session{sessRemaining === 1 ? '' : 's'} left</span>
               </span>
-              <Link to="/schedule" className="btn btn-sm btn-primary">Book Session</Link>
             </div>
-          </div>
-          <div className="session-progress-bar mb-8">
-            <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessColor }} />
-          </div>
-          <div className="flex-between">
-            <span className="text-sm text-muted">{sessUsed} sessions used</span>
-            <span className="text-sm" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</span>
+            <div className="session-progress-bar mb-12">
+              <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: 'var(--brand-gradient)' }} />
+            </div>
+            <div className="flex-between" style={{ alignItems: 'center' }}>
+              <span className="text-sm text-muted">{sessUsed} of {sessTotal} sessions used</span>
+              <Link to="/schedule" className="btn btn-sm" style={{ background: 'var(--brand-gradient)', color: '#fff' }}>Book Session</Link>
+            </div>
           </div>
         </div>
       )}
@@ -233,7 +228,7 @@ export default function ClientDashboard() {
               return (
                 <Link key={l.id} to="/log" className="schedule-item schedule-item-link">
                   <div className="schedule-info">
-                    <div className="schedule-client">{plan?.name || 'Workout'}</div>
+                    <div className="schedule-client">{plan?.name || l.workoutName || 'Custom Workout'}</div>
                     <div className="schedule-type">{l.date} - RPE: {l.rpe}/10</div>
                   </div>
                   <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Done' : 'Partial'}</span>
@@ -254,7 +249,7 @@ export default function ClientDashboard() {
             <div className="pr-grid">
               {Object.entries(prs).slice(0, 6).map(([exId, pr]) => (
                 <div key={exId} className="pr-item">
-                  <div className="pr-exercise">{getExerciseName(exId)}</div>
+                  <div className="pr-exercise">{pr.name || getExerciseName(exId, 'Custom exercise')}</div>
                   <div className="pr-weight">{pr.weight}kg</div>
                   <div className="pr-date">{pr.date}</div>
                 </div>

@@ -191,16 +191,11 @@ export default function TrainerDashboard() {
     .filter(m => m.to === currentUser.id && !m.read)
     .slice(0, 3);
 
-  const weekDays = getWeekDays();
-  const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date));
-  const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
-
-  // "Up next" hero — next upcoming session today
   const upcomingToday = todaySchedule
     .filter(s => s.status !== 'cancelled' && s.status !== 'completed')
     .sort((a, b) => a.time.localeCompare(b.time));
   const nowStr = new Date().toTimeString().slice(0, 5);
-  const nextSession = upcomingToday.find(s => s.time >= nowStr) || null;
+  const nextSession = upcomingToday.find(s => s.time >= nowStr) || upcomingToday[0];
   const nextClient = nextSession ? clients.find(c => c.id === nextSession.clientId) : null;
   let nextCountdown = null;
   if (nextSession) {
@@ -216,6 +211,10 @@ export default function TrainerDashboard() {
       nextCountdown = 'Now';
     }
   }
+
+  const weekDays = getWeekDays();
+  const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date));
+  const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
 
   const atRiskClients = clients.reduce((acc, client) => {
     const logs = getWorkoutLogs(client.id);

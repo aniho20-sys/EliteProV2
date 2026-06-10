@@ -200,6 +200,7 @@ export default function WorkoutLogPage() {
         clientId: targetClientId,
         ...(loggingForClient && { trainerId: currentUser.id, createdBy: currentUser.id, logType: 'pt_session' }),
         planId: selectedPlan?.id || '',
+        workoutName: selectedPlan?.name || 'Custom Workout',
         date: logDate,
         completed: completedCount > 0,
         entries: logEntries,
@@ -368,7 +369,7 @@ export default function WorkoutLogPage() {
           <div className="pr-grid">
             {Object.entries(prs).map(([exId, pr]) => (
               <div key={exId} className="pr-item">
-                <div className="pr-exercise">{getExerciseName(exId)}</div>
+                <div className="pr-exercise">{pr.name || getExerciseName(exId, 'Custom exercise')}</div>
                 <div className="pr-weight">{pr.weight}kg</div>
                 <div className="pr-date">{pr.date}</div>
               </div>
