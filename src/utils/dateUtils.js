@@ -27,3 +27,11 @@ export function parseLocalDate(str) {
 export function formatDayDate(str = localToday()) {
   return parseLocalDate(str).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'long' });
 }
+
+// Returns a time-of-day greeting ("Morning"/"Afternoon"/"Evening") for dashboard headers.
+export function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Morning';
+  if (hour < 18) return 'Afternoon';
+  return 'Evening';
+}

@@ -4,16 +4,9 @@ import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCir
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
-import { localToday, localDateAdd, formatDayDate } from '../utils/dateUtils';
+import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 
 const SEVERITY_COLOR = { high: 'var(--danger)', mid: 'var(--warning)' };
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Morning';
-  if (hour < 18) return 'Afternoon';
-  return 'Evening';
-}
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

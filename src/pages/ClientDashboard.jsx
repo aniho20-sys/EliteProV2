@@ -1,31 +1,10 @@
 import { useApp } from '../context/AppContext';
-import { Dumbbell, TrendingDown, TrendingUp, Activity, Trophy, CalendarOff, ClipboardList, Play, ChevronRight } from 'lucide-react';
-import { localToday, localDateAdd } from '../utils/dateUtils';
+import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight } from 'lucide-react';
+import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
-
-function WeightSparkline({ stats }) {
-  const recent = stats.slice(-10);
-  if (recent.length < 2) return null;
-  const weights = recent.map(s => s.weight);
-  const min = Math.min(...weights);
-  const max = Math.max(...weights);
-  const range = max - min || 1;
-  const W = 72, H = 22;
-  const points = weights.map((wt, i) => {
-    const x = (i / (weights.length - 1)) * W;
-    const y = H - ((wt - min) / range) * (H - 2) - 1;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const trending = weights[weights.length - 1] <= weights[0] ? 'var(--success)' : 'var(--accent)';
-  return (
-    <svg width={W} height={H} className="weight-sparkline" aria-hidden="true">
-      <polyline points={points} fill="none" stroke={trending} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -44,8 +23,6 @@ export default function ClientDashboard() {
   const loggedToday = logs.some(l => l.date === today);
 
   const latestStat = stats[stats.length - 1];
-  const prevStat = stats[stats.length - 2];
-  const weightChange = latestStat && prevStat ? (latestStat.weight - prevStat.weight).toFixed(1) : null;
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
 
@@ -55,8 +32,8 @@ export default function ClientDashboard() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Hey, {currentUser.name.split(' ')[0]}!</h1>
-        <p className="page-subtitle">Keep pushing towards your goals</p>
+        <div className="page-date">{formatDayDate(today)}</div>
+        <h1 className="page-title">{getGreeting()}, {currentUser.name.split(' ')[0]}</h1>
       </div>
 
       {logs.length === 0 && plans.length > 0 && (
@@ -79,28 +56,27 @@ export default function ClientDashboard() {
         </div>
       )}
 
-      <div className="grid-4 mb-16">
-        <Link to="/my-workouts" className="card stat-card stat-card-link">
-          <Dumbbell size={24} style={{ color: 'var(--primary-light)', marginBottom: 8 }} />
-          <div className="stat-value">{plans.length}</div>
-          <div className="stat-label">Workout Plans</div>
+      {/* Compact stat strip */}
+      <div className="stat-strip mb-16">
+        <Link to="/log" className="stat-pill">
+          <Flame size={15} style={{ color: 'var(--accent)' }} />
+          <div className="stat-pill-value">{thisWeekLogs.length}</div>
+          <div className="stat-pill-label">This Week</div>
         </Link>
-        <Link to="/log" className="card stat-card stat-card-link">
-          <Activity size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} />
-          <div className="stat-value">{thisWeekLogs.length}</div>
-          <div className="stat-label">Workouts This Week</div>
+        <Link to="/log" className="stat-pill">
+          <Dumbbell size={15} style={{ color: 'var(--primary-light)' }} />
+          <div className="stat-pill-value">{totalWorkouts}</div>
+          <div className="stat-pill-label">Total</div>
         </Link>
-        <Link to="/log" className="card stat-card stat-card-link">
-          <TrendingUp size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
-          <div className="stat-value">{totalWorkouts}</div>
-          <div className="stat-label">Total Workouts</div>
+        <Link to="/progress" className="stat-pill">
+          <Scale size={15} style={{ color: 'var(--danger)' }} />
+          <div className="stat-pill-value">{latestStat ? `${latestStat.weight}kg` : '--'}</div>
+          <div className="stat-pill-label">Weight</div>
         </Link>
-        <Link to="/progress" className="card stat-card stat-card-link">
-          {weightChange && parseFloat(weightChange) > 0 ? <TrendingUp size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} /> : <TrendingDown size={24} style={{ color: 'var(--danger)', marginBottom: 8 }} />}
-          <div className="stat-value">{latestStat ? `${latestStat.weight}kg` : '--'}</div>
-          <div className="stat-label">Current Weight</div>
-          {weightChange && <div className={`stat-change ${parseFloat(weightChange) > 0 ? 'positive' : 'negative'}`}>{weightChange > 0 ? '+' : ''}{weightChange}kg</div>}
-          {stats.length >= 2 && <WeightSparkline stats={stats} />}
+        <Link to="/progress" className="stat-pill">
+          <Trophy size={15} style={{ color: 'var(--warning)' }} />
+          <div className="stat-pill-value">{Object.keys(prs).length}</div>
+          <div className="stat-pill-label">PRs</div>
         </Link>
       </div>
 
