@@ -578,7 +578,7 @@ export function AppProvider({ children }) {
         const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
         if (maxWeight > 0) {
           if (!prs[entry.exerciseId] || maxWeight > prs[entry.exerciseId].weight) {
-            prs[entry.exerciseId] = { weight: maxWeight, date: log.date };
+            prs[entry.exerciseId] = { weight: maxWeight, date: log.date, name: entry.name };
           }
         }
       });

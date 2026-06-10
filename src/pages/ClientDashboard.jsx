@@ -233,7 +233,7 @@ export default function ClientDashboard() {
               return (
                 <Link key={l.id} to="/log" className="schedule-item schedule-item-link">
                   <div className="schedule-info">
-                    <div className="schedule-client">{plan?.name || 'Workout'}</div>
+                    <div className="schedule-client">{plan?.name || l.workoutName || 'Custom Workout'}</div>
                     <div className="schedule-type">{l.date} - RPE: {l.rpe}/10</div>
                   </div>
                   <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Done' : 'Partial'}</span>
@@ -254,7 +254,7 @@ export default function ClientDashboard() {
             <div className="pr-grid">
               {Object.entries(prs).slice(0, 6).map(([exId, pr]) => (
                 <div key={exId} className="pr-item">
-                  <div className="pr-exercise">{getExerciseName(exId)}</div>
+                  <div className="pr-exercise">{pr.name || getExerciseName(exId, 'Custom exercise')}</div>
                   <div className="pr-weight">{pr.weight}kg</div>
                   <div className="pr-date">{pr.date}</div>
                 </div>
