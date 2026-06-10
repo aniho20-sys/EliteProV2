@@ -629,13 +629,13 @@ body {
   letter-spacing: 0.01em;
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #5a75f0);
+  background: var(--brand-gradient);
   color: white;
-  box-shadow: 0 2px 12px var(--primary-glow);
+  box-shadow: 0 2px 12px rgba(154, 79, 192, 0.25);
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-  box-shadow: 0 4px 20px rgba(67, 97, 238, 0.3);
+  filter: brightness(1.08);
+  box-shadow: 0 4px 20px rgba(154, 79, 192, 0.35);
   transform: translateY(-1px);
 }
 .btn-accent {
