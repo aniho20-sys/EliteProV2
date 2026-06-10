@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageSquare, Copy } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageSquare, Copy, Clock, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -181,6 +181,27 @@ export default function TrainerDashboard() {
     .filter(m => m.to === currentUser.id && !m.read)
     .slice(0, 3);
 
+  const upcomingToday = todaySchedule
+    .filter(s => s.status !== 'cancelled' && s.status !== 'completed')
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const nowStr = new Date().toTimeString().slice(0, 5);
+  const nextSession = upcomingToday.find(s => s.time >= nowStr) || upcomingToday[0];
+  const nextClient = nextSession ? clients.find(c => c.id === nextSession.clientId) : null;
+  let nextCountdown = null;
+  if (nextSession) {
+    const [h, m] = nextSession.time.split(':').map(Number);
+    const sessionTime = new Date();
+    sessionTime.setHours(h, m, 0, 0);
+    const diffMin = Math.round((sessionTime.getTime() - Date.now()) / 60000);
+    if (diffMin > 0) {
+      const hh = Math.floor(diffMin / 60);
+      const mm = diffMin % 60;
+      nextCountdown = hh > 0 ? `in ${hh}h ${mm}m` : `in ${mm}m`;
+    } else {
+      nextCountdown = 'Now';
+    }
+  }
+
   const weekDays = getWeekDays();
   const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date));
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
@@ -269,6 +290,36 @@ export default function TrainerDashboard() {
           <div className="stat-label">Workout Plans</div>
         </Link>
       </div>
+
+      {/* Up next */}
+      {nextSession && (
+        <div className="hero-card mb-16">
+          <div className="hero-card-inner">
+            <div className="flex-between mb-12" style={{ alignItems: 'center' }}>
+              <span className="hero-card-label">Up next</span>
+              <span className="text-sm text-muted flex gap-8" style={{ alignItems: 'center' }}>
+                <Clock size={12} /> {nextCountdown}
+              </span>
+            </div>
+            <div className="flex gap-12" style={{ alignItems: 'center' }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 16, background: 'var(--brand-gradient)',
+                display: 'grid', placeItems: 'center', color: '#fff',
+                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, flexShrink: 0,
+              }}>
+                {nextClient?.name?.[0] || '?'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17 }}>
+                  {nextClient?.name || 'Unknown'} · {nextSession.time}
+                </div>
+                <div className="text-sm text-muted" style={{ marginTop: 2 }}>{nextSession.type} · {nextSession.duration || 60}min</div>
+              </div>
+              <Link to={`/clients/${nextSession.clientId}`} className="btn-icon"><ChevronRight size={18} /></Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* At Risk Clients */}
       {atRiskClients.length > 0 && (
