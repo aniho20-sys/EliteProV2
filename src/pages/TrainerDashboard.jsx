@@ -1,10 +1,19 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageSquare, Copy } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
-import { localToday, localDateAdd } from '../utils/dateUtils';
+import { localToday, localDateAdd, formatDayDate } from '../utils/dateUtils';
+
+const SEVERITY_COLOR = { high: 'var(--danger)', mid: 'var(--warning)' };
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Morning';
+  if (hour < 18) return 'Afternoon';
+  return 'Evening';
+}
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -172,7 +181,8 @@ export default function TrainerDashboard() {
   };
 
   const clients = getClients(currentUser.id);
-  const totalPlans = getWorkoutPlans({ trainerId: currentUser.id }).length;
+  const allPlans = getWorkoutPlans({ trainerId: currentUser.id });
+  const totalPlans = allPlans.length;
   const today = localToday();
   const todayMs = new Date(today).getTime();
   const todaySchedule = getSchedule({ trainerId: currentUser.id, date: today });
@@ -185,17 +195,42 @@ export default function TrainerDashboard() {
   const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date));
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
 
+  // "Up next" hero — next upcoming session today
+  const upcomingToday = todaySchedule
+    .filter(s => s.status !== 'cancelled' && s.status !== 'completed')
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const nowStr = new Date().toTimeString().slice(0, 5);
+  const nextSession = upcomingToday.find(s => s.time >= nowStr) || null;
+  const nextClient = nextSession ? clients.find(c => c.id === nextSession.clientId) : null;
+  let nextCountdown = null;
+  if (nextSession) {
+    const [h, m] = nextSession.time.split(':').map(Number);
+    const sessionTime = new Date();
+    sessionTime.setHours(h, m, 0, 0);
+    const diffMin = Math.round((sessionTime.getTime() - Date.now()) / 60000);
+    if (diffMin > 0) {
+      const hh = Math.floor(diffMin / 60);
+      const mm = diffMin % 60;
+      nextCountdown = hh > 0 ? `in ${hh}h ${mm}m` : `in ${mm}m`;
+    } else {
+      nextCountdown = 'Now';
+    }
+  }
+
   const atRiskClients = clients.reduce((acc, client) => {
     const logs = getWorkoutLogs(client.id);
     const latest = logs.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
     const daysSince = latest
       ? Math.floor((todayMs - new Date(latest.date).getTime()) / 86400000)
       : null;
+    const lastWorkoutName = latest
+      ? (allPlans.find(p => p.id === latest.planId)?.name || latest.workoutName || 'Workout')
+      : null;
     const { remaining } = getSessionStats(client.id);
     const inactive = daysSince === null || daysSince >= INACTIVE_DAYS;
     const lowSessions = remaining !== null && remaining <= 2;
     if (inactive || lowSessions) {
-      acc.push({ client, daysSince, reasons: { inactive, lowSessions, remaining } });
+      acc.push({ client, daysSince, lastWorkoutName, reasons: { inactive, lowSessions, remaining } });
     }
     return acc;
   }, []).sort((a, b) => {
@@ -207,8 +242,8 @@ export default function TrainerDashboard() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Welcome back, {currentUser.name.split(' ')[0]}!</h1>
-        <p className="page-subtitle">Here&apos;s your overview for today</p>
+        <div className="page-date">{formatDayDate(today)}</div>
+        <h1 className="page-title">{getGreeting()}, {currentUser.name.split(' ')[0]}</h1>
       </div>
 
       {clients.length === 0 && (
@@ -246,67 +281,96 @@ export default function TrainerDashboard() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid-4 mb-16">
-        <Link to="/clients" className="card stat-card stat-card-link">
-          <Users size={24} style={{ color: 'var(--primary-light)', marginBottom: 8 }} />
-          <div className="stat-value">{clients.length}</div>
-          <div className="stat-label">Active Clients</div>
+      {/* Compact stat strip */}
+      <div className="stat-strip mb-16">
+        <Link to="/clients" className="stat-pill">
+          <Users size={15} style={{ color: 'var(--primary-light)' }} />
+          <div className="stat-pill-value">{clients.length}</div>
+          <div className="stat-pill-label">Clients</div>
         </Link>
-        <Link to="/schedule" className="card stat-card stat-card-link">
-          <Calendar size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} />
-          <div className="stat-value">{todaySchedule.length}</div>
-          <div className="stat-label">Sessions Today</div>
+        <Link to="/schedule" className="stat-pill">
+          <Calendar size={15} style={{ color: 'var(--accent)' }} />
+          <div className="stat-pill-value">{todaySchedule.length}</div>
+          <div className="stat-pill-label">Today</div>
         </Link>
-        <Link to="/messages" className="card stat-card stat-card-link">
-          <TrendingUp size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
-          <div className="stat-value">{unread}</div>
-          <div className="stat-label">Unread Messages</div>
+        <Link to="/messages" className="stat-pill">
+          <TrendingUp size={15} style={{ color: 'var(--warning)' }} />
+          <div className="stat-pill-value">{unread}</div>
+          <div className="stat-pill-label">Unread</div>
         </Link>
-        <Link to="/plans" className="card stat-card stat-card-link">
-          <Dumbbell size={24} style={{ color: 'var(--danger)', marginBottom: 8 }} />
-          <div className="stat-value">{totalPlans}</div>
-          <div className="stat-label">Workout Plans</div>
+        <Link to="/plans" className="stat-pill">
+          <Dumbbell size={15} style={{ color: 'var(--danger)' }} />
+          <div className="stat-pill-value">{totalPlans}</div>
+          <div className="stat-pill-label">Plans</div>
         </Link>
       </div>
 
-      {/* At Risk Clients */}
-      {atRiskClients.length > 0 && (
-        <div className="at-risk-panel mb-16">
-          <div className="at-risk-header">
-            <AlertTriangle size={16} />
-            <span>{atRiskClients.length} Client{atRiskClients.length !== 1 ? 's' : ''} Need Attention</span>
+      {/* Up next */}
+      <div className="hero-card mb-16">
+        <div className="hero-card-inner">
+          <div className="hero-card-top">
+            <span className="hero-card-label">Up next</span>
+            {nextSession && (
+              <span className="hero-card-time"><Clock size={12} /> {nextCountdown}</span>
+            )}
           </div>
-          <div className="at-risk-list">
-            {atRiskClients.map(({ client, daysSince, reasons }) => (
-              <div key={client.id} className="at-risk-item">
-                <Link to={`/clients/${client.id}`} className="at-risk-identity">
-                  <div className="at-risk-avatar">{client.name?.[0] || '?'}</div>
-                  <span className="at-risk-name">{client.name}</span>
+          {nextSession ? (
+            <div className="hero-card-body">
+              <div className="hero-avatar">{nextClient?.name?.[0] || '?'}</div>
+              <div className="hero-card-info">
+                <div className="hero-card-title">{nextClient?.name || 'Unknown'} · {nextSession.time}</div>
+                <div className="hero-card-sub">{nextSession.type} · {nextSession.duration || 60}min</div>
+              </div>
+              <Link to={`/clients/${nextSession.clientId}`} className="btn-icon"><ChevronRight size={18} /></Link>
+            </div>
+          ) : (
+            <div className="hero-card-empty">
+              <span className="hero-card-empty-text">No sessions scheduled today</span>
+              <Link to="/schedule" className="btn btn-sm btn-primary">Book a session</Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Needs attention */}
+      {atRiskClients.length > 0 && (
+        <div className="needs-attention mb-16">
+          <div className="needs-attention-header">
+            <div className="flex gap-8" style={{ alignItems: 'center' }}>
+              <AlertTriangle size={15} style={{ color: 'var(--danger)' }} />
+              <span className="needs-attention-title">Needs attention</span>
+              <span className="needs-attention-count">{atRiskClients.length}</span>
+            </div>
+            <Link to="/clients" className="needs-attention-viewall">View all</Link>
+          </div>
+          {atRiskClients.map(({ client, daysSince, lastWorkoutName, reasons }) => {
+            const severity = reasons.lowSessions ? 'high' : 'mid';
+            const reasonText = reasons.lowSessions
+              ? (reasons.remaining === 0 ? 'Sessions used up' : `${reasons.remaining} session${reasons.remaining === 1 ? '' : 's'} left`)
+              : (daysSince === null ? 'No logs yet' : `Inactive ${daysSince} day${daysSince === 1 ? '' : 's'}`);
+            const hintText = reasons.lowSessions
+              ? 'Renewal due'
+              : (lastWorkoutName ? `Last: ${lastWorkoutName}` : 'No workouts yet');
+            return (
+              <div key={client.id} className="needs-attention-item" style={{ borderLeftColor: SEVERITY_COLOR[severity] }}>
+                <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
+                <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div className="needs-attention-name">{client.name}</div>
+                  <div className="needs-attention-meta">
+                    <span style={{ color: SEVERITY_COLOR[severity], fontWeight: 600 }}>{reasonText}</span>
+                    <span className="text-muted"> · {hintText}</span>
+                  </div>
                 </Link>
-                <div className="at-risk-reasons">
-                  {reasons.inactive && (
-                    <span className="at-risk-tag at-risk-tag-inactive">
-                      {daysSince === null ? 'No logs yet' : `Inactive ${daysSince}d`}
-                    </span>
-                  )}
-                  {reasons.lowSessions && (
-                    <span className="at-risk-tag at-risk-tag-low">
-                      {reasons.remaining === 0 ? 'Sessions used up' : `${reasons.remaining} session${reasons.remaining === 1 ? '' : 's'} left`}
-                    </span>
-                  )}
-                </div>
                 <button
-                  className="btn btn-sm at-risk-msg-btn"
+                  className="needs-attention-msg"
                   onClick={() => handleOpenQuickMsg(client, reasons)}
                   title="Send follow-up message"
                 >
-                  <MessageSquare size={13} />
-                  Message
+                  <MessageCircle size={16} />
                 </button>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
 

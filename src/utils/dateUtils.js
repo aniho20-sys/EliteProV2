@@ -22,3 +22,8 @@ export function parseLocalDate(str) {
   const [y, m, day] = str.split('-').map(Number);
   return new Date(y, m - 1, day);
 }
+
+// Formats a YYYY-MM-DD string as "Wed 10 June" for dashboard greeting headers.
+export function formatDayDate(str = localToday()) {
+  return parseLocalDate(str).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'long' });
+}

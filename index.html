@@ -56,7 +56,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>ElitePro - Fitness Training Platform</title>
   </head>
-  <body style="background:#fff">
+  <body>
+    <script>
+      try {
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('elitepro_theme') || 'light');
+      } catch {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
