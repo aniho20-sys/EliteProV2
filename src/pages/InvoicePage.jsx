@@ -253,25 +253,25 @@ export default function InvoicePage() {
       </div>
 
       {/* Summary */}
-      <div className="grid-3 mb-16">
-        <div className="card stat-card">
-          <Clock size={22} style={{ color: 'var(--warning)', marginBottom: 8 }} />
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>
+      <div className="stat-strip mb-16">
+        <div className="stat-pill">
+          <Clock size={15} style={{ color: 'var(--warning)' }} />
+          <div className="stat-pill-value">
             {invoices[0]?.currency || 'HKD'} {unpaidTotal.toFixed(0)}
           </div>
-          <div className="stat-label">Unpaid</div>
+          <div className="stat-pill-label">Unpaid</div>
         </div>
-        <div className="card stat-card">
-          <AlertCircle size={22} style={{ color: 'var(--danger)', marginBottom: 8 }} />
-          <div className="stat-value">{overdueCount}</div>
-          <div className="stat-label">Overdue</div>
+        <div className="stat-pill">
+          <AlertCircle size={15} style={{ color: 'var(--danger)' }} />
+          <div className="stat-pill-value">{overdueCount}</div>
+          <div className="stat-pill-label">Overdue</div>
         </div>
-        <div className="card stat-card">
-          <CheckCircle size={22} style={{ color: 'var(--success)', marginBottom: 8 }} />
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>
+        <div className="stat-pill">
+          <CheckCircle size={15} style={{ color: 'var(--success)' }} />
+          <div className="stat-pill-value">
             {invoices[0]?.currency || 'HKD'} {paidThisMonth.toFixed(0)}
           </div>
-          <div className="stat-label">Paid This Month</div>
+          <div className="stat-pill-label">Paid This Month</div>
         </div>
       </div>
 

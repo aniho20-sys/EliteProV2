@@ -92,26 +92,26 @@ export default function BusinessAnalyticsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid-4 mb-16">
-        <div className="card stat-card">
-          <DollarSign size={24} style={{ color: 'var(--success)', marginBottom: 8 }} />
-          <div className="stat-value">{paidThisMonth.toLocaleString()}</div>
-          <div className="stat-label">{currency} Earned This Month</div>
+      <div className="stat-strip mb-16">
+        <div className="stat-pill">
+          <DollarSign size={15} style={{ color: 'var(--success)' }} />
+          <div className="stat-pill-value">{currency} {paidThisMonth.toLocaleString()}</div>
+          <div className="stat-pill-label">Earned This Month</div>
         </div>
-        <div className="card stat-card">
-          <TrendingUp size={24} style={{ color: 'var(--primary-light)', marginBottom: 8 }} />
-          <div className="stat-value">{totalPaidYTD.toLocaleString()}</div>
-          <div className="stat-label">{currency} Revenue YTD</div>
+        <div className="stat-pill">
+          <TrendingUp size={15} style={{ color: 'var(--primary-light)' }} />
+          <div className="stat-pill-value">{currency} {totalPaidYTD.toLocaleString()}</div>
+          <div className="stat-pill-label">Revenue YTD</div>
         </div>
-        <div className="card stat-card">
-          <Users size={24} style={{ color: 'var(--accent)', marginBottom: 8 }} />
-          <div className="stat-value">{retentionRate}%</div>
-          <div className="stat-label">30-Day Retention</div>
+        <div className="stat-pill">
+          <Users size={15} style={{ color: 'var(--accent)' }} />
+          <div className="stat-pill-value">{retentionRate}%</div>
+          <div className="stat-pill-label">30-Day Retention</div>
         </div>
-        <div className="card stat-card">
-          <Calendar size={24} style={{ color: 'var(--warning)', marginBottom: 8 }} />
-          <div className="stat-value">{schedule.filter(s => s.status === 'completed').length}</div>
-          <div className="stat-label">Sessions Completed</div>
+        <div className="stat-pill">
+          <Calendar size={15} style={{ color: 'var(--warning)' }} />
+          <div className="stat-pill-value">{schedule.filter(s => s.status === 'completed').length}</div>
+          <div className="stat-pill-label">Sessions Completed</div>
         </div>
       </div>
 
