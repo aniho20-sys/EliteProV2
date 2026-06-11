@@ -2377,8 +2377,11 @@ tr:hover { background: var(--bg-card-hover); }
   .log-top-actions { justify-content: stretch; }
   .log-top-actions .btn { flex: 1; justify-content: center; }
   .log-card-title { flex-direction: column; }
-  .log-set-input { width: 65px; padding: 8px 6px; font-size: 16px; }
-  .log-set-num { min-width: 38px; font-size: 16px; }
+  .log-set-row { gap: 4px; }
+  .log-set-input { width: 48px; padding: 8px 4px; font-size: 16px; }
+  .log-set-num { min-width: 26px; font-size: 0.7rem; }
+  .log-field-group { gap: 2px; }
+  .log-set-row .btn-icon { min-width: 32px; min-height: 32px; padding: 6px; }
   .plan-ex-notes-input { font-size: 16px; }
   .last-session-hint { flex-direction: column; align-items: flex-start; gap: 2px; }
   .last-session-data { font-size: 0.75rem; }
@@ -2732,6 +2735,11 @@ tr:hover { background: var(--bg-card-hover); }
   .filter-bar .form-select, .filter-bar .form-input { width: 100%; min-width: 0; }
   .btn { padding: 10px 16px; font-size: 0.8rem; }
   .btn-sm { padding: 8px 12px; }
+  .log-set-row { gap: 2px; }
+  .log-set-input { width: 40px; padding: 8px 2px; }
+  .log-set-num { min-width: 22px; }
+  .log-field-group { gap: 1px; }
+  .log-set-row .btn-icon { min-width: 28px; min-height: 28px; padding: 4px; }
   .bottom-nav-link { font-size: 0.6rem; padding: 6px 6px; }
   .mobile-header-inner { padding: 8px 12px; }
   .pr-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -4067,9 +4075,17 @@ tr:hover { background: var(--bg-card-hover); }
 }
 @media (max-width: 640px) {
   .log-stepper {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 0.85rem;
+  }
+}
+@media (max-width: 380px) {
+  .log-stepper {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
   }
 }
 
