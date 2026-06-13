@@ -663,8 +663,6 @@ export function AppProvider({ children }) {
   };
 
   // ========== Badges (milestones/utils extracted to ./badgeUtils.js) ==========
-  const getBadges = (clientId) => (users.find(u => u.id === clientId)?.badges || []);
-
   const checkAndAwardBadges = async (clientId) => {
     const client = users.find(u => u.id === clientId);
     if (!client) return [];
@@ -811,8 +809,8 @@ export function AppProvider({ children }) {
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
-    getInviteCode, findTrainerByCode, connectToTrainer,
-    getBadges, checkAndAwardBadges,
+    getInviteCode, connectToTrainer,
+    checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,
     getAvailableSlots, openStudioSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots,
