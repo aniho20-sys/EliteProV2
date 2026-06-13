@@ -113,7 +113,7 @@ function buildDefaultMsg(client, reasons) {
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient, getSessionStats } = useApp();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient, getSessionStats, incrementSessionOffset } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
   const [recapNote, setRecapNote] = useState('');
@@ -137,14 +137,33 @@ export default function TrainerDashboard() {
     if (!recapSession) return;
     setSavingRecap(true);
     completingRef.current.add(recapSession.id);
+    const clientId = recapSession.clientId;
+    const { total, used: prevUsed } = getSessionStats(clientId);
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
+
+      let deducted = false;
+      if (clientId) {
+        try {
+          await incrementSessionOffset(clientId);
+          deducted = true;
+        } catch (err) {
+          console.error('[incrementSessionOffset] failed:', err?.code || err?.message || err, 'clientId:', clientId);
+        }
+      }
+
       if (recapSend && recapNote.trim()) {
         const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
-        await sendMessage(currentUser.id, recapSession.clientId, fullMsg);
-        toast('Session complete — recap sent to client');
+        await sendMessage(currentUser.id, clientId, fullMsg);
+      }
+
+      const recapMsg = recapSend && recapNote.trim() ? ' — recap sent to client' : '';
+      if (deducted) {
+        const newUsed = prevUsed + 1;
+        const countMsg = total !== null ? ` (${newUsed}/${total} sessions used)` : ` (${newUsed} sessions used)`;
+        toast(`Session marked as complete${countMsg}${recapMsg}`);
       } else {
-        toast('Session marked as complete');
+        toast(`Session marked as complete${recapMsg}${clientId ? ' — session count not deducted' : ''}`, clientId ? 'info' : 'success');
       }
       setRecapSession(null);
     } catch {
