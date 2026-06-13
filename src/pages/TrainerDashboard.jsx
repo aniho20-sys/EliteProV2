@@ -158,12 +158,10 @@ export default function TrainerDashboard() {
       }
 
       const recapMsg = recapSend && recapNote.trim() ? ' — recap sent to client' : '';
-      if (deducted) {
-        const newUsed = prevUsed + 1;
-        const countMsg = total !== null ? ` (${newUsed}/${total} sessions used)` : ` (${newUsed} sessions used)`;
-        toast(`Session marked as complete${countMsg}${recapMsg}`);
+      if (deducted && total !== null) {
+        toast(`Session complete · ${prevUsed + 1}/${total} sessions used${recapMsg}`);
       } else {
-        toast(`Session marked as complete${recapMsg}${clientId ? ' — session count not deducted' : ''}`, clientId ? 'info' : 'success');
+        toast(`Session marked as complete${recapMsg}`);
       }
       setRecapSession(null);
     } catch {
