@@ -23,11 +23,6 @@ export default function NotifPrompt() {
     return () => clearTimeout(timer);
   }, [supported, permission, currentUser]);
 
-  // Hide as soon as permission is granted or denied
-  useEffect(() => {
-    if (permission !== 'default') setShow(false);
-  }, [permission]);
-
   const handleEnable = async () => {
     setRequesting(true);
     await requestPermission(currentUser.id);
@@ -40,7 +35,8 @@ export default function NotifPrompt() {
     setShow(false);
   };
 
-  if (!show) return null;
+  // Hide as soon as permission is granted or denied, even if the show timer already fired
+  if (!show || permission !== 'default') return null;
 
   const subtitle = currentUser?.role === 'trainer'
     ? 'Get alerts when clients message or log workouts'

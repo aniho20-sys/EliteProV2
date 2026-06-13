@@ -189,7 +189,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!currentUser) return;
     const targetTrainerId = currentUser.role === 'trainer' ? currentUser.id : currentUser.trainerId;
-    if (!targetTrainerId) { setExercises(defaultExercises); return; }
+    if (!targetTrainerId) return; // getExercises() falls back to defaultExercises while exercises is empty
     const unsub = onSnapshot(
       query(collection(db, 'exercises'), where('trainerId', '==', targetTrainerId)),
       (snap) => setExercises([...snap.docs.map(d => ({ ...d.data(), id: d.id })), ...defaultExercises]),

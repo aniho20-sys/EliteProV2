@@ -54,6 +54,8 @@ export function NotificationProvider({ children }) {
   // Auto-register token if permission already granted
   useEffect(() => {
     if (!supported || permission !== 'granted' || !currentUser || !VAPID_KEY) return;
+    // setupMessaging only updates state after its network I/O resolves, not synchronously
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setupMessaging(currentUser.id).catch(err => console.error('FCM auto-setup failed:', err));
   }, [supported, permission, currentUser, setupMessaging]);
 
