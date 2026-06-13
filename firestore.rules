@@ -99,18 +99,30 @@ service cloud.firestore {
     // Only the client or their trainer can read.
     match /workoutLogs/{logId} {
       allow read: if isAuth() && (resource.data.clientId == request.auth.uid || resource.data.trainerId == request.auth.uid);
+      // trainerId must be null or the creating client's actual trainer — prevents a
+      // client from tagging arbitrary strangers as trainerId to get their logs
+      // pulled into that trainer's workoutLogs listener.
       allow create: if isAuth() && (
-        request.resource.data.clientId == request.auth.uid ||
-        isTrainerOf(request.resource.data.clientId)
+        (request.resource.data.clientId == request.auth.uid
+          && (request.resource.data.trainerId == null
+              || request.resource.data.trainerId == userTrainerId()))
+        || (isTrainerOf(request.resource.data.clientId)
+            && request.resource.data.trainerId == request.auth.uid)
       );
-      // Client can update their own log; trainer can update logs they created (createdBy) or add trainerNotes
+      // Client can update their own log; trainer can update logs they created (createdBy) or add trainerNotes.
+      // clientId/trainerId/createdBy are immutable after creation — without this, a client
+      // could reassign their own log's clientId to another user, polluting that user's
+      // workout history, PRs and progression charts with attacker-controlled data.
       allow update: if isAuth() && (
         resource.data.clientId == request.auth.uid ||
         (isTrainerOf(resource.data.clientId) && (
           resource.data.createdBy == request.auth.uid ||
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerNotes'])
         ))
-      );
+      )
+        && request.resource.data.clientId == resource.data.clientId
+        && request.resource.data.trainerId == resource.data.trainerId
+        && request.resource.data.createdBy == resource.data.createdBy;
       allow delete: if false;
     }
 
