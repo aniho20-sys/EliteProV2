@@ -54,8 +54,10 @@ function VolumeChart({ logs }) {
 }
 
 export default function ProgressPage() {
-  const { currentUser, getBodyStats, addBodyStat, updateBodyStat, getWorkoutLogs, getSchedule } = useApp();
+  const { currentUser, getBodyStats, addBodyStat, updateBodyStat, getWorkoutLogs, getSchedule, getExercises, getWorkoutPlans } = useApp();
   const logs = getWorkoutLogs(currentUser.id);
+  const exerciseLibrary = getExercises();
+  const plans = getWorkoutPlans({ clientId: currentUser.id });
   const stats = getBodyStats(currentUser.id);
   const completedSessions = getSchedule({ clientId: currentUser.id })
     .filter(s => s.status === 'completed')
@@ -141,7 +143,7 @@ export default function ProgressPage() {
       {activeTab === 'history' && (
         <div className="card">
           <h2 className="card-title mb-16">Session History</h2>
-          <SessionDateList sessions={completedSessions} />
+          <SessionDateList sessions={completedSessions} logs={logs} exerciseLibrary={exerciseLibrary} plans={plans} />
         </div>
       )}
 

@@ -4605,9 +4605,14 @@ tr:hover { background: var(--bg-card-hover); }
   border: 1px solid var(--border);
   border-radius: 20px;
   font-size: 0.78rem;
+  font-family: inherit;
   color: var(--text);
   white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
+.session-date-chip:hover { background: var(--bg); border-color: var(--primary); }
+.session-date-chip:active { transform: scale(0.97); }
 
 /* Session log stats bar */
 .log-session-stats {

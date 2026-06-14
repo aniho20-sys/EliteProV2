@@ -518,7 +518,7 @@ export default function ClientDetailPage() {
           {completedSessions.length === 0 ? (
             <p className="text-sm text-muted">No completed sessions yet.</p>
           ) : (
-            <SessionDateList sessions={completedSessions} />
+            <SessionDateList sessions={completedSessions} logs={logs} exerciseLibrary={exerciseLibrary} plans={plans} />
           )}
         </div>
         </>
