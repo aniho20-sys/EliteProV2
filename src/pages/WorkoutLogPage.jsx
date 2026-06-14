@@ -99,7 +99,7 @@ export default function WorkoutLogPage() {
         completedSets: [...completedSets],
       }));
     } catch { /* ignore quota errors */ }
-  }, [showLog, selectedPlan, logDate, entries, rpe, notes, timer.restSeconds, targetClientId, completedSets]);
+  }, [showLog, selectedPlan, logDate, entries, rpe, notes, timer.restSeconds, targetClientId, completedSets, logDraftKey]);
 
   const buildPlanEntries = (plan) => {
     const lastLog = [...logs].reverse().find(l => l.planId === plan.id);

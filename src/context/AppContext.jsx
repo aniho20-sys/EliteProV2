@@ -187,7 +187,7 @@ export function AppProvider({ children }) {
 
   // --- Exercises: role-aware listener (trainer sees own; client sees trainer's) ---
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
     const targetTrainerId = currentUser.role === 'trainer' ? currentUser.id : currentUser.trainerId;
     if (!targetTrainerId) return; // getExercises() falls back to defaultExercises while exercises is empty
     const unsub = onSnapshot(
@@ -196,11 +196,11 @@ export function AppProvider({ children }) {
       () => setExercises(defaultExercises),
     );
     return () => unsub();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.role, currentUser?.trainerId]);
 
   // --- Templates: trainer-only reusable plan blueprints ---
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'trainer') return;
+    if (!currentUser?.id || currentUser.role !== 'trainer') return;
     const unsub = onSnapshot(
       query(collection(db, 'templates'), where('trainerId', '==', currentUser.id)),
       (snap) => setTemplates(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
@@ -211,7 +211,7 @@ export function AppProvider({ children }) {
 
   // --- gym啦: studios, studioSlots, trainerApplications listeners ---
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
     const unsubs = [];
 
     // Studios: all authenticated users can read
@@ -251,7 +251,7 @@ export function AppProvider({ children }) {
 
   // --- Trainer profile for clients: load trainer doc so ProfilePage can show trainer name/inviteCode ---
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'client' || !currentUser.trainerId) return;
+    if (!currentUser?.id || currentUser.role !== 'client' || !currentUser.trainerId) return;
     const unsub = onSnapshot(
       doc(db, 'users', currentUser.trainerId),
       (snap) => {
@@ -267,18 +267,18 @@ export function AppProvider({ children }) {
 
   // --- Trainer schedule for clients: load trainer's full schedule so clients see real availability ---
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'client' || !currentUser.trainerId) return;
+    if (!currentUser?.id || currentUser.role !== 'client' || !currentUser.trainerId) return;
     const unsub = onSnapshot(
       query(collection(db, 'schedule'), where('trainerId', '==', currentUser.trainerId)),
       (snap) => setTrainerSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
       () => {},
     );
     return () => unsub();
-  }, [currentUser?.id, currentUser?.trainerId]);
+  }, [currentUser?.id, currentUser?.trainerId, currentUser?.role]);
 
   // --- Body Stats: per-client subcollection listeners (reactive on users list) ---
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
     const clientIds = currentUser.role === 'trainer'
       ? users.filter(u => u.trainerId === currentUser.id).map(u => u.id)
       : [currentUser.id];

@@ -103,10 +103,14 @@ export default function ProfilePage() {
   const [connecting, setConnecting] = useState(false);
 
   // Load invite code for trainer
+  // getInviteCode/inviteCode deliberately excluded: getInviteCode is recreated on every
+  // AppContext render, and re-running while inviteCode is still empty would issue
+  // repeated generate+write calls before the first one resolves.
   useEffect(() => {
     if (isTrainer && !inviteCode) {
       getInviteCode(currentUser.id).then(code => { if (code) setInviteCode(code); });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTrainer, currentUser.id]);
 
   // Get trainer name for client
