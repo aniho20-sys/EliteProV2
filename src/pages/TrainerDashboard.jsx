@@ -202,7 +202,7 @@ export default function TrainerDashboard() {
     .slice(0, 3);
 
   const upcomingToday = todaySchedule
-    .filter(s => s.status !== 'cancelled' && s.status !== 'completed')
+    .filter(s => s.status !== 'cancelled' && s.status !== 'completed' && !s.isBlocked)
     .sort((a, b) => a.time.localeCompare(b.time));
   const nowStr = new Date().toTimeString().slice(0, 5);
   const nextSession = upcomingToday.find(s => s.time >= nowStr) || upcomingToday[0];
@@ -223,7 +223,7 @@ export default function TrainerDashboard() {
   }
 
   const weekDays = getWeekDays();
-  const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date));
+  const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date) && !s.isBlocked);
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
 
   const atRiskClients = clients.reduce((acc, client) => {
