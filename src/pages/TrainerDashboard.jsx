@@ -223,7 +223,7 @@ export default function TrainerDashboard() {
   }
 
   const weekDays = getWeekDays();
-  const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date) && !s.isBlocked);
+  const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date) && !s.isBlocked && s.status !== 'cancelled');
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
 
   const atRiskClients = clients.reduce((acc, client) => {
