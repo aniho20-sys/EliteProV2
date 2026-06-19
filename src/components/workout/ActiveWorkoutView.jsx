@@ -88,6 +88,18 @@ export default function ActiveWorkoutView({
     ));
   };
 
+  const findLastEntry = (exerciseId, planId) => {
+    if (planId) {
+      const lastLog = [...logs].reverse().find(l => l.planId === planId);
+      return lastLog?.entries?.find(e => e.exerciseId === exerciseId) || null;
+    }
+    for (const log of [...logs].reverse()) {
+      const found = log.entries?.find(e => e.exerciseId === exerciseId);
+      if (found) return found;
+    }
+    return null;
+  };
+
   const updateSet = (exIdx, setIdx, field, value) => {
     setEntries(prev => prev.map((entry, i) => {
       if (i !== exIdx) return entry;
@@ -204,8 +216,7 @@ export default function ActiveWorkoutView({
         const currentPR = prs[entry.exerciseId];
         const exercise = getExercise(entry.exerciseId);
         const gotNewPR = isNewPR(entry);
-        const lastLog = selectedPlan?.id ? [...logs].reverse().find(l => l.planId === selectedPlan.id) : null;
-        const lastEntry = lastLog?.entries?.find(e => e.exerciseId === entry.exerciseId);
+        const lastEntry = findLastEntry(entry.exerciseId, selectedPlan?.id);
         return (
           <div key={exIdx} className={`card mb-16 ${gotNewPR ? 'card-pr-glow' : ''}`}>
             <div className="log-card-header">
