@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Play, Timer, ArrowLeftRight, Info, X } from 'lucide-react';
+import { Trophy, Play, Timer, ArrowLeftRight, Info, X, RotateCcw } from 'lucide-react';
 import { isSafeUrl } from '../../utils/urlUtils';
 import { normalizeSets, UNIT_OPTIONS, emptySet, formatSet, getProgressionSuggestion, stringifySet } from '../../utils/workoutUtils';
 import { localToday } from '../../utils/dateUtils';
@@ -255,11 +255,12 @@ export default function ActiveWorkoutView({
                 </select>
               </div>
               {lastEntry && (
-                <div className="last-session-hint">
-                  <span className="last-session-label">Last</span>
+                <button type="button" className="last-session-hint" onClick={() => fillFromLast(exIdx, lastEntry, entry.unit || 'weight_reps')}>
+                  <RotateCcw size={13} className="last-session-icon" />
+                  <span className="last-session-label">Last time</span>
                   <span className="last-session-data">{lastEntry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}</span>
-                  <button className="btn btn-outline btn-sm last-session-fill-btn" onClick={() => fillFromLast(exIdx, lastEntry, entry.unit || 'weight_reps')}>Fill</button>
-                </div>
+                  <span className="last-session-fill-btn">Use this</span>
+                </button>
               )}
               {(() => {
                 const suggestion = getProgressionSuggestion(logs, entry.exerciseId);
