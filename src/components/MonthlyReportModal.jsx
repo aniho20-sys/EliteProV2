@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { X, FileText, Printer } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { calcVolume } from '../utils/workoutUtils';
 
 function monthOptions() {
   const opts = [];
   const now = new Date();
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 0; i <= 11; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const label = d.toLocaleDateString('en', { year: 'numeric', month: 'long' });
@@ -55,10 +56,7 @@ export default function MonthlyReportModal({ client, onClose }) {
     .sort((a, b) => b[1].weight - a[1].weight)
     .slice(0, 6);
 
-  const totalVolume = Math.round(monthLogs.reduce((t, log) =>
-    t + (log.entries || []).reduce((et, entry) =>
-      et + (entry.sets || []).reduce((st, s) =>
-        st + (s.weight && s.reps ? Number(s.weight) * Number(s.reps) : 0), 0), 0), 0));
+  const totalVolume = Math.round(monthLogs.reduce((t, log) => t + calcVolume(log.entries), 0));
 
   const attendancePct = monthBooked.length > 0
     ? Math.round((monthCompleted.length / monthBooked.length) * 100) : null;
@@ -233,9 +231,10 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
     `<tr><td>${esc(exName(id))}</td><td style="font-weight:600;color:#2563eb">${esc(pr.weight)} kg</td><td style="color:#6b7280;font-size:0.85em">${esc(pr.date || '—')}</td></tr>`
   ).join('');
 
-  const logRows = monthLogs.map(l =>
-    `<tr><td style="white-space:nowrap">${esc(l.date)}</td><td>${(l.entries || []).map(e => esc(exName(e.exerciseId, e.name))).join(', ')}</td><td style="color:#6b7280;white-space:nowrap">${l.rpe ? `RPE ${esc(l.rpe)}` : '—'}</td></tr>`
-  ).join('');
+  const logRows = monthLogs.map(l => {
+    const vol = calcVolume(l.entries);
+    return `<tr><td style="white-space:nowrap">${esc(l.date)}</td><td>${(l.entries || []).map(e => esc(exName(e.exerciseId, e.name))).join(', ')}</td><td style="white-space:nowrap">${vol > 0 ? `${vol.toLocaleString()} kg` : '—'}</td><td style="color:#6b7280;white-space:nowrap">${l.rpe ? `RPE ${esc(l.rpe)}` : '—'}</td></tr>`;
+  }).join('');
 
   const invoiceSection = includeInvoice ? `
     <div class="invoice-section">
@@ -367,7 +366,7 @@ function buildHTML({ client, trainer, month, monthCompleted, monthLogs, monthSta
   <div class="section">
     <div class="section-title">💪 Workout Summary</div>
     <table class="data-table">
-      <tr><th>Date</th><th>Exercises</th><th>Intensity</th></tr>
+      <tr><th>Date</th><th>Exercises</th><th>Volume</th><th>Intensity</th></tr>
       ${logRows}
     </table>
   </div>` : ''}
