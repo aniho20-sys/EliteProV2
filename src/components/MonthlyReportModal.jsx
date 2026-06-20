@@ -25,7 +25,7 @@ export default function MonthlyReportModal({ client, onClose }) {
 
   const opts = monthOptions();
   const [month, setMonth] = useState(opts[0].val);
-  const [includeWorkoutSummary, setIncludeWorkoutSummary] = useState(false);
+  const [includeWorkoutSummary, setIncludeWorkoutSummary] = useState(true);
   const [includeInvoice, setIncludeInvoice] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState('');
   const [invoiceCurrency, setInvoiceCurrency] = useState('HKD');
