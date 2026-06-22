@@ -38,7 +38,7 @@ src/
 │   └── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
 ├── context/
 │   ├── AppContext.jsx         # Global state + all Firestore/Auth operations
-│   ├── NotificationContext.jsx # FCM push notifications (code ready; blocked — Blaze billing downgraded to Spark on 2026-06-21, Cloud Functions can't run)
+│   ├── NotificationContext.jsx # FCM push notifications (code ready; Blaze restored 2026-06-22, Functions deployed and live)
 │   ├── ThemeContext.jsx       # Light/dark theme toggle (persisted to localStorage)
 │   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss)
 ├── data/
@@ -75,7 +75,7 @@ src/
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (sendNotificationOnMessage + sendNotificationOnSchedule; blocked — billing downgraded to Spark)
+functions/                    # Cloud Functions (sendNotificationOnMessage + sendNotificationOnSchedule; deployed and live on Blaze)
 ├── index.js                  # sendNotificationOnMessage + sendNotificationOnSchedule
 └── package.json
 
@@ -98,8 +98,8 @@ Top-level config files:
 ## Firebase Configuration
 - **Project ID**: `elitepro-16718`
 - **Config**: hardcoded in `src/firebase.js` (public API key — safe for client-side apps)
-- **Billing plan**: Spark (free) — downgraded from Blaze on 2026-06-21 after the linked Cloud Billing account was closed/unlinked; Cloud Functions deployment is blocked again until Blaze is restored via Firebase Console
-- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (code ready, blocked on Blaze), Cloud Functions (code ready, blocked on Blaze)
+- **Billing plan**: Blaze (pay-as-you-go) — restored 2026-06-22 after the Free Trial billing account was upgraded to a full paid account and relinked; Cloud Functions deploy verified working again
+- **Services used**: Firestore (database), Firebase Auth (authentication), Cloud Messaging/FCM (deployed, live), Cloud Functions (deployed, live)
 - **Offline**: IndexedDB persistence enabled; app works without internet after first load
 
 ## Authentication Flow
@@ -360,7 +360,7 @@ data                         // raw { users, bodyStats, workoutPlans, workoutLog
 ### Other contexts
 - **ThemeContext**: `{ theme, toggleTheme }` — `'light'` | `'dark'`, persisted to `localStorage` key `elitepro_theme`, applied via `data-theme` attribute on `<html>`
 - **ToastContext**: `addToast(message, type?)` — `type` is `'success'` (default), `'error'`, or `'info'`; auto-dismisses after 3s
-- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Code ready; blocked because billing was downgraded from Blaze to Spark on 2026-06-21 — Cloud Functions can't run on Spark, so notifications won't fire until Blaze is restored via Firebase Console
+- **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Blaze billing was restored 2026-06-22 and Cloud Functions deploy succeeded; push notifications are live
 
 ## Routing
 Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
@@ -452,7 +452,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 11. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
 12. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
 13. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
-14. **Push notifications inactive** — `NotificationContext` + Cloud Functions code exists, but billing was downgraded from Blaze to Spark on 2026-06-21 (linked Cloud Billing account closed/unlinked), so Cloud Functions can no longer deploy or run. CI's "Deploy Functions" step (`firebase-hosting.yml`) now fails as a warning only — Hosting and Firestore rules still deploy successfully. Restore Blaze via Firebase Console to re-enable
+14. **Push notifications active** — `NotificationContext` + Cloud Functions are deployed and live since Blaze billing was restored on 2026-06-22 (Free Trial billing account upgraded to paid and relinked). CI's "Deploy Functions" step (`firebase-hosting.yml`) hard-fails the workflow again on deploy errors
 15. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
 16. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
 17. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
