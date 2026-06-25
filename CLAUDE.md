@@ -75,8 +75,8 @@ src/
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (sendNotificationOnMessage + sendNotificationOnSchedule; deployed and live on Blaze)
-├── index.js                  # sendNotificationOnMessage + sendNotificationOnSchedule
+functions/                    # Cloud Functions (onNewMessage, onNewSchedule, onScheduleUpdate, onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow, onAccountDelete; deployed and live on Blaze)
+├── index.js                  # onNewMessage + onNewSchedule + onScheduleUpdate + onNewWorkoutPlan + onNewWorkoutLog + onSessionsLow + onAccountDelete (GDPR cascade delete)
 └── package.json
 
 public/
