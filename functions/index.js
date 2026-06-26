@@ -238,7 +238,7 @@ exports.onSessionsLow = functions.firestore
     // Notify the client when crossing the ≤ 3 threshold for the first time
     if (remainingAfter <= 3 && remainingBefore > 3) {
       await sendPush(clientId, after.fcmTokens, {
-        title: '⚠️ 堂數快用完',
+        title: '🔔 堂數提醒',
         body: `你仲剩 ${remainingAfter} 堂，記得聯絡教練續堂`,
       }, {
         type: 'sessions_low_client',
