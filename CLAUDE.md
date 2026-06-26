@@ -28,39 +28,59 @@ src/
 ├── components/
 │   ├── EmptyState.jsx        # Reusable empty state (icon + title + desc + CTA action)
 │   ├── ErrorBoundary.jsx     # React class error boundary (wraps entire app)
+│   ├── ExerciseDetailModal.jsx # Exercise detail/instructions modal (video link, muscle, equipment)
 │   ├── ExerciseProgress.jsx  # Per-exercise strength progression chart (auto-selects most-logged exercise; dropdown sorted by session count; Recharts AreaChart + PR badges in history table)
 │   ├── GlobalSearch.jsx      # Search bar: clients, exercises, plans
 │   ├── InstallPrompt.jsx     # PWA install prompt banner (beforeinstallprompt + iOS fallback)
-│   ├── MuscleSelector.jsx    # Interactive SVG muscle body model for exercise targeting
-│   ├── Navigation.jsx        # Desktop sidebar (4 primary + collapsible More with 4 secondary) + mobile top header + bottom nav (4 primary + More sheet)
+│   ├── MonthlyReportModal.jsx # Trainer: generate monthly progress report (sessions, volume, PRs, body comp, optional fee summary) → browser print to PDF
+│   ├── MuscleSelector.jsx    # Muscle group chip selector for exercise targeting
+│   ├── Navigation.jsx        # Desktop sidebar (primary + collapsible More with secondary) + mobile top header + bottom nav (primary + More sheet); driven by LINK_DEFS/NAV_CONFIG
 │   ├── NotesSection.jsx      # Client notes section component
+│   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
 │   ├── ProgressView.jsx      # Body composition chart + stats grid + history table; shared by ProgressPage & ClientDetailPage
-│   └── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
+│   ├── SessionDateList.jsx   # Renders a list of session dates (used in monthly report / progress views)
+│   ├── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
+│   └── workout/
+│       ├── ActiveWorkoutView.jsx     # In-progress workout UI: exercise list, set inputs, rest timer pill
+│       ├── ExerciseSwapModal.jsx     # Swap/add an exercise within a plan or log (incl. Custom tab)
+│       ├── SetInputs.jsx             # Per-set input row for all unit types, with remove-set support
+│       └── WorkoutCompleteScreen.jsx # Post-save summary: volume, exercises, RPE, new PRs, closing message
 ├── context/
 │   ├── AppContext.jsx         # Global state + all Firestore/Auth operations
 │   ├── NotificationContext.jsx # FCM push notifications (code ready; Blaze restored 2026-06-22, Functions deployed and live)
 │   ├── ThemeContext.jsx       # Light/dark theme toggle (persisted to localStorage)
-│   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss)
+│   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss; error toasts 6s)
 ├── data/
 │   ├── exercises.js          # Static exercise library (seeded into Firestore)
-│   └── metrics.js            # Body stat metric definitions: METRICS array + EMPTY_STAT_FORM
+│   ├── metrics.js            # Body stat metric definitions: METRICS array + EMPTY_STAT_FORM
+│   └── sampleData.js         # Demo seed data (ghost clients, plans, logs, etc.)
+├── hooks/
+│   ├── useOnlineStatus.js    # Tracks navigator.onLine + online/offline events
+│   └── useRestTimer.js       # Wall-clock rest timer: sessionStorage persistence, wake listeners, WAV beep via AudioBufferSource + iOS keep-alive
 ├── pages/
 │   ├── LoginPage.jsx                 # Auth: Google, email/password, forgot password
 │   ├── RoleSelectPage.jsx            # Post-auth profile creation (role + invite code)
+│   ├── LandingPage.jsx               # No-auth marketing landing page at /landing (CSS UI mockups)
 │   ├── TrainerDashboard.jsx          # Trainer home: stats overview
 │   ├── ClientDashboard.jsx           # Client home: workout summary + body stats
 │   ├── ClientsPage.jsx               # Trainer: client list
 │   ├── ClientDetailPage.jsx          # Trainer: client detail tabs (overview, progress, plans, logs, notes)
 │   ├── ClientProgressOverviewPage.jsx # Trainer: all-clients progress overview with volume, sessions, PR stats + sorting
 │   ├── InvoicePage.jsx               # Trainer: invoice creation, management, status tracking
+│   ├── BusinessAnalyticsPage.jsx     # Trainer: /analytics — monthly revenue, sessions, 30-day retention, top clients
 │   ├── WorkoutPlansPage.jsx          # Create/view workout plans + save-as-template
 │   ├── SchedulePage.jsx              # Session scheduling + calendar view
 │   ├── MessagesPage.jsx              # In-app messaging (full page)
 │   ├── ExerciseLibraryPage.jsx       # Exercise database with search/filter
 │   ├── MyWorkoutsPage.jsx            # Client: assigned workout plans
-│   ├── WorkoutLogPage.jsx            # Client: log workout sessions (rest timer, unit types, localStorage draft)
+│   ├── WorkoutLogPage.jsx            # Client: log workout sessions (rest timer, unit types, custom exercises, localStorage draft)
 │   ├── ProgressPage.jsx              # Client: body composition tab + exercise progression tab
+│   ├── IntakeFormPage.jsx            # Client: onboarding questionnaire (PAR-Q style)
 │   ├── ProfilePage.jsx               # User profile, invite code, account management
+│   ├── OperatorDashboard.jsx         # gym啦 (operator): home — gated behind GYMLA_ENABLED
+│   ├── StudioManagementPage.jsx      # gym啦 (operator): manage studios + slots — gated behind GYMLA_ENABLED
+│   ├── StudioBookingPage.jsx         # gym啦 (trainer): book studio slots — gated behind GYMLA_ENABLED
+│   ├── TrainerApplicationPage.jsx    # gym啦: trainer application flow — gated behind GYMLA_ENABLED
 │   ├── PrivacyPolicyPage.jsx         # Static privacy policy (no auth required)
 │   └── TermsPage.jsx                 # Static terms of service (no auth required)
 ├── styles/
@@ -68,23 +88,28 @@ src/
 ├── utils/
 │   ├── authErrors.js         # Firebase Auth error code → friendly message map
 │   ├── dateUtils.js          # Local timezone-safe date helpers: localToday, localDateAdd, parseLocalDate
+│   ├── exerciseUtils.js      # resolveExerciseName(library, id, fallback) — resolves exerciseId (incl. custom-* IDs) to a display name
 │   ├── sessionUtils.js       # Session colour/label helpers
 │   ├── urlUtils.js           # URL safety validators: isSafeUrl(url), isYouTube(url)
-│   └── workoutUtils.js       # Workout set normalisation helpers
+│   └── workoutUtils.js       # Workout set normalisation helpers (UNIT_OPTIONS, emptySet, hasValue, formatSet, etc.)
 ├── firebase.js               # Firebase init (db, auth exports)
-├── App.jsx                   # Root: provider tree + routing + invite code URL parsing
+├── App.jsx                   # Root: provider tree + routing + invite code URL parsing + GYMLA_ENABLED flag
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (onNewMessage, onNewSchedule, onScheduleUpdate, onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow, onAccountDelete; deployed and live on Blaze)
-├── index.js                  # onNewMessage + onNewSchedule + onScheduleUpdate + onNewWorkoutPlan + onNewWorkoutLog + onSessionsLow + onAccountDelete (GDPR cascade delete)
+functions/                    # Cloud Functions (deployed and live on Blaze) — 7 functions:
+├── index.js                  # onAccountDelete, onNewMessage, onNewSchedule, onScheduleUpdate,
+│                              # onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow (push to client when
+│                              # sessions remaining ≤ 3, push to trainer when ≤ 2)
 └── package.json
 
 public/
 ├── firebase-messaging-sw.js  # FCM background notification Service Worker
 ├── manifest.json             # PWA manifest
+├── sounds/                   # timer-done.wav (rest timer completion sound, generated by scripts/generate-beep.cjs)
 └── splash/                   # iOS PWA splash screens (auto-generated by scripts/generate-splash.cjs)
 
 scripts/
+├── generate-beep.cjs         # Generates public/sounds/timer-done.wav (3-beep ascending pattern)
 └── generate-splash.cjs       # Generates iOS splash PNGs into public/splash/ (runs in prebuild)
 ```
 
@@ -182,12 +207,13 @@ Top-level config files:
   entries: [
     {
       exerciseId: string,
-      unit: 'weight_reps' | 'reps_only' | 'time' | 'distance',  // defaults to 'weight_reps'
+      unit: 'weight_reps' | 'reps_only' | 'time' | 'distance' | 'weight_distance',  // defaults to 'weight_reps'
       sets: [
-        // weight_reps: { weight: number, reps: number, completed: boolean }
-        // reps_only:   { reps: number, completed: boolean }
-        // time:        { seconds: number, completed: boolean }
-        // distance:    { metres: number, completed: boolean }
+        // weight_reps:     { weight: number, reps: number, completed: boolean }
+        // reps_only:       { reps: number, completed: boolean }
+        // time:            { seconds: number, completed: boolean }
+        // distance:        { metres: number, completed: boolean }
+        // weight_distance: { weight: number, metres: number, completed: boolean }
       ],
     }
   ],
@@ -232,7 +258,7 @@ Top-level config files:
   equipment: string,     // from equipmentTypes list
   description: string,
   instructions: string,
-  unit: 'weight_reps' | 'reps_only' | 'time' | 'distance',  // defaults to 'weight_reps' when absent
+  unit: 'weight_reps' | 'reps_only' | 'time' | 'distance' | 'weight_distance',  // defaults to 'weight_reps' when absent
   videoUrl: string,      // optional YouTube/safe URL for demo video
 }
 ```
@@ -359,7 +385,7 @@ data                         // raw { users, bodyStats, workoutPlans, workoutLog
 
 ### Other contexts
 - **ThemeContext**: `{ theme, toggleTheme }` — `'light'` | `'dark'`, persisted to `localStorage` key `elitepro_theme`, applied via `data-theme` attribute on `<html>`
-- **ToastContext**: `addToast(message, type?)` — `type` is `'success'` (default), `'error'`, or `'info'`; auto-dismisses after 3s
+- **ToastContext**: `addToast(message, type?, duration?)` — `type` is `'success'` (default), `'error'`, or `'info'`; auto-dismisses after 3s, except `'error'` toasts which dismiss after 6s (override either with explicit `duration`)
 - **NotificationContext**: FCM push notification management — token registration, foreground message handling, permission request. Blaze billing was restored 2026-06-22 and Cloud Functions deploy succeeded; push notifications are live
 
 ## Routing
@@ -372,6 +398,7 @@ Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 | `/clients/:clientId` | ClientDetailPage | — |
 | `/progress-overview` | ClientProgressOverviewPage | — |
 | `/invoices` | InvoicePage | — |
+| `/analytics` | BusinessAnalyticsPage | — |
 | `/plans` | WorkoutPlansPage | WorkoutPlansPage |
 | `/schedule` | SchedulePage | SchedulePage |
 | `/messages` | MessagesPage | MessagesPage |
@@ -382,6 +409,8 @@ Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 | `/progress` | — | ProgressPage |
 | `/privacy` | PrivacyPolicyPage (no auth) | PrivacyPolicyPage (no auth) |
 | `/terms` | TermsPage (no auth) | TermsPage (no auth) |
+
+gym啦 (operator) routes — `/operator/studios`, `/apply`, `/studios/book` — are gated behind `GYMLA_ENABLED` in `App.jsx` (currently `false`); see convention #25.
 
 Routes are conditionally rendered based on `currentUser.role`. Unknown routes redirect to `/`.
 
@@ -441,27 +470,29 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 ## Key Conventions for AI Assistants
 1. **Never bypass AppContext** — all Firestore reads/writes must go through context functions, not direct `db` imports in components
 2. **Check Firestore rules** before adding new write operations — rules enforce role and ownership constraints
-3. **IDs are `Date.now()` strings** — e.g. `plan-${Date.now()}`, `log-${Date.now()}`; not UUIDs
-4. **`markLoaded` tracks 8 collections** — current set: users, bodyStats (manual), workoutPlans, workoutLogs, schedule, messages, exercises (manual), invoices. If adding a new Firestore collection listener, increment the threshold in `markLoaded` (`loadedRef.current.size >= N`)
-5. **Toast not alert** — use `useToast()` for user feedback, never `alert()`
-6. **HashRouter** — links must be hash-compatible; no server-side route handling
-7. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
-8. **No localStorage for app data** — `ThemeContext` uses localStorage for theme; `WorkoutLogPage` uses it for in-progress draft only. All persisted app state lives in Firestore
-9. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
-10. **Always await Firestore writes** — wrap in try/catch with error toast; never fire-and-forget
-11. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
-12. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
-13. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
-14. **Push notifications active** — `NotificationContext` + Cloud Functions are deployed and live since Blaze billing was restored on 2026-06-22 (Free Trial billing account upgraded to paid and relinked). CI's "Deploy Functions" step (`firebase-hosting.yml`) hard-fails the workflow again on deploy errors
-15. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
-16. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
-17. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
-18. **URL safety** — always validate external URLs with `isSafeUrl(url)` from `utils/urlUtils.js` before rendering links or iframes
-19. **Body composition UI** — use `<ProgressView clientId={...} canDelete onAdd={...} onEdit={...} />` as the canonical body composition view; never inline duplicate chart/table/modal markup
-20. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`, auto-selects the most-logged exercise, and sorts the dropdown by session count
-21. **Immutable fields in Firestore updates** — `trainerId`, `clientId`, and `role` must never change after creation; all update rules in `firestore.rules` enforce this
-22. **Navigation architecture** — desktop sidebar has primary links + a collapsible "More" section with secondary links (defined per-role in `NAV_CONFIG`). Mobile bottom nav has primary links + "More" sheet. Keep primary nav to ≤5 items; add new features to the secondary/More section
-23. **Workout utilities** — `UNIT_OPTIONS`, `emptySet(unit)`, `hasValue(s, unit)`, `formatSet(s, unit)` are all exported from `utils/workoutUtils.js`; never redefine them locally in pages
+3. **Demo data is scoped** — when adding new collections, seed data should be prefixed with `${trainerUid}-` for demo isolation
+4. **IDs are `Date.now()` strings** — e.g. `plan-${Date.now()}`, `log-${Date.now()}`; not UUIDs
+5. **`markLoaded` tracks 8 collections** — current set: users, bodyStats (manual), workoutPlans, workoutLogs, schedule, messages, exercises (manual), invoices. If adding a new Firestore collection listener, increment the threshold in `markLoaded` (`loadedRef.current.size >= N`)
+6. **Toast not alert** — use `useToast()` for user feedback, never `alert()`
+7. **HashRouter** — links must be hash-compatible; no server-side route handling
+8. **Theme** — respect CSS variables; add new color values as variables, not hardcoded hex
+9. **No localStorage for app data** — `ThemeContext` uses localStorage for theme; `WorkoutLogPage` uses it for in-progress draft only. All persisted app state lives in Firestore
+10. **workoutLogs and messages cannot be deleted** — Firestore rules set `allow delete: if false`; handle this in reset/cleanup flows
+11. **Always await Firestore writes** — wrap in try/catch with error toast; never fire-and-forget
+12. **Use EmptyState component** for empty data views — import from `components/EmptyState.jsx`; pass Lucide icon, contextual description, and actionable CTA
+13. **Use Skeleton components** for loading states — import from `components/Skeleton.jsx`
+14. **Double-submit protection** — all forms/buttons that trigger Firestore writes must use a `saving`/`sending` state to disable during async ops
+15. **Push notifications active** — `NotificationContext` + Cloud Functions are deployed and live since Blaze billing was restored on 2026-06-22 (Free Trial billing account upgraded to paid and relinked). CI's "Deploy Functions" step (`firebase-hosting.yml`) hard-fails the workflow again on deploy errors
+16. **Exercise unit types** — exercises and log entries carry a `unit` field (`'weight_reps' | 'reps_only' | 'time' | 'distance' | 'weight_distance'`); set shapes differ per unit. Use `normalizeSets` from `workoutUtils.js` to normalise legacy sets
+17. **Unit type UI** — use `.log-unit-pill` / `.log-unit-picker` CSS classes for pill-button unit selectors; never use a `<select>` for unit type
+18. **Date helpers** — always use `localToday()` / `localDateAdd()` / `parseLocalDate()` from `utils/dateUtils.js` for date strings; never use `new Date().toISOString().split('T')[0]` (returns UTC, wrong for non-UTC timezones)
+19. **URL safety** — always validate external URLs with `isSafeUrl(url)` from `utils/urlUtils.js` before rendering links or iframes
+20. **Body composition UI** — use `<ProgressView clientId={...} canDelete onAdd={...} onEdit={...} />` as the canonical body composition view; never inline duplicate chart/table/modal markup
+21. **Exercise progression UI** — use `<ExerciseProgress clientId={...} />` for per-exercise strength charts; it reads logs internally via `useApp()`, auto-selects the most-logged exercise, and sorts the dropdown by session count
+22. **Immutable fields in Firestore updates** — `trainerId`, `clientId`, and `role` must never change after creation; all update rules in `firestore.rules` enforce this
+23. **Navigation architecture** — `Navigation.jsx` defines a single `LINK_DEFS` map (icon + label per route) and a per-role `NAV_CONFIG` (`trainer`/`client`/`operator`, each with `desktop.{primary,secondary}` and `mobile.{primary,more}` route arrays). Desktop sidebar renders `primary` links plus a collapsible "More" section for `secondary`; mobile bottom nav renders `primary` (4 items) plus a "More" sheet for `more`. Keep primary nav to ≤4-5 items; add new features to `secondary`/`more`
+24. **Workout utilities** — `UNIT_OPTIONS`, `emptySet(unit)`, `hasValue(s, unit)`, `formatSet(s, unit)` are all exported from `utils/workoutUtils.js`; never redefine them locally in pages
+25. **gym啦 feature flag** — gym啦 (operator role, studios, slot booking, trainer applications) is gated behind `GYMLA_ENABLED` in `App.jsx`. While `false`, operator routes/`/apply`/`/studios/book` are hidden and `operator` users get the `client`/trainer-equivalent nav. Code is preserved — flip the flag to re-enable
 
 ## Team Structure
 
