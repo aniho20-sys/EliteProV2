@@ -95,18 +95,23 @@ export default function ClientDashboard() {
       )}
 
       {sessTotal !== null && (
-        <div className="hero-card mb-16">
+        <div className="hero-card mb-16" style={sessRemaining <= 3 ? { background: 'var(--danger)' } : undefined}>
           <div className="hero-card-inner">
             <div className="flex-between mb-12" style={{ alignItems: 'baseline' }}>
-              <span className="hero-card-label">Your package</span>
+              <span className="hero-card-label" style={sessRemaining <= 3 ? { color: 'var(--danger)' } : undefined}>Your package</span>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
                 {sessRemaining}
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> session{sessRemaining === 1 ? '' : 's'} left</span>
               </span>
             </div>
             <div className="session-progress-bar mb-12">
-              <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: 'var(--brand-gradient)' }} />
+              <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessRemaining <= 3 ? 'var(--danger)' : 'var(--brand-gradient)' }} />
             </div>
+            {sessRemaining <= 3 && (
+              <p className="text-sm mb-12" style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                堂數快用完，記得聯絡教練續堂
+              </p>
+            )}
             <div className="flex-between" style={{ alignItems: 'center' }}>
               <span className="text-sm text-muted">{sessUsed} of {sessTotal} sessions used</span>
               <Link to="/schedule" className="btn btn-sm" style={{ background: 'var(--brand-gradient)', color: '#fff' }}>Book Session</Link>
