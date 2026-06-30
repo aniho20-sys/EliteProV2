@@ -238,8 +238,8 @@ exports.onSessionsLow = functions.firestore
     // Notify the client when crossing the ≤ 3 threshold for the first time
     if (remainingAfter <= 3 && remainingBefore > 3) {
       await sendPush(clientId, after.fcmTokens, {
-        title: '🔔 堂數提醒',
-        body: `你仲剩 ${remainingAfter} 堂，記得聯絡教練續堂`,
+        title: '🔔 Sessions running low',
+        body: `You have ${remainingAfter} session${remainingAfter === 1 ? '' : 's'} left — contact your trainer to top up`,
       }, {
         type: 'sessions_low_client',
         url: '/#/',
@@ -253,8 +253,8 @@ exports.onSessionsLow = functions.firestore
         const trainerSnap = await db.doc(`users/${trainerId}`).get();
         if (trainerSnap.exists) {
           await sendPush(trainerId, trainerSnap.data().fcmTokens, {
-            title: '⚠️ 堂數不足',
-            body: `${clientName} 只剩 ${remainingAfter} 堂，記得提醒續費`,
+            title: '⚠️ Sessions running low',
+            body: `${clientName} has ${remainingAfter} session${remainingAfter === 1 ? '' : 's'} left — remind them to renew`,
           }, {
             type: 'sessions_low',
             url: `/#/clients/${clientId}`,

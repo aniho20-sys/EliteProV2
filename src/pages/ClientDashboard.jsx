@@ -109,7 +109,7 @@ export default function ClientDashboard() {
             </div>
             {sessRemaining <= 3 && (
               <p className="text-sm mb-12" style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                堂數快用完，記得聯絡教練續堂
+                Running low — contact your trainer to top up
               </p>
             )}
             <div className="flex-between" style={{ alignItems: 'center' }}>
