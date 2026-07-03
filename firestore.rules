@@ -191,6 +191,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Credit Ledger ──
+    // All writes via Cloud Functions (Admin SDK bypasses rules).
+    // Clients can read own entries; trainers can read their clients' entries.
+    match /creditLedger/{entryId} {
+      allow read: if isAuth() && (
+        resource.data.clientId == request.auth.uid ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid)
+      );
+      allow write: if false;
+    }
+
     // ── Exercises ──
     // Trainer reads own; client reads trainer's + personal.
     // Any auth user can create: trainer with own ID, client with trainer's ID or own ID.

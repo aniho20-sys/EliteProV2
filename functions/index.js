@@ -3,6 +3,7 @@ const functions = require('firebase-functions/v1');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const HttpsError = functions.https.HttpsError;
 
 initializeApp();
 const db = getFirestore();
@@ -216,6 +217,251 @@ exports.onNewWorkoutLog = functions.firestore
       clientId: log.clientId,
     });
   });
+
+// ─── Credit System Helpers ───
+
+// Detects London's UTC offset via a noon-UTC probe (handles BST/GMT automatically).
+// Returns true when the given London-time session is more than 24 hours away.
+function isMoreThan24HoursAway(dateStr, timeStr) {
+  const probe = new Date(`${dateStr}T12:00:00Z`);
+  const londonHour = parseInt(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(probe)
+  ) % 24;
+  const londonOffsetFromUTC = 12 - londonHour; // -1 for BST (UTC+1), 0 for GMT
+  const sessionAsUTCMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
+  const sessionTrueUTCMs = sessionAsUTCMs + londonOffsetFromUTC * 3600 * 1000;
+  return (sessionTrueUTCMs - Date.now()) > 24 * 60 * 60 * 1000;
+}
+
+// Returns current YYYY-MM in Europe/London time using formatToParts for reliability.
+function getLondonMonth() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/London',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  return `${year}-${month}`;
+}
+
+// ─── Book Session → create schedule doc + deduct credit atomically ───
+exports.bookSession = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new HttpsError('unauthenticated', 'Authentication required');
+  const uid = context.auth.uid;
+  const { date, time, type, trainerId, duration, notes } = data || {};
+
+  if (!date || !time || !trainerId) {
+    throw new HttpsError('invalid-argument', 'Missing required fields: date, time, trainerId');
+  }
+
+  const clientRef = db.doc(`users/${uid}`);
+  const schedId = `sched-${Date.now()}-${uid.slice(0, 6)}`;
+  const schedRef = db.doc(`schedule/${schedId}`);
+
+  let newBalance;
+  await db.runTransaction(async (transaction) => {
+    const clientSnap = await transaction.get(clientRef);
+    if (!clientSnap.exists) throw new HttpsError('not-found', 'Client profile not found');
+
+    const currentBalance = clientSnap.data().creditBalance ?? 0;
+    if (currentBalance <= 0) {
+      throw new HttpsError('failed-precondition', 'No credits remaining. Contact your coach to top up.');
+    }
+
+    newBalance = currentBalance - 1;
+    const now = new Date().toISOString();
+    const ledgerId = `ledger-${Date.now()}-${uid.slice(0, 6)}`;
+
+    transaction.set(schedRef, {
+      id: schedId,
+      clientId: uid,
+      trainerId,
+      date,
+      time,
+      type: type || 'PT Session',
+      duration: Number(duration) || 60,
+      notes: notes || '',
+      status: 'pending',
+      creditDeducted: true,
+      createdAt: now,
+    });
+
+    transaction.update(clientRef, { creditBalance: newBalance });
+
+    transaction.set(db.doc(`creditLedger/${ledgerId}`), {
+      id: ledgerId,
+      clientId: uid,
+      trainerId,
+      amount: -1,
+      balance_after: newBalance,
+      type: 'booking',
+      credit_type: 'session',
+      expires_at: null,
+      schedule_id: schedId,
+      note: `Booking: ${type || 'PT Session'} on ${date} at ${time}`,
+      created_at: now,
+      created_by: uid,
+    });
+  });
+
+  return { newBalance, scheduleId: schedId };
+});
+
+// ─── Cancel Session → refund credit per policy (server-side enforcement) ───
+exports.cancelSession = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new HttpsError('unauthenticated', 'Authentication required');
+  const uid = context.auth.uid;
+  const { scheduleId } = data || {};
+
+  if (!scheduleId) throw new HttpsError('invalid-argument', 'Missing scheduleId');
+
+  const schedSnap = await db.doc(`schedule/${scheduleId}`).get();
+  if (!schedSnap.exists) throw new HttpsError('not-found', 'Session not found');
+
+  const sched = schedSnap.data();
+  const isCoach = uid === sched.trainerId;
+  const isClient = uid === sched.clientId;
+
+  if (!isCoach && !isClient) {
+    throw new HttpsError('permission-denied', 'Not authorized to cancel this session');
+  }
+  if (!['pending', 'confirmed'].includes(sched.status)) {
+    throw new HttpsError('failed-precondition', `Session cannot be cancelled (status: ${sched.status})`);
+  }
+
+  const clientRef = db.doc(`users/${sched.clientId}`);
+  let refunded = false;
+  let newBalance = null;
+
+  await db.runTransaction(async (transaction) => {
+    const clientSnap = await transaction.get(clientRef);
+    if (!clientSnap.exists) throw new HttpsError('not-found', 'Client not found');
+
+    const clientData = clientSnap.data();
+    const currentBalance = clientData.creditBalance ?? 0;
+    let ledgerType = null;
+    let ledgerNote = '';
+    const clientUpdates = {};
+
+    if (isCoach) {
+      if (sched.creditDeducted) {
+        refunded = true;
+        newBalance = currentBalance + 1;
+        clientUpdates.creditBalance = newBalance;
+        ledgerType = 'cancellation_refund';
+        ledgerNote = 'Coach cancelled — credit refunded';
+      }
+    } else {
+      const moreThan24h = isMoreThan24HoursAway(sched.date, sched.time);
+      const londonMonth = getLondonMonth();
+      const storedMonth = clientData.rescheduleMonth || '';
+      const count = storedMonth === londonMonth ? (clientData.rescheduleCount || 0) : 0;
+      const withinLimit = count < 2;
+
+      if (sched.creditDeducted && moreThan24h && withinLimit) {
+        refunded = true;
+        newBalance = currentBalance + 1;
+        clientUpdates.creditBalance = newBalance;
+        clientUpdates.rescheduleCount = count + 1;
+        clientUpdates.rescheduleMonth = londonMonth;
+        ledgerType = 'cancellation_refund';
+        ledgerNote = 'Client cancelled >24hr in advance — credit refunded';
+      } else if (sched.creditDeducted) {
+        refunded = false;
+        newBalance = currentBalance;
+        if (!moreThan24h) {
+          ledgerType = 'no_show_forfeit';
+          ledgerNote = 'Late cancellation (<24hr) — credit forfeited';
+        } else {
+          ledgerType = 'reschedule_forfeit';
+          ledgerNote = 'Reschedule limit reached — credit forfeited';
+        }
+      }
+    }
+
+    transaction.update(db.doc(`schedule/${scheduleId}`), { status: 'cancelled' });
+
+    if (Object.keys(clientUpdates).length > 0) {
+      transaction.update(clientRef, clientUpdates);
+    }
+
+    if (ledgerType) {
+      const now = new Date().toISOString();
+      const ledgerId = `ledger-${Date.now()}-${uid.slice(0, 6)}`;
+      transaction.set(db.doc(`creditLedger/${ledgerId}`), {
+        id: ledgerId,
+        clientId: sched.clientId,
+        trainerId: sched.trainerId,
+        amount: refunded ? 1 : 0,
+        balance_after: refunded ? newBalance : currentBalance,
+        type: ledgerType,
+        credit_type: 'session',
+        expires_at: null,
+        schedule_id: scheduleId,
+        note: ledgerNote,
+        created_at: now,
+        created_by: uid,
+      });
+    }
+  });
+
+  return { refunded, newBalance };
+});
+
+// ─── Adjust Client Credits → trainer manually adds/removes credits ───
+exports.adjustClientCredits = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new HttpsError('unauthenticated', 'Authentication required');
+  const uid = context.auth.uid;
+  const { clientId, amount, note } = data || {};
+
+  if (!clientId || amount === undefined || amount === null) {
+    throw new HttpsError('invalid-argument', 'Missing clientId or amount');
+  }
+
+  const callerSnap = await db.doc(`users/${uid}`).get();
+  if (!callerSnap.exists || callerSnap.data().role !== 'trainer') {
+    throw new HttpsError('permission-denied', 'Only trainers can adjust credits');
+  }
+
+  const clientRef = db.doc(`users/${clientId}`);
+  let newBalance;
+
+  await db.runTransaction(async (transaction) => {
+    const clientSnap = await transaction.get(clientRef);
+    if (!clientSnap.exists) throw new HttpsError('not-found', 'Client not found');
+
+    const clientData = clientSnap.data();
+    if (clientData.trainerId !== uid) {
+      throw new HttpsError('permission-denied', 'This client is not assigned to you');
+    }
+
+    const current = clientData.creditBalance ?? 0;
+    newBalance = Math.max(0, current + Number(amount));
+
+    transaction.update(clientRef, { creditBalance: newBalance });
+
+    const now = new Date().toISOString();
+    const ledgerId = `ledger-${Date.now()}-${uid.slice(0, 6)}`;
+    const amt = Number(amount);
+    transaction.set(db.doc(`creditLedger/${ledgerId}`), {
+      id: ledgerId,
+      clientId,
+      trainerId: uid,
+      amount: amt,
+      balance_after: newBalance,
+      type: 'coach_adjustment',
+      credit_type: 'session',
+      expires_at: null,
+      schedule_id: null,
+      note: note || `Coach adjusted credits by ${amt > 0 ? '+' : ''}${amt}`,
+      created_at: now,
+      created_by: uid,
+    });
+  });
+
+  return { newBalance };
+});
 
 // ─── Sessions running low → Push to client when remaining drops to ≤ 3, push to trainer when ≤ 2 ───
 exports.onSessionsLow = functions.firestore

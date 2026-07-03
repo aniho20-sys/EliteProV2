@@ -21,7 +21,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, incrementSessionOffset, sendMessage } = useApp();
+  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, incrementSessionOffset, sendMessage, getCreditBalance, bookSessionWithCredit, cancelSessionWithCredit } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const isTrainer = currentUser.role === 'trainer';
@@ -33,8 +33,9 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // { id, isBlocked }
   const [deleting, setDeleting] = useState(false);
-  const [lateCancelModal, setLateCancelModal] = useState(null); // session object
+  const [lateCancelModal, setLateCancelModal] = useState(null); // session object (legacy sessions)
   const [cancelingLate, setCancelingLate] = useState(false);
+  const [cancelConfirmModal, setCancelConfirmModal] = useState(null); // { session, refundable, overRescheduleLimit, within24 }
   const [bookMode, setBookMode] = useState('session'); // 'session' | 'block'
   const [form, setForm] = useState({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
   const [blockTimes, setBlockTimes] = useState(new Set());
@@ -51,6 +52,9 @@ export default function SchedulePage() {
     localStorage.setItem('elitepro_wh_banner_dismissed', '1');
     setBannerDismissed(true);
   };
+
+  // Client's current credit balance (null = not set up, use legacy session quota)
+  const creditBalance = isTrainer ? null : getCreditBalance(currentUser.id);
 
   // For client: find their trainer
   const trainerId = isTrainer ? currentUser.id : currentUser.trainerId;
@@ -84,9 +88,66 @@ export default function SchedulePage() {
     return diffHours >= 0 && diffHours < 24;
   };
 
+  const getLondonMonth = () => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/London', year: 'numeric', month: '2-digit',
+    }).formatToParts(new Date());
+    const year = parts.find(p => p.type === 'year').value;
+    const month = parts.find(p => p.type === 'month').value;
+    return `${year}-${month}`;
+  };
+
   const handleClientCancel = (session) => {
-    if (isWithin24Hours(session.date, session.time)) {
-      setLateCancelModal(session);
+    if (session.creditDeducted) {
+      // New credit system path: show appropriate confirmation modal
+      const within24 = isWithin24Hours(session.date, session.time);
+      const londonMonth = getLondonMonth();
+      const count = currentUser?.rescheduleMonth === londonMonth ? (currentUser?.rescheduleCount || 0) : 0;
+      const overLimit = count >= 2;
+      setCancelConfirmModal({
+        session,
+        refundable: !within24 && !overLimit,
+        overRescheduleLimit: overLimit && !within24,
+        within24,
+      });
+    } else {
+      // Legacy path: check 24hr window
+      if (isWithin24Hours(session.date, session.time)) {
+        setLateCancelModal(session);
+      } else {
+        updateStatus(session.id, 'cancelled');
+      }
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!cancelConfirmModal || cancelingLate) return;
+    setCancelingLate(true);
+    try {
+      const result = await cancelSessionWithCredit(cancelConfirmModal.session.id);
+      const msg = result.refunded
+        ? 'Session cancelled — 1 credit refunded.'
+        : 'Session cancelled — credit not refunded.';
+      toast(msg, result.refunded ? 'success' : 'info');
+      setCancelConfirmModal(null);
+    } catch (err) {
+      toast(err?.message || 'Failed to cancel session', 'error');
+    } finally {
+      setCancelingLate(false);
+    }
+  };
+
+  const handleTrainerCancel = async (session) => {
+    if (session.creditDeducted) {
+      try {
+        setUpdatingStatus(session.id);
+        const result = await cancelSessionWithCredit(session.id);
+        toast('Session cancelled' + (result.refunded ? ' — credit refunded to client' : ''));
+      } catch (err) {
+        toast(err?.message || 'Failed to cancel session', 'error');
+      } finally {
+        setUpdatingStatus(null);
+      }
     } else {
       updateStatus(session.id, 'cancelled');
     }
@@ -180,6 +241,35 @@ export default function SchedulePage() {
       return;
     }
 
+    // Client booking via credit system
+    if (!isTrainer && creditBalance !== null) {
+      if (creditBalance <= 0) {
+        toast('No credits remaining. Contact your coach.', 'error');
+        return;
+      }
+      setSaving(true);
+      try {
+        await bookSessionWithCredit({
+          date: form.date,
+          time: form.time,
+          duration: Number(form.duration) || 60,
+          type: form.type || 'PT Session',
+          trainerId: currentUser.trainerId,
+          notes: form.notes || '',
+        });
+        setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
+        setShowAdd(false);
+        setBookMode('session');
+        toast('Session booked — 1 credit deducted');
+      } catch (err) {
+        toast(err?.message || 'Booking failed', 'error');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Legacy path: trainer booking OR client without credits set up
     const targetClientId = isTrainer ? form.clientId : currentUser.id;
     const { remaining } = getSessionStats(targetClientId);
     if (remaining !== null && remaining <= 0) {
@@ -265,13 +355,15 @@ export default function SchedulePage() {
     }
 
     let deducted = false;
-    try {
-      await incrementSessionOffset(clientId);
-      deducted = true;
-    } catch (err) {
-      const errMsg = err?.code || err?.message || String(err) || 'unknown error';
-      console.error('[incrementSessionOffset] failed:', errMsg, 'clientId:', clientId);
-      toast(`堂數未能自動扣減: ${errMsg}`, 'error');
+    if (!recapSession.creditDeducted) {
+      try {
+        await incrementSessionOffset(clientId);
+        deducted = true;
+      } catch (err) {
+        const errMsg = err?.code || err?.message || String(err) || 'unknown error';
+        console.error('[incrementSessionOffset] failed:', errMsg, 'clientId:', clientId);
+        toast(`堂數未能自動扣減: ${errMsg}`, 'error');
+      }
     }
 
     if (recapSend && recapNote.trim()) {
@@ -281,7 +373,9 @@ export default function SchedulePage() {
       } catch { /* non-critical */ }
     }
 
-    if (deducted) {
+    if (recapSession.creditDeducted) {
+      toast('Session completed');
+    } else if (deducted) {
       const newUsed = prevUsed + 1;
       const countMsg = total !== null
         ? ` · 剩餘 ${Math.max(0, total - newUsed)} 堂（${newUsed}/${total}）`
@@ -425,7 +519,7 @@ export default function SchedulePage() {
                     {isTrainer && s.status === 'pending' && (
                       <>
                         <button className="btn-icon" aria-label="Confirm session" onClick={() => updateStatus(s.id, 'confirmed')} title="Confirm" disabled={updatingStatus === s.id}><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                        <button className="btn-icon" aria-label="Cancel session" onClick={() => updateStatus(s.id, 'cancelled')} title="Cancel" disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                        <button className="btn-icon" aria-label="Cancel session" onClick={() => handleTrainerCancel(s)} title="Cancel" disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger)' }} /></button>
                       </>
                     )}
                     {isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
@@ -478,6 +572,44 @@ export default function SchedulePage() {
               <button className="btn btn-outline" onClick={() => setLateCancelModal(null)} disabled={cancelingLate}>Go Back</button>
               <button className="btn btn-danger" onClick={handleLateCancelConfirm} disabled={cancelingLate}>
                 {cancelingLate ? 'Cancelling…' : 'Cancel Anyway'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelConfirmModal && (
+        <div className="modal-overlay" onClick={() => !cancelingLate && setCancelConfirmModal(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 22 }}>{cancelConfirmModal.refundable ? '📅' : '⚠️'}</span>
+              <h3 className="modal-title" style={{ margin: 0 }}>Cancel Session</h3>
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: '0.9rem' }}>
+              <div><strong>{cancelConfirmModal.session.date}</strong> at <strong>{cancelConfirmModal.session.time}</strong></div>
+              <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>{cancelConfirmModal.session.type}</div>
+            </div>
+            {cancelConfirmModal.refundable ? (
+              <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+                Cancel this session? Your credit will be refunded.
+              </p>
+            ) : cancelConfirmModal.within24 ? (
+              <p className="text-sm" style={{ color: 'var(--warning)', fontWeight: 600, marginBottom: 16 }}>
+                Cancelling within 24 hours — this credit will not be refunded. Continue?
+              </p>
+            ) : cancelConfirmModal.overRescheduleLimit ? (
+              <p className="text-sm" style={{ color: 'var(--warning)', fontWeight: 600, marginBottom: 16 }}>
+                You&apos;ve used your 2 free reschedules this month. Further cancellations will use a credit.
+              </p>
+            ) : (
+              <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+                This credit will not be refunded. Continue?
+              </p>
+            )}
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setCancelConfirmModal(null)} disabled={cancelingLate}>Go Back</button>
+              <button className="btn btn-danger" onClick={handleCancelConfirm} disabled={cancelingLate}>
+                {cancelingLate ? 'Cancelling…' : 'Cancel Session'}
               </button>
             </div>
           </div>

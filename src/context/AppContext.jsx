@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { db, auth } from '../firebase';
+import { db, auth, cloudFunctions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, writeBatch, getDocs, query, where, or, orderBy, runTransaction,
@@ -662,6 +663,30 @@ export function AppProvider({ children }) {
     await deleteDoc(doc(db, 'templates', templateId));
   };
 
+  // ========== Credits ==========
+  const getCreditBalance = (clientId) => {
+    const client = users.find(u => u.id === clientId);
+    return client?.creditBalance ?? null; // null = not set up yet
+  };
+
+  const bookSessionWithCredit = async (formData) => {
+    const fn = httpsCallable(cloudFunctions, 'bookSession');
+    const result = await fn(formData);
+    return result.data; // { newBalance, scheduleId }
+  };
+
+  const cancelSessionWithCredit = async (scheduleId) => {
+    const fn = httpsCallable(cloudFunctions, 'cancelSession');
+    const result = await fn({ scheduleId });
+    return result.data; // { refunded, newBalance }
+  };
+
+  const adjustCredits = async (clientId, amount, note) => {
+    const fn = httpsCallable(cloudFunctions, 'adjustClientCredits');
+    const result = await fn({ clientId, amount, note });
+    return result.data; // { newBalance }
+  };
+
   // ========== Badges (milestones/utils extracted to ./badgeUtils.js) ==========
   const checkAndAwardBadges = async (clientId) => {
     const client = users.find(u => u.id === clientId);
@@ -815,6 +840,7 @@ export function AppProvider({ children }) {
     getStudios, addStudio, updateStudio,
     getAvailableSlots, openStudioSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots,
     submitGymApplication, getMyGymApplication, getGymApplications, reviewGymApplication,
+    getCreditBalance, bookSessionWithCredit, cancelSessionWithCredit, adjustCredits,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -108,7 +108,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, getCreditBalance, adjustCredits } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -151,6 +151,10 @@ export default function ClientDetailPage() {
   const [editLogExSearch, setEditLogExSearch] = useState('');
   const [intakeForm, setIntakeForm] = useState(undefined); // undefined = not loaded yet
   const [showReport, setShowReport] = useState(false);
+  const [adjustCreditsOpen, setAdjustCreditsOpen] = useState(false);
+  const [creditAdjustAmount, setCreditAdjustAmount] = useState('');
+  const [creditAdjustNote, setCreditAdjustNote] = useState('');
+  const [savingCredit, setSavingCredit] = useState(false);
 
   useEffect(() => {
     if (tab !== 'intake') return;
@@ -213,6 +217,7 @@ export default function ClientDetailPage() {
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(clientId);
   const sessColor = getSessionColor(sessRemaining);
+  const creditBalance = getCreditBalance(clientId);
 
   const handleSaveSessions = async () => {
     setSavingSessions(true);
@@ -243,6 +248,23 @@ export default function ClientDetailPage() {
       toast('Failed to update sessions', 'error');
     } finally {
       setSavingTopUp(false);
+    }
+  };
+
+  const handleAdjustCredits = async () => {
+    const amt = Number(creditAdjustAmount);
+    if (!amt || amt === 0) return;
+    setSavingCredit(true);
+    try {
+      await adjustCredits(clientId, amt, creditAdjustNote.trim() || undefined);
+      setAdjustCreditsOpen(false);
+      setCreditAdjustAmount('');
+      setCreditAdjustNote('');
+      toast(`Credits ${amt > 0 ? 'added' : 'deducted'}: ${Math.abs(amt)}`);
+    } catch (err) {
+      toast(err?.message || 'Failed to adjust credits', 'error');
+    } finally {
+      setSavingCredit(false);
     }
   };
 
@@ -482,6 +504,34 @@ export default function ClientDetailPage() {
                 </>
               ) : (
                 <p className="text-sm text-muted">Not set — click &quot;Set Total&quot; to configure</p>
+              )}
+            </div>
+
+            {/* Credits */}
+            <div className="mt-16">
+              <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
+                <span className="text-sm fw-bold">Credits</span>
+                <button className="btn btn-primary btn-sm" onClick={() => { setCreditAdjustAmount(''); setCreditAdjustNote(''); setAdjustCreditsOpen(true); }}>
+                  Adjust Credits
+                </button>
+              </div>
+              {creditBalance !== null ? (
+                <div>
+                  <div className="flex-between mb-4">
+                    <span className="text-sm text-muted">Balance:</span>
+                    <span style={{ fontWeight: 700, color: creditBalance === 0 ? 'var(--danger)' : creditBalance <= 3 ? 'var(--warning)' : 'var(--accent)' }}>
+                      {creditBalance} remaining
+                    </span>
+                  </div>
+                  {(() => {
+                    const londonParts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+                    const londonMonth = `${londonParts.find(p => p.type === 'year').value}-${londonParts.find(p => p.type === 'month').value}`;
+                    const count = client?.rescheduleMonth === londonMonth ? (client?.rescheduleCount || 0) : 0;
+                    return <p className="text-sm text-muted">{count} reschedule{count !== 1 ? 's' : ''} used this month</p>;
+                  })()}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">Not set up — click &quot;Adjust Credits&quot; to add credits</p>
               )}
             </div>
 
@@ -925,6 +975,61 @@ export default function ClientDetailPage() {
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => { setEditingLogId(null); setEditLogExSearch(''); }}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveEditLog} disabled={savingEditLog}>{savingEditLog ? 'Saving…' : 'Save Changes'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adjustCreditsOpen && (
+        <div className="modal-overlay" onClick={() => { setAdjustCreditsOpen(false); setCreditAdjustAmount(''); setCreditAdjustNote(''); }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <h3 className="modal-title">Adjust Credits</h3>
+            <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
+              Current balance: <strong style={{ color: creditBalance === null ? 'var(--text-muted)' : creditBalance <= 3 ? 'var(--warning)' : 'var(--accent)' }}>
+                {creditBalance ?? 0} credits
+              </strong>
+            </p>
+            <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
+              {[5, 10, 20].map(n => (
+                <button key={n} className={`btn btn-sm ${creditAdjustAmount === String(n) ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCreditAdjustAmount(String(n))}>+{n}</button>
+              ))}
+              {[-1, -5].map(n => (
+                <button key={n} className={`btn btn-sm ${creditAdjustAmount === String(n) ? 'btn-danger' : 'btn-outline'}`} onClick={() => setCreditAdjustAmount(String(n))}>{n}</button>
+              ))}
+            </div>
+            <div className="flex gap-8 mb-12" style={{ alignItems: 'center' }}>
+              <span className="text-sm text-muted">Custom:</span>
+              <input
+                className="form-input"
+                style={{ width: 80, padding: '4px 8px' }}
+                type="number"
+                inputMode="numeric"
+                placeholder="0"
+                value={creditAdjustAmount}
+                onChange={e => setCreditAdjustAmount(e.target.value)}
+              />
+              <span className="text-sm text-muted">credits</span>
+            </div>
+            <div className="form-group mb-12">
+              <label className="form-label">Note <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+              <input
+                className="form-input"
+                placeholder="e.g. 10-session pack"
+                value={creditAdjustNote}
+                onChange={e => setCreditAdjustNote(e.target.value)}
+                maxLength={100}
+              />
+            </div>
+            {Number(creditAdjustAmount) !== 0 && (
+              <p className="text-sm mb-12" style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                New balance: {Math.max(0, (creditBalance ?? 0) + Number(creditAdjustAmount))} credits
+              </p>
+            )}
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => { setAdjustCreditsOpen(false); setCreditAdjustAmount(''); setCreditAdjustNote(''); }} disabled={savingCredit}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleAdjustCredits} disabled={savingCredit || !Number(creditAdjustAmount) || Number(creditAdjustAmount) === 0}>
+                {savingCredit ? 'Saving…' : 'Confirm'}
+              </button>
             </div>
           </div>
         </div>
