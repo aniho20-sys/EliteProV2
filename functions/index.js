@@ -246,17 +246,39 @@ function getLondonMonth() {
 }
 
 // ─── Book Session → create schedule doc + deduct credit atomically ───
+// Supports both client self-booking (clientId omitted) and trainer booking on
+// behalf of a client (clientId passed explicitly). Server verifies authorization.
 exports.bookSession = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new HttpsError('unauthenticated', 'Authentication required');
   const uid = context.auth.uid;
-  const { date, time, type, trainerId, duration, notes } = data || {};
+  const { date, time, type, trainerId, duration, notes, clientId: requestedClientId } = data || {};
 
   if (!date || !time || !trainerId) {
     throw new HttpsError('invalid-argument', 'Missing required fields: date, time, trainerId');
   }
 
-  const clientRef = db.doc(`users/${uid}`);
-  const schedId = `sched-${Date.now()}-${uid.slice(0, 6)}`;
+  // Determine clientId and verify authorization
+  let clientId;
+  if (requestedClientId && requestedClientId !== uid) {
+    // Trainer booking on behalf of a client — verify caller is the trainer
+    if (trainerId !== uid) {
+      throw new HttpsError('invalid-argument', 'trainerId must match the calling trainer');
+    }
+    const callerSnap = await db.doc(`users/${uid}`).get();
+    if (!callerSnap.exists || callerSnap.data().role !== 'trainer') {
+      throw new HttpsError('permission-denied', 'Only trainers can book on behalf of a client');
+    }
+    const clientDocSnap = await db.doc(`users/${requestedClientId}`).get();
+    if (!clientDocSnap.exists || clientDocSnap.data().trainerId !== uid) {
+      throw new HttpsError('permission-denied', 'This client is not assigned to you');
+    }
+    clientId = requestedClientId;
+  } else {
+    clientId = uid;
+  }
+
+  const clientRef = db.doc(`users/${clientId}`);
+  const schedId = `sched-${Date.now()}-${clientId.slice(0, 6)}`;
   const schedRef = db.doc(`schedule/${schedId}`);
 
   let newBalance;
@@ -271,11 +293,11 @@ exports.bookSession = functions.https.onCall(async (data, context) => {
 
     newBalance = currentBalance - 1;
     const now = new Date().toISOString();
-    const ledgerId = `ledger-${Date.now()}-${uid.slice(0, 6)}`;
+    const ledgerId = `ledger-${Date.now()}-${clientId.slice(0, 6)}`;
 
     transaction.set(schedRef, {
       id: schedId,
-      clientId: uid,
+      clientId,
       trainerId,
       date,
       time,
@@ -291,7 +313,7 @@ exports.bookSession = functions.https.onCall(async (data, context) => {
 
     transaction.set(db.doc(`creditLedger/${ledgerId}`), {
       id: ledgerId,
-      clientId: uid,
+      clientId,
       trainerId,
       amount: -1,
       balance_after: newBalance,

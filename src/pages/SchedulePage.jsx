@@ -269,7 +269,40 @@ export default function SchedulePage() {
       return;
     }
 
-    // Legacy path: trainer booking OR client without credits set up
+    // Trainer booking via credit system (when the target client has credits set up)
+    if (isTrainer && form.clientId) {
+      const clientCreditBalance = getCreditBalance(form.clientId);
+      if (clientCreditBalance !== null) {
+        if (clientCreditBalance <= 0) {
+          toast('This client has no credits remaining. Adjust their credits first.', 'error');
+          return;
+        }
+        setSaving(true);
+        try {
+          await bookSessionWithCredit({
+            date: form.date,
+            time: form.time,
+            duration: Number(form.duration) || 60,
+            type: form.type || 'PT Session',
+            trainerId: currentUser.id,
+            clientId: form.clientId,
+            notes: form.notes || '',
+          });
+          setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
+          setShowAdd(false);
+          setBookMode('session');
+          const clientName = getClient(form.clientId)?.name?.split(' ')[0] || 'client';
+          toast(`Session booked — 1 credit deducted from ${clientName}`);
+        } catch (err) {
+          toast(err?.message || 'Booking failed', 'error');
+        } finally {
+          setSaving(false);
+        }
+        return;
+      }
+    }
+
+    // Legacy path: client without credits OR trainer booking client without credits
     const targetClientId = isTrainer ? form.clientId : currentUser.id;
     const { remaining } = getSessionStats(targetClientId);
     if (remaining !== null && remaining <= 0) {
