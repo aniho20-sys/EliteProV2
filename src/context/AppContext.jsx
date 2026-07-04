@@ -58,6 +58,7 @@ export function AppProvider({ children }) {
   const loadedRef = useRef(new Set());
   const [listenerEpoch, setListenerEpoch] = useState(0);
   const retryCountRef = useRef(0);
+  const sessionMigratedRef = useRef(new Set());
 
   const markLoaded = useCallback((name) => {
     loadedRef.current.add(name);
@@ -301,6 +302,27 @@ export function AppProvider({ children }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (profile) setCurrentUser(profile);
   }, [users, firebaseUser]);
+
+  // One-time silent migration: convert totalSessions → creditBalance for trainer's clients
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'trainer') return;
+    const toMigrate = users.filter(u =>
+      u.role === 'client' &&
+      u.trainerId === currentUser.id &&
+      u.totalSessions != null &&
+      u.creditBalance == null &&
+      !sessionMigratedRef.current.has(u.id)
+    );
+    toMigrate.forEach(async (client) => {
+      sessionMigratedRef.current.add(client.id);
+      const remaining = Math.max(0, client.totalSessions - (client.sessionOffset || 0));
+      try {
+        await updateDoc(doc(db, 'users', client.id), { creditBalance: remaining });
+      } catch {
+        sessionMigratedRef.current.delete(client.id);
+      }
+    });
+  }, [users, currentUser]);
 
 // ========== Auth ==========
 

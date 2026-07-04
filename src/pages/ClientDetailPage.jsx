@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer, FileText } from 'lucide-react';
-import { getSessionColor } from '../utils/sessionUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
@@ -108,7 +107,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, getCreditBalance, adjustCredits } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSchedule, getIntakeForm, getCreditBalance, adjustCredits } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -126,13 +125,6 @@ export default function ClientDetailPage() {
   const [savingStat, setSavingStat] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [editingSessions, setEditingSessions] = useState(false);
-  const [sessionsInput, setSessionsInput] = useState('');
-  const [offsetInput, setOffsetInput] = useState('');
-  const [savingSessions, setSavingSessions] = useState(false);
-  const [topUpOpen, setTopUpOpen] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState('');
-  const [savingTopUp, setSavingTopUp] = useState(false);
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
   const [savingNoteId, setSavingNoteId] = useState(null);
@@ -215,41 +207,8 @@ export default function ClientDetailPage() {
     }
   };
 
-  const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(clientId);
-  const sessColor = getSessionColor(sessRemaining);
   const creditBalance = getCreditBalance(clientId);
 
-  const handleSaveSessions = async () => {
-    setSavingSessions(true);
-    try {
-      await updateClient(clientId, {
-        totalSessions: Number(sessionsInput) || 0,
-        sessionOffset: Number(offsetInput) || 0,
-      });
-      setEditingSessions(false);
-      toast('Sessions updated');
-    } catch {
-      toast('Failed to update sessions', 'error');
-    } finally {
-      setSavingSessions(false);
-    }
-  };
-
-  const handleTopUp = async () => {
-    const qty = Number(topUpAmount);
-    if (!qty || qty <= 0) return;
-    setSavingTopUp(true);
-    try {
-      await updateClient(clientId, { totalSessions: (client?.totalSessions ?? 0) + qty });
-      setTopUpOpen(false);
-      setTopUpAmount('');
-      toast(`Added ${qty} sessions`);
-    } catch {
-      toast('Failed to update sessions', 'error');
-    } finally {
-      setSavingTopUp(false);
-    }
-  };
 
   const handleAdjustCredits = async () => {
     const amt = Number(creditAdjustAmount);
@@ -458,56 +417,7 @@ export default function ClientDetailPage() {
             <p className="text-sm mt-8">Completed Workouts: <strong>{logs.filter(l => l.completed).length}</strong></p>
             <p className="text-sm mt-8">Measurements: <strong>{stats.length} records</strong></p>
             <p className="text-sm mt-8">Member since: <strong>{client.joinDate}</strong></p>
-            <div className="mt-16">
-              <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
-                <span className="text-sm fw-bold">Sessions</span>
-                {!editingSessions && (
-                  <div className="flex gap-8">
-                    {sessTotal !== null && (
-                      <button className="btn btn-primary btn-sm" onClick={() => { setTopUpAmount(''); setTopUpOpen(true); }}>
-                        + Top Up
-                      </button>
-                    )}
-                    <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setOffsetInput(client?.sessionOffset ?? ''); setEditingSessions(true); }}>
-                      {sessTotal === null ? 'Set Total' : 'Edit'}
-                    </button>
-                  </div>
-                )}
-              </div>
-              {editingSessions ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>Total sessions:</span>
-                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" inputMode="numeric" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
-                    <span className="text-sm text-muted">sessions</span>
-                  </div>
-                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>Sessions used:</span>
-                    <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" inputMode="numeric" value={offsetInput} onChange={e => setOffsetInput(e.target.value)} />
-                    <span className="text-sm text-muted">sessions</span>
-                  </div>
-                  <div className="flex gap-8">
-                    <button className="btn btn-primary btn-sm" onClick={handleSaveSessions} disabled={savingSessions}>{savingSessions ? 'Saving…' : 'Save'}</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => setEditingSessions(false)} disabled={savingSessions}>Cancel</button>
-                  </div>
-                </div>
-              ) : sessTotal !== null ? (
-                <>
-                  <div className="flex-between mb-6">
-                    <span className="text-sm text-muted">{sessUsed} used</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: sessColor }}>{sessUsed} / {sessTotal}</span>
-                  </div>
-                  <div className="session-progress-bar">
-                    <div className="session-progress-fill" style={{ width: `${sessTotal > 0 ? Math.min(100, Math.round((sessUsed / sessTotal) * 100)) : 0}%`, background: sessColor }} />
-                  </div>
-                  <div className="text-sm mt-6" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</div>
-                </>
-              ) : (
-                <p className="text-sm text-muted">Not set — click &quot;Set Total&quot; to configure</p>
-              )}
-            </div>
-
-            {/* Credits */}
+            {/* Session Credits */}
             <div className="mt-16">
               <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
                 <span className="text-sm fw-bold">Session Credits</span>
@@ -828,44 +738,6 @@ export default function ClientDetailPage() {
         </div>
       )}
 
-      {topUpOpen && (
-        <div className="modal-overlay" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
-            <h3 className="modal-title">+ Top Up Sessions</h3>
-            <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
-              Currently: <strong>{sessUsed} used</strong> / <strong>{sessTotal} total</strong> — <span style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</span>
-            </p>
-            <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
-              {[5, 10, 20].map(n => (
-                <button key={n} className={`btn btn-sm ${topUpAmount === String(n) ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpAmount(String(n))}>+{n}</button>
-              ))}
-            </div>
-            <div className="flex gap-8 mb-12" style={{ alignItems: 'center' }}>
-              <span className="text-sm text-muted">Custom:</span>
-              <input
-                className="form-input"
-                style={{ width: 72, padding: '4px 8px' }}
-                type="number" min="1" inputMode="numeric"
-                placeholder="0"
-                value={topUpAmount}
-                onChange={e => setTopUpAmount(e.target.value)}
-              />
-              <span className="text-sm text-muted">sessions</span>
-            </div>
-            {Number(topUpAmount) > 0 && (
-              <p className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>
-                After top-up: {(sessRemaining ?? 0) + Number(topUpAmount)} remaining
-              </p>
-            )}
-            <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }} disabled={savingTopUp}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleTopUp} disabled={savingTopUp || !Number(topUpAmount) || Number(topUpAmount) <= 0}>
-                {savingTopUp ? 'Saving…' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showRemoveConfirm && (
         <div className="modal-overlay" onClick={() => setShowRemoveConfirm(false)}>

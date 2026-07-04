@@ -8,7 +8,7 @@ import EmptyState from '../components/EmptyState';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getCreditBalance } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getCreditBalance } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
@@ -24,7 +24,6 @@ export default function ClientDashboard() {
 
   const latestStat = stats[stats.length - 1];
 
-  const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
   const creditBalance = getCreditBalance(currentUser.id);
 
   const totalWorkouts = logs.length;
@@ -131,31 +130,6 @@ export default function ClientDashboard() {
         </div>
       )}
 
-      {sessTotal !== null && creditBalance === null && (
-        <div className="hero-card mb-16" style={sessRemaining <= 3 ? { background: 'var(--warning)' } : undefined}>
-          <div className="hero-card-inner">
-            <div className="flex-between mb-12" style={{ alignItems: 'baseline' }}>
-              <span className="hero-card-label" style={sessRemaining <= 3 ? { color: 'var(--warning)' } : undefined}>Your package</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
-                {sessRemaining}
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> session{sessRemaining === 1 ? '' : 's'} left</span>
-              </span>
-            </div>
-            <div className="session-progress-bar mb-12">
-              <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessRemaining <= 3 ? 'var(--warning)' : 'var(--brand-gradient)' }} />
-            </div>
-            {sessRemaining <= 3 && (
-              <p className="text-sm mb-12" style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                Running low — contact your trainer to top up
-              </p>
-            )}
-            <div className="flex-between" style={{ alignItems: 'center' }}>
-              <span className="text-sm text-muted">{sessUsed} of {sessTotal} sessions used</span>
-              <Link to="/schedule" className="btn btn-sm" style={{ background: 'var(--brand-gradient)', color: '#fff' }}>Book Session</Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="grid-2">
         <div className="card">
