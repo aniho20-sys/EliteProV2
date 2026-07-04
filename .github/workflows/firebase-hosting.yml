@@ -2,7 +2,9 @@ name: Deploy to Firebase
 
 on:
   push:
-    branches: ['claude/fitness-app-features-LbxtG']
+    branches:
+      - 'claude/fitness-app-features-LbxtG'
+      - 'claude/review-claude-progress-docs-UvHbs'
   workflow_dispatch:
 
 jobs:
