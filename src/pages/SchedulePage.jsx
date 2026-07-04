@@ -126,8 +126,8 @@ export default function SchedulePage() {
     try {
       const result = await cancelSessionWithCredit(cancelConfirmModal.session.id);
       const msg = result.refunded
-        ? 'Session cancelled — 1 credit refunded.'
-        : 'Session cancelled — credit not refunded.';
+        ? 'Session cancelled — 1 session credit refunded.'
+        : 'Session cancelled — session credit not refunded.';
       toast(msg, result.refunded ? 'success' : 'info');
       setCancelConfirmModal(null);
     } catch (err) {
@@ -142,7 +142,7 @@ export default function SchedulePage() {
       try {
         setUpdatingStatus(session.id);
         const result = await cancelSessionWithCredit(session.id);
-        toast('Session cancelled' + (result.refunded ? ' — credit refunded to client' : ''));
+        toast('Session cancelled' + (result.refunded ? ' — session credit refunded to client' : ''));
       } catch (err) {
         toast(err?.message || 'Failed to cancel session', 'error');
       } finally {
@@ -244,7 +244,7 @@ export default function SchedulePage() {
     // Client booking via credit system
     if (!isTrainer && creditBalance !== null) {
       if (creditBalance <= 0) {
-        toast('No credits remaining. Contact your coach.', 'error');
+        toast('No session credits remaining. Contact your coach.', 'error');
         return;
       }
       setSaving(true);
@@ -260,7 +260,7 @@ export default function SchedulePage() {
         setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
         setShowAdd(false);
         setBookMode('session');
-        toast('Session booked — 1 credit deducted');
+        toast('Session booked — 1 session credit deducted');
       } catch (err) {
         toast(err?.message || 'Booking failed', 'error');
       } finally {
@@ -274,7 +274,7 @@ export default function SchedulePage() {
       const clientCreditBalance = getCreditBalance(form.clientId);
       if (clientCreditBalance !== null) {
         if (clientCreditBalance <= 0) {
-          toast('This client has no credits remaining. Adjust their credits first.', 'error');
+          toast('This client has no session credits remaining. Adjust their session credits first.', 'error');
           return;
         }
         setSaving(true);
@@ -292,7 +292,7 @@ export default function SchedulePage() {
           setShowAdd(false);
           setBookMode('session');
           const clientName = getClient(form.clientId)?.name?.split(' ')[0] || 'client';
-          toast(`Session booked — 1 credit deducted from ${clientName}`);
+          toast(`Session booked — 1 session credit deducted from ${clientName}`);
         } catch (err) {
           toast(err?.message || 'Booking failed', 'error');
         } finally {
@@ -624,19 +624,19 @@ export default function SchedulePage() {
             </div>
             {cancelConfirmModal.refundable ? (
               <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-                Cancel this session? Your credit will be refunded.
+                Cancel this session? Your session credit will be refunded.
               </p>
             ) : cancelConfirmModal.within24 ? (
               <p className="text-sm" style={{ color: 'var(--warning)', fontWeight: 600, marginBottom: 16 }}>
-                Cancelling within 24 hours — this credit will not be refunded. Continue?
+                Cancelling within 24 hours — this session credit will not be refunded. Continue?
               </p>
             ) : cancelConfirmModal.overRescheduleLimit ? (
               <p className="text-sm" style={{ color: 'var(--warning)', fontWeight: 600, marginBottom: 16 }}>
-                You&apos;ve used your 2 free reschedules this month. Further cancellations will use a credit.
+                You&apos;ve used your 2 free reschedules this month. Further cancellations will use a session credit.
               </p>
             ) : (
               <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-                This credit will not be refunded. Continue?
+                This session credit will not be refunded. Continue?
               </p>
             )}
             <div className="modal-actions">

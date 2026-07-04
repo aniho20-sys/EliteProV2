@@ -105,20 +105,20 @@ export default function ClientDashboard() {
         }>
           <div className="hero-card-inner">
             <div className="flex-between mb-8" style={{ alignItems: 'baseline' }}>
-              <span className="hero-card-label">Credits</span>
+              <span className="hero-card-label">Session Credits</span>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
                 {creditBalance}
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> remaining</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> session{creditBalance === 1 ? '' : 's'} remaining</span>
               </span>
             </div>
             {creditBalance === 0 && (
               <p className="text-sm mb-12" style={{ color: 'var(--danger)', fontWeight: 600 }}>
-                No credits remaining. Contact your coach.
+                No session credits remaining. Contact your coach.
               </p>
             )}
             {creditBalance > 0 && creditBalance <= 3 && (
               <p className="text-sm mb-12" style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                Running low — contact your trainer to top up
+                Running low on session credits — contact your trainer to top up
               </p>
             )}
             {creditBalance > 0 && (

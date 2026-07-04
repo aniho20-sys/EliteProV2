@@ -260,7 +260,7 @@ export default function ClientDetailPage() {
       setAdjustCreditsOpen(false);
       setCreditAdjustAmount('');
       setCreditAdjustNote('');
-      toast(`Credits ${amt > 0 ? 'added' : 'deducted'}: ${Math.abs(amt)}`);
+      toast(`Session credits ${amt > 0 ? 'added' : 'deducted'}: ${Math.abs(amt)}`);
     } catch (err) {
       toast(err?.message || 'Failed to adjust credits', 'error');
     } finally {
@@ -510,9 +510,9 @@ export default function ClientDetailPage() {
             {/* Credits */}
             <div className="mt-16">
               <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
-                <span className="text-sm fw-bold">Credits</span>
+                <span className="text-sm fw-bold">Session Credits</span>
                 <button className="btn btn-primary btn-sm" onClick={() => { setCreditAdjustAmount(''); setCreditAdjustNote(''); setAdjustCreditsOpen(true); }}>
-                  Adjust Credits
+                  Adjust Session Credits
                 </button>
               </div>
               {creditBalance !== null ? (
@@ -520,7 +520,7 @@ export default function ClientDetailPage() {
                   <div className="flex-between mb-4">
                     <span className="text-sm text-muted">Balance:</span>
                     <span style={{ fontWeight: 700, color: creditBalance === 0 ? 'var(--danger)' : creditBalance <= 3 ? 'var(--warning)' : 'var(--accent)' }}>
-                      {creditBalance} remaining
+                      {creditBalance} session credit{creditBalance === 1 ? '' : 's'} remaining
                     </span>
                   </div>
                   {(() => {
@@ -531,7 +531,7 @@ export default function ClientDetailPage() {
                   })()}
                 </div>
               ) : (
-                <p className="text-sm text-muted">Not set up — click &quot;Adjust Credits&quot; to add credits</p>
+                <p className="text-sm text-muted">Not set up — click &quot;Adjust Session Credits&quot; to add session credits</p>
               )}
             </div>
 
@@ -983,10 +983,10 @@ export default function ClientDetailPage() {
       {adjustCreditsOpen && (
         <div className="modal-overlay" onClick={() => { setAdjustCreditsOpen(false); setCreditAdjustAmount(''); setCreditAdjustNote(''); }}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-            <h3 className="modal-title">Adjust Credits</h3>
+            <h3 className="modal-title">Adjust Session Credits</h3>
             <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
               Current balance: <strong style={{ color: creditBalance === null ? 'var(--text-muted)' : creditBalance <= 3 ? 'var(--warning)' : 'var(--accent)' }}>
-                {creditBalance ?? 0} credits
+                {creditBalance ?? 0} session credit{(creditBalance ?? 0) === 1 ? '' : 's'}
               </strong>
             </p>
             <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
@@ -1008,7 +1008,7 @@ export default function ClientDetailPage() {
                 value={creditAdjustAmount}
                 onChange={e => setCreditAdjustAmount(e.target.value)}
               />
-              <span className="text-sm text-muted">credits</span>
+              <span className="text-sm text-muted">session credits</span>
             </div>
             <div className="form-group mb-12">
               <label className="form-label">Note <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
@@ -1022,7 +1022,7 @@ export default function ClientDetailPage() {
             </div>
             {Number(creditAdjustAmount) !== 0 && (
               <p className="text-sm mb-12" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                New balance: {Math.max(0, (creditBalance ?? 0) + Number(creditAdjustAmount))} credits
+                New balance: {Math.max(0, (creditBalance ?? 0) + Number(creditAdjustAmount))} session credit{Math.max(0, (creditBalance ?? 0) + Number(creditAdjustAmount)) === 1 ? '' : 's'}
               </p>
             )}
             <div className="modal-actions">
