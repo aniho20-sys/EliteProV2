@@ -303,19 +303,24 @@ export function AppProvider({ children }) {
     if (profile) setCurrentUser(profile);
   }, [users, firebaseUser]);
 
-  // One-time silent migration: convert totalSessions → creditBalance for trainer's clients
+  // One-time silent migration: opt ALL trainer's clients into the credit system.
+  // Clients with a session quota (totalSessions) get remaining = totalSessions - sessionOffset.
+  // Clients without a quota (tracking only) get creditBalance = 0 so the trainer can add
+  // credits via "Adjust Session Credits" — this is intentional: without a known remaining
+  // count we can't guess the balance, so we surface it rather than hiding it in legacy mode.
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'trainer') return;
     const toMigrate = users.filter(u =>
       u.role === 'client' &&
       u.trainerId === currentUser.id &&
-      u.totalSessions != null &&
       u.creditBalance == null &&
       !sessionMigratedRef.current.has(u.id)
     );
     toMigrate.forEach(async (client) => {
       sessionMigratedRef.current.add(client.id);
-      const remaining = Math.max(0, client.totalSessions - (client.sessionOffset || 0));
+      const remaining = client.totalSessions != null
+        ? Math.max(0, client.totalSessions - (client.sessionOffset || 0))
+        : 0; // No quota set — start at 0; trainer adds credits via Adjust Session Credits
       try {
         await updateDoc(doc(db, 'users', client.id), { creditBalance: remaining });
       } catch {
