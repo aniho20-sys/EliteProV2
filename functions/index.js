@@ -485,7 +485,12 @@ exports.adjustClientCredits = functions.https.onCall(async (data, context) => {
   return { newBalance };
 });
 
-// ─── Sessions running low → Push to client when remaining drops to ≤ 3, push to trainer when ≤ 2 ───
+// Feature flag: set to true to enable credit-balance push notifications.
+// Default false so test/QA deployments don't spam real devices.
+// Flip to true in production once notifications are verified working end-to-end.
+const CREDIT_PUSH_NOTIFICATIONS_ENABLED = false;
+
+// ─── Sessions running low → Push to trainer when ≤ 3, push to client when ≤ 2 ───
 // Handles both the legacy sessionOffset system and the new creditBalance system.
 exports.onSessionsLow = functions.firestore
   .document('users/{userId}')
@@ -502,20 +507,24 @@ exports.onSessionsLow = functions.firestore
     const creditBefore = before.creditBalance;
     const creditAfter = after.creditBalance;
     if (creditBefore !== creditAfter && creditAfter != null) {
-      const trainerId = after.trainerId;
-      if (creditAfter <= 3 && (creditBefore == null || creditBefore > 3)) {
-        await sendPush(clientId, after.fcmTokens, {
-          title: '🔔 Session credits running low',
-          body: `You have ${creditAfter} session credit${creditAfter === 1 ? '' : 's'} remaining — contact your trainer to top up`,
-        }, { type: 'sessions_low_client', url: '/#/' });
-      }
-      if (creditAfter <= 2 && (creditBefore == null || creditBefore > 2) && trainerId) {
-        const trainerSnap = await db.doc(`users/${trainerId}`).get();
-        if (trainerSnap.exists) {
-          await sendPush(trainerId, trainerSnap.data().fcmTokens, {
-            title: '⚠️ Session credits running low',
-            body: `${clientName} has ${creditAfter} session credit${creditAfter === 1 ? '' : 's'} left — remind them to renew`,
-          }, { type: 'sessions_low', url: `/#/clients/${clientId}`, clientId });
+      if (CREDIT_PUSH_NOTIFICATIONS_ENABLED) {
+        const trainerId = after.trainerId;
+        // Notify client at ≤2 (urgent: almost out)
+        if (creditAfter <= 2 && (creditBefore == null || creditBefore > 2)) {
+          await sendPush(clientId, after.fcmTokens, {
+            title: '🔔 Session credits running low',
+            body: `You have ${creditAfter} session credit${creditAfter === 1 ? '' : 's'} remaining — contact your trainer to top up`,
+          }, { type: 'sessions_low_client', url: '/#/' });
+        }
+        // Notify trainer at ≤3 (early warning so they can reach out in time)
+        if (creditAfter <= 3 && (creditBefore == null || creditBefore > 3) && trainerId) {
+          const trainerSnap = await db.doc(`users/${trainerId}`).get();
+          if (trainerSnap.exists) {
+            await sendPush(trainerId, trainerSnap.data().fcmTokens, {
+              title: '⚠️ Session credits running low',
+              body: `${clientName} has ${creditAfter} session credit${creditAfter === 1 ? '' : 's'} left — remind them to renew`,
+            }, { type: 'sessions_low', url: `/#/clients/${clientId}`, clientId });
+          }
         }
       }
       return; // credit system handled; skip legacy path

@@ -474,7 +474,7 @@ export default function ClientDetailPage() {
           <VolumeChart logs={logs} />
         </div>
         <div className="card mt-16">
-          <h3 className="card-title mb-12">Session Dates</h3>
+          <h3 className="card-title mb-12">Session History</h3>
           {completedSessions.length === 0 ? (
             <p className="text-sm text-muted">No completed sessions yet.</p>
           ) : (
