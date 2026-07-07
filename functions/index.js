@@ -486,6 +486,7 @@ exports.adjustClientCredits = functions.https.onCall(async (data, context) => {
 });
 
 // ─── Sessions running low → Push to client when remaining drops to ≤ 3, push to trainer when ≤ 2 ───
+// Handles both the legacy sessionOffset system and the new creditBalance system.
 exports.onSessionsLow = functions.firestore
   .document('users/{userId}')
   .onUpdate(async (change) => {
@@ -493,6 +494,34 @@ exports.onSessionsLow = functions.firestore
     const after = change.after.data();
 
     if (!after || after.role !== 'client') return;
+
+    const clientId = change.after.id;
+    const clientName = after.name || 'A client';
+
+    // ── Credit balance system ──
+    const creditBefore = before.creditBalance;
+    const creditAfter = after.creditBalance;
+    if (creditBefore !== creditAfter && creditAfter != null) {
+      const trainerId = after.trainerId;
+      if (creditAfter <= 3 && (creditBefore == null || creditBefore > 3)) {
+        await sendPush(clientId, after.fcmTokens, {
+          title: '🔔 Session credits running low',
+          body: `You have ${creditAfter} session credit${creditAfter === 1 ? '' : 's'} remaining — contact your trainer to top up`,
+        }, { type: 'sessions_low_client', url: '/#/' });
+      }
+      if (creditAfter <= 2 && (creditBefore == null || creditBefore > 2) && trainerId) {
+        const trainerSnap = await db.doc(`users/${trainerId}`).get();
+        if (trainerSnap.exists) {
+          await sendPush(trainerId, trainerSnap.data().fcmTokens, {
+            title: '⚠️ Session credits running low',
+            body: `${clientName} has ${creditAfter} session credit${creditAfter === 1 ? '' : 's'} left — remind them to renew`,
+          }, { type: 'sessions_low', url: `/#/clients/${clientId}`, clientId });
+        }
+      }
+      return; // credit system handled; skip legacy path
+    }
+
+    // ── Legacy sessionOffset system ──
     if ((before.sessionOffset ?? 0) === (after.sessionOffset ?? 0)) return;
 
     const total = after.totalSessions;
@@ -500,8 +529,6 @@ exports.onSessionsLow = functions.firestore
 
     const remainingBefore = total - (before.sessionOffset ?? 0);
     const remainingAfter  = total - (after.sessionOffset ?? 0);
-    const clientId = change.after.id;
-    const clientName = after.name || 'A client';
 
     // Notify the client when crossing the ≤ 3 threshold for the first time
     if (remainingAfter <= 3 && remainingBefore > 3) {

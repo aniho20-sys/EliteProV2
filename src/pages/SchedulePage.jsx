@@ -440,8 +440,12 @@ export default function SchedulePage() {
         <button
           className="btn btn-primary"
           onClick={() => { setBookMode('session'); setShowAdd(true); }}
-          disabled={!isTrainer && !trainerId}
-          title={!isTrainer && !trainerId ? 'Connect a coach first' : undefined}
+          disabled={(!isTrainer && !trainerId) || (!isTrainer && creditBalance !== null && creditBalance <= 0)}
+          title={
+            !isTrainer && !trainerId ? 'Connect a coach first'
+            : !isTrainer && creditBalance !== null && creditBalance <= 0 ? 'No session credits remaining'
+            : undefined
+          }
         >
           <Plus size={18} /> Book Session
         </button>
