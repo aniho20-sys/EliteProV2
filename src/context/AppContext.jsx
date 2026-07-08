@@ -413,6 +413,11 @@ export function AppProvider({ children }) {
 
   const updateClient = async (clientId, updates) => {
     await updateDoc(doc(db, 'users', clientId), updates);
+    // Optimistic local patch — the trainerId-scoped users listener can serve a
+    // stale IndexedDB-cached snapshot instead of re-firing promptly (see listener
+    // split comment above), so without this the trainer's own UI can keep
+    // showing pre-write values (e.g. session counts) after a successful write.
+    setUsers(prev => prev.map(u => u.id === clientId ? { ...u, ...updates } : u));
   };
 
   const incrementSessionOffset = async (clientId) => {
