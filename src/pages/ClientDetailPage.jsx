@@ -239,8 +239,8 @@ export default function ClientDetailPage() {
       setTopUpOpen(false);
       setTopUpAmount('');
       toast(`Added ${qty} sessions`);
-    } catch {
-      toast('Failed to update sessions', 'error');
+    } catch (err) {
+      toast(`Failed to update sessions: ${err?.code || err?.message || 'unknown error'}`, 'error');
     } finally {
       setSavingTopUp(false);
     }
