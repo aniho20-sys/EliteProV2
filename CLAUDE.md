@@ -96,10 +96,12 @@ src/
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing + GYMLA_ENABLED flag
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (deployed and live on Blaze) — 7 functions:
+functions/                    # Cloud Functions (deployed and live on Blaze) — 9 functions:
 ├── index.js                  # onAccountDelete, onNewMessage, onNewSchedule, onScheduleUpdate,
 │                              # onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow (push to client when
-│                              # sessions remaining ≤ 3, push to trainer when ≤ 2)
+│                              # sessions remaining ≤ 3, push to trainer when ≤ 2), onScheduleBooked +
+│                              # onScheduleCreditUpdate (server-side session credit accounting — see
+│                              # "Session credit accounting" below)
 └── package.json
 
 public/

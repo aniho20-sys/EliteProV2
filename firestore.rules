@@ -65,16 +65,11 @@ service cloud.firestore {
                .hasOnly(['name','email','avatar','fcmTokens','goals','notes',
                          'age','height','speciality','trainerId','inviteCode'])
         // Trainer updating their own client's full profile (totalSessions, sessionOffset, etc.)
+        // Session credit accounting itself (booking/cancel/complete) runs server-side via
+        // Cloud Functions using the admin SDK, which bypasses these rules entirely — so no
+        // client-side sessionOffset write path is needed even for a removed client.
         || isTrainerOf(userId)
-            && request.resource.data.role == resource.data.role
-        // Trainers can increment sessionOffset by 1 on any client doc (e.g. after
-        // client is removed from roster but old sessions still need to be closed out).
-        // Restricted to exactly +1 increment and sessionOffset field only.
-        || (isTrainer()
-            && resource.data.role == 'client'
-            && request.resource.data.role == resource.data.role
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sessionOffset'])
-            && request.resource.data.sessionOffset == resource.data.get('sessionOffset', 0) + 1);
+            && request.resource.data.role == resource.data.role;
       allow delete: if isOwner(userId);
     }
 

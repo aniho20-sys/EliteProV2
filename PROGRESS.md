@@ -195,7 +195,7 @@
 | `getRedirectResult` 先 resolve 才設 `authReady` | `onAuthStateChanged` 喺 redirect 返回前 fire `null` → 閃現 Login 頁；加 `redirectChecked` state 解決 |
 | MuscleSelector 改為 chip 文字選擇 | SVG body model UX 唔好（細位難 tap）；chip list 更快更清晰 |
 | VAPID key hardcode 為 fallback | VAPID Web Push public key 非 secret，可安全 hardcode；`VITE_VAPID_KEY` env var 優先 |
-| Mark Complete 自動扣堂數（Firestore `increment`） | 原子操作避免 race condition；比先讀後寫穩陣；教練仍可手動覆蓋 |
+| Session credit 喺 book session 嗰刻即扣（唔再等 Mark Complete） | Sessions ARE session credit；改由 Cloud Function（`onScheduleBooked`/`onScheduleCreditUpdate`，admin SDK，伺服器端 transaction）統一處理扣數/24小時前取消退款(每月上限2次)/舊 booking 補扣，避免前端直接寫 `sessionOffset` 帶嚟嘅安全隱患 |
 | Apple Watch 整合需 Capacitor 原生化 | PWA 無法存取 iOS HealthKit；Android Health Connect 只支援原生 app |
 | Rest Timer 用 wall-clock（絕對 end time）非 decrement interval | `setInterval` 喺 screen-off / app 背景時會被瀏覽器 throttle 或暫停，wall-clock 喺喚醒後可自我校正 |
 | 計時完成音效用預生成 WAV + `AudioBufferSource`，每 20s 播靜音 buffer keep-alive | iOS 會喺無聲約 30s 後自動 suspend AudioContext；`resume()` 喺非手勢 callback 入面唔可靠；靜音 buffer 維持 'running' 狀態 |
@@ -231,8 +231,10 @@
 | Firestore 欄位 | 意思 | 誰改 |
 |---------------|------|------|
 | `totalSessions` | 學員購買總堂數（可 Top-Up）| 教練（Set Total / Top-Up） |
-| `sessionOffset` | 已用堂數 | **自動**：Mark Complete `+1`（`increment`）；教練亦可手動覆蓋 |
+| `sessionOffset` | 已用堂數（= 已扣嘅 session credit）| **自動**：Cloud Function `onScheduleBooked` 喺 book session 嗰刻即刻 `+1`（sessions ARE session credit）；`onScheduleCreditUpdate` 處理取消退款/舊 booking 補扣；教練亦可手動覆蓋 |
 | remaining | `totalSessions - sessionOffset` | 系統自動計算，唔儲存 |
+| `schedule.deductedAtBooking` | 呢條 booking 係咪已經喺 book 嗰刻扣咗 credit（新模式）| 系統自動（Cloud Function 寫入），冇呢個 flag = 舊模式 booking（Mark Complete/24小時內取消先扣） |
+| `earlyCancelMonth` / `earlyCancelCount` | 學員本月已用咗幾多次「24小時前免費取消」（上限2次，跨月reset）| 系統自動（`onScheduleCreditUpdate`） |
 
 ### CI / Deployment 限制
 

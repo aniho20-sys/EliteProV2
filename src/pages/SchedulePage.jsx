@@ -21,7 +21,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, incrementSessionOffset, sendMessage } = useApp();
+  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const isTrainer = currentUser.role === 'trainer';
@@ -97,7 +97,6 @@ export default function SchedulePage() {
     setCancelingLate(true);
     try {
       await updateScheduleItem(lateCancelModal.id, { status: 'cancelled', lateCancellation: true });
-      await incrementSessionOffset(lateCancelModal.clientId);
       toast('Session cancelled — the full session fee still applies per our policy.', 'info');
       setLateCancelModal(null);
     } catch (err) {
@@ -246,7 +245,6 @@ export default function SchedulePage() {
     if (!recapSession || savingRecap) return;
     setSavingRecap(true);
     const clientId = recapSession.clientId;
-    const { total, used: prevUsed } = getSessionStats(clientId);
 
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
@@ -256,41 +254,18 @@ export default function SchedulePage() {
       return;
     }
 
-    if (!clientId) {
-      toast('課堂完成（未能扣堂：session 缺少 clientId）', 'info');
-      setRecapSession(null);
-      setRecapNote('');
-      setSavingRecap(false);
-      return;
-    }
+    // Credit was already deducted when this session was booked (sessions ARE
+    // session credit); the onScheduleCreditUpdate function only charges here
+    // as a catch-up for sessions booked before that model shipped.
 
-    let deducted = false;
-    try {
-      await incrementSessionOffset(clientId);
-      deducted = true;
-    } catch (err) {
-      const errMsg = err?.code || err?.message || String(err) || 'unknown error';
-      console.error('[incrementSessionOffset] failed:', errMsg, 'clientId:', clientId);
-      toast(`堂數未能自動扣減: ${errMsg}`, 'error');
-    }
-
-    if (recapSend && recapNote.trim()) {
+    if (recapSend && recapNote.trim() && clientId) {
       try {
         const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
         await sendMessage(currentUser.id, clientId, fullMsg);
       } catch { /* non-critical */ }
     }
 
-    if (deducted) {
-      const newUsed = prevUsed + 1;
-      const countMsg = total !== null
-        ? ` · 剩餘 ${Math.max(0, total - newUsed)} 堂（${newUsed}/${total}）`
-        : ` · 已用 ${newUsed} 堂`;
-      toast(`課堂完成${countMsg}`);
-    } else {
-      toast('課堂完成（堂數未扣減）', 'info');
-    }
-
+    toast('課堂完成');
     setRecapSession(null);
     setRecapNote('');
     setSavingRecap(false);
@@ -500,11 +475,14 @@ export default function SchedulePage() {
                     <span className="text-muted" style={{ fontSize: '0.85rem' }}>Used: {used} · No quota set</span>
                   </div>
                 );
+                // Sessions ARE session credit — deducted at booking time, not here.
+                // Only legacy bookings (no deductedAtBooking flag) still get charged now.
+                const afterComplete = recapSession.deductedAtBooking ? remaining : Math.max(0, remaining - 1);
                 return (
                   <div className="recap-row">
                     <span className="form-label">Sessions</span>
                     <span style={{ color: remaining <= 2 ? 'var(--danger)' : 'var(--text)', fontWeight: 600 }}>
-                      {remaining} remaining → after: {Math.max(0, remaining - 1)}
+                      {remaining} remaining → after: {afterComplete}
                       {remaining <= 2 && <span style={{ marginLeft: 6, fontSize: '0.8rem' }}>⚠️ Low</span>}
                     </span>
                   </div>

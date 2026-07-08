@@ -113,7 +113,7 @@ function buildDefaultMsg(client, reasons) {
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient, getSessionStats, incrementSessionOffset } = useApp();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient, getSessionStats } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
   const [recapNote, setRecapNote] = useState('');
@@ -138,31 +138,20 @@ export default function TrainerDashboard() {
     setSavingRecap(true);
     completingRef.current.add(recapSession.id);
     const clientId = recapSession.clientId;
-    const { total, used: prevUsed } = getSessionStats(clientId);
     try {
       await updateScheduleItem(recapSession.id, { status: 'completed' });
 
-      let deducted = false;
-      if (clientId) {
-        try {
-          await incrementSessionOffset(clientId);
-          deducted = true;
-        } catch (err) {
-          console.error('[incrementSessionOffset] failed:', err?.code || err?.message || err, 'clientId:', clientId);
-        }
-      }
+      // Credit was already deducted when this session was booked (sessions ARE
+      // session credit); the onScheduleCreditUpdate function only charges here
+      // as a catch-up for sessions booked before that model shipped.
 
-      if (recapSend && recapNote.trim()) {
+      if (recapSend && recapNote.trim() && clientId) {
         const fullMsg = `📋 Session Recap — ${recapSession.date} ${recapSession.time}\nType: ${recapSession.type}\n\n${recapNote.trim()}`;
         await sendMessage(currentUser.id, clientId, fullMsg);
       }
 
       const recapMsg = recapSend && recapNote.trim() ? ' — recap sent to client' : '';
-      if (deducted && total !== null) {
-        toast(`Session complete · ${prevUsed + 1}/${total} sessions used${recapMsg}`);
-      } else {
-        toast(`Session marked as complete${recapMsg}`);
-      }
+      toast(`Session marked as complete${recapMsg}`);
       setRecapSession(null);
     } catch {
       toast('Failed to update session', 'error');

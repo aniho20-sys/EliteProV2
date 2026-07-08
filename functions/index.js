@@ -217,6 +217,93 @@ exports.onNewWorkoutLog = functions.firestore
     });
   });
 
+// ─── Session credit: deduct 1 credit the moment a real session is booked ───
+// Sessions ARE session credit — booking spends one immediately (not on completion).
+// Blocked time slots (no clientId) are skipped.
+exports.onScheduleBooked = functions.firestore
+  .document('schedule/{schedId}')
+  .onCreate(async (snap) => {
+    const sched = snap.data();
+    if (!sched || sched.isBlocked || !sched.clientId || sched.deductedAtBooking) return;
+
+    const clientRef = db.doc(`users/${sched.clientId}`);
+    await db.runTransaction(async (tx) => {
+      const clientDoc = await tx.get(clientRef);
+      if (!clientDoc.exists) return;
+      const current = clientDoc.data().sessionOffset ?? 0;
+      tx.update(clientRef, { sessionOffset: current + 1 });
+      tx.update(snap.ref, { deductedAtBooking: true });
+    });
+  });
+
+// ─── Session credit: cancel refund / legacy-booking catch-up on complete ───
+// deductedAtBooking marks sessions booked under the new pay-at-booking model.
+// Sessions booked before this shipped have no such flag and were never charged
+// at booking, so they're caught up here instead — same net effect either way.
+//
+// Cancel:
+//   - legacy (no flag): late (<24h) charges now; early (>=24h) stays free — this
+//     mirrors the exact behaviour that used to run client-side.
+//   - new model (flag set): late stays charged (no-op); early refunds 1 credit,
+//     capped at 2 free early-cancels per client per calendar month.
+// Complete:
+//   - legacy (no flag): charge now, exactly once.
+//   - new model (flag set): already charged at booking — no-op.
+exports.onScheduleCreditUpdate = functions.firestore
+  .document('schedule/{schedId}')
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!after || after.isBlocked || !after.clientId) return;
+    if (!before || before.status === after.status) return;
+
+    const clientRef = db.doc(`users/${after.clientId}`);
+
+    if (after.status === 'cancelled') {
+      const sessionDt = new Date(`${after.date}T${after.time}:00`);
+      const isLate = (sessionDt.getTime() - Date.now()) / (1000 * 60 * 60) < 24;
+
+      if (!after.deductedAtBooking) {
+        if (!isLate) return; // legacy booking, early cancel — always free
+        await db.runTransaction(async (tx) => {
+          const clientDoc = await tx.get(clientRef);
+          if (!clientDoc.exists) return;
+          const current = clientDoc.data().sessionOffset ?? 0;
+          tx.update(clientRef, { sessionOffset: current + 1 });
+        });
+        return;
+      }
+
+      if (isLate) return; // already charged at booking, stays charged
+
+      const month = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+      await db.runTransaction(async (tx) => {
+        const clientDoc = await tx.get(clientRef);
+        if (!clientDoc.exists) return;
+        const data = clientDoc.data();
+        const count = data.earlyCancelMonth === month ? (data.earlyCancelCount ?? 0) : 0;
+        if (count >= 2) return; // free early-cancel cap used up this month
+        const current = data.sessionOffset ?? 0;
+        tx.update(clientRef, {
+          sessionOffset: Math.max(0, current - 1),
+          earlyCancelMonth: month,
+          earlyCancelCount: count + 1,
+        });
+      });
+      return;
+    }
+
+    if (after.status === 'completed') {
+      if (after.deductedAtBooking) return; // already charged at booking
+      await db.runTransaction(async (tx) => {
+        const clientDoc = await tx.get(clientRef);
+        if (!clientDoc.exists) return;
+        const current = clientDoc.data().sessionOffset ?? 0;
+        tx.update(clientRef, { sessionOffset: current + 1 });
+      });
+    }
+  });
+
 // ─── Sessions running low → Push to client when remaining drops to ≤ 3, push to trainer when ≤ 2 ───
 exports.onSessionsLow = functions.firestore
   .document('users/{userId}')
