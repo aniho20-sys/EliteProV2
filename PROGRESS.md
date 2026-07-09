@@ -109,6 +109,18 @@
 - Firestore rules（`studios`, `studioSlots`, `trainerApplications`）
 - 新 Pages：`OperatorDashboard.jsx`, `StudioManagementPage.jsx`, `StudioBookingPage.jsx`, `TrainerApplicationPage.jsx`
 
+### Credit 續約提醒（Session 33）
+- **學生端**：credit card 剩 3 堂／1 堂各彈一次可關閉嘅提示卡（Firestore flag `renewalPrompt3Shown`/`renewalPrompt1Shown` 控制只彈一次，續約後自動 reset）；剩 2-3 堂期間常駐一行「Renew early to keep your current rate」取代舊有「Running low」字句（教練未設定 rate 時繼續顯示舊字句作 fallback）
+- **Payment Sheet**：撳 Renew 彈出 bank details modal，逐行 copy + Copy all，reference 用學生 id 生成，寫明「rate confirmed when payment received while sessions remain」；純資訊性，唔會自動通知教練（教練話銀行自己會通知收款）
+- **教練端**：ProfilePage 新增「Renewal Pricing」（current rate／renewed-after-exhausted rate）同「Bank Details」設定；ClientDetailPage Top-Up modal 加 rate 選擇（預設按 remaining>0 揀返現行 rate，用晒先揀加價 rate）
+- **新 collection `creditLedger`**：每次 top-up 一條 append-only 記錄（`clientId, trainerId, date, qty, rate, addedBy`），trainer 建立、trainer + 該 client 可讀，唔可以 update/delete
+- **`onSessionsLow` Cloud Function 今次無改**：獨立運作，未同呢個 in-app 提示統一文案（留待日後）
+
+### Session Credit 喺 Book 果刻即扣（Session 33）
+- Sessions ARE session credit：book session 成功即刻扣 1 堂（新 Cloud Functions `onScheduleBooked` + `onScheduleCreditUpdate`，server-side transaction，唔靠前端寫 `sessionOffset`）
+- 24小時前取消退返 credit（每個學生每月上限 2 次免費早取消，用晒就算 24 小時前取消都照收）；24小時內取消照收
+- 舊有（呢個 feature 上線前）已 book 但未完成嘅 session 冇 `deductedAtBooking` 標記，Mark Complete／late-cancel 會補扣一次，新舊自然共存唔會走數或者重複扣
+
 ### WorkoutLog 最新改善（Session 31）
 - **REST TIMER 清理**：移除 ActiveWorkoutView inline RestTimerBar + 移除概覽畫面頂部 REST TIMER block；只保留底部 floating pill
 - **Floating pill 改良**：尺寸放大（padding 14×22px，時間字體 1.5rem）；時間數字可點擊輸入自訂分:秒（edit 模式，分:秒雙 input）

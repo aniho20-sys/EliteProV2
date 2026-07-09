@@ -37,6 +37,7 @@ src/
 │   ├── Navigation.jsx        # Desktop sidebar (primary + collapsible More with secondary) + mobile top header + bottom nav (primary + More sheet); driven by LINK_DEFS/NAV_CONFIG
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
+│   ├── PaymentSheetModal.jsx # Client: renewal payment sheet — trainer's bank details (per-row + Copy all), auto reference, rate-lock disclaimer
 │   ├── ProgressView.jsx      # Body composition chart + stats grid + history table; shared by ProgressPage & ClientDetailPage
 │   ├── SessionDateList.jsx   # Renders a list of session dates (used in monthly report / progress views)
 │   ├── Skeleton.jsx          # Loading skeleton components (SkeletonLine/Card/List/StatGrid)
@@ -152,12 +153,19 @@ Top-level config files:
   // trainer-only:
   speciality: string,
   inviteCode: string,       // 6-char uppercase alphanumeric
+  renewalRate: number,      // £/session — current rate shown to clients renewing early
+  renewalRateNext: number,  // £/session — rate once a client's sessions run out first
+  bankDetails: { accountName: string, sortCode: string, accountNumber: string },
   // client-only:
   trainerId: string | null, // UID of trainer
   age: number,
   height: number,           // cm
   goals: string,
   notes: string,
+  totalSessions: number,           // purchased session credit (Top-Up)
+  sessionOffset: number,           // used credit — see "Session credit accounting" below
+  renewalPrompt3Shown: boolean,    // one-time "3 sessions left" prompt already shown
+  renewalPrompt1Shown: boolean,    // one-time "1 session left" prompt already shown
 }
 ```
 
@@ -295,6 +303,20 @@ Top-level config files:
 }
 ```
 
+#### `creditLedger/{entryId}`
+Append-only top-up history — one entry per top-up, never updated/deleted (corrections are a new entry).
+```js
+{
+  id: string,
+  clientId: string,
+  trainerId: string,
+  date: string,      // 'YYYY-MM-DD'
+  qty: number,        // sessions added
+  rate: number | null,// £/session charged for this top-up
+  addedBy: string,    // trainer UID
+}
+```
+
 ## State Management (AppContext)
 `AppContext` is the single source of truth. It subscribes to all Firestore collections with real-time `onSnapshot` listeners when a user is authenticated. All reads and writes go through context functions.
 
@@ -321,6 +343,10 @@ getClients(trainerId)        // returns client users for a trainer
 getClient(clientId)
 updateClient(clientId, updates)
 removeClient(clientId)       // sets trainerId to null (detaches client from trainer)
+
+// Credit Ledger
+getCreditLedger(clientId)    // async — fetches append-only top-up history, newest first
+addCreditLedgerEntry(clientId, { qty, rate })  // logs a top-up, adds sessions, resets renewal prompt flags
 
 // Body Stats
 getBodyStats(clientId)       // returns entries array (sorted by date)

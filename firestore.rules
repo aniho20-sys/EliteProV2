@@ -59,11 +59,17 @@ service cloud.firestore {
       // Self-update is restricted to personal profile fields only — billing fields
       // (totalSessions, sessionOffset) are intentionally excluded to prevent clients
       // from granting themselves free sessions.
+      // renewalRate/renewalRateNext/bankDetails are trainer-only meaningful (read via a
+      // client's trainerId relationship); renewalPrompt3Shown/renewalPrompt1Shown are
+      // client-only meaningful (own dashboard prompt state). Harmless either way if the
+      // "wrong" role writes them since nothing reads them off the wrong doc.
       allow update: if isOwner(userId)
           && request.resource.data.role == resource.data.role
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['name','email','avatar','fcmTokens','goals','notes',
-                         'age','height','speciality','trainerId','inviteCode'])
+                         'age','height','speciality','trainerId','inviteCode',
+                         'renewalRate','renewalRateNext','bankDetails',
+                         'renewalPrompt3Shown','renewalPrompt1Shown'])
         // Trainer updating their own client's full profile (totalSessions, sessionOffset, etc.)
         // Session credit accounting itself (booking/cancel/complete) runs server-side via
         // Cloud Functions using the admin SDK, which bypasses these rules entirely — so no
@@ -71,6 +77,19 @@ service cloud.firestore {
         || isTrainerOf(userId)
             && request.resource.data.role == resource.data.role;
       allow delete: if isOwner(userId);
+    }
+
+    // ── Credit Ledger ──
+    // Append-only history of top-ups (qty + rate + date). Trainer creates entries for
+    // their own clients; trainer and that client can both read. No update/delete —
+    // corrections happen by adding a new entry, not editing history.
+    match /creditLedger/{entryId} {
+      allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if isTrainer()
+        && request.resource.data.trainerId == request.auth.uid
+        && isTrainerOf(request.resource.data.clientId);
+      allow update: if false;
+      allow delete: if false;
     }
 
     // ── Body Stats ──

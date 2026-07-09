@@ -108,7 +108,7 @@ function VolumeChart({ logs }) {
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, addCreditLedgerEntry } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -132,6 +132,7 @@ export default function ClientDetailPage() {
   const [savingSessions, setSavingSessions] = useState(false);
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpRate, setTopUpRate] = useState(null);
   const [savingTopUp, setSavingTopUp] = useState(false);
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
@@ -235,9 +236,10 @@ export default function ClientDetailPage() {
     if (!qty || qty <= 0) return;
     setSavingTopUp(true);
     try {
-      await updateClient(clientId, { totalSessions: (client?.totalSessions ?? 0) + qty });
+      await addCreditLedgerEntry(clientId, { qty, rate: topUpRate });
       setTopUpOpen(false);
       setTopUpAmount('');
+      setTopUpRate(null);
       toast(`Added ${qty} sessions`);
     } catch (err) {
       toast(`Failed to update sessions: ${err?.code || err?.message || 'unknown error'}`, 'error');
@@ -442,7 +444,11 @@ export default function ClientDetailPage() {
                 {!editingSessions && (
                   <div className="flex gap-8">
                     {sessTotal !== null && (
-                      <button className="btn btn-primary btn-sm" onClick={() => { setTopUpAmount(''); setTopUpOpen(true); }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => {
+                        setTopUpAmount('');
+                        setTopUpRate(sessRemaining > 0 ? currentUser.renewalRate ?? null : currentUser.renewalRateNext ?? null);
+                        setTopUpOpen(true);
+                      }}>
                         + Top Up
                       </button>
                     )}
@@ -779,7 +785,7 @@ export default function ClientDetailPage() {
       )}
 
       {topUpOpen && (
-        <div className="modal-overlay" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }}>
+        <div className="modal-overlay" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
             <h3 className="modal-title">+ Top Up Sessions</h3>
             <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
@@ -802,13 +808,30 @@ export default function ClientDetailPage() {
               />
               <span className="text-sm text-muted">sessions</span>
             </div>
+            {(currentUser.renewalRate || currentUser.renewalRateNext) && (
+              <div className="mb-12">
+                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 6 }}>Rate charged for this top-up:</span>
+                <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
+                  {currentUser.renewalRate && (
+                    <button className={`btn btn-sm ${topUpRate === currentUser.renewalRate ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRate)}>
+                      £{currentUser.renewalRate} (current rate)
+                    </button>
+                  )}
+                  {currentUser.renewalRateNext && (
+                    <button className={`btn btn-sm ${topUpRate === currentUser.renewalRateNext ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRateNext)}>
+                      £{currentUser.renewalRateNext} (renewed after running out)
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {Number(topUpAmount) > 0 && (
               <p className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>
                 After top-up: {(sessRemaining ?? 0) + Number(topUpAmount)} remaining
               </p>
             )}
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }} disabled={savingTopUp}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }} disabled={savingTopUp}>Cancel</button>
               <button className="btn btn-primary" onClick={handleTopUp} disabled={savingTopUp || !Number(topUpAmount) || Number(topUpAmount) <= 0}>
                 {savingTopUp ? 'Saving…' : 'Confirm'}
               </button>

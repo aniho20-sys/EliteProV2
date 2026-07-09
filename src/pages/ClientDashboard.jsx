@@ -1,14 +1,16 @@
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight } from 'lucide-react';
+import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight, X } from 'lucide-react';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
+import PaymentSheetModal from '../components/PaymentSheetModal';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getClient, updateClient } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
@@ -25,6 +27,25 @@ export default function ClientDashboard() {
   const latestStat = stats[stats.length - 1];
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
+  const trainer = currentUser.trainerId ? getClient(currentUser.trainerId) : null;
+
+  const [renewalPrompt, setRenewalPrompt] = useState(null); // '3-left' | '1-left' | null
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const promptFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (sessRemaining === null || promptFiredRef.current) return;
+    if (!trainer?.renewalRate || !trainer?.renewalRateNext) return; // trainer hasn't set rates yet — nothing to show
+    if (!currentUser.renewalPrompt3Shown && sessRemaining <= 3 && sessRemaining >= 2) {
+      promptFiredRef.current = true;
+      setRenewalPrompt('3-left');
+      updateClient(currentUser.id, { renewalPrompt3Shown: true }).catch(() => {});
+    } else if (!currentUser.renewalPrompt1Shown && sessRemaining <= 1) {
+      promptFiredRef.current = true;
+      setRenewalPrompt('1-left');
+      updateClient(currentUser.id, { renewalPrompt1Shown: true }).catch(() => {});
+    }
+  }, [sessRemaining, currentUser.id, currentUser.renewalPrompt3Shown, currentUser.renewalPrompt1Shown, trainer, updateClient]);
 
   const totalWorkouts = logs.length;
   const thisWeekLogs = logs.filter(l => l.date >= localDateAdd(today, -7));
@@ -108,9 +129,19 @@ export default function ClientDashboard() {
               <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessRemaining <= 3 ? 'var(--warning)' : 'var(--brand-gradient)' }} />
             </div>
             {sessRemaining <= 3 && (
-              <p className="text-sm mb-12" style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                Running low — contact your trainer to top up
-              </p>
+              trainer?.renewalRate && trainer?.renewalRateNext ? (
+                <button
+                  className="text-sm mb-12"
+                  onClick={() => setShowPaymentSheet(true)}
+                  style={{ color: 'var(--warning)', fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  Renew early to keep your current rate <ChevronRight size={14} />
+                </button>
+              ) : (
+                <p className="text-sm mb-12" style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                  Running low — contact your trainer to top up
+                </p>
+              )
             )}
             <div className="flex-between" style={{ alignItems: 'center' }}>
               <span className="text-sm text-muted">{sessUsed} of {sessTotal} sessions used</span>
@@ -118,6 +149,35 @@ export default function ClientDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {renewalPrompt && (
+        <div className="card mb-16" style={{ borderLeft: `3px solid ${renewalPrompt === '1-left' ? 'var(--danger)' : 'var(--warning)'}` }}>
+          <div className="flex-between mb-8" style={{ alignItems: 'flex-start' }}>
+            <h3 className="card-title" style={{ marginBottom: 0 }}>
+              {renewalPrompt === '1-left' ? 'Last session left' : `${sessRemaining} sessions left`}
+            </h3>
+            <button className="btn-icon" onClick={() => setRenewalPrompt(null)} aria-label="Dismiss"><X size={16} /></button>
+          </div>
+          <p className="text-sm text-muted mb-12">
+            {renewalPrompt === '1-left'
+              ? <>This is your final session at <strong>£{trainer?.renewalRate}/session</strong>. Renew now to lock in your rate before it moves to £{trainer?.renewalRateNext}.</>
+              : <>Renew before they run out to keep your current rate <strong>(£{trainer?.renewalRate}/session)</strong>. After that, renewal is £{trainer?.renewalRateNext}/session.</>}
+          </p>
+          <div className="flex gap-8">
+            <button className="btn btn-primary btn-sm" onClick={() => { setShowPaymentSheet(true); setRenewalPrompt(null); }}>Renew</button>
+            <button className="btn btn-outline btn-sm" onClick={() => setRenewalPrompt(null)}>Dismiss</button>
+          </div>
+        </div>
+      )}
+
+      {showPaymentSheet && (
+        <PaymentSheetModal
+          client={currentUser}
+          trainer={trainer}
+          remaining={sessRemaining}
+          onClose={() => setShowPaymentSheet(false)}
+        />
       )}
 
       <div className="grid-2">

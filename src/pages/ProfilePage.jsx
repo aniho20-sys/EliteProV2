@@ -98,6 +98,19 @@ export default function ProfilePage() {
   });
   const [whSaving, setWhSaving] = useState(false);
 
+  // Trainer: renewal pricing (shown to clients when they run low on sessions)
+  const [renewalRate, setRenewalRate] = useState(currentUser.renewalRate ?? '');
+  const [renewalRateNext, setRenewalRateNext] = useState(currentUser.renewalRateNext ?? '');
+  const [renewalSaving, setRenewalSaving] = useState(false);
+
+  // Trainer: bank details (shown to clients in the renewal payment sheet)
+  const [bankDetails, setBankDetails] = useState({
+    accountName: currentUser.bankDetails?.accountName || '',
+    sortCode: currentUser.bankDetails?.sortCode || '',
+    accountNumber: currentUser.bankDetails?.accountNumber || '',
+  });
+  const [bankSaving, setBankSaving] = useState(false);
+
   // Client: connect to trainer
   const [connectCode, setConnectCode] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -191,6 +204,36 @@ export default function ProfilePage() {
       toast('Failed to save working hours', 'error');
     } finally {
       setWhSaving(false);
+    }
+  };
+
+  const handleSaveRenewalRates = async () => {
+    const rate = Number(renewalRate);
+    const rateNext = Number(renewalRateNext);
+    if (!rate || rate <= 0 || !rateNext || rateNext <= 0) {
+      toast('Enter both rates as numbers greater than 0', 'error');
+      return;
+    }
+    setRenewalSaving(true);
+    try {
+      await updateClient(currentUser.id, { renewalRate: rate, renewalRateNext: rateNext });
+      toast('Renewal rates saved');
+    } catch {
+      toast('Failed to save renewal rates', 'error');
+    } finally {
+      setRenewalSaving(false);
+    }
+  };
+
+  const handleSaveBankDetails = async () => {
+    setBankSaving(true);
+    try {
+      await updateClient(currentUser.id, { bankDetails });
+      toast('Bank details saved');
+    } catch {
+      toast('Failed to save bank details', 'error');
+    } finally {
+      setBankSaving(false);
     }
   };
 
@@ -398,6 +441,57 @@ export default function ProfilePage() {
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveWorkHours} disabled={whSaving}>
             <Save size={16} /> {whSaving ? 'Saving...' : 'Save Hours'}
+          </button>
+        </div>
+      )}
+
+      {/* Trainer: Renewal Pricing */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">Renewal Pricing</h3>
+          <p className="invite-desc">Shown to clients when they run low on sessions, so they know what renewing now vs. later costs.</p>
+          <div className="form-row mt-8">
+            <div className="form-group">
+              <label className="form-label">Current rate (per session)</label>
+              <input type="number" min="0" inputMode="decimal" className="form-input" placeholder="65"
+                value={renewalRate} onChange={e => setRenewalRate(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Rate after sessions run out</label>
+              <input type="number" min="0" inputMode="decimal" className="form-input" placeholder="70"
+                value={renewalRateNext} onChange={e => setRenewalRateNext(e.target.value)} />
+            </div>
+          </div>
+          <button className="btn btn-primary mt-8" onClick={handleSaveRenewalRates} disabled={renewalSaving}>
+            <Save size={16} /> {renewalSaving ? 'Saving...' : 'Save Rates'}
+          </button>
+        </div>
+      )}
+
+      {/* Trainer: Bank Details */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">Bank Details</h3>
+          <p className="invite-desc">Shown to clients in the renewal payment sheet so they can pay you directly.</p>
+          <div className="form-group mt-8">
+            <label className="form-label">Account name</label>
+            <input className="form-input" placeholder="e.g. Ani Ho PT" value={bankDetails.accountName}
+              onChange={e => setBankDetails(b => ({ ...b, accountName: e.target.value }))} />
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Sort code</label>
+              <input className="form-input" placeholder="e.g. 12-34-56" value={bankDetails.sortCode}
+                onChange={e => setBankDetails(b => ({ ...b, sortCode: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Account number</label>
+              <input className="form-input" placeholder="e.g. 12345678" value={bankDetails.accountNumber}
+                onChange={e => setBankDetails(b => ({ ...b, accountNumber: e.target.value }))} />
+            </div>
+          </div>
+          <button className="btn btn-primary mt-8" onClick={handleSaveBankDetails} disabled={bankSaving}>
+            <Save size={16} /> {bankSaving ? 'Saving...' : 'Save Bank Details'}
           </button>
         </div>
       )}

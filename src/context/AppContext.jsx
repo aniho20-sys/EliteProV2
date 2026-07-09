@@ -426,6 +426,32 @@ export function AppProvider({ children }) {
     await updateDoc(doc(db, 'users', clientId), { trainerId: null });
   };
 
+  // ========== Credit Ledger ==========
+  // Append-only top-up history (fetched on demand — no realtime listener needed).
+  const getCreditLedger = async (clientId) => {
+    const snap = await getDocs(query(collection(db, 'creditLedger'), where('clientId', '==', clientId)));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => b.date.localeCompare(a.date));
+  };
+
+  // Records a top-up: appends the ledger entry, adds the sessions, and clears the
+  // renewal-reminder flags so the client's dashboard prompts can fire again next time.
+  const addCreditLedgerEntry = async (clientId, { qty, rate }) => {
+    await addDoc(collection(db, 'creditLedger'), {
+      clientId,
+      trainerId: currentUser.id,
+      date: localToday(),
+      qty,
+      rate: rate ?? null,
+      addedBy: currentUser.id,
+    });
+    const client = users.find(u => u.id === clientId);
+    await updateClient(clientId, {
+      totalSessions: (client?.totalSessions ?? 0) + qty,
+      renewalPrompt3Shown: false,
+      renewalPrompt1Shown: false,
+    });
+  };
+
   // ========== Body Stats ==========
   const getBodyStats = (clientId) => bodyStatsMap[clientId] || [];
 
@@ -786,7 +812,7 @@ export function AppProvider({ children }) {
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     deleteAccount,
-    getClients, getClient, updateClient, removeClient,
+    getClients, getClient, updateClient, removeClient, getCreditLedger, addCreditLedgerEntry,
     getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
     data: { users, workoutPlans, workoutLogs, schedule, messages, exercises, invoices },
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
