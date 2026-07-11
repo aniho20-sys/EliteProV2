@@ -3,6 +3,8 @@
 ## Project Overview
 ElitePro is a web-based fitness training platform for personal trainers and their clients. Trainers manage clients, create workout plans, schedule sessions, and communicate with clients. Clients view workouts, log training sessions, track body stats, and message their coach.
 
+See `ROADMAP.md` for the source of truth on development phases (current and future).
+
 ## Tech Stack
 - **Framework**: React 19 + Vite 8
 - **Routing**: React Router v7 (HashRouter)
@@ -521,6 +523,17 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 23. **Navigation architecture** — `Navigation.jsx` defines a single `LINK_DEFS` map (icon + label per route) and a per-role `NAV_CONFIG` (`trainer`/`client`/`operator`, each with `desktop.{primary,secondary}` and `mobile.{primary,more}` route arrays). Desktop sidebar renders `primary` links plus a collapsible "More" section for `secondary`; mobile bottom nav renders `primary` (4 items) plus a "More" sheet for `more`. Keep primary nav to ≤4-5 items; add new features to `secondary`/`more`
 24. **Workout utilities** — `UNIT_OPTIONS`, `emptySet(unit)`, `hasValue(s, unit)`, `formatSet(s, unit)` are all exported from `utils/workoutUtils.js`; never redefine them locally in pages
 25. **gym啦 feature flag** — gym啦 (operator role, studios, slot booking, trainer applications) is gated behind `GYMLA_ENABLED` in `App.jsx`. While `false`, operator routes/`/apply`/`/studios/book` are hidden and `operator` users get the `client`/trainer-equivalent nav. Code is preserved — flip the flag to re-enable
+
+## Future Considerations — Venue Marketplace (Phase 5)
+
+ElitePro will later expand into a venue booking marketplace (studios renting dead hours to coaches). To keep this path open:
+
+- Sessions should support an optional `venueId` field in the schema (nullable for now). Do not hardcode location assumptions into session or booking logic.
+- The booking engine, cancellation policy engine, and transaction ledger should stay generic enough to be reused for venue bookings, not coupled tightly to student sessions.
+- A future "studio owner" user role will be added — avoid design decisions that assume only coach/student roles exist.
+- Build as a module INSIDE this repo (same Firebase project, same auth), never as a separate codebase.
+
+See `ROADMAP.md` for the full Phase 5 write-up (trigger condition, business model, key principles).
 
 ## Team Structure
 
