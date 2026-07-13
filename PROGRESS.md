@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-12（Session 33 — 由員工A整理，涵蓋 6月10日至今全部 37 個 commit）
+> 最後更新：2026-07-13（Session 33 — 由員工A整理，加埋 credit Cloud Function 自動化測試 + 分支清理完成）
 
 ---
 
@@ -122,6 +122,12 @@
 - 舊有（呢個 feature 上線前）已 book 但未完成嘅 session 冇 `deductedAtBooking` 標記，Mark Complete／late-cancel 會補扣一次，新舊自然共存唔會走數或者重複扣
 - 順帶修埋兩個相關 bug：`updateClient()` 冇 optimistic local patch 導致教練自己畫面（Top-Up、Set Total、tag）寫入成功但唔即時反映；`handleTopUp` 錯誤提示冇顯示實際 Firebase error code
 
+### Credit Cloud Function 自動化測試（Session 33）
+- 新增 `functions/test/bookSession.test.js`：12 個 Jest test，跑真正 Firestore emulator（冇 mock），涵蓋 `onScheduleBooked`/`onScheduleCreditUpdate` 全部分支——book即扣、blocked slot/冇client doc 唔扣、24小時前退款、24小時內照收、每月2次上限、跨月reset、舊booking補扣（late-cancel/Mark Complete）、新booking Mark Complete唔重複扣
+- `functions/` 新增 `jest`/`firebase-functions-test` devDependencies + `test`/`test:emulator` script（之前完全冇 test infra）
+- 測試素材來源：喺分支清理過程搵到一條獨立、平行開發嘅「Session Credits」實作（`claude/review-claude-progress-docs-UvHbs`，改名UI、`creditBalance` 欄位、migration script），同 Session 33 呢個實作方式唔同、未 merge。已將個分支存做 `archive/parallel-credit-system-2026-07`（保留參考），攞返裡面嘅 test 檔案改寫做測試而家實際嘅實作（`sessionOffset`/`deductedAtBooking`），冇碰佢嘅 migration script 同改名部分。原分支已刪
+- **分支清理完成**：連同其他 20 幾條 4-5 月遺留、內容已過時嘅 session 分支（同 main 冇 common ancestor，屬於 repo 早期 unrelated-histories merge 之前嘅舊 lineage），加埋幾條週報 branch 一齊處理咗；而家 remote 淨返 `main`（`claude/fitness-app-features-LbxtG`）、`archive/parallel-credit-system-2026-07`、`gh-pages` 三條
+
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）
 - Stat card 全面轉用 stat-strip/stat-pill 精簡橫向排列（TrainerDashboard、ClientDashboard、BusinessAnalyticsPage、InvoicePage 都套用）
@@ -229,17 +235,22 @@
 
 > 對應 `ROADMAP.md` Phase 1。呢度追蹤實際落地功能 vs. 仲差邊啲場景未經真人測試。
 
-### ✅ 已實測確認
+### ✅ 已實測確認（人手）
 - **Book session 即扣 credit**：教練已實測、確認學生 book 完之後 remaining 堂數即刻跌一格
 - **24小時前取消退款**：教練已實測、確認退返 credit（見對話紀錄「成功左」）
 - **Top-Up 寫入即時反映**：`updateClient` optimistic patch fix 已確認解決「教練撳完 Top Up 個畫面唔郁」嘅 bug
 
+### ✅ 已用自動化測試驗證（12 個 Jest test，`functions/test/bookSession.test.js`，跑真 Firestore emulator）
+- 24小時內取消（late-cancel）照收（新 booking 分支）
+- 每月 2 次免費早取消上限，包括「用晒上限」同「跨月reset」兩個邊界情況
+- 舊 booking（冇 `deductedAtBooking` 標記）Mark Complete／late-cancel 補扣一次
+- 新 booking Mark Complete 唔會重複扣
+- blocked slot / 冇 client doc 唔會扣數或者 crash
+- 呢批已經有自動化測試覆蓋，唔再列入「未實測」——但仲未經**真人教練**用真實帳號操作確認，如果想要真人再過一次都得，睇 Ani 需要
+
 ### ⬜ 未實測 / 待驗證
 | 場景 | 詳情 |
 |------|------|
-| 24小時內取消（late-cancel）照收 | 邏輯已寫（`onScheduleCreditUpdate`），未見教練實測呢個分支 |
-| 每月 2 次免費早取消上限 | 需要同一個學生喺一個月內取消 3 次先測到「第3次唔退」嘅邊界情況；短期內較難自然測試到，可以考慮手動改 `earlyCancelMonth`/`earlyCancelCount` 做模擬測試 |
-| 舊 booking（冇 `deductedAtBooking` 標記）Mark Complete／late-cancel 補扣一次 | 邏輯已寫，未見實測；Session 33 上線之後新 book 嘅 session 先會有標記，要揾一個「上線前已經 book 咗」嘅舊 session 先測到 |
 | Top-Up 新 rate 選擇器 + `creditLedger` 寫入 | Session 33 尾段先加，仲未見教練確認測試（要先喺 Profile 設定 Renewal Pricing 先會顯示） |
 | Credit 續約提醒（3堂/1堂提示、常駐 banner、payment sheet） | 已部署，教練未回報測試結果 |
 | Reschedule cap | `ROADMAP.md` Phase 1 提到「reschedule cap」，但現有 code 入面搵唔到獨立嘅「reschedule」動作（只有 cancel + 重新 book），懷疑呢個名詞可能係指緊「每月2次早取消上限」——**待 Ani 澄清係咪同一件事，定係要開返一個獨立嘅 reschedule 功能** |
