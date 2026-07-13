@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-06-10（Session 32）
+> 最後更新：2026-07-12（Session 33 — 由員工A整理，涵蓋 6月10日至今全部 37 個 commit）
 
 ---
 
@@ -12,9 +12,9 @@
 |------|------|------|------|
 | 🔴 | 更新 Landing Page copy → 首5位 Founding Member，3個月免費 | 員工B | ⬜ |
 | 🔴 | 手機打開 `/#/landing` 確認版面效果 | 自己 | ⬜ |
-| 🔴 | Firebase Console → Functions 確認 7 個 functions 存在（含新增 onSessionsLow） | 自己 | ⬜ |
-| 🔴 | Firebase Console → Firestore Rules 確認係最新版本 | 自己 | ⬜ |
-| 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | ⬜ |
+| 🔴 | Firebase Console → Functions 確認存在（而家係 **9 個** functions，含新增 `onScheduleBooked`/`onScheduleCreditUpdate`） | 自己 | ✅ CI 自動部署持續成功（`Deploy Functions` 步驟），人手 Console 覆核可選做 |
+| 🔴 | Firebase Console → Firestore Rules 確認係最新版本 | 自己 | ✅ CI `Deploy Firestore Rules` 步驟每次 push 都成功 |
+| 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | 🟡 部分完成——Book session 即扣/24小時前取消退款已由教練實測確認（見 Phase 1 Credit UAT），但未由 Landing Page signup 開始跑全程 |
 | 🟠 | iOS Safari + Android Chrome 各測試一次 | 自己 | ⬜ |
 | 🟡 | 寫 WhatsApp 邀請訊息，直接搵5個教練朋友 | 員工X + 自己 | ⬜ |
 
@@ -36,7 +36,7 @@
 | Workout Complete Screen | ❌ | ✅ |
 | Smart Progression | ❌ | ✅ |
 | Badge / 獎章系統 | ❌ | ✅ |
-| Push Notifications | ✅ | ⚠️ 待確認 |
+| Push Notifications | ✅ | ✅ |
 | Built-in exercise GIFs | ✅ | ❌ |
 | Excel / CSV 客戶匯入 | ❌ | 🔜 規劃中 |
 | Apple Watch 整合 | ✅ | ⚠️ 需 Capacitor |
@@ -71,8 +71,8 @@
 - Schedule 日曆（conflict check、working hours、可前後翻閱歷史日期）
 - **Block Time 合併入 Book Session modal**（頂部 toggle：Book Session ｜ Block Time；共用日期 + 時段 picker；Blocked slot 若已有真實 session 自動隱藏）
 - Session Recap 一鍵發送（Mark Complete → recap modal → 發送 message 給 client）
-- **完成課堂自動扣堂數**（Mark Complete → Firestore `increment(1)` 原子操作；教練仍可在 ClientDetailPage 手動覆蓋）
-- **堂數 Top-Up 功能**（+5/+10/+20 快捷鍵 + 自訂數量 modal）
+- ~~完成課堂自動扣堂數~~ **已被 Session 33「Book 即扣 Credit」取代**——而家扣數喺 book session 嗰刻已經發生，Mark Complete 只做狀態更新（舊有未打上 `deductedAtBooking` 標記嘅 booking 除外，見下面 Session 33 章節）
+- **堂數 Top-Up 功能**（+5/+10/+20 快捷鍵 + 自訂數量 modal + rate 選擇——見 Session 33「Credit 續約提醒」）
 
 ### 客戶管理
 - Client 管理（搜尋、detail view、labels/分組、Remove Client）
@@ -120,6 +120,38 @@
 - Sessions ARE session credit：book session 成功即刻扣 1 堂（新 Cloud Functions `onScheduleBooked` + `onScheduleCreditUpdate`，server-side transaction，唔靠前端寫 `sessionOffset`）
 - 24小時前取消退返 credit（每個學生每月上限 2 次免費早取消，用晒就算 24 小時前取消都照收）；24小時內取消照收
 - 舊有（呢個 feature 上線前）已 book 但未完成嘅 session 冇 `deductedAtBooking` 標記，Mark Complete／late-cancel 會補扣一次，新舊自然共存唔會走數或者重複扣
+- 順帶修埋兩個相關 bug：`updateClient()` 冇 optimistic local patch 導致教練自己畫面（Top-Up、Set Total、tag）寫入成功但唔即時反映；`handleTopUp` 錯誤提示冇顯示實際 Firebase error code
+
+### Dashboard 全面改版（6月10-11日）
+- 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）
+- Stat card 全面轉用 stat-strip/stat-pill 精簡橫向排列（TrainerDashboard、ClientDashboard、BusinessAnalyticsPage、InvoicePage 都套用）
+- 新 hero-card 元件：TrainerDashboard「Up Next」顯示下一堂 + 即時倒數；ClientDashboard「Your package」堂數卡改用漸層 progress bar
+- TrainerDashboard「Needs attention」panel 取代舊 at-risk 名單：severity 顏色分邊、avatar、快速訊息按鈕
+- 全站 primary button 統一用 brand gradient
+- Dark mode bug 修復：`index.html` 硬 code 白色背景搞到啲透明漸層喺 dark mode 穿色，而家 paint 前就設定 `data-theme`
+- Design-ref prototype（`design-ref/coach-dashboard.jsx`、`design-ref/student-dashboard.jsx`）只做參考，未匯入正式 app
+
+### Firestore 安全性強化
+- `workoutLogs` rules 收緊：`create` 時 `trainerId` 必須係 null 或者學生真正教練；`update` 時 `clientId`/`trainerId`/`createdBy` 唔可以再改（防止學生亂咁改自己個 log 嘅 clientId 污染第二人紀錄）；已用 Firestore emulator 做 3個合法操作+3個攻擊情景嘅自動化測試驗證
+- `users` doc self-update 收緊做淨係 profile 欄位（`totalSessions`/`sessionOffset` 唔可以自己改），防止學生自己派堂數畀自己（7月2日）
+
+### 細節修復同體驗優化
+- Session 日期 chip 可以撳開睇返嗰日訓練詳情（exercises/sets/volume/notes）
+- 手機版 workout log 嘅 weight/reps 輸入框過窄問題修復
+- 「Last time」carry-over hint 加落 free workout（之前得 plan-based workout 先有），同埋改做成成行可撳嘅顯眼樣式
+- Monthly Report：月份下拉選單漏咗當月嘅 bug 修復 + 加咗 per-session Volume 欄（預設開）
+- This Week's Sessions 計算修復：剔除 block-time slot 同已取消 session
+- 清走 dead code（`getBadges`/`findTrainerByCode` 冇用嘅 export）、修返幾個 `react-hooks/exhaustive-deps` lint warning
+
+### onSessionsLow 擴展（學生端 + UI 顯示，6月下旬）
+- Push 通知擴展：之前得教練收到「堂數不足」提示，而家學生本身喺剩 ≤3 堂時都會收到（教練仍然係 ≤2 堂先收到）
+- ClientDashboard 堂數卡喺 ≤3 堂時會變成警示樣式（顏色由紅色/warning icon 調淡做 amber，避免俾人一種「出錯」嘅感覺）
+- 提示文案由中文改做英文，同全站 UI 語言一致
+- **呢個功能同 Session 33 新增嘅「Credit 續約提醒」係獨立運作**，冇整合文案/邏輯（見上面 Credit 續約提醒 章節備註）
+
+### Firebase Billing 短暫波動（6月21-22日，已解決）
+- 6月21日 Blaze billing 一度被降級做 Spark（linked Cloud Billing account 斷咗），CI 一度將 `Deploy Functions` 失敗改做非阻擋性（warning）避免拖累 Hosting/Rules 部署
+- 6月22日 Blaze billing 修復，CI 已改返做「Deploy Functions 失敗就整條 workflow fail」嘅嚴格模式，之後所有 deploy（包括 Session 33 呢批）都持續成功
 
 ### WorkoutLog 最新改善（Session 31）
 - **REST TIMER 清理**：移除 ActiveWorkoutView inline RestTimerBar + 移除概覽畫面頂部 REST TIMER block；只保留底部 floating pill
@@ -158,37 +190,60 @@
 
 | # | 任務 | 詳情 |
 |---|------|------|
-| 1 | **Push 通知實際運作確認** | GitHub Actions → Deploy Functions 確認冇 error；Firebase Console → Functions 確認 7 個 functions 存在（新增 `onSessionsLow`）；確認 VAPID key 吻合；雙方去 Profile → Enable Notifications |
+| 1 | ~~Push 通知實際運作確認~~ | ✅ 已解決——GitHub Actions `Deploy Functions` 持續成功，Blaze billing 穩定；剩返「雙方去 Profile → Enable Notifications」呢個純用戶操作步驟，唔算開發待辦 |
 | 2 | **Excel / CSV 客戶匯入** | 教練上傳 Excel → 解析 → 建立 ghost client profiles；提供模板下載；預覽確認後批量建立 |
-| 3 | **訓練日誌儲存錯誤確認** | Fix 已部署（commit aa8a90e + Session 32 進一步修復：`completedSets` 持久化、`l.entries` null guard），等待用戶測試回報確認根治 |
+| 3 | **訓練日誌儲存錯誤確認** | Fix 已部署（commit aa8a90e + Session 32 進一步修復：`completedSets` 持久化、`l.entries` null guard），等待用戶測試回報確認根治——長時間冇再收到相關回報，但未正式 close |
+| 4 | **Phase 1 Credit UAT 收尾**（見下面新增章節） | Session 33 兩個 credit 相關 feature（Book 即扣 + 續約提醒）已部署，仲差幾個場景未實測 |
 
 ### 🟠 P2 — 高優先
 
 | # | 任務 | 詳情 |
 |---|------|------|
-| 4 | **公開教練 Profile 頁** | 可分享 URL（`/#/coach/{inviteCode}`）；顯示教練名、speciality、匿名化成果；作為獲客工具 |
+| 5 | **公開教練 Profile 頁** | 可分享 URL（`/#/coach/{inviteCode}`）；顯示教練名、speciality、匿名化成果；作為獲客工具 |
 
 ### 🟡 P3 — 中優先
 
 | # | 任務 | 詳情 |
 |---|------|------|
-| 5 | **Referral 系統** | 現有 client 分享 referral link 介紹新 client；教練可設 referral 獎勵（如送 1 堂） |
-| 6 | **iOS Shortcuts Webhook** | 每位教練生成專屬 webhook URL；iOS Shortcut 自動 POST Apple Health 數據；免 Capacitor 實現部分健康數據同步 |
-| 7 | **Google Fit / Health Connect OAuth** | Android 平台；授權後定時同步體重、活動數據至 bodyStats |
+| 6 | **Referral 系統** | 現有 client 分享 referral link 介紹新 client；教練可設 referral 獎勵（如送 1 堂） |
+| 7 | **iOS Shortcuts Webhook** | 每位教練生成專屬 webhook URL；iOS Shortcut 自動 POST Apple Health 數據；免 Capacitor 實現部分健康數據同步 |
+| 8 | **Google Fit / Health Connect OAuth** | Android 平台；授權後定時同步體重、活動數據至 bodyStats |
 
 ### 🟢 低優先（長遠）
 
 | # | 任務 |
 |---|------|
-| 8 | **獎章 Shareable 卡 Phase 2**（Web Share API） |
-| 9 | **進度相片**（Firebase Storage） |
-| 10 | **Data Export（CSV / PDF）**（GDPR 合規） |
-| 11 | **Stripe 收費整合**（目前 invoice 係 PDF，收錢靠線下） |
-| 12 | **Hevy CSV Import**（教練從 Hevy 帶走客戶數據） |
-| 13 | **Trainer announcements / broadcast**（群發訊息） |
-| 14 | **Group Class 管理**（多 client 同一 session） |
-| 15 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple） |
-| 16 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成，現透過 `GYMLA_ENABLED=false` 暫時隱藏） |
+| 9 | **獎章 Shareable 卡 Phase 2**（Web Share API） |
+| 10 | **進度相片**（Firebase Storage） |
+| 11 | **Data Export（CSV / PDF）**（GDPR 合規） |
+| 12 | **Stripe 收費整合**（目前 invoice 係 PDF，收錢靠線下——**注意**：Phase 3 GoCardless 訂閱billing 一旦推行，呢個項目範圍要重新評估） |
+| 13 | **Hevy CSV Import**（教練從 Hevy 帶走客戶數據） |
+| 14 | **Trainer announcements / broadcast**（群發訊息） |
+| 15 | **Group Class 管理**（多 client 同一 session） |
+| 16 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple） |
+| 17 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成，現透過 `GYMLA_ENABLED=false` 暫時隱藏） |
+
+---
+
+## 🧪 Phase 1 — Credit System Acceptance Testing 進度
+
+> 對應 `ROADMAP.md` Phase 1。呢度追蹤實際落地功能 vs. 仲差邊啲場景未經真人測試。
+
+### ✅ 已實測確認
+- **Book session 即扣 credit**：教練已實測、確認學生 book 完之後 remaining 堂數即刻跌一格
+- **24小時前取消退款**：教練已實測、確認退返 credit（見對話紀錄「成功左」）
+- **Top-Up 寫入即時反映**：`updateClient` optimistic patch fix 已確認解決「教練撳完 Top Up 個畫面唔郁」嘅 bug
+
+### ⬜ 未實測 / 待驗證
+| 場景 | 詳情 |
+|------|------|
+| 24小時內取消（late-cancel）照收 | 邏輯已寫（`onScheduleCreditUpdate`），未見教練實測呢個分支 |
+| 每月 2 次免費早取消上限 | 需要同一個學生喺一個月內取消 3 次先測到「第3次唔退」嘅邊界情況；短期內較難自然測試到，可以考慮手動改 `earlyCancelMonth`/`earlyCancelCount` 做模擬測試 |
+| 舊 booking（冇 `deductedAtBooking` 標記）Mark Complete／late-cancel 補扣一次 | 邏輯已寫，未見實測；Session 33 上線之後新 book 嘅 session 先會有標記，要揾一個「上線前已經 book 咗」嘅舊 session 先測到 |
+| Top-Up 新 rate 選擇器 + `creditLedger` 寫入 | Session 33 尾段先加，仲未見教練確認測試（要先喺 Profile 設定 Renewal Pricing 先會顯示） |
+| Credit 續約提醒（3堂/1堂提示、常駐 banner、payment sheet） | 已部署，教練未回報測試結果 |
+| Reschedule cap | `ROADMAP.md` Phase 1 提到「reschedule cap」，但現有 code 入面搵唔到獨立嘅「reschedule」動作（只有 cancel + 重新 book），懷疑呢個名詞可能係指緊「每月2次早取消上限」——**待 Ani 澄清係咪同一件事，定係要開返一個獨立嘅 reschedule 功能** |
+| 從 Landing Page signup 開始嘅全程 E2E | 見即時行動清單，未做過 |
 
 ---
 
@@ -212,7 +267,7 @@
 | Rest Timer 用 wall-clock（絕對 end time）非 decrement interval | `setInterval` 喺 screen-off / app 背景時會被瀏覽器 throttle 或暫停，wall-clock 喺喚醒後可自我校正 |
 | 計時完成音效用預生成 WAV + `AudioBufferSource`，每 20s 播靜音 buffer keep-alive | iOS 會喺無聲約 30s 後自動 suspend AudioContext；`resume()` 喺非手勢 callback 入面唔可靠；靜音 buffer 維持 'running' 狀態 |
 | Toast 錯誤訊息顯示 6 秒（成功訊息 3 秒） | 錯誤內容（含 error code）通常較長，需要更多時間閱讀 |
-| Firestore rules 容許任何 trainer 對 client doc `sessionOffset` `+1` | client 被 `removeClient`（`trainerId` 設 `null`）後，舊 schedule 仍需可以 Mark Complete 扣數 |
+| ~~Firestore rules 容許任何 trainer 對 client doc `sessionOffset` `+1`~~（Session 33 已移除呢條 rule） | 呢個 workaround 本身係為咗俾前端 `incrementSessionOffset()` 喺 client 被 remove 後都寫得入；Session 33 將全部扣數/退款邏輯搬去 Cloud Function（admin SDK，唔受 rules 限制），前端已經冇再直接寫 `sessionOffset`，呢條 rule 變成多餘，已刪走收窄攻擊面 |
 | gym啦 用 `GYMLA_ENABLED` flag 控制顯示，唔刪 code | 功能未到launch時機，但要保留已完成嘅 Sprint 1 開發成果，方便日後一鍵重新啟用 |
 
 ---
@@ -251,8 +306,8 @@
 ### CI / Deployment 限制
 
 CI service account（`FIREBASE_SERVICE_ACCOUNT`）權限：
-- Firestore rules：`continue-on-error: true`，失敗唔報紅，**需人手在 Firebase Console 確認**
-- Cloud Functions：同上，需在 Firebase Console → Functions 確認 7 個 functions 存在
+- Firestore rules：`continue-on-error: true`，失敗唔報紅，**需人手在 Firebase Console 確認**（Session 33 期間多次 push 都喺 GitHub Actions 見到 `Deploy Firestore Rules` 步驟成功）
+- Cloud Functions：同上，而家係 **9 個** functions（`onAccountDelete`、`onNewMessage`、`onNewSchedule`、`onScheduleUpdate`、`onNewWorkoutPlan`、`onNewWorkoutLog`、`onSessionsLow`、`onScheduleBooked`、`onScheduleCreditUpdate`），Session 33 幾次 deploy 喺 GitHub Actions 都見到 `Deploy Functions` 步驟成功
 
 **永久修復方式：** Google Cloud Console → IAM → 找到 CI service account → 加 Cloud Functions Admin + Cloud Run Admin 角色
 
@@ -261,7 +316,7 @@ CI service account（`FIREBASE_SERVICE_ACCOUNT`）權限：
 | 項目 | 狀態 | 詳情 |
 |------|------|------|
 | VAPID Key | ✅ 已配置 | hardcode fallback 於 `NotificationContext.jsx`；`VITE_VAPID_KEY` env var 優先 |
-| Cloud Functions | ⚠️ 待確認 | 需在 Firebase Console → Functions 確認 7 個 functions 存在 |
+| Cloud Functions | ✅ CI 確認持續成功 | 而家 9 個 functions；Session 33 幾次 deploy 喺 GitHub Actions 都見到 `Deploy Functions` 成功，人手 Firebase Console 覆核可選做 |
 | iOS 支援 | ⚠️ 限制 | 需 PWA 模式（Add to Home Screen）；Safari 16.4+ 才支援 Web Push |
 | Android Chrome | ✅ 直接支援 | 無需 PWA 模式 |
 | Blaze Plan | ✅ 已啟用 | 用戶確認 |
