@@ -6,8 +6,6 @@ import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 
-const SEVERITY_COLOR = { high: 'var(--danger)', mid: 'var(--warning)' };
-
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getWeekDays() {
@@ -99,7 +97,8 @@ function ClientActivityList({ clients, getWorkoutLogs, today }) {
   );
 }
 
-const INACTIVE_DAYS = 7;
+const CHURN_INACTIVE_DAYS = 21;
+const SNOOZE_OPTIONS = [7, 14, 30];
 
 function buildDefaultMsg(client, reasons) {
   const first = (client.name || 'there').split(' ')[0];
@@ -110,10 +109,22 @@ function buildDefaultMsg(client, reasons) {
   return `Hey ${first}, just checking in! Haven't seen a workout log in a while — everything okay? 🏋️`;
 }
 
+function buildRenewalMsg(client, remaining, trainer) {
+  const first = (client.name || 'there').split(' ')[0];
+  const n = remaining;
+  if (trainer?.renewalRate && trainer?.renewalRateNext) {
+    return `Hey ${first}, you've got ${n} session${n === 1 ? '' : 's'} left — renew now to keep your current rate (£${trainer.renewalRate}/session)! After that, renewal moves to £${trainer.renewalRateNext}/session.`;
+  }
+  return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
+}
+
+// 'YYYY-MM-DD' strings compare lexicographically same as chronologically.
+const isSnoozed = (dateStr, today) => !!dateStr && dateStr > today;
+
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, sendMessage, getClient, getSessionStats } = useApp();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, updateClient, sendMessage, getClient, getSessionStats } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
   const [recapNote, setRecapNote] = useState('');
@@ -122,6 +133,9 @@ export default function TrainerDashboard() {
   const [quickMsgClient, setQuickMsgClient] = useState(null);
   const [quickMsgText, setQuickMsgText] = useState('');
   const [sendingQuick, setSendingQuick] = useState(false);
+  const [showAttentionAll, setShowAttentionAll] = useState(false);
+  const [snoozeMenuFor, setSnoozeMenuFor] = useState(null); // `${category}-${clientId}` or null
+  const [sendingReminderFor, setSendingReminderFor] = useState(null); // clientId
 
   const openRecap = (e, session) => {
     e.preventDefault();
@@ -179,6 +193,35 @@ export default function TrainerDashboard() {
     }
   };
 
+  // Sends the renewal nudge directly (no draft/edit step) and snoozes this
+  // item for 7 days so it leaves the list — the client's own dashboard still
+  // owns the actual reminder banner/payment sheet; this just prompts them to
+  // go look.
+  const handleSendRenewalReminder = async (client, remaining) => {
+    setSendingReminderFor(client.id);
+    try {
+      const msg = buildRenewalMsg(client, remaining, currentUser);
+      await sendMessage(currentUser.id, client.id, msg);
+      await updateClient(client.id, { renewalSnoozedUntil: localDateAdd(7) });
+      toast(`Renewal reminder sent to ${client.name}`);
+    } catch {
+      toast('Failed to send reminder', 'error');
+    } finally {
+      setSendingReminderFor(null);
+    }
+  };
+
+  const handleSnooze = async (clientId, category, days) => {
+    const field = category === 'renewal' ? 'renewalSnoozedUntil' : 'churnSnoozedUntil';
+    setSnoozeMenuFor(null);
+    try {
+      await updateClient(clientId, { [field]: localDateAdd(days) });
+      toast(`Snoozed for ${days} days`);
+    } catch {
+      toast('Failed to snooze', 'error');
+    }
+  };
+
   const clients = getClients(currentUser.id);
   const allPlans = getWorkoutPlans({ trainerId: currentUser.id });
   const totalPlans = allPlans.length;
@@ -215,7 +258,18 @@ export default function TrainerDashboard() {
   const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date) && !s.isBlocked && s.status !== 'cancelled');
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
 
-  const atRiskClients = clients.reduce((acc, client) => {
+  // Two independent tracks — a client can appear in both if they genuinely
+  // qualify for both, and each has its own snooze so handling/snoozing one
+  // never hides the other.
+  const renewalClients = clients.reduce((acc, client) => {
+    const { remaining } = getSessionStats(client.id);
+    if (remaining !== null && remaining <= 2 && !isSnoozed(client.renewalSnoozedUntil, today)) {
+      acc.push({ client, remaining });
+    }
+    return acc;
+  }, []).sort((a, b) => a.remaining - b.remaining);
+
+  const churnClients = clients.reduce((acc, client) => {
     const logs = getWorkoutLogs(client.id);
     const latest = logs.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
     const daysSince = latest
@@ -224,18 +278,19 @@ export default function TrainerDashboard() {
     const lastWorkoutName = latest
       ? (allPlans.find(p => p.id === latest.planId)?.name || latest.workoutName || 'Workout')
       : null;
-    const { remaining } = getSessionStats(client.id);
-    const inactive = daysSince === null || daysSince >= INACTIVE_DAYS;
-    const lowSessions = remaining !== null && remaining <= 2;
-    if (inactive || lowSessions) {
-      acc.push({ client, daysSince, lastWorkoutName, reasons: { inactive, lowSessions, remaining } });
+    const inactive = daysSince === null || daysSince >= CHURN_INACTIVE_DAYS;
+    if (inactive && !isSnoozed(client.churnSnoozedUntil, today)) {
+      acc.push({ client, daysSince, lastWorkoutName });
     }
     return acc;
-  }, []).sort((a, b) => {
-    const aScore = (a.reasons.lowSessions ? 2 : 0) + (a.reasons.inactive ? 1 : 0);
-    const bScore = (b.reasons.lowSessions ? 2 : 0) + (b.reasons.inactive ? 1 : 0);
-    return bScore - aScore;
-  });
+  }, []).sort((a, b) => (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity));
+
+  const totalAttentionCount = renewalClients.length + churnClients.length;
+  const visibleRenewalCount = showAttentionAll ? renewalClients.length : Math.min(3, renewalClients.length);
+  const visibleChurnCount = showAttentionAll ? churnClients.length : Math.max(0, 3 - visibleRenewalCount);
+  const visibleRenewal = renewalClients.slice(0, visibleRenewalCount);
+  const visibleChurn = churnClients.slice(0, visibleChurnCount);
+  const hiddenAttentionCount = totalAttentionCount - visibleRenewal.length - visibleChurn.length;
 
   return (
     <div>
@@ -331,46 +386,124 @@ export default function TrainerDashboard() {
       </div>
 
       {/* Needs attention */}
-      {atRiskClients.length > 0 && (
+      {totalAttentionCount === 0 ? (
+        <div className="needs-attention needs-attention-allclear mb-16">
+          <span>All clear ✅ — no clients need attention right now.</span>
+        </div>
+      ) : (
         <div className="needs-attention mb-16">
           <div className="needs-attention-header">
             <div className="flex gap-8" style={{ alignItems: 'center' }}>
               <AlertTriangle size={15} style={{ color: 'var(--danger)' }} />
               <span className="needs-attention-title">Needs attention</span>
-              <span className="needs-attention-count">{atRiskClients.length}</span>
+              <span className="needs-attention-count">{totalAttentionCount}</span>
             </div>
-            <Link to="/clients" className="needs-attention-viewall">View all</Link>
+            {(hiddenAttentionCount > 0 || showAttentionAll) && (
+              <button className="needs-attention-viewall" onClick={() => setShowAttentionAll(v => !v)}>
+                {showAttentionAll ? 'Show less' : 'View all'}
+              </button>
+            )}
           </div>
-          {atRiskClients.map(({ client, daysSince, lastWorkoutName, reasons }) => {
-            const severity = reasons.lowSessions ? 'high' : 'mid';
-            const reasonText = reasons.lowSessions
-              ? (reasons.remaining === 0 ? 'Sessions used up' : `${reasons.remaining} session${reasons.remaining === 1 ? '' : 's'} left`)
-              : (daysSince === null ? 'No logs yet' : `Inactive ${daysSince} day${daysSince === 1 ? '' : 's'}`);
-            const hintText = reasons.lowSessions
-              ? 'Renewal due'
-              : (lastWorkoutName ? `Last: ${lastWorkoutName}` : 'No workouts yet');
-            return (
-              <div key={client.id} className="needs-attention-item" style={{ borderLeftColor: SEVERITY_COLOR[severity] }}>
-                <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
-                <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div className="needs-attention-name">{client.name}</div>
-                  <div className="needs-attention-meta">
-                    <span style={{ color: SEVERITY_COLOR[severity], fontWeight: 600 }}>{reasonText}</span>
-                    <span className="text-muted"> · {hintText}</span>
-                  </div>
-                </Link>
-                <button
-                  className="needs-attention-msg"
-                  onClick={() => handleOpenQuickMsg(client, reasons)}
-                  title="Send follow-up message"
-                >
-                  <MessageCircle size={16} />
-                </button>
+
+          {visibleRenewal.length > 0 && (
+            <>
+              <div className="needs-attention-category">
+                <span className="needs-attention-category-dot" style={{ background: 'var(--danger)' }} />
+                Renewal <span className="text-muted">({renewalClients.length})</span>
               </div>
-            );
-          })}
+              {visibleRenewal.map(({ client, remaining }) => (
+                <div key={`renewal-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--danger)' }}>
+                  <div className="needs-attention-item-top">
+                    <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
+                    <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="needs-attention-name">{client.name}</div>
+                      <div className="needs-attention-meta">
+                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                          {remaining === 0 ? 'Sessions used up' : `${remaining} session${remaining === 1 ? '' : 's'} left`}
+                        </span>
+                        <span className="text-muted"> · Renewal due</span>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="needs-attention-item-actions">
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={sendingReminderFor === client.id}
+                      onClick={() => handleSendRenewalReminder(client, remaining)}
+                    >
+                      <Send size={14} /> {sendingReminderFor === client.id ? 'Sending…' : 'Send renewal reminder'}
+                    </button>
+                    <div className="needs-attention-snooze-wrap">
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setSnoozeMenuFor(m => m === `renewal-${client.id}` ? null : `renewal-${client.id}`)}
+                      >
+                        <Clock size={14} /> Snooze
+                      </button>
+                      {snoozeMenuFor === `renewal-${client.id}` && (
+                        <div className="needs-attention-snooze-menu">
+                          {SNOOZE_OPTIONS.map(d => (
+                            <button key={d} onClick={() => handleSnooze(client.id, 'renewal', d)}>{d} days</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {visibleChurn.length > 0 && (
+            <>
+              <div className="needs-attention-category">
+                <span className="needs-attention-category-dot" style={{ background: 'var(--warning)' }} />
+                At risk of churn <span className="text-muted">({churnClients.length})</span>
+              </div>
+              {visibleChurn.map(({ client, daysSince, lastWorkoutName }) => (
+                <div key={`churn-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--warning)' }}>
+                  <div className="needs-attention-item-top">
+                    <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
+                    <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="needs-attention-name">{client.name}</div>
+                      <div className="needs-attention-meta">
+                        <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                          {daysSince === null ? 'No logs yet' : `Inactive ${daysSince} day${daysSince === 1 ? '' : 's'}`}
+                        </span>
+                        <span className="text-muted"> · {lastWorkoutName ? `Last: ${lastWorkoutName}` : 'No workouts yet'}</span>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="needs-attention-item-actions">
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleOpenQuickMsg(client, { inactive: true, lowSessions: false })}
+                    >
+                      <MessageCircle size={14} /> Send a check-in
+                    </button>
+                    <div className="needs-attention-snooze-wrap">
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setSnoozeMenuFor(m => m === `churn-${client.id}` ? null : `churn-${client.id}`)}
+                      >
+                        <Clock size={14} /> Snooze
+                      </button>
+                      {snoozeMenuFor === `churn-${client.id}` && (
+                        <div className="needs-attention-snooze-menu">
+                          {SNOOZE_OPTIONS.map(d => (
+                            <button key={d} onClick={() => handleSnooze(client.id, 'churn', d)}>{d} days</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
+      {snoozeMenuFor && <div className="needs-attention-snooze-backdrop" onClick={() => setSnoozeMenuFor(null)} />}
 
       {/* Today + Messages */}
       <div className="grid-2 mb-16">
