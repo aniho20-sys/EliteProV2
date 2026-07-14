@@ -1,5 +1,20 @@
+// Follows a soft-merged exercise's mergedInto pointer to the surviving exercise doc.
+// Merges never rewrite exerciseId on existing workoutPlans/workoutLogs — this lets old
+// references keep resolving to the current (merged-into) exercise instead.
+export const canonicalExercise = (library, id) => {
+  let ex = library.find(e => e.id === id);
+  const seen = new Set();
+  while (ex?.mergedInto && !seen.has(ex.id)) {
+    seen.add(ex.id);
+    const next = library.find(e => e.id === ex.mergedInto);
+    if (!next) break;
+    ex = next;
+  }
+  return ex;
+};
+
 export const resolveExerciseName = (library, id, fallback) =>
-  library.find(e => e.id === id)?.name || fallback || id;
+  canonicalExercise(library, id)?.name || fallback || id;
 
 // Title-cases a name while preserving words that are already all-caps acronyms (e.g. "RDL", "HIIT")
 export const titleCaseExerciseName = (name) =>

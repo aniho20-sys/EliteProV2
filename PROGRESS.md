@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行）
 
 ---
 
@@ -155,7 +155,15 @@
 - **教練端新增「匯出動作庫」功能**（`ProfilePage.jsx`）：一撳將全部動作 copy 做 JSON 去 clipboard，貼返俾 AI 分析——因為 Ani 全程用手機，冇 terminal，呢個原則已寫入 CLAUDE.md 第26條
 - **合併重複動作機制決定**（未實裝，留返 Phase C 之後）：唔用 batch rewrite 歷史數據，改用「軟合併」——舊 doc 標記 `mergedInto: 新ID`，`resolveExerciseName`/`ExerciseProgress` 讀取時跟呢個指針解析，PR 歷史自動冧埋計、可 undo；呢條原則已寫入 CLAUDE.md 第27條
 - 12 個 credit emulator test 保持全綠（呢次改動完全喺 `exercises` collection + UI，冇掂 `functions/index.js`）；`npm run build` 通過
-- **待 Ani**：喺 Profile 撳「匯出動作庫」copy 返真實動作數據俾 AI，先可以做 Phase C（大掃除預覽表）；Phase D（合併 UI）留最後
+
+### Exercise Library Phase C：大掃除預覽 + 批准執行（Session 34）
+- Ani 匯出真實 `exercises` 數據（42 條教練自建 + 22 條共用底版），出咗 artifact 版大掃除預覽表：19 項缺 tag/標籤唔規範、7 項命名唔規範、4 組疑似重複
+- **查到「兜巴星」`custom--` 空白 ID 根源**：嚟自 2026年4月已刪走嘅舊 function（`'custom-' + name.replace(/[^a-z0-9]+/g,'-')`，ASCII-only regex 隔走晒中文字）；已核實現時 3 條建立動作嘅路全部用 timestamp 做 ID（唔睇個名），呢類 bug 結構上唔會再發生
+- **已確認、寫落 CLAUDE.md 嘅決定**：22 條共用底版動作（冇 `trainerId`）係刻意設計；「Triceps extension」vs「Overhead Tricep extension」係兩個唔同動作，唔合併
+- **軟合併機制正式實裝**：`utils/exerciseUtils.js` 新增 `canonicalExercise()`，跟 `mergedInto` 指針解析到最終存活嘅 exercise（`resolveExerciseName` 已套用）；`ExerciseProgress.jsx`（`exerciseOptions`/`buildHistory`）同 `AppContext.getPersonalRecords` 都改做用 canonical id 分組，舊 id 嘅歷史 log 會自動冧埋計落新 id，唔使改動任何 `workoutPlans`/`workoutLogs` 文件
+- **一次性「Apply Approved Cleanup (Batch 1)」按鈕**（`ProfilePage.jsx`，Exercise Library Backup 卡下面）：執行 Ani 批准嘅 9 項操作——刪除「兜巴星」`custom--`、刪除「Core」`ex-1781006442488`、合併 Core boat（留 `custom-core-boat`）、合併 Hip abduction（留 `ex-1776704070364`）、5 項改名（KB Single Arm Row / Chest Press (Machine) / Walking Lunges / Hip Adduction (Machine) / Hip Abduction (Machine)）——因為冇 admin SDK 憑證，需要 Ani 喺 app 度親手撳一次先會真正寫入 Firestore；跑完之後會喺跟進 commit 度移除呢個按鈕
+- **未處理，等 Ani 拍板**：`ex-1779565704448`「Mobility workout」——冇缺明確嘅改名/去留建議，Ani 呢次批准清單冇提到，留待下次
+- 12 個 credit emulator test 保持全綠；`npm run build` 通過
 
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）

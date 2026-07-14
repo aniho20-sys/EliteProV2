@@ -57,7 +57,7 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, updateExercise, deleteExercise } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
   const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission, token: fcmToken } = useNotifications();
@@ -118,6 +118,9 @@ export default function ProfilePage() {
   // Trainer: exercise library export (copy-as-JSON — no terminal/CLI access assumed)
   const [exportCopied, setExportCopied] = useState(false);
   const exportCopiedTimer = useRef(null);
+
+  // Trainer: one-time approved cleanup batch (2026-07-14) — remove this block once Ani confirms it ran
+  const [cleanupRunning, setCleanupRunning] = useState(false);
 
   // Load invite code for trainer
   // getInviteCode/inviteCode deliberately excluded: getInviteCode is recreated on every
@@ -239,6 +242,43 @@ export default function ProfilePage() {
     } finally {
       setBankSaving(false);
     }
+  };
+
+  // 2026-07-14 approved cleanup batch — see reports/exercise-library-cleanup-preview
+  const CLEANUP_BATCH_1 = [
+    { type: 'delete', id: 'custom--', label: '刪除「兜巴星」' },
+    { type: 'delete', id: 'ex-1781006442488', label: '刪除「Core」' },
+    { type: 'merge', id: 'ex-1777769559834', into: 'custom-core-boat', label: 'Core boat 合併 → custom-core-boat' },
+    { type: 'merge', id: 'custom-hip-abduction', into: 'ex-1776704070364', label: 'Hip abduction 合併 → ex-1776704070364' },
+    { type: 'rename', id: 'custom-kb-single-armrow', name: 'KB Single Arm Row' },
+    { type: 'rename', id: 'ex-1776704156141', name: 'Chest Press (Machine)' },
+    { type: 'rename', id: 'ex-1779464427230', name: 'Walking Lunges' },
+    { type: 'rename', id: 'custom-hip-adductor', name: 'Hip Adduction (Machine)' },
+    { type: 'rename', id: 'ex-1776704070364', name: 'Hip Abduction (Machine)' },
+  ];
+
+  const handleApplyCleanupBatch1 = async () => {
+    if (!window.confirm(`即將執行 9 項已批准嘅 Exercise Library 清理操作（2 刪除 + 2 合併 + 5 改名）。繼續？`)) return;
+    setCleanupRunning(true);
+    const results = [];
+    for (const op of CLEANUP_BATCH_1) {
+      try {
+        if (op.type === 'delete') await deleteExercise(op.id);
+        else if (op.type === 'merge') await updateExercise(op.id, { mergedInto: op.into });
+        else if (op.type === 'rename') await updateExercise(op.id, { name: op.name });
+        results.push({ ...op, ok: true });
+      } catch (err) {
+        results.push({ ...op, ok: false, error: err.message });
+      }
+    }
+    const failed = results.filter(r => !r.ok);
+    if (failed.length === 0) {
+      toast('清理批次 1 已完成 — 9/9 成功');
+    } else {
+      console.error('Cleanup batch 1 failures:', failed);
+      toast(`${failed.length} 項失敗，其餘已完成 — 詳情請睇 console`, 'error');
+    }
+    setCleanupRunning(false);
   };
 
   const handleExportExercises = () => {
@@ -520,6 +560,10 @@ export default function ProfilePage() {
           <button className="btn btn-outline mt-8" onClick={handleExportExercises} style={{ width: '100%' }}>
             {exportCopied ? <Check size={16} /> : <Copy size={16} />}
             {exportCopied ? 'Copied!' : 'Copy Exercise Library as JSON'}
+          </button>
+          <p className="invite-desc mt-16">一次性：套用 2026-07-14 已批准嘅大掃除清理（刪除「兜巴星」/「Core」、合併 2 組重複、5 項改名）。</p>
+          <button className="btn btn-outline mt-8" onClick={handleApplyCleanupBatch1} disabled={cleanupRunning} style={{ width: '100%' }}>
+            {cleanupRunning ? 'Applying…' : 'Apply Approved Cleanup (Batch 1)'}
           </button>
         </div>
       )}

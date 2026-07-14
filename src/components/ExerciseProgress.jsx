@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Dumbbell, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import EmptyState from './EmptyState';
+import { canonicalExercise } from '../utils/exerciseUtils';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -12,12 +13,13 @@ const EX_METRICS = [
   { key: 'totalReps', label: 'Total Reps', unit: 'reps' },
 ];
 
-function buildHistory(logs, exerciseId) {
+// canonicalId groups a soft-merged exercise's history under its surviving exercise
+function buildHistory(logs, exerciseId, canonicalId) {
   return logs
-    .filter(log => log.entries?.some(e => e.exerciseId === exerciseId))
+    .filter(log => log.entries?.some(e => canonicalId(e.exerciseId) === exerciseId))
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(log => {
-      const entry = log.entries.find(e => e.exerciseId === exerciseId);
+      const entry = log.entries.find(e => canonicalId(e.exerciseId) === exerciseId);
       const completed = (entry?.sets || []).filter(s => s.completed !== false);
       const weights = completed.map(s => Number(s.weight) || 0);
       const maxWeight = weights.length ? Math.max(...weights) : 0;
@@ -48,23 +50,30 @@ export default function ExerciseProgress({ clientId }) {
   const [selectedId, setSelectedId] = useState(null);
   const [metric, setMetric] = useState('maxWeight');
 
+  const canonicalId = useMemo(() => {
+    const map = new Map();
+    exerciseLibrary.forEach(e => map.set(e.id, canonicalExercise(exerciseLibrary, e.id)?.id || e.id));
+    return (id) => map.get(id) || id;
+  }, [exerciseLibrary]);
+
   const exerciseOptions = useMemo(() => {
+    const idsByLog = logs.map(log => new Set((log.entries || []).map(e => canonicalId(e.exerciseId))));
     const ids = new Set();
-    logs.forEach(log => (log.entries || []).forEach(e => ids.add(e.exerciseId)));
+    idsByLog.forEach(set => set.forEach(id => ids.add(id)));
     return [...ids]
       .map(id => {
-        const count = logs.filter(l => l.entries?.some(e => e.exerciseId === id)).length;
+        const count = idsByLog.filter(set => set.has(id)).length;
         return { id, name: exerciseLibrary.find(e => e.id === id)?.name || id, count };
       })
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  }, [logs, exerciseLibrary]);
+  }, [logs, exerciseLibrary, canonicalId]);
 
   const activeId = selectedId ?? exerciseOptions[0]?.id ?? null;
 
   const history = useMemo(() => {
     if (!activeId) return [];
-    return buildHistory(logs, activeId);
-  }, [logs, activeId]);
+    return buildHistory(logs, activeId, canonicalId);
+  }, [logs, activeId, canonicalId]);
 
   const reversedHistory = useMemo(() => [...history].reverse(), [history]);
 

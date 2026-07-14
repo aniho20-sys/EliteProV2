@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 import { localToday } from '../utils/dateUtils';
+import { canonicalExercise } from '../utils/exerciseUtils';
 import { getNewBadges } from './badgeUtils';
 
 const AppContext = createContext();
@@ -587,13 +588,15 @@ export function AppProvider({ children }) {
   // ========== Personal Records ==========
   const getPersonalRecords = (clientId) => {
     const logs = workoutLogs.filter(l => l.clientId === clientId);
+    const library = getExercises();
     const prs = {};
     logs.forEach(log => {
       (log.entries || []).forEach(entry => {
+        const id = canonicalExercise(library, entry.exerciseId)?.id || entry.exerciseId;
         const maxWeight = Math.max(...entry.sets.map(s => Number(s.weight) || 0));
         if (maxWeight > 0) {
-          if (!prs[entry.exerciseId] || maxWeight > prs[entry.exerciseId].weight) {
-            prs[entry.exerciseId] = { weight: maxWeight, date: log.date, name: entry.name };
+          if (!prs[id] || maxWeight > prs[id].weight) {
+            prs[id] = { weight: maxWeight, date: log.date, name: entry.name };
           }
         }
       });
