@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復）
 
 ---
 
@@ -134,6 +134,14 @@
 - 兩類都可以 Snooze 7／14／30 日，存喺 client doc 新欄位 `renewalSnoozedUntil`／`churnSnoozedUntil`（唔係 local state，換機都記得；到期用日期比較自動恢復，唔使 cron）
 - 首頁最多顯示 3 項（續約優先塞滿），其餘用「View all」inline 展開；全部清晒顯示「All clear ✅」
 - `firestore.rules` 冇改動——教練寫自己客戶 doc 本身已經冇欄位限制，已經涵蓋新欄位
+
+### Needs Attention「流失風險」false positive 修復（Session 34）
+- 員工B：發現 inactive 定義淨係計 `workoutLogs` 日數，令每星期上堂但唔記錄workout log 嘅活躍付費客被誤標「流失風險」
+- 改做「最後活動」= max(最後 workout log 日期, 最後 `status:'completed'` 嘅 schedule 日期)，超過 21 日先算 inactive；`TrainerDashboard.jsx` 嘅 `churnClients` 同 `ClientDashboard.jsx`（學生端 Home）嘅「This Week」stat 都套用同一個邏輯（This Week 由淨計 log 改做計 distinct 訓練日：log 日期 ∪ 完成 session 日期）
+- **順帶發現，未修**：`TrainerDashboard.jsx` 嘅 `ClientActivityList`（另一個獨立小組件，顯示每個客戶「Xd ago」）都係用返舊嘅 log-only 邏輯，同一個 root cause，但呢次冇喺批准範圍入面，未郁
+- 學生端「上次活動」——搵過 `ClientDashboard.jsx`全文，暫時搵唔到獨立嘅「上次活動」stat（得返「This Week」／「Total」兩個 pill），已經連 This Week 一齊修；如果 Ani 講嘅係第度嘅 UI 元素，需要補充位置先可以修
+- 12 個 credit emulator test 保持全綠；`npm run build` 通過
+- **待 Ani 驗證**：邊個客戶會由清單度消失，取決於「有 completed session 但冇 log」嘅實際客戶名單，冇真實數據冇辦法離線比對，要 Ani 部署後喺真實 Needs Attention 面板前後對比
 
 ### Trainer 端 UX Audit + Top 5 首兩項修復（Session 33）
 - 員工D+員工E 出咗 `reports/ux-audit-trainer-2026-07-14.md`，逐頁 audit TrainerDashboard/Clients/ClientDetailPage/WorkoutPlansPage/SchedulePage/Credit管理/NotesSection/ProfilePage/Navigation/通知鐘/Invoice/Analytics，40 個發現 + 完整 payment chain 追蹤（確認由頭到尾冇一步自動化）+ Top 5 優先榜

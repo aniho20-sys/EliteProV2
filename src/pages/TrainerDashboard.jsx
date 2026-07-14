@@ -269,18 +269,26 @@ export default function TrainerDashboard() {
     return acc;
   }, []).sort((a, b) => a.remaining - b.remaining);
 
+  // "Last activity" = most recent of (last workout log, last completed session) — a client
+  // who trains weekly via booked sessions but rarely logs workouts is still active, not churning.
   const churnClients = clients.reduce((acc, client) => {
-    const logs = getWorkoutLogs(client.id);
-    const latest = logs.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    const daysSince = latest
-      ? Math.floor((todayMs - new Date(latest.date).getTime()) / 86400000)
+    const latestLog = getWorkoutLogs(client.id).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    const latestSession = getSchedule({ clientId: client.id })
+      .filter(s => s.status === 'completed')
+      .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    const logMs = latestLog ? new Date(latestLog.date).getTime() : null;
+    const sessionMs = latestSession ? new Date(latestSession.date).getTime() : null;
+    const lastActivityMs = logMs !== null && sessionMs !== null ? Math.max(logMs, sessionMs) : (logMs ?? sessionMs);
+    const daysSince = lastActivityMs !== null
+      ? Math.floor((todayMs - lastActivityMs) / 86400000)
       : null;
-    const lastWorkoutName = latest
-      ? (allPlans.find(p => p.id === latest.planId)?.name || latest.workoutName || 'Workout')
-      : null;
+    const lastActivityLabel = lastActivityMs === null ? null
+      : sessionMs !== null && sessionMs >= (logMs ?? -Infinity)
+        ? (latestSession.type || 'Session')
+        : (allPlans.find(p => p.id === latestLog.planId)?.name || latestLog.workoutName || 'Workout');
     const inactive = daysSince === null || daysSince >= CHURN_INACTIVE_DAYS;
     if (inactive && !isSnoozed(client.churnSnoozedUntil, today)) {
-      acc.push({ client, daysSince, lastWorkoutName });
+      acc.push({ client, daysSince, lastActivityLabel });
     }
     return acc;
   }, []).sort((a, b) => (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity));
@@ -460,7 +468,7 @@ export default function TrainerDashboard() {
                 <span className="needs-attention-category-dot" style={{ background: 'var(--warning)' }} />
                 At risk of churn <span className="text-muted">({churnClients.length})</span>
               </div>
-              {visibleChurn.map(({ client, daysSince, lastWorkoutName }) => (
+              {visibleChurn.map(({ client, daysSince, lastActivityLabel }) => (
                 <div key={`churn-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--warning)' }}>
                   <div className="needs-attention-item-top">
                     <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
@@ -468,9 +476,9 @@ export default function TrainerDashboard() {
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
                         <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                          {daysSince === null ? 'No logs yet' : `Inactive ${daysSince} day${daysSince === 1 ? '' : 's'}`}
+                          {daysSince === null ? 'No activity yet' : `Inactive ${daysSince} day${daysSince === 1 ? '' : 's'}`}
                         </span>
-                        <span className="text-muted"> · {lastWorkoutName ? `Last: ${lastWorkoutName}` : 'No workouts yet'}</span>
+                        <span className="text-muted"> · {lastActivityLabel ? `Last: ${lastActivityLabel}` : 'No activity yet'}</span>
                       </div>
                     </Link>
                   </div>

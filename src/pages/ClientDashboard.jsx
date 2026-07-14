@@ -48,7 +48,14 @@ export default function ClientDashboard() {
   }, [sessRemaining, currentUser.id, currentUser.renewalPrompt3Shown, currentUser.renewalPrompt1Shown, trainer, updateClient]);
 
   const totalWorkouts = logs.length;
-  const thisWeekLogs = logs.filter(l => l.date >= localDateAdd(today, -7));
+  // "This Week" counts distinct training days — a logged workout OR a completed session —
+  // so clients who train via booked sessions without always logging aren't undercounted.
+  const weekStart = localDateAdd(today, -7);
+  const thisWeekActivityDates = new Set([
+    ...logs.filter(l => l.date >= weekStart).map(l => l.date),
+    ...getSchedule({ clientId: currentUser.id }).filter(s => s.status === 'completed' && s.date >= weekStart).map(s => s.date),
+  ]);
+  const thisWeekCount = thisWeekActivityDates.size;
 
   return (
     <div>
@@ -81,7 +88,7 @@ export default function ClientDashboard() {
       <div className="stat-strip mb-16">
         <Link to="/log" className="stat-pill">
           <Flame size={15} style={{ color: 'var(--accent)' }} />
-          <div className="stat-pill-value">{thisWeekLogs.length}</div>
+          <div className="stat-pill-value">{thisWeekCount}</div>
           <div className="stat-pill-label">This Week</div>
         </Link>
         <Link to="/log" className="stat-pill">
