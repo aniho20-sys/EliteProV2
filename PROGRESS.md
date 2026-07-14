@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復、動作 list 全站 A-Z 排序）
 
 ---
 
@@ -183,6 +183,12 @@
   1. Sticky filter row 嘅 breakpoint（768px）同真實 app `.mobile-header` 出現嘅 breakpoint（1024px）唔啱，窄啲嘅平板寬度會令 chips 匿埋喺 header 後面——已統一做 1024px
   2. Dropdown 展開嗰陣俾裁到得返一條線咁高——CSS 冷知識：淨係設 `overflow-x` 會強行將 `overflow-y` 都變做 `auto`，連累用嚟做橫向 scroll 嘅 container 裁走咗展開嘅 dropdown；改用 JS 量度按鈕位置嚟 position 個 dropdown（唔再靠 CSS `top:100%` 呢種相對定位）解決
 - 用真實 `index.css` + 真實 post-cleanup 數據做靜態 mockup screenshot 俾 Ani 驗，確認密度（scroll少少即12+行可見）先 commit
+- 12 個 credit emulator test 保持全綠；`npm run build` 通過
+
+### 動作 list 全站 A-Z 排序（Session 34）
+- 新增共用 `sortExercisesByName()`（`utils/exerciseUtils.js`，`localeCompare` + `sensitivity:'base'` 做 case-insensitive），喺 render 嗰刻排序，唔靠 Firestore 返嚟嘅次序
+- 套用去 3 個顯示動作 list 嘅地方：`ExerciseLibraryPage.jsx`（Library 主頁）、`WorkoutPlansPage.jsx`（Add Exercises 搜尋結果）、`ExerciseSwapModal.jsx`（swap/add exercise picker，順便修埋一個小 bug：原本 `.slice(0,60)` 喺 sort 之前就切走，而家已經改做「先 sort 先 slice」，等頭 60 個真係 A-Z 頭 60 個）
+- Filter 篩選完嘅結果、新增動作 submit 完，都會即時出現喺正確字母位置——因為排序喺 render 層做，唔靠儲存次序
 - 12 個 credit emulator test 保持全綠；`npm run build` 通過
 
 ### Dashboard 全面改版（6月10-11日）

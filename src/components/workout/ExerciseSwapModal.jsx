@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Search } from 'lucide-react';
+import { sortExercisesByName } from '../../utils/exerciseUtils';
 
 export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, currentId, currentName, onSwap, onClose, mode = 'swap' }) {
   const [search, setSearch] = useState('');
@@ -7,12 +8,12 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
   const [tab, setTab] = useState('library'); // 'library' | 'custom'
   const [customName, setCustomName] = useState('');
 
-  const filtered = exerciseLibrary.filter(e => {
+  const filtered = sortExercisesByName(exerciseLibrary.filter(e => {
     if (!e || !e.name) return false;
     const matchName = !search || e.name.toLowerCase().includes(search.toLowerCase());
     const matchMuscle = !muscle || e.muscle === muscle || (Array.isArray(e.muscles) && e.muscles.includes(muscle));
     return matchName && matchMuscle;
-  }).slice(0, 60);
+  })).slice(0, 60);
 
   const handleAddCustom = () => {
     const name = customName.trim();

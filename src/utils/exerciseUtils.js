@@ -25,3 +25,8 @@ export const titleCaseExerciseName = (name) =>
 // Shared "≥1 muscle group + equipment" requirement for any UI that creates/edits exercises
 export const exerciseFieldsValid = ({ muscle, equipment }) =>
   !!(muscle && muscle.split(',').map(s => s.trim()).filter(Boolean).length) && !!(equipment && equipment.trim());
+
+// Canonical A-Z sort for every UI that lists exercises, applied at render time so a newly
+// added exercise appears in its correct alphabetical position rather than at the bottom.
+export const sortExercisesByName = (list) =>
+  [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));

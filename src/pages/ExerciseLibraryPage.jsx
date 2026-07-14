@@ -6,7 +6,7 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
-import { titleCaseExerciseName, exerciseFieldsValid } from '../utils/exerciseUtils';
+import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName } from '../utils/exerciseUtils';
 import { movementPatterns } from '../data/exercises';
 
 const EMPTY_FORM = { name: '', muscles: [], equipment: '', movementPattern: '', aliases: [], description: '', instructions: '', commonMistakes: '', videoUrl: '', unit: 'weight_reps' };
@@ -51,7 +51,7 @@ export default function ExerciseLibraryPage() {
     }
   }, [showModal]);
 
-  const filtered = exercises.filter(e => {
+  const filtered = sortExercisesByName(exercises.filter(e => {
     const q = search.toLowerCase();
     const matchesText = !q || e.name.toLowerCase().includes(q) || (e.aliases || []).some(a => a.toLowerCase().includes(q));
     if (!matchesText) return false;
@@ -59,7 +59,7 @@ export default function ExerciseLibraryPage() {
     if (equipFilter && e.equipment !== equipFilter) return false;
     if (patternFilter && e.movementPattern !== patternFilter) return false;
     return true;
-  });
+  }));
 
   const openAdd = () => {
     setEditingEx(null);
