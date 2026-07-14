@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Search, Play, Plus, Trash2, Pencil, X, ExternalLink, SearchX, Link2 } from 'lucide-react';
+import { Search, Plus, X, SearchX } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
-import { isSafeUrl, isYouTube } from '../utils/urlUtils';
+import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
+import { titleCaseExerciseName, exerciseFieldsValid } from '../utils/exerciseUtils';
+import { movementPatterns } from '../data/exercises';
+
+const EMPTY_FORM = { name: '', muscles: [], equipment: '', movementPattern: '', aliases: [], description: '', instructions: '', commonMistakes: '', videoUrl: '', unit: 'weight_reps' };
 
 export default function ExerciseLibraryPage() {
   const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
@@ -17,55 +21,84 @@ export default function ExerciseLibraryPage() {
   const [search, setSearch] = useState('');
   const [muscleFilter, setMuscleFilter] = useState('');
   const [equipFilter, setEquipFilter] = useState('');
+  const [patternFilter, setPatternFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingEx, setEditingEx] = useState(null);
-  const [form, setForm] = useState({ name: '', muscles: [], equipment: '', description: '', videoUrl: '' });
-  const [focusUrl, setFocusUrl] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [aliasInput, setAliasInput] = useState('');
   const [saving, setSaving] = useState(false);
-  const urlInputRef = useRef(null);
   const [detailExercise, setDetailExercise] = useState(null);
+  const nameInputRef = useRef(null);
 
   useEffect(() => {
-    if (showModal && focusUrl && urlInputRef.current) {
-      // Small delay to let modal animation finish before focusing
-      const t = setTimeout(() => { urlInputRef.current?.focus(); }, 150);
+    if (showModal && nameInputRef.current) {
+      const t = setTimeout(() => nameInputRef.current?.focus(), 150);
       return () => clearTimeout(t);
     }
-  }, [showModal, focusUrl]);
+  }, [showModal]);
 
   const filtered = exercises.filter(e => {
-    if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
+    const q = search.toLowerCase();
+    const matchesText = !q || e.name.toLowerCase().includes(q) || (e.aliases || []).some(a => a.toLowerCase().includes(q));
+    if (!matchesText) return false;
     if (muscleFilter && !parseMuscles(e.muscle).includes(muscleFilter)) return false;
     if (equipFilter && e.equipment !== equipFilter) return false;
+    if (patternFilter && e.movementPattern !== patternFilter) return false;
     return true;
   });
 
   const openAdd = () => {
-    setFocusUrl(false);
     setEditingEx(null);
-    setForm({ name: '', muscles: [], equipment: equipmentTypes[0], description: '', videoUrl: '', unit: 'weight_reps' });
+    setForm({ ...EMPTY_FORM, equipment: equipmentTypes[0] });
+    setAliasInput('');
     setShowModal(true);
   };
 
   const openEdit = (ex) => {
-    setFocusUrl(false);
     setEditingEx(ex);
-    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '', unit: ex.unit || 'weight_reps' });
+    setForm({
+      name: ex.name,
+      muscles: parseMuscles(ex.muscle),
+      equipment: ex.equipment || '',
+      movementPattern: ex.movementPattern || '',
+      aliases: ex.aliases || [],
+      description: ex.description || '',
+      instructions: ex.instructions || '',
+      commonMistakes: ex.commonMistakes || '',
+      videoUrl: ex.videoUrl || '',
+      unit: ex.unit || 'weight_reps',
+    });
+    setAliasInput('');
+    setDetailExercise(null);
     setShowModal(true);
   };
 
-  // Opens edit modal with URL field auto-focused
-  const openEditAtUrl = (ex) => {
-    setEditingEx(ex);
-    setForm({ name: ex.name, muscles: parseMuscles(ex.muscle), equipment: ex.equipment, description: ex.description, videoUrl: ex.videoUrl || '', unit: ex.unit || 'weight_reps' });
-    setFocusUrl(true);
-    setShowModal(true);
+  const handleDelete = async (ex) => {
+    if (!window.confirm(`Delete "${ex.name}"? This cannot be undone.`)) return;
+    try {
+      await deleteExercise(ex.id);
+      toast('Exercise deleted', 'info');
+      setDetailExercise(null);
+    } catch { toast('Failed to delete', 'error'); }
   };
+
+  const addAlias = () => {
+    const name = aliasInput.trim();
+    if (!name || form.aliases.includes(name)) { setAliasInput(''); return; }
+    setForm(f => ({ ...f, aliases: [...f.aliases, name] }));
+    setAliasInput('');
+  };
+
+  const removeAlias = (name) => setForm(f => ({ ...f, aliases: f.aliases.filter(a => a !== name) }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { muscles, ...rest } = form;
-    const exData = { ...rest, muscle: muscles.join(', ') };
+    const exData = { ...rest, name: titleCaseExerciseName(form.name), muscle: muscles.join(', ') };
+    if (!exerciseFieldsValid(exData)) {
+      toast('Pick at least one muscle group and an equipment type', 'error');
+      return;
+    }
     setSaving(true);
     try {
       if (editingEx) {
@@ -79,14 +112,17 @@ export default function ExerciseLibraryPage() {
     } catch { toast('Failed to save exercise', 'error'); } finally { setSaving(false); }
   };
 
-  const handleDelete = async (id) => {
-    const ex = exercises.find(e => e.id === id);
-    if (!window.confirm(`Delete "${ex?.name || 'this exercise'}"? This cannot be undone.`)) return;
-    try {
-      await deleteExercise(id);
-      toast('Exercise deleted', 'info');
-    } catch { toast('Failed to delete', 'error'); }
-  };
+  const chipRow = (label, options, value, setValue) => (
+    <div className="ex-filter-chip-row">
+      <span className="ex-filter-chip-label">{label}</span>
+      <div className="ex-filter-chips">
+        <button type="button" className={`plan-equip-chip${!value ? ' active' : ''}`} onClick={() => setValue('')}>All</button>
+        {options.map(o => (
+          <button key={o} type="button" className={`plan-equip-chip${value === o ? ' active' : ''}`} onClick={() => setValue(v => v === o ? '' : o)}>{o}</button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -105,59 +141,35 @@ export default function ExerciseLibraryPage() {
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="form-select" value={muscleFilter} onChange={e => setMuscleFilter(e.target.value)}>
-          <option value="">All Muscles</option>
-          {muscleGroups.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select className="form-select" value={equipFilter} onChange={e => setEquipFilter(e.target.value)}>
-          <option value="">All Equipment</option>
-          {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
-        </select>
       </div>
 
-      <div className="grid-3">
-        {filtered.map(ex => (
-          <div key={ex.id} className="card exercise-card exercise-card-clickable" onClick={() => setDetailExercise(ex)}>
-            <div className="exercise-name">{ex.name}</div>
-            <div className="exercise-meta">
-              {(() => {
-                const muscles = ex.muscle ? ex.muscle.split(', ').filter(Boolean) : [];
-                const shown = muscles.slice(0, 3);
-                const extra = muscles.length - shown.length;
-                return (<>
-                  {shown.map(m => <span key={m} className="tag tag-primary" style={{ fontSize: '0.72rem' }}>{m}</span>)}
-                  {extra > 0 && <span className="tag" style={{ fontSize: '0.72rem' }}>+{extra} more</span>}
-                  {ex.equipment && <span className="tag tag-accent" style={{ fontSize: '0.72rem' }}>{ex.equipment}</span>}
-                </>);
-              })()}
-            </div>
-            <div className="exercise-desc">{ex.description}</div>
-            <div className="exercise-actions mt-8" onClick={e => e.stopPropagation()}>
-              {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
-                isYouTube(ex.videoUrl) ? (
-                  <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video">
-                    <Play size={14} /> Watch Demo
-                  </a>
-                ) : (
-                  <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link-ref">
-                    <ExternalLink size={14} /> Open Link
-                  </a>
-                )
-              )}
-              {isTrainer && !ex.videoUrl && (
-                <button className="btn btn-sm btn-add-link" onClick={() => openEditAtUrl(ex)}>
-                  <Link2 size={13} /> Add Link
-                </button>
-              )}
-              {isTrainer && (
-                <div className="exercise-trainer-actions">
-                  <button className="btn-icon" title="Edit" onClick={() => openEdit(ex)}><Pencil size={15} /></button>
-                  <button className="btn-icon" title="Delete" onClick={() => handleDelete(ex.id)} style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+      <div className="ex-filter-chips-wrap">
+        {chipRow('Muscle', muscleGroups, muscleFilter, setMuscleFilter)}
+        {chipRow('Equipment', equipmentTypes, equipFilter, setEquipFilter)}
+        {chipRow('Movement', movementPatterns, patternFilter, setPatternFilter)}
+      </div>
+
+      <div className="exercise-list">
+        {filtered.map(ex => {
+          const hasVideo = isSafeUrl(ex.videoUrl) && isYouTube(ex.videoUrl) && getYouTubeId(ex.videoUrl);
+          const muscles = parseMuscles(ex.muscle);
+          const shown = muscles.slice(0, 2);
+          const extra = muscles.length - shown.length;
+          return (
+            <div key={ex.id} className="card exercise-row" onClick={() => setDetailExercise(ex)}>
+              <div className="exercise-row-info">
+                <span className="exercise-row-name">{ex.name}</span>
+                <div className="exercise-row-tags">
+                  {shown.map(m => <span key={m} className="tag tag-primary">{m}</span>)}
+                  {extra > 0 && <span className="tag">+{extra}</span>}
+                  {ex.equipment && <span className="tag tag-accent">{ex.equipment}</span>}
+                  {ex.movementPattern && <span className="tag">{ex.movementPattern}</span>}
                 </div>
-              )}
+              </div>
+              {hasVideo && <span className="exercise-row-video" title="Has demo video">🎥</span>}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
@@ -168,7 +180,7 @@ export default function ExerciseLibraryPage() {
             description="Try clearing filters or use a different search term."
             action={{
               label: 'Clear Filters',
-              onClick: () => { setSearch(''); setMuscleFilter(''); setEquipFilter(''); },
+              onClick: () => { setSearch(''); setMuscleFilter(''); setEquipFilter(''); setPatternFilter(''); },
             }}
           />
         </div>
@@ -184,10 +196,10 @@ export default function ExerciseLibraryPage() {
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Exercise Name</label>
-                <input className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Bulgarian Split Squat" />
+                <input ref={nameInputRef} className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Bulgarian Split Squat" />
               </div>
               <div className="form-group">
-                <label className="form-label">Muscle Groups</label>
+                <label className="form-label">Muscle Groups <span className="text-muted" style={{ fontWeight: 400 }}>(at least 1 required)</span></label>
                 <MuscleSelector
                   selected={form.muscles}
                   onChange={muscles => setForm({ ...form, muscles })}
@@ -195,9 +207,36 @@ export default function ExerciseLibraryPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Equipment</label>
-                <select className="form-select" value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
+                <select className="form-select" required value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
+                  <option value="" disabled>Select equipment</option>
                   {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
                 </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Movement Pattern <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                <select className="form-select" value={form.movementPattern} onChange={e => setForm({ ...form, movementPattern: e.target.value })}>
+                  <option value="">Unclassified</option>
+                  {movementPatterns.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Aliases <span className="text-muted" style={{ fontWeight: 400 }}>(alt. names / Chinese name, optional)</span></label>
+                <div className="muscle-chips mb-8">
+                  {form.aliases.map(a => (
+                    <button key={a} type="button" className="muscle-chip active" onClick={() => removeAlias(a)} title="Click to remove">{a} ×</button>
+                  ))}
+                </div>
+                <div className="muscle-chip-add">
+                  <input
+                    className="form-input"
+                    style={{ flex: 1, padding: '5px 10px', fontSize: '0.875rem' }}
+                    value={aliasInput}
+                    onChange={e => setAliasInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }}
+                    placeholder="e.g. 深蹲, RDL…"
+                  />
+                  <button type="button" className="btn btn-outline btn-sm" onClick={addAlias} disabled={!aliasInput.trim()}>+ Add</button>
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Unit Type</label>
@@ -216,28 +255,37 @@ export default function ExerciseLibraryPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    Video / Demo URL <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
-                  </span>
-                </label>
+                <label className="form-label">Video / Demo URL</label>
                 <input
-                  ref={urlInputRef}
                   className="form-input"
                   value={form.videoUrl}
                   onChange={e => setForm({ ...form, videoUrl: e.target.value })}
-                  placeholder="YouTube, Instagram, article link…"
+                  placeholder="Paste a YouTube link…"
                 />
-                {form.videoUrl && isSafeUrl(form.videoUrl) && (
-                  <a href={form.videoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
-                    {isYouTube(form.videoUrl) ? <Play size={12} /> : <ExternalLink size={12} />}
-                    {isYouTube(form.videoUrl) ? 'Preview YouTube link' : 'Preview link'}
-                  </a>
-                )}
+                {form.videoUrl && isYouTube(form.videoUrl) && getYouTubeId(form.videoUrl) ? (
+                  <div className="ex-form-video-preview">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${getYouTubeId(form.videoUrl)}`}
+                      title="Video preview"
+                      allow="encrypted-media"
+                    />
+                    <span className="text-sm text-muted">Will play in-app for students — no YouTube redirect</span>
+                  </div>
+                ) : form.videoUrl && isSafeUrl(form.videoUrl) ? (
+                  <p className="text-sm text-muted mt-8">Not a YouTube link — will open in a new tab for students instead of playing in-app.</p>
+                ) : null}
               </div>
               <div className="form-group">
                 <label className="form-label">Description</label>
-                <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="How to perform this exercise..." />
+                <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="General description..." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">動作要點 <span className="text-muted" style={{ fontWeight: 400 }}>(form cues, optional)</span></label>
+                <textarea className="form-textarea" value={form.instructions} onChange={e => setForm({ ...form, instructions: e.target.value })} placeholder="Key coaching points for this exercise..." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">常見錯誤 <span className="text-muted" style={{ fontWeight: 400 }}>(common mistakes, optional)</span></label>
+                <textarea className="form-textarea" value={form.commonMistakes} onChange={e => setForm({ ...form, commonMistakes: e.target.value })} placeholder="Common mistakes to watch for..." />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
@@ -252,7 +300,8 @@ export default function ExerciseLibraryPage() {
         <ExerciseDetailModal
           exercise={detailExercise}
           onClose={() => setDetailExercise(null)}
-          onAddLink={(ex) => { setDetailExercise(null); openEditAtUrl(ex); }}
+          onEdit={isTrainer ? openEdit : undefined}
+          onDelete={isTrainer ? handleDelete : undefined}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
@@ -57,7 +57,7 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
   const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission, token: fcmToken } = useNotifications();
@@ -114,6 +114,10 @@ export default function ProfilePage() {
   // Client: connect to trainer
   const [connectCode, setConnectCode] = useState('');
   const [connecting, setConnecting] = useState(false);
+
+  // Trainer: exercise library export (copy-as-JSON — no terminal/CLI access assumed)
+  const [exportCopied, setExportCopied] = useState(false);
+  const exportCopiedTimer = useRef(null);
 
   // Load invite code for trainer
   // getInviteCode/inviteCode deliberately excluded: getInviteCode is recreated on every
@@ -235,6 +239,16 @@ export default function ProfilePage() {
     } finally {
       setBankSaving(false);
     }
+  };
+
+  const handleExportExercises = () => {
+    const list = getExercises();
+    navigator.clipboard.writeText(JSON.stringify(list, null, 2)).then(() => {
+      setExportCopied(true);
+      toast(`Copied ${list.length} exercises as JSON`);
+      clearTimeout(exportCopiedTimer.current);
+      exportCopiedTimer.current = setTimeout(() => setExportCopied(false), 2000);
+    }).catch(() => toast('Failed to copy', 'error'));
   };
 
   const handleConnect = async () => {
@@ -492,6 +506,20 @@ export default function ProfilePage() {
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveBankDetails} disabled={bankSaving}>
             <Save size={16} /> {bankSaving ? 'Saving...' : 'Save Bank Details'}
+          </button>
+        </div>
+      )}
+
+      {/* Trainer: Exercise Library Backup/Export */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Dumbbell size={18} /> Exercise Library Backup
+          </h3>
+          <p className="invite-desc">Copy your full exercise library as JSON — paste it somewhere safe, or share it for a data review.</p>
+          <button className="btn btn-outline mt-8" onClick={handleExportExercises} style={{ width: '100%' }}>
+            {exportCopied ? <Check size={16} /> : <Copy size={16} />}
+            {exportCopied ? 'Copied!' : 'Copy Exercise Library as JSON'}
           </button>
         </div>
       )}

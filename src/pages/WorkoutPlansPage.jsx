@@ -5,10 +5,10 @@ import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, emptySet, UNIT_OPTIONS } from '../utils/workoutUtils';
-import { resolveExerciseName } from '../utils/exerciseUtils';
+import { resolveExerciseName, exerciseFieldsValid } from '../utils/exerciseUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
-const EMPTY_CUSTOM = { name: '', muscles: [], saveToLibrary: false };
+const EMPTY_CUSTOM = { name: '', muscles: [], equipment: '', saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
   const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, equipmentTypes } = useApp();
@@ -26,7 +26,6 @@ export default function WorkoutPlansPage() {
   const [exEquipFilter, setExEquipFilter] = useState('');
   const exFilterRef = useRef('');
   const [dragIdx, setDragIdx] = useState(null);
-  const [creatingCustom, setCreatingCustom] = useState(false);
   const [addLinkModal, setAddLinkModal] = useState(null); // { exerciseId, name }
   const [addLinkUrl, setAddLinkUrl] = useState('');
   const [savingLink, setSavingLink] = useState(false);
@@ -85,20 +84,15 @@ export default function WorkoutPlansPage() {
     }));
   };
 
-  const handleCreateCustomExercise = async () => {
+  // Opens the full custom-exercise form pre-filled with the typed name, instead of
+  // instant-creating with placeholder muscle/equipment — every new library exercise
+  // needs a real muscle group + equipment before it's saved.
+  const handleCreateCustomExercise = () => {
     const name = exFilter.trim();
     if (!name) return;
-    setCreatingCustom(true);
-    try {
-      const newEx = await addExercise({ name, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
-      addExToForm(newEx);
-      updateExFilter('');
-      toast(`"${newEx.name}" added to library and plan`);
-    } catch {
-      toast('Failed to create exercise', 'error');
-    } finally {
-      setCreatingCustom(false);
-    }
+    setCustomForm({ ...EMPTY_CUSTOM, name });
+    setShowCustomForm(true);
+    updateExFilter('');
   };
 
   const removeExercise = (index) => {
@@ -163,13 +157,18 @@ export default function WorkoutPlansPage() {
     if (!name) return;
     const muscleStr = customForm.muscles.length > 0 ? customForm.muscles.join(', ') : '';
 
+    if (customForm.saveToLibrary && !exerciseFieldsValid({ muscle: muscleStr, equipment: customForm.equipment })) {
+      toast('Pick at least one muscle group and an equipment type to save to the library', 'error');
+      return;
+    }
+
     setCustomSaving(true);
     try {
       if (customForm.saveToLibrary) {
         const newEx = await addExercise({
           name,
-          muscle: muscleStr || 'Custom',
-          equipment: 'Other',
+          muscle: muscleStr,
+          equipment: customForm.equipment,
           description: '',
         });
         setForm(prev => ({
@@ -215,20 +214,14 @@ export default function WorkoutPlansPage() {
     }
 
     if (pending) {
-      updateExFilter('');
       const exact = exerciseLibrary.find(ex => ex.name.toLowerCase() === pending.toLowerCase());
-      let newEx;
       if (exact) {
-        newEx = exact;
+        updateExFilter('');
+        exercises = [...exercises, { exerciseId: exact.id, name: exact.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }];
       } else {
-        try {
-          newEx = await addExercise({ name: pending, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
-        } catch {
-          toast('Failed to create exercise', 'error');
-          return;
-        }
+        toast(`"${pending}" isn't in the library yet — use "Add as new exercise" below the search box first`, 'error');
+        return;
       }
-      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }];
     }
 
     if (exercises.length === 0) {
@@ -262,20 +255,14 @@ export default function WorkoutPlansPage() {
     if (!form.name.trim()) { toast('Please enter a plan name', 'error'); return; }
 
     if (pending) {
-      updateExFilter('');
       const exact = exerciseLibrary.find(ex => ex.name.toLowerCase() === pending.toLowerCase());
-      let newEx;
       if (exact) {
-        newEx = exact;
+        updateExFilter('');
+        exercises = [...exercises, { exerciseId: exact.id, name: exact.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }];
       } else {
-        try {
-          newEx = await addExercise({ name: pending, muscle: 'Custom', equipment: 'Other', description: '', instructions: '' });
-        } catch {
-          toast('Failed to create exercise', 'error');
-          return;
-        }
+        toast(`"${pending}" isn't in the library yet — use "Add as new exercise" below the search box first`, 'error');
+        return;
       }
-      exercises = [...exercises, { exerciseId: newEx.id, name: newEx.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }];
     }
 
     if (exercises.length === 0) { toast('Please add at least one exercise', 'error'); return; }
@@ -687,12 +674,12 @@ export default function WorkoutPlansPage() {
                       <div className="plan-ex-no-results">No matches in library</div>
                     )}
                     <div
-                      className={`plan-ex-custom-add ${creatingCustom ? 'loading' : ''}`}
+                      className="plan-ex-custom-add"
                       style={{ borderTop: filteredExercises.length > 0 ? '1px solid var(--border)' : 'none' }}
-                      onClick={!creatingCustom ? handleCreateCustomExercise : undefined}
+                      onClick={handleCreateCustomExercise}
                     >
                       <Plus size={14} />
-                      <span>{creatingCustom ? 'Adding...' : `Add "${exFilter}" as custom exercise`}</span>
+                      <span>{`Add "${exFilter}" as new exercise…`}</span>
                     </div>
                   </div>
                 )}
@@ -723,7 +710,11 @@ export default function WorkoutPlansPage() {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label" style={{ marginBottom: 8 }}>Muscle Groups <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                      <label className="form-label" style={{ marginBottom: 8 }}>
+                        Muscle Groups {customForm.saveToLibrary
+                          ? <span className="text-muted" style={{ fontWeight: 400 }}>(at least 1 required to save to library)</span>
+                          : <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span>}
+                      </label>
                       <MuscleSelector
                         selected={customForm.muscles}
                         onChange={muscles => setCustomForm(p => ({ ...p, muscles }))}
@@ -739,13 +730,23 @@ export default function WorkoutPlansPage() {
                       Save to Exercise Library for future use
                     </label>
 
+                    {customForm.saveToLibrary && (
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Equipment <span className="text-muted" style={{ fontWeight: 400 }}>(required to save to library)</span></label>
+                        <select className="form-select" value={customForm.equipment} onChange={e => setCustomForm(p => ({ ...p, equipment: e.target.value }))}>
+                          <option value="" disabled>Select equipment</option>
+                          {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+                        </select>
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
                         type="button"
                         className="btn btn-primary"
                         style={{ flex: 1 }}
                         onClick={handleAddCustom}
-                        disabled={!customForm.name.trim() || customSaving}
+                        disabled={!customForm.name.trim() || customSaving || (customForm.saveToLibrary && !exerciseFieldsValid({ muscle: customForm.muscles.join(', '), equipment: customForm.equipment }))}
                       >
                         {customSaving ? 'Adding...' : 'Add Exercise'}
                       </button>

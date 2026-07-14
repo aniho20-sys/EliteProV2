@@ -45,3 +45,4 @@ export const muscleGroups = [
   'Adductors', 'Abductors',
 ];
 export const equipmentTypes = ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Bodyweight', 'Other'];
+export const movementPatterns = ['Hinge', 'Squat', 'Push', 'Pull', 'Carry', 'Locomotion', 'Rotation'];

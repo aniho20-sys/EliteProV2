@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { X, Play, ExternalLink, Dumbbell, Link2 } from 'lucide-react';
+import { X, Play, ExternalLink, Dumbbell, Pencil, Trash2 } from 'lucide-react';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { useApp } from '../context/AppContext';
 
-export default function ExerciseDetailModal({ exercise, onClose, onAddLink }) {
+export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelete }) {
   const { currentUser } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const [showEmbed, setShowEmbed] = useState(false);
@@ -22,6 +22,13 @@ export default function ExerciseDetailModal({ exercise, onClose, onAddLink }) {
         </button>
 
         <h3 className="ex-detail-title">{exercise.name}</h3>
+
+        {isTrainer && (onEdit || onDelete) && (
+          <div className="ex-detail-trainer-actions">
+            {onEdit && <button className="btn btn-sm btn-outline" onClick={() => onEdit(exercise)}><Pencil size={13} /> Edit</button>}
+            {onDelete && <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)' }} onClick={() => onDelete(exercise)}><Trash2 size={13} /> Delete</button>}
+          </div>
+        )}
 
         {/* Hero: YouTube thumbnail or placeholder */}
         {videoId ? (
@@ -66,12 +73,12 @@ export default function ExerciseDetailModal({ exercise, onClose, onAddLink }) {
             <ExternalLink size={16} /> Open Link
           </a>
         )}
-        {!hasVideo && isTrainer && onAddLink && (
+        {!hasVideo && isTrainer && onEdit && (
           <button
             className="btn btn-outline ex-detail-video-btn"
-            onClick={() => { onClose(); onAddLink(exercise); }}
+            onClick={() => onEdit(exercise)}
           >
-            <Link2 size={15} /> 加入教學片
+            <Play size={15} /> 加入教學片
           </button>
         )}
 
@@ -83,6 +90,9 @@ export default function ExerciseDetailModal({ exercise, onClose, onAddLink }) {
           {muscles.map(m => (
             <span key={m} className="tag tag-primary">{m}</span>
           ))}
+          {exercise.movementPattern && (
+            <span className="tag">{exercise.movementPattern}</span>
+          )}
         </div>
 
         {/* Description */}
@@ -92,8 +102,15 @@ export default function ExerciseDetailModal({ exercise, onClose, onAddLink }) {
 
         {exercise.instructions && (
           <div className="ex-detail-instructions">
-            <h4 className="ex-detail-instructions-title">訓練要點</h4>
+            <h4 className="ex-detail-instructions-title">動作要點</h4>
             <p className="ex-detail-desc">{exercise.instructions}</p>
+          </div>
+        )}
+
+        {exercise.commonMistakes && (
+          <div className="ex-detail-instructions">
+            <h4 className="ex-detail-instructions-title">常見錯誤</h4>
+            <p className="ex-detail-desc">{exercise.commonMistakes}</p>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 33 — Needs Attention 重新設計、Trainer UX Audit + Top 5 首兩項修復）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能）
 
 ---
 
@@ -141,6 +141,21 @@
   - **ProfilePage crash bug**：「Connect to Coach」掣用咗冇 import 嘅 `<Link>` icon，令未連教練嘅學生打開自己個 Profile 會 `ReferenceError` crash；改用返已經 import 咗、風格一致嘅 `<Link2>`
   - **NotesSection 送唔到訊息風險**：`handleSend` 之前冇 `await`、冇 try/catch、冇 sending state（違反 CLAUDE.md 第11/14條），離線或者權限錯誤時輸入框會靜默清空，令人以為送咗但其實冇送到；已改做 `async`/`await`/try-catch/toast error/sending state 全套
 - 發現全 repo 有 4 個唔同版本嘅「剩餘堂數」顏色門檻邏輯（`SchedulePage.jsx` 兩處、`sessionUtils.js`、`ClientProgressOverviewPage.jsx`）+ `BusinessAnalyticsPage` 完全冇讀 `creditLedger`（續約收嘅錢喺 Analytics 度會顯示錯）——呢兩點未修，留喺 audit 報告嘅「大項目」清單
+
+### Exercise Library 重新設計 Phase A+B（Session 34）
+- 員工A+員工D 出方案（版面 + 數據規範），Ani 批准 4 個開放問題後實裝：
+  - **版面**：card grid 改做 list view（一行一動作 + tags + 🎥 icon），撳入去先開 detail modal 做 edit/delete/影片管理；頂部兩個 `<select>` filter 改做 muscle/equipment/movement pattern 三組 chips
+  - **必填驗證**：新增動作要求至少 1 個 muscle group + 1 個 equipment type（`utils/exerciseUtils.js` 新增共用 `exerciseFieldsValid()`），套用去 Exercise Library 主 modal **同** `WorkoutPlansPage` 全部寫入 `exercises` collection 嘅路——`handleCreateCustomExercise` 同 submit-time 嘅 leftover-text auto-create 之前會靜默用 `muscle:'Custom', equipment:'Other'` 建立冇規範嘅動作，而家改咗做導向去要求填muscle+equipment 嘅完整表先可以建立；`ExerciseSwapModal` 嘅 Custom tab（本身完全冇寫入 `exercises` collection）留返第二階段，同「應唔應該存入 library」一齊傾
+  - **名自動 title case**：新增 `titleCaseExerciseName()`，保留全大寫縮寫（如 RDL）唔會被強行改做 Rdl
+  - **新分類軸「動作模式」**：`movementPatterns` 常數（Hinge/Squat/Push/Pull/Carry/Locomotion/Rotation），first-class filter chip，非必填
+  - **aliases 欄位**：可加中文名/簡寫，search 同時比對 name + aliases
+  - **影片 in-app 播放**：Detail modal 原有嘅 YouTube iframe embed（撳一下先播放）保留唔變；Add/Edit 表單而家貼 YouTube link 會即時顯示內嵌預覽（唔再係外開連結）
+  - **formCues 決定**：重用現有 `instructions` 欄位顯示做「動作要點」，冇開新欄位；新增 `commonMistakes`（常見錯誤）欄位，得內容先顯示
+  - `firestore.rules` 冇改動（`exercises` update 規則本身冇 field allowlist，已核實）
+- **教練端新增「匯出動作庫」功能**（`ProfilePage.jsx`）：一撳將全部動作 copy 做 JSON 去 clipboard，貼返俾 AI 分析——因為 Ani 全程用手機，冇 terminal，呢個原則已寫入 CLAUDE.md 第26條
+- **合併重複動作機制決定**（未實裝，留返 Phase C 之後）：唔用 batch rewrite 歷史數據，改用「軟合併」——舊 doc 標記 `mergedInto: 新ID`，`resolveExerciseName`/`ExerciseProgress` 讀取時跟呢個指針解析，PR 歷史自動冧埋計、可 undo；呢條原則已寫入 CLAUDE.md 第27條
+- 12 個 credit emulator test 保持全綠（呢次改動完全喺 `exercises` collection + UI，冇掂 `functions/index.js`）；`npm run build` 通過
+- **待 Ani**：喺 Profile 撳「匯出動作庫」copy 返真實動作數據俾 AI，先可以做 Phase C（大掃除預覽表）；Phase D（合併 UI）留最後
 
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）

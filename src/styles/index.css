@@ -2028,19 +2028,6 @@ tr:hover { background: var(--bg-card-hover); }
 }
 
 /* ===== EXERCISE LIBRARY ===== */
-.exercise-card {
-  padding: 18px;
-  transition: all 0.25s var(--ease);
-}
-.exercise-card:hover {
-  border-color: var(--border-light);
-  transform: translateY(-1px);
-}
-.exercise-name { font-weight: 700; margin-bottom: 8px; font-size: 0.95rem; }
-.exercise-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; align-items: center; }
-.exercise-desc { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.5; }
-.exercise-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.exercise-trainer-actions { display: flex; gap: 2px; margin-left: auto; }
 .btn-video {
   display: inline-flex;
   align-items: center;
@@ -2081,26 +2068,32 @@ tr:hover { background: var(--bg-card-hover); }
   border-style: solid;
   background: var(--primary-glow);
 }
-.btn-link-ref {
-  display: inline-flex;
+.ex-filter-chips-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.ex-filter-chip-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ex-filter-chip-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); min-width: 68px; flex-shrink: 0; }
+.ex-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.exercise-list { display: flex; flex-direction: column; gap: 8px; }
+.exercise-row {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--primary-glow);
-  color: var(--primary);
-  border: 1px solid rgba(67, 97, 238, 0.2);
-  border-radius: var(--radius-full);
-  padding: 5px 12px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  transition: all 0.2s var(--ease);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
 }
-.btn-link-ref:hover {
-  background: rgba(67, 97, 238, 0.15);
-  transform: translateY(-1px);
+.exercise-row:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
 }
+.exercise-row-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.exercise-row-name { font-weight: 700; font-size: 0.92rem; }
+.exercise-row-tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.exercise-row-video { font-size: 1.1rem; flex-shrink: 0; }
+
+.ex-form-video-preview { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ex-form-video-preview iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; }
 
 /* ===== WORKOUT PLAN ===== */
 .plan-header {
@@ -4247,6 +4240,7 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 14px;
   padding-right: 32px;
 }
+.ex-detail-trainer-actions { display: flex; gap: 8px; margin-bottom: 12px; }
 .ex-detail-hero {
   width: 100%;
   aspect-ratio: 16/9;
@@ -4303,14 +4297,6 @@ tr:hover { background: var(--bg-card-hover); }
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-.exercise-card-clickable {
-  cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s;
-}
-.exercise-card-clickable:hover {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
 }
 .ex-info-btn {
   padding: 2px 4px;
