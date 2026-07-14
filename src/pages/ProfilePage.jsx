@@ -510,7 +510,7 @@ export default function ProfilePage() {
               maxLength={6}
             />
             <button className="btn btn-primary" onClick={handleConnect} disabled={connecting || connectCode.length < 6}>
-              <Link size={16} /> {connecting ? 'Connecting...' : 'Connect'}
+              <Link2 size={16} /> {connecting ? 'Connecting...' : 'Connect'}
             </button>
           </div>
         </div>

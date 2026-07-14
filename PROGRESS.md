@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-13（Session 33 — 由員工A整理，加埋 credit Cloud Function 自動化測試 + 分支清理完成）
+> 最後更新：2026-07-14（Session 33 — Needs Attention 重新設計、Trainer UX Audit + Top 5 首兩項修復）
 
 ---
 
@@ -127,6 +127,20 @@
 - `functions/` 新增 `jest`/`firebase-functions-test` devDependencies + `test`/`test:emulator` script（之前完全冇 test infra）
 - 測試素材來源：喺分支清理過程搵到一條獨立、平行開發嘅「Session Credits」實作（`claude/review-claude-progress-docs-UvHbs`，改名UI、`creditBalance` 欄位、migration script），同 Session 33 呢個實作方式唔同、未 merge。已將個分支存做 `archive/parallel-credit-system-2026-07`（保留參考），攞返裡面嘅 test 檔案改寫做測試而家實際嘅實作（`sessionOffset`/`deductedAtBooking`），冇碰佢嘅 migration script 同改名部分。原分支已刪
 - **分支清理完成**：連同其他 20 幾條 4-5 月遺留、內容已過時嘅 session 分支（同 main 冇 common ancestor，屬於 repo 早期 unrelated-histories merge 之前嘅舊 lineage），加埋幾條週報 branch 一齊處理咗；而家 remote 淨返 `main`（`claude/fitness-app-features-LbxtG`）、`archive/parallel-credit-system-2026-07`、`gh-pages` 三條
+
+### Needs Attention 重新設計：報告板 → 待辦盒（Session 33）
+- 拆返做兩個獨立分類，唔再撈埋：【續約】（sessions used up／≤2 堂，紅色，永遠排先）同【流失風險】（inactive 門檻由 7 日提高到 21 日，黃色）
+- 每項有真正 primary action，唔淨係開 chat：續約 →「Send renewal reminder」一撳即送（沿用教練喺 Profile 設嘅 rate 文案），送出後自動 snooze 7 日；流失 →「Send a check-in」開返現有 quick-message modal（冇改動）
+- 兩類都可以 Snooze 7／14／30 日，存喺 client doc 新欄位 `renewalSnoozedUntil`／`churnSnoozedUntil`（唔係 local state，換機都記得；到期用日期比較自動恢復，唔使 cron）
+- 首頁最多顯示 3 項（續約優先塞滿），其餘用「View all」inline 展開；全部清晒顯示「All clear ✅」
+- `firestore.rules` 冇改動——教練寫自己客戶 doc 本身已經冇欄位限制，已經涵蓋新欄位
+
+### Trainer 端 UX Audit + Top 5 首兩項修復（Session 33）
+- 員工D+員工E 出咗 `reports/ux-audit-trainer-2026-07-14.md`，逐頁 audit TrainerDashboard/Clients/ClientDetailPage/WorkoutPlansPage/SchedulePage/Credit管理/NotesSection/ProfilePage/Navigation/通知鐘/Invoice/Analytics，40 個發現 + 完整 payment chain 追蹤（確認由頭到尾冇一步自動化）+ Top 5 優先榜
+- 修咗 Top 5 首兩項（純 bug fix，未動其他建議）：
+  - **ProfilePage crash bug**：「Connect to Coach」掣用咗冇 import 嘅 `<Link>` icon，令未連教練嘅學生打開自己個 Profile 會 `ReferenceError` crash；改用返已經 import 咗、風格一致嘅 `<Link2>`
+  - **NotesSection 送唔到訊息風險**：`handleSend` 之前冇 `await`、冇 try/catch、冇 sending state（違反 CLAUDE.md 第11/14條），離線或者權限錯誤時輸入框會靜默清空，令人以為送咗但其實冇送到；已改做 `async`/`await`/try-catch/toast error/sending state 全套
+- 發現全 repo 有 4 個唔同版本嘅「剩餘堂數」顏色門檻邏輯（`SchedulePage.jsx` 兩處、`sessionUtils.js`、`ClientProgressOverviewPage.jsx`）+ `BusinessAnalyticsPage` 完全冇讀 `creditLedger`（續約收嘅錢喺 Analytics 度會顯示錯）——呢兩點未修，留喺 audit 報告嘅「大項目」清單
 
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）

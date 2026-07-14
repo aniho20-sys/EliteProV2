@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 import { Send } from 'lucide-react';
 
 export default function NotesSection({ clientId }) {
   const { currentUser, getMessages, sendMessage, markMessagesRead, getClient } = useApp();
+  const toast = useToast();
   const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
   const listRef = useRef(null);
 
   const isTrainer = currentUser.role === 'trainer';
@@ -22,11 +25,18 @@ export default function NotesSection({ clientId }) {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages.length, currentUser.id, otherUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    sendMessage(currentUser.id, otherUserId, text.trim());
-    setText('');
+    if (!text.trim() || sending) return;
+    setSending(true);
+    try {
+      await sendMessage(currentUser.id, otherUserId, text.trim());
+      setText('');
+    } catch {
+      toast('Failed to send message', 'error');
+    } finally {
+      setSending(false);
+    }
   };
 
   const getName = (id) => getClient(id)?.name || 'Unknown';
@@ -55,8 +65,8 @@ export default function NotesSection({ clientId }) {
         )}
       </div>
       <form onSubmit={handleSend} className="note-input-row">
-        <input className="form-input" value={text} onChange={e => setText(e.target.value)} placeholder="Write a note..." />
-        <button type="submit" className="btn btn-primary btn-sm"><Send size={14} /></button>
+        <input className="form-input" value={text} onChange={e => setText(e.target.value)} placeholder="Write a note..." disabled={sending} />
+        <button type="submit" className="btn btn-primary btn-sm" disabled={sending || !text.trim()}><Send size={14} /></button>
       </form>
     </div>
   );
