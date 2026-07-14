@@ -23,6 +23,8 @@ See `ROADMAP.md` for the source of truth on development phases (current and futu
 - `npm run deploy` — Build + `firebase deploy` (all services)
 - `npm run deploy:hosting` — Build + deploy Firebase Hosting only
 - `npm run deploy:rules` — Deploy Firestore security rules only
+- `cd functions && npm run test:emulator` — Cloud Functions Jest suite (credit/booking logic) against the Firestore emulator
+- `cd firestore-tests && npm run test:emulator` — `firestore.rules` verification suite (`@firebase/rules-unit-testing`) against the Firestore emulator; separate tooling from the Cloud Functions suite above, run this after any `firestore.rules` change
 
 ## Project Structure
 ```
@@ -105,6 +107,10 @@ functions/                    # Cloud Functions (deployed and live on Blaze) —
 │                              # sessions remaining ≤ 3, push to trainer when ≤ 2), onScheduleBooked +
 │                              # onScheduleCreditUpdate (server-side session credit accounting — see
 │                              # "Session credit accounting" below)
+└── package.json
+
+firestore-tests/              # firestore.rules verification (separate from functions/'s Jest suite)
+├── exerciseOverrides.rules.test.js  # @firebase/rules-unit-testing — trainer/student read/write matrix
 └── package.json
 
 public/
@@ -278,7 +284,22 @@ Top-level config files:
   videoUrl: string,      // YouTube link plays in-app via iframe embed in ExerciseDetailModal; non-YouTube links open in a new tab
 }
 ```
-**Shared default exercises (intentional):** the 22 seeded exercises in `data/exercises.js` (`bench-press`, `squat`, etc.) were written into Firestore without a `trainerId` field. Because `firestore.rules`' read/update checks compare `resource.data.trainerId` against `userTrainerId()` (which is `null` for a trainer account), a missing `trainerId` matches `null == null` for every trainer — so these 22 exercises are visible to and shared by all trainer accounts, and are effectively un-editable/undeletable by anyone (the update rule requires an exact `trainerId` match, which a real UID never satisfies against `null`). This is by design — new trainers get a starter library — not a bug.
+**Shared default exercises (intentional) — corrected 2026-07-14:** the 22 exercises in `data/exercises.js` (`bench-press`, `squat`, etc.) are **static frontend data, not Firestore documents at all**. `AppContext.jsx`'s exercises listener queries `where('trainerId','==',targetTrainerId)` and appends the imported `defaultExercises` array in-memory to every result (`[...snap.docs..., ...defaultExercises]`) — the 22 never round-trip through Firestore, so there is no document for any trainer to edit or delete. (An earlier version of this note wrongly attributed this to a `firestore.rules` `null == null` loophole — there's no Firestore doc involved at all, so no rule is even evaluated.) Attempting `updateExercise`/`deleteExercise` on one of these 22 ids fails because the target document doesn't exist. This is by design — new trainers get a shared starter library that can't be individually edited — but as of Session 34 trainers can layer personal video/instructions content on top via `exerciseOverrides` (below), without touching the shared base.
+
+#### `exerciseOverrides/{overrideId}`
+Lets a trainer customize video/instructions for one of the 22 static seed exercises without a base document to edit directly. Doc ID convention: `${trainerId}_${exerciseId}`. No document exists for an exercise a trainer hasn't customized. Only applies to seed exercises — trainer-created exercises (which have a real `exercises` doc) are edited directly instead.
+```js
+{
+  id: string,
+  trainerId: string,        // owning trainer's UID, immutable after creation
+  exerciseId: string,       // static seed id (e.g. 'bench-press'), immutable after creation
+  videoMode: 'default' | 'custom' | 'hidden',   // absent doc = 'default' for both fields
+  videoUrl: string,          // only meaningful when videoMode === 'custom'
+  instructionsMode: 'default' | 'custom' | 'hidden',
+  instructions: string,      // only meaningful when instructionsMode === 'custom'
+}
+```
+`AppContext.getExercises()` merges the current trainer's (or client's own trainer's) overrides onto the 22 seed exercises at read time, so every page that lists exercises via `getExercises()` picks up the customization automatically — no per-page changes needed.
 
 #### `invoices/{invoiceId}`
 ```js
@@ -392,10 +413,12 @@ getSessionStats(clientId)    // returns { used, total, offset, colour, label }
 getPersonalRecords(clientId) // returns { exerciseId: { weight, date } }
 
 // Exercises
-getExercises()               // returns Firestore exercises if available, else static defaults
+getExercises()               // returns Firestore + static exercises, merged with the current trainer's exerciseOverrides
 addExercise(exercise)
 updateExercise(exerciseId, updates)
 deleteExercise(exerciseId)
+upsertExerciseOverride(exerciseId, { videoMode?, videoUrl?, instructionsMode?, instructions? })  // trainer-only; only applies to the 22 static seed exercises
+deleteExerciseOverride(exerciseId)  // "reset to default" — removes the override doc entirely
 muscleGroups                 // string[] constant
 equipmentTypes               // string[] constant
 
@@ -458,6 +481,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **schedule**: Trainer, client, or any client of the same trainer can read; trainer books for own clients only, client books with own trainer only; `trainerId`+`clientId` are immutable after creation
 - **messages**: Sender and recipient can read; sender creates; recipient can only update `read` field; **delete is disabled**
 - **exercises**: Trainer reads own; client reads trainer's + personal; any auth can create with valid trainerId; trainer can update/delete own exercises. `trainerId` is immutable after creation
+- **exerciseOverrides**: Trainer reads/writes own; client reads their own trainer's (read-only, never writes). `trainerId`+`exerciseId` are immutable after creation
 - **templates**: Trainer-only access to own templates. `trainerId` is immutable after creation
 - **invoices**: Trainer reads/writes own; client reads invoices addressed to them. `trainerId` is immutable after creation
 

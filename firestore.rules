@@ -223,6 +223,23 @@ service cloud.firestore {
       allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
     }
 
+    // ── Exercise Overrides ──
+    // Per-trainer video/instructions customization layered on top of the static seed
+    // exercises (which have no backing Firestore doc — see CLAUDE.md). Trainer owns
+    // read/write on their own overrides; their clients can only read, never write.
+    match /exerciseOverrides/{overrideId} {
+      allow read: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        userTrainerId() == resource.data.trainerId
+      );
+      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
+      // trainerId and exerciseId are immutable after creation
+      allow update: if isAuth() && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == resource.data.trainerId
+        && request.resource.data.exerciseId == resource.data.exerciseId;
+      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+    }
+
     // ── Templates ──
     // Trainer-only: personal reusable plan blueprints.
     match /templates/{templateId} {

@@ -37,6 +37,7 @@ export function AppProvider({ children }) {
   const [trainerSchedule, setTrainerSchedule] = useState([]);
   const [messages, setMessages] = useState([]);
   const [exercises, setExercises] = useState([]);
+  const [exerciseOverrides, setExerciseOverrides] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [studios, setStudios] = useState([]);
@@ -99,7 +100,7 @@ export function AppProvider({ children }) {
       // Not authed: reset state and mark as non-loading
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
-      setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]); setTemplates([]);
+      setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]); setExerciseOverrides([]); setTemplates([]);
       loadedRef.current = new Set();
       retryCountRef.current = 0;
       setLoading(false);
@@ -195,6 +196,22 @@ export function AppProvider({ children }) {
       query(collection(db, 'exercises'), where('trainerId', '==', targetTrainerId)),
       (snap) => setExercises([...snap.docs.map(d => ({ ...d.data(), id: d.id })), ...defaultExercises]),
       () => setExercises(defaultExercises),
+    );
+    return () => unsub();
+  }, [currentUser?.id, currentUser?.role, currentUser?.trainerId]);
+
+  // --- Exercise Overrides: per-trainer video/instructions layered onto the static seed
+  // exercises (which have no backing Firestore doc — see CLAUDE.md). Same targetTrainerId
+  // as the exercises listener above, so trainer sees own overrides and clients see their
+  // own trainer's — reused as-is, no new ID-resolution logic.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const targetTrainerId = currentUser.role === 'trainer' ? currentUser.id : currentUser.trainerId;
+    if (!targetTrainerId) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'exerciseOverrides'), where('trainerId', '==', targetTrainerId)),
+      (snap) => setExerciseOverrides(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
+      () => setExerciseOverrides([]),
     );
     return () => unsub();
   }, [currentUser?.id, currentUser?.role, currentUser?.trainerId]);
@@ -627,7 +644,40 @@ export function AppProvider({ children }) {
   };
 
   // ========== Exercises ==========
-  const getExercises = () => exercises.length > 0 ? exercises : defaultExercises;
+  // Merges the current trainer's (or client's own trainer's) exerciseOverrides onto the
+  // base list, so every page that lists exercises via getExercises() picks up the
+  // customization automatically without per-page changes.
+  const getExercises = () => {
+    const base = exercises.length > 0 ? exercises : defaultExercises;
+    if (exerciseOverrides.length === 0) return base;
+    return base.map(ex => {
+      const ov = exerciseOverrides.find(o => o.exerciseId === ex.id);
+      if (!ov) return ex;
+      return {
+        ...ex,
+        videoUrl: ov.videoMode === 'hidden' ? '' : ov.videoMode === 'custom' ? ov.videoUrl : ex.videoUrl,
+        instructions: ov.instructionsMode === 'hidden' ? '' : ov.instructionsMode === 'custom' ? ov.instructions : ex.instructions,
+      };
+    });
+  };
+
+  // Raw override doc for one exercise (for pre-filling the customize form's mode toggles —
+  // getExercises() above returns the merged display value, not the mode itself)
+  const getExerciseOverride = (exerciseId) => exerciseOverrides.find(o => o.exerciseId === exerciseId) || null;
+
+  // Trainer-only: layers personal video/instructions onto one of the 22 static seed
+  // exercises (which have no backing exercises doc). Doc ID is deterministic so there's
+  // always at most one override per (trainer, exercise) pair.
+  const upsertExerciseOverride = async (exerciseId, updates) => {
+    const trainerId = currentUser.id;
+    const id = `${trainerId}_${exerciseId}`;
+    await setDoc(doc(db, 'exerciseOverrides', id), { ...updates, id, trainerId, exerciseId }, { merge: true });
+  };
+
+  // "Reset to default" — removes the override doc entirely rather than writing back defaults
+  const deleteExerciseOverride = async (exerciseId) => {
+    await deleteDoc(doc(db, 'exerciseOverrides', `${currentUser.id}_${exerciseId}`));
+  };
 
   const addExercise = async (exercise) => {
     const trainerId = currentUser?.role === 'trainer'
@@ -825,6 +875,7 @@ export function AppProvider({ children }) {
     getSessionStats,
     getPersonalRecords,
     getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
+    getExerciseOverride, upsertExerciseOverride, deleteExerciseOverride,
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer,

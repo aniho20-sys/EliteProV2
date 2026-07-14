@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復、動作 list 全站 A-Z 排序）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復、動作 list 全站 A-Z 排序、exerciseOverrides 疊加機制）
 
 ---
 
@@ -190,6 +190,17 @@
 - 套用去 3 個顯示動作 list 嘅地方：`ExerciseLibraryPage.jsx`（Library 主頁）、`WorkoutPlansPage.jsx`（Add Exercises 搜尋結果）、`ExerciseSwapModal.jsx`（swap/add exercise picker，順便修埋一個小 bug：原本 `.slice(0,60)` 喺 sort 之前就切走，而家已經改做「先 sort 先 slice」，等頭 60 個真係 A-Z 頭 60 個）
 - Filter 篩選完嘅結果、新增動作 submit 完，都會即時出現喺正確字母位置——因為排序喺 render 層做，唔靠儲存次序
 - 12 個 credit emulator test 保持全綠；`npm run build` 通過
+
+### `exerciseOverrides` 疊加機制（Session 34）
+- 觸發：Ani 報告「Barbell Curl」改/刪唔到，查出真正原因——22 條 seed 動作純粹係 `data/exercises.js` 嘅靜態 JS 陣列，`AppContext.jsx` 每次都直接 `concat` 落 exercises state，**根本冇對應嘅 Firestore 文件**（之前 CLAUDE.md 寫錯咗，話係 rules `null==null` 巧合，已經改正）
+- 新增 `exerciseOverrides/{overrideId}` collection：`trainerId`/`exerciseId`（建立後不可改）+ `videoMode`/`videoUrl` + `instructionsMode`/`instructions`，`videoMode`/`instructionsMode` 三態（`default`/`custom`/`hidden`），doc ID 用 deterministic `${trainerId}_${exerciseId}`；教練完全冇自訂 → 唔建立文件；撳「還原用底版」→ 直接刪走文件
+- `AppContext.jsx`：新 listener 重用現有 exercises listener 嘅 `targetTrainerId` 邏輯（教練=自己，學生=自己教練）；`getExercises()` 喺 return 前 merge 埋 override；新增 `getExerciseOverride`/`upsertExerciseOverride`/`deleteExerciseOverride`
+- **Merge 喺 AppContext 一層做**：`WorkoutPlansPage.jsx`/`ClientDetailPage.jsx`/`SessionDateList.jsx` 全部經 `getExercises()` 攞資料，plan/log 顯示動作自動跟到教練自訂內容，冇改任何頁面
+- UI：`ExerciseLibraryPage.jsx` 按 `exercise.trainerId` 有冇分流——有（教練自建）照舊全表單 edit/delete；冇（seed 動作）撳 Edit 開新「Customize」panel，兩欄（影片/動作要點）都做一致嘅 3-way 選擇（用底版/自訂/唔顯示），Delete 掣對 seed 動作隱藏（seed 冇「刪除」概念）
+- Rules：新增 `exerciseOverrides` match block——教練讀寫自己嘅，學生淨係讀自己教練嘅，`trainerId`/`exerciseId` 建立後不可改
+- **新增自動化 rules 測試套件**（`firestore-tests/`，獨立於 `functions/` 嗰套 Cloud Functions Jest test，用 `@firebase/rules-unit-testing` + jest）：15 個測試，覆蓋教練A讀寫自己/教練B讀寫教練A嘅（全部拒絕）/學生讀自己教練嘅（准）讀第二個教練嘅（拒絕）任何寫（拒絕）/trainerId+exerciseId immutability，跑法 `cd firestore-tests && npm run test:emulator`
+- 12 個 credit emulator test + 15 個新 rules test 全部保持全綠；`npm run build` 通過
+- **待 Ani**：部署後用第二個真實帳號人手多撳一次做心理雙重確認（自動測試已經覆蓋咗核心矩陣，人手撳純粹係額外心安）
 
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）

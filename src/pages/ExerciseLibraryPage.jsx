@@ -7,12 +7,17 @@ import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName } from '../utils/exerciseUtils';
-import { movementPatterns } from '../data/exercises';
+import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exercises';
 
 const EMPTY_FORM = { name: '', muscles: [], equipment: '', movementPattern: '', aliases: [], description: '', instructions: '', commonMistakes: '', videoUrl: '', unit: 'weight_reps' };
+const EMPTY_CUSTOMIZE = { videoMode: 'default', videoUrl: '', instructionsMode: 'default', instructions: '' };
+const MODE_LABELS = { default: '用底版', custom: '自訂', hidden: '唔顯示' };
 
 export default function ExerciseLibraryPage() {
-  const { currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes } = useApp();
+  const {
+    currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
+    getExerciseOverride, upsertExerciseOverride, deleteExerciseOverride,
+  } = useApp();
   const parseMuscles = (str) => str ? str.split(', ').filter(Boolean) : [];
   const toast = useToast();
   const isTrainer = currentUser?.role === 'trainer';
@@ -30,6 +35,10 @@ export default function ExerciseLibraryPage() {
   const [detailExercise, setDetailExercise] = useState(null);
   const [openFilter, setOpenFilter] = useState(null);
   const [dropdownPos, setDropdownPos] = useState(null);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [customizingEx, setCustomizingEx] = useState(null);
+  const [customizeForm, setCustomizeForm] = useState(EMPTY_CUSTOMIZE);
+  const [customizeSaving, setCustomizeSaving] = useState(false);
   const nameInputRef = useRef(null);
   const pillOuterRef = useRef(null);
 
@@ -94,6 +103,45 @@ export default function ExerciseLibraryPage() {
       toast('Exercise deleted', 'info');
       setDetailExercise(null);
     } catch { toast('Failed to delete', 'error'); }
+  };
+
+  // Seed exercises (no trainerId — see CLAUDE.md) have no doc of their own to edit, so
+  // trainers layer personal video/instructions on top via an exerciseOverrides doc instead.
+  const openCustomize = (ex) => {
+    const ov = getExerciseOverride(ex.id);
+    setCustomizingEx(ex);
+    setCustomizeForm({
+      videoMode: ov?.videoMode || 'default',
+      videoUrl: ov?.videoUrl || '',
+      instructionsMode: ov?.instructionsMode || 'default',
+      instructions: ov?.instructions || '',
+    });
+    setDetailExercise(null);
+    setShowCustomize(true);
+  };
+
+  const handleCustomizeSubmit = async (e) => {
+    e.preventDefault();
+    setCustomizeSaving(true);
+    try {
+      const allDefault = customizeForm.videoMode === 'default' && customizeForm.instructionsMode === 'default';
+      if (allDefault) {
+        await deleteExerciseOverride(customizingEx.id);
+      } else {
+        await upsertExerciseOverride(customizingEx.id, customizeForm);
+      }
+      toast('Customization saved');
+      setShowCustomize(false);
+    } catch { toast('Failed to save customization', 'error'); } finally { setCustomizeSaving(false); }
+  };
+
+  const handleResetCustomize = async () => {
+    setCustomizeSaving(true);
+    try {
+      await deleteExerciseOverride(customizingEx.id);
+      toast('Reset to default');
+      setShowCustomize(false);
+    } catch { toast('Failed to reset', 'error'); } finally { setCustomizeSaving(false); }
   };
 
   const addAlias = () => {
@@ -335,10 +383,75 @@ export default function ExerciseLibraryPage() {
         <ExerciseDetailModal
           exercise={detailExercise}
           onClose={() => setDetailExercise(null)}
-          onEdit={isTrainer ? openEdit : undefined}
-          onDelete={isTrainer ? handleDelete : undefined}
+          onEdit={isTrainer ? (ex => ex.trainerId ? openEdit(ex) : openCustomize(ex)) : undefined}
+          onDelete={isTrainer && detailExercise.trainerId ? handleDelete : undefined}
         />
       )}
+
+      {showCustomize && customizingEx && (() => {
+        const seedVideoUrl = seedExercises.find(s => s.id === customizingEx.id)?.videoUrl;
+        return (
+          <div className="modal-overlay" onClick={() => setShowCustomize(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="flex-between mb-8">
+                <h3 className="modal-title" style={{ marginBottom: 0 }}>Customize: {customizingEx.name}</h3>
+                <button className="btn-icon" onClick={() => setShowCustomize(false)}><X size={18} /></button>
+              </div>
+              <p className="ex-customize-notice">呢個係你自己嘅自訂內容，只有你同你嘅學生見到</p>
+              <form onSubmit={handleCustomizeSubmit}>
+                <div className="form-group">
+                  <label className="form-label">Video / Demo URL</label>
+                  <div className="ex-mode-toggle">
+                    {['default', 'custom', 'hidden'].map(m => (
+                      <button key={m} type="button"
+                        className={`ex-mode-pill${customizeForm.videoMode === m ? ' active' : ''}`}
+                        onClick={() => setCustomizeForm(f => ({ ...f, videoMode: m }))}
+                      >{MODE_LABELS[m]}</button>
+                    ))}
+                  </div>
+                  {customizeForm.videoMode === 'custom' && (
+                    <input
+                      className="form-input mt-8"
+                      value={customizeForm.videoUrl}
+                      onChange={e => setCustomizeForm(f => ({ ...f, videoUrl: e.target.value }))}
+                      placeholder="Paste a YouTube link…"
+                    />
+                  )}
+                  {customizeForm.videoMode === 'default' && (
+                    <p className="text-sm text-muted mt-8">{seedVideoUrl ? '會顯示底版嘅教學片' : '底版冇教學片'}</p>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">動作要點</label>
+                  <div className="ex-mode-toggle">
+                    {['default', 'custom', 'hidden'].map(m => (
+                      <button key={m} type="button"
+                        className={`ex-mode-pill${customizeForm.instructionsMode === m ? ' active' : ''}`}
+                        onClick={() => setCustomizeForm(f => ({ ...f, instructionsMode: m }))}
+                      >{MODE_LABELS[m]}</button>
+                    ))}
+                  </div>
+                  {customizeForm.instructionsMode === 'custom' && (
+                    <textarea
+                      className="form-textarea mt-8"
+                      value={customizeForm.instructions}
+                      onChange={e => setCustomizeForm(f => ({ ...f, instructions: e.target.value }))}
+                      placeholder="Key coaching points for this exercise..."
+                    />
+                  )}
+                </div>
+                <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
+                  <button type="button" className="btn btn-outline" onClick={handleResetCustomize} disabled={customizeSaving}>還原用底版</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="btn btn-outline" onClick={() => setShowCustomize(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" disabled={customizeSaving}>{customizeSaving ? 'Saving…' : 'Save'}</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

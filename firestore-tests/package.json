@@ -1,0 +1,14 @@
+{
+  "name": "elitepro-firestore-rules-tests",
+  "private": true,
+  "description": "Automated firestore.rules verification via @firebase/rules-unit-testing (separate from functions/'s Cloud Functions Jest suite)",
+  "scripts": {
+    "test": "jest --testPathPattern=. --forceExit",
+    "test:emulator": "firebase emulators:exec --only firestore --project elitepro-16718 \"npm test\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.11.0",
+    "jest": "^29.7.0"
+  }
+}
