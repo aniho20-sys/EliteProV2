@@ -266,14 +266,19 @@ Top-level config files:
 {
   id: string,
   name: string,
-  muscle: string,        // from muscleGroups list
+  trainerId: string,     // owning trainer's UID — see note below on docs that omit this field
+  muscle: string,        // comma-joined from muscleGroups list
   equipment: string,     // from equipmentTypes list
+  movementPattern: string,  // optional: Hinge/Squat/Push/Pull/Carry/Locomotion/Rotation, '' = unclassified
+  aliases: string[],     // optional alt. names (e.g. Chinese name/abbreviation) so search matches either
   description: string,
-  instructions: string,
+  instructions: string,  // shown to students as "動作要點" (reused as formCues — no separate field)
+  commonMistakes: string, // optional, shown to students as "常見錯誤" only when populated
   unit: 'weight_reps' | 'reps_only' | 'time' | 'distance' | 'weight_distance',  // defaults to 'weight_reps' when absent
-  videoUrl: string,      // optional YouTube/safe URL for demo video
+  videoUrl: string,      // YouTube link plays in-app via iframe embed in ExerciseDetailModal; non-YouTube links open in a new tab
 }
 ```
+**Shared default exercises (intentional):** the 22 seeded exercises in `data/exercises.js` (`bench-press`, `squat`, etc.) were written into Firestore without a `trainerId` field. Because `firestore.rules`' read/update checks compare `resource.data.trainerId` against `userTrainerId()` (which is `null` for a trainer account), a missing `trainerId` matches `null == null` for every trainer — so these 22 exercises are visible to and shared by all trainer accounts, and are effectively un-editable/undeletable by anyone (the update rule requires an exact `trainerId` match, which a real UID never satisfies against `null`). This is by design — new trainers get a starter library — not a bug.
 
 #### `invoices/{invoiceId}`
 ```js
