@@ -520,6 +520,16 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **Firestore rules**: deploy with `npm run deploy:rules`
 - **Required secrets** (GitHub): `FIREBASE_SERVICE_ACCOUNT`
 
+## QA Test Accounts (permanent — do not delete)
+Created 2026-07-14 to verify multi-tenant isolation (e.g. `exerciseOverrides`) with a second real trainer identity, since Ani only has her own production account. Both are real accounts in the live `elitepro-16718` project (not the emulator) — created via the same client-side self-signup + self-profile-write flow any real user goes through (`createUserWithEmailAndPassword` + `users/{uid}` self-create), so they behave exactly like genuine accounts.
+
+| Role | Email | UID | Notes |
+|---|---|---|---|
+| Trainer | `test-coach-b@elitepro.test` | `zY3mbXFAXoaYvGxEQwH15zTZtOF3` | Invite code `QATEST` |
+| Client | `test-student-b@elitepro.test` | `fuV7SB6tBAVcCYKSiU20Yv9fwdk1` | `trainerId` set to the coach account above |
+
+Passwords were shared with Ani directly in chat, not recorded here — store in a password manager. Keep these two accounts permanently for future multi-tenant/isolation testing (required before any Phase 5 venue-marketplace work, where a second trainer identity becomes load-bearing for testing cross-tenant boundaries).
+
 ## Git Workflow Rules
 - **Work directly on `claude/fitness-app-features-LbxtG`** — do NOT create new branches
 - All changes must be committed and pushed to `claude/fitness-app-features-LbxtG`
