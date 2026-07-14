@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做）
 
 ---
 
@@ -163,6 +163,18 @@
 - **軟合併機制正式實裝**：`utils/exerciseUtils.js` 新增 `canonicalExercise()`，跟 `mergedInto` 指針解析到最終存活嘅 exercise（`resolveExerciseName` 已套用）；`ExerciseProgress.jsx`（`exerciseOptions`/`buildHistory`）同 `AppContext.getPersonalRecords` 都改做用 canonical id 分組，舊 id 嘅歷史 log 會自動冧埋計落新 id，唔使改動任何 `workoutPlans`/`workoutLogs` 文件
 - **一次性「Apply Approved Cleanup (Batch 1)」按鈕**（`ProfilePage.jsx`，Exercise Library Backup 卡下面）：執行 Ani 批准嘅 9 項操作——刪除「兜巴星」`custom--`、刪除「Core」`ex-1781006442488`、合併 Core boat（留 `custom-core-boat`）、合併 Hip abduction（留 `ex-1776704070364`）、5 項改名（KB Single Arm Row / Chest Press (Machine) / Walking Lunges / Hip Adduction (Machine) / Hip Abduction (Machine)）——因為冇 admin SDK 憑證，需要 Ani 喺 app 度親手撳一次先會真正寫入 Firestore；跑完之後會喺跟進 commit 度移除呢個按鈕
 - **未處理，等 Ani 拍板**：`ex-1779565704448`「Mobility workout」——冇缺明確嘅改名/去留建議，Ani 呢次批准清單冇提到，留待下次
+- 12 個 credit emulator test 保持全綠；`npm run build` 通過
+
+### Exercise Library List View 密度重做（Session 34）
+- Ani 驗收 Phase A+B 之後打回頭：list view 實際效果係「細張卡片」唔係真正 list——重做：
+  - 每行實高 56px、細分隔線、`.exercise-list` 淨係外層一個 rounded container，行本身冇圓角/白卡/陰影
+  - 動作名 semibold 做主角，肌群/器材/動作模式濃縮做一行細字（如「Core +3 · Bodyweight」），唔再用逐個 tag pill
+  - 有片先顯示 lucide `Play` icon（細細個、右邊），移除晒 emoji 🎥
+  - 3 組 filter（muscle/equipment/movement）由 3 行併做一行橫向 scroll，每組做 App Store 式摺埋 chip：撳先展開選項，揀咗變「Muscle: Core ✕」
+- **過程中執到 2 個真 bug，已修**：
+  1. Sticky filter row 嘅 breakpoint（768px）同真實 app `.mobile-header` 出現嘅 breakpoint（1024px）唔啱，窄啲嘅平板寬度會令 chips 匿埋喺 header 後面——已統一做 1024px
+  2. Dropdown 展開嗰陣俾裁到得返一條線咁高——CSS 冷知識：淨係設 `overflow-x` 會強行將 `overflow-y` 都變做 `auto`，連累用嚟做橫向 scroll 嘅 container 裁走咗展開嘅 dropdown；改用 JS 量度按鈕位置嚟 position 個 dropdown（唔再靠 CSS `top:100%` 呢種相對定位）解決
+- 用真實 `index.css` + 真實 post-cleanup 數據做靜態 mockup screenshot 俾 Ani 驗，確認密度（scroll少少即12+行可見）先 commit
 - 12 個 credit emulator test 保持全綠；`npm run build` 通過
 
 ### Dashboard 全面改版（6月10-11日）

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Search, Plus, X, SearchX } from 'lucide-react';
+import { Search, Plus, X, SearchX, Play, ChevronDown } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
@@ -28,7 +28,21 @@ export default function ExerciseLibraryPage() {
   const [aliasInput, setAliasInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [detailExercise, setDetailExercise] = useState(null);
+  const [openFilter, setOpenFilter] = useState(null);
+  const [dropdownPos, setDropdownPos] = useState(null);
   const nameInputRef = useRef(null);
+  const pillOuterRef = useRef(null);
+
+  // Positions the dropdown via measured coordinates (not CSS anchoring) because the pill
+  // row scrolls horizontally — an absolutely-positioned child would otherwise get clipped
+  // by that scroll container's implicit overflow-y.
+  const handlePillClick = (key, e) => {
+    if (openFilter === key) { setOpenFilter(null); return; }
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    const outerRect = pillOuterRef.current.getBoundingClientRect();
+    setDropdownPos({ left: btnRect.left - outerRect.left, top: btnRect.bottom - outerRect.top + 6 });
+    setOpenFilter(key);
+  };
 
   useEffect(() => {
     if (showModal && nameInputRef.current) {
@@ -112,17 +126,11 @@ export default function ExerciseLibraryPage() {
     } catch { toast('Failed to save exercise', 'error'); } finally { setSaving(false); }
   };
 
-  const chipRow = (label, options, value, setValue) => (
-    <div className="ex-filter-chip-row">
-      <span className="ex-filter-chip-label">{label}</span>
-      <div className="ex-filter-chips">
-        <button type="button" className={`plan-equip-chip${!value ? ' active' : ''}`} onClick={() => setValue('')}>All</button>
-        {options.map(o => (
-          <button key={o} type="button" className={`plan-equip-chip${value === o ? ' active' : ''}`} onClick={() => setValue(v => v === o ? '' : o)}>{o}</button>
-        ))}
-      </div>
-    </div>
-  );
+  const filterGroups = [
+    { key: 'muscle', label: 'Muscle', options: muscleGroups, value: muscleFilter, setValue: setMuscleFilter },
+    { key: 'equipment', label: 'Equipment', options: equipmentTypes, value: equipFilter, setValue: setEquipFilter },
+    { key: 'pattern', label: 'Movement', options: movementPatterns, value: patternFilter, setValue: setPatternFilter },
+  ];
 
   return (
     <div>
@@ -143,30 +151,57 @@ export default function ExerciseLibraryPage() {
         </div>
       </div>
 
-      <div className="ex-filter-chips-wrap">
-        {chipRow('Muscle', muscleGroups, muscleFilter, setMuscleFilter)}
-        {chipRow('Equipment', equipmentTypes, equipFilter, setEquipFilter)}
-        {chipRow('Movement', movementPatterns, patternFilter, setPatternFilter)}
+      <div className="ex-filter-pill-outer" ref={pillOuterRef}>
+        <div className="ex-filter-pill-scroll">
+          {filterGroups.map(g => (
+            <button
+              key={g.key}
+              type="button"
+              className={`ex-filter-pill${g.value ? ' active' : ''}`}
+              onClick={e => handlePillClick(g.key, e)}
+            >
+              {g.value ? `${g.label}: ${g.value}` : g.label}
+              {g.value ? (
+                <X size={12} className="ex-filter-pill-clear" onClick={e => { e.stopPropagation(); g.setValue(''); setOpenFilter(null); }} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+            </button>
+          ))}
+        </div>
+        {openFilter && dropdownPos && (
+          <div className="ex-filter-pill-dropdown" style={{ left: dropdownPos.left, top: dropdownPos.top }} onClick={e => e.stopPropagation()}>
+            {filterGroups.find(g => g.key === openFilter).options.map(o => {
+              const g = filterGroups.find(f => f.key === openFilter);
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  className={`plan-equip-chip${g.value === o ? ' active' : ''}`}
+                  onClick={() => { g.setValue(v => v === o ? '' : o); setOpenFilter(null); }}
+                >{o}</button>
+              );
+            })}
+          </div>
+        )}
       </div>
+      {openFilter && <div className="ex-filter-pill-backdrop" onClick={() => setOpenFilter(null)} />}
 
       <div className="exercise-list">
         {filtered.map(ex => {
-          const hasVideo = isSafeUrl(ex.videoUrl) && isYouTube(ex.videoUrl) && getYouTubeId(ex.videoUrl);
+          const hasVideo = isSafeUrl(ex.videoUrl);
           const muscles = parseMuscles(ex.muscle);
-          const shown = muscles.slice(0, 2);
-          const extra = muscles.length - shown.length;
+          const metaParts = [];
+          if (muscles.length) metaParts.push(muscles.length > 1 ? `${muscles[0]} +${muscles.length - 1}` : muscles[0]);
+          if (ex.equipment) metaParts.push(ex.equipment);
+          if (ex.movementPattern) metaParts.push(ex.movementPattern);
           return (
-            <div key={ex.id} className="card exercise-row" onClick={() => setDetailExercise(ex)}>
-              <div className="exercise-row-info">
+            <div key={ex.id} className="exercise-row" onClick={() => setDetailExercise(ex)}>
+              <div className="exercise-row-text">
                 <span className="exercise-row-name">{ex.name}</span>
-                <div className="exercise-row-tags">
-                  {shown.map(m => <span key={m} className="tag tag-primary">{m}</span>)}
-                  {extra > 0 && <span className="tag">+{extra}</span>}
-                  {ex.equipment && <span className="tag tag-accent">{ex.equipment}</span>}
-                  {ex.movementPattern && <span className="tag">{ex.movementPattern}</span>}
-                </div>
+                {metaParts.length > 0 && <span className="exercise-row-meta">{metaParts.join(' · ')}</span>}
               </div>
-              {hasVideo && <span className="exercise-row-video" title="Has demo video">🎥</span>}
+              {hasVideo && <Play size={14} className="exercise-row-video-icon" fill="currentColor" aria-label="Has demo video" />}
             </div>
           );
         })}
