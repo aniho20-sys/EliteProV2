@@ -11,7 +11,7 @@ import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exer
 
 const EMPTY_FORM = { name: '', muscles: [], equipment: '', movementPattern: '', aliases: [], description: '', instructions: '', commonMistakes: '', videoUrl: '', unit: 'weight_reps' };
 const EMPTY_CUSTOMIZE = { videoMode: 'default', videoUrl: '', instructionsMode: 'default', instructions: '' };
-const MODE_LABELS = { default: '用底版', custom: '自訂', hidden: '唔顯示' };
+const MODE_LABELS = { default: 'Default', custom: 'Custom', hidden: 'Hidden' };
 
 export default function ExerciseLibraryPage() {
   const {
@@ -316,7 +316,7 @@ export default function ExerciseLibraryPage() {
                     value={aliasInput}
                     onChange={e => setAliasInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }}
-                    placeholder="e.g. 深蹲, RDL…"
+                    placeholder="e.g. RDL, Bulgarian Split Squat…"
                   />
                   <button type="button" className="btn btn-outline btn-sm" onClick={addAlias} disabled={!aliasInput.trim()}>+ Add</button>
                 </div>
@@ -363,11 +363,11 @@ export default function ExerciseLibraryPage() {
                 <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="General description..." />
               </div>
               <div className="form-group">
-                <label className="form-label">動作要點 <span className="text-muted" style={{ fontWeight: 400 }}>(form cues, optional)</span></label>
+                <label className="form-label">Coaching Cues <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
                 <textarea className="form-textarea" value={form.instructions} onChange={e => setForm({ ...form, instructions: e.target.value })} placeholder="Key coaching points for this exercise..." />
               </div>
               <div className="form-group">
-                <label className="form-label">常見錯誤 <span className="text-muted" style={{ fontWeight: 400 }}>(common mistakes, optional)</span></label>
+                <label className="form-label">Common Mistakes <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
                 <textarea className="form-textarea" value={form.commonMistakes} onChange={e => setForm({ ...form, commonMistakes: e.target.value })} placeholder="Common mistakes to watch for..." />
               </div>
               <div className="modal-actions">
@@ -397,7 +397,7 @@ export default function ExerciseLibraryPage() {
                 <h3 className="modal-title" style={{ marginBottom: 0 }}>Customize: {customizingEx.name}</h3>
                 <button className="btn-icon" onClick={() => setShowCustomize(false)}><X size={18} /></button>
               </div>
-              <p className="ex-customize-notice">呢個係你自己嘅自訂內容，只有你同你嘅學生見到</p>
+              <p className="ex-customize-notice">Your custom content — only visible to you and your clients</p>
               <form onSubmit={handleCustomizeSubmit}>
                 <div className="form-group">
                   <label className="form-label">Video / Demo URL</label>
@@ -418,11 +418,11 @@ export default function ExerciseLibraryPage() {
                     />
                   )}
                   {customizeForm.videoMode === 'default' && (
-                    <p className="text-sm text-muted mt-8">{seedVideoUrl ? '會顯示底版嘅教學片' : '底版冇教學片'}</p>
+                    <p className="text-sm text-muted mt-8">{seedVideoUrl ? 'Shows the default demo video' : 'The default has no demo video'}</p>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">動作要點</label>
+                  <label className="form-label">Coaching Cues</label>
                   <div className="ex-mode-toggle">
                     {['default', 'custom', 'hidden'].map(m => (
                       <button key={m} type="button"
@@ -441,7 +441,7 @@ export default function ExerciseLibraryPage() {
                   )}
                 </div>
                 <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
-                  <button type="button" className="btn btn-outline" onClick={handleResetCustomize} disabled={customizeSaving}>還原用底版</button>
+                  <button type="button" className="btn btn-outline" onClick={handleResetCustomize} disabled={customizeSaving}>Reset to Default</button>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" className="btn btn-outline" onClick={() => setShowCustomize(false)}>Cancel</button>
                     <button type="submit" className="btn btn-primary" disabled={customizeSaving}>{customizeSaving ? 'Saving…' : 'Save'}</button>

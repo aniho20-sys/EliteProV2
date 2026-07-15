@@ -51,7 +51,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
             onClick={() => setShowEmbed(true)}
           >
             <Play size={16} />
-            {videoId ? '▶ 教學片' : 'Open Link'}
+            {videoId ? 'Watch Demo' : 'Open Link'}
           </button>
         )}
         {hasVideo && showEmbed && videoId && (
@@ -78,7 +78,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
             className="btn btn-outline ex-detail-video-btn"
             onClick={() => onEdit(exercise)}
           >
-            <Play size={15} /> 加入教學片
+            <Play size={15} /> Add Demo Video
           </button>
         )}
 
@@ -102,14 +102,14 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
 
         {exercise.instructions && (
           <div className="ex-detail-instructions">
-            <h4 className="ex-detail-instructions-title">動作要點</h4>
+            <h4 className="ex-detail-instructions-title">Coaching Cues</h4>
             <p className="ex-detail-desc">{exercise.instructions}</p>
           </div>
         )}
 
         {exercise.commonMistakes && (
           <div className="ex-detail-instructions">
-            <h4 className="ex-detail-instructions-title">常見錯誤</h4>
+            <h4 className="ex-detail-instructions-title">Common Mistakes</h4>
             <p className="ex-detail-desc">{exercise.commonMistakes}</p>
           </div>
         )}

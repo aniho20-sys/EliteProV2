@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復、動作 list 全站 A-Z 排序、exerciseOverrides 疊加機制）
+> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復、動作 list 全站 A-Z 排序、exerciseOverrides 疊加機制、UI 語言規則：全站英文清查）
 
 ---
 
@@ -201,6 +201,16 @@
 - **新增自動化 rules 測試套件**（`firestore-tests/`，獨立於 `functions/` 嗰套 Cloud Functions Jest test，用 `@firebase/rules-unit-testing` + jest）：15 個測試，覆蓋教練A讀寫自己/教練B讀寫教練A嘅（全部拒絕）/學生讀自己教練嘅（准）讀第二個教練嘅（拒絕）任何寫（拒絕）/trainerId+exerciseId immutability，跑法 `cd firestore-tests && npm run test:emulator`
 - 12 個 credit emulator test + 15 個新 rules test 全部保持全綠；`npm run build` 通過
 - **待 Ani**：部署後用第二個真實帳號人手多撳一次做心理雙重確認（自動測試已經覆蓋咗核心矩陣，人手撳純粹係額外心安）
+- 已開 2 個永久 QA 測試帳號（第二個教練 + 掛喺佢名下嘅學生），已寫入 CLAUDE.md「QA Test Accounts」，密碼淨係喺對話俾咗 Ani
+
+### UI 語言規則：全站英文清查（Session 34）
+- 新規矩寫入 CLAUDE.md 第28條：所有 app UI 文字（掣、標籤、提示、錯誤訊息、空狀態）一律英文，廣東話淨係用喺同 Ani 嘅內部溝通/報告/commit message，永遠唔可以出現喺 UI
+- 即時修正：`ExerciseLibraryPage.jsx`（Customize panel 全部中文 → 英文：Default/Custom/Hidden、Coaching Cues、Common Mistakes、Reset to Default 等）、`ExerciseDetailModal.jsx`（Watch Demo、Add Demo Video、Coaching Cues、Common Mistakes）、`SchedulePage.jsx`（一個漏咗嘅 toast「課堂完成」→ "Session marked complete"）
+- 掃咗成個 `src/` 搵晒所有 CJK 字元，發現 2 類睇落係**刻意**而唔係漏咗嘅：
+  1. 「gym啦」呢個 gym啦 operator 功能嘅品牌名（`Navigation.jsx`/`TrainerApplicationPage.jsx`/`OperatorDashboard.jsx`/`StudioBookingPage.jsx`，全部依家喺 `GYMLA_ENABLED=false` 之下隱藏）+ `StudioManagementPage.jsx` 嘅地區名 placeholder（「旺角」）
+  2. `LandingPage.jsx` 嘅全頁雙語（英文+廣東話）行銷文案設計
+- 呢兩類未郁，留返俾 Ani 拍板係咪都要轉英文（詳情見對話回覆）
+- 12 個 credit emulator test 保持全綠；`npm run build` 通過
 
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）

@@ -265,7 +265,7 @@ export default function SchedulePage() {
       } catch { /* non-critical */ }
     }
 
-    toast('課堂完成');
+    toast('Session marked complete');
     setRecapSession(null);
     setRecapNote('');
     setSavingRecap(false);
