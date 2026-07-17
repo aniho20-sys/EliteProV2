@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight, X } from 'lucide-react';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
+import { getClientActivityDates } from '../utils/activityUtils';
 import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
@@ -50,12 +51,10 @@ export default function ClientDashboard() {
   const totalWorkouts = logs.length;
   // "This Week" counts distinct training days — a logged workout OR a completed session —
   // so clients who train via booked sessions without always logging aren't undercounted.
+  // Shares getClientActivityDates() with TrainerDashboard so both sides agree on what counts.
   const weekStart = localDateAdd(today, -7);
-  const thisWeekActivityDates = new Set([
-    ...logs.filter(l => l.date >= weekStart).map(l => l.date),
-    ...getSchedule({ clientId: currentUser.id }).filter(s => s.status === 'completed' && s.date >= weekStart).map(s => s.date),
-  ]);
-  const thisWeekCount = thisWeekActivityDates.size;
+  const thisWeekCount = getClientActivityDates(currentUser.id, { getWorkoutLogs, getSchedule })
+    .filter(d => d >= weekStart).length;
 
   return (
     <div>

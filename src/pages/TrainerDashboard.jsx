@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, Copy } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
+import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -51,48 +52,49 @@ function WeeklySessionsChart({ weekDays, schedule, today }) {
   );
 }
 
-function ClientActivityList({ clients, getWorkoutLogs, today }) {
-  const todayMs = new Date(today).getTime();
+// Positioned right below Needs Attention, but deliberately undramatic: this is a status
+// summary, not a warning system — recency uses neutral gray text, never red/yellow/green.
+// Needs Attention already owns the "this client needs action" call-out.
+function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, today }) {
+  const [expanded, setExpanded] = useState(false);
+  const weekStart = localDateAdd(today, -7);
 
-  const activity = clients.map(client => {
-    const logs = getWorkoutLogs(client.id);
-    const latest = logs.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    const daysSince = latest
-      ? Math.floor((todayMs - new Date(latest.date).getTime()) / 86400000)
-      : null;
-    return { client, daysSince };
-  }).sort((a, b) => {
-    if (a.daysSince === null && b.daysSince === null) return 0;
-    if (a.daysSince === null) return 1;
-    if (b.daysSince === null) return -1;
-    return a.daysSince - b.daysSince;
-  });
+  const activity = clients.map(client => ({
+    client,
+    ...getLastActivity(client.id, { getWorkoutLogs, getSchedule, plans, today }),
+  })).sort((a, b) => (a.daysSince ?? Infinity) - (b.daysSince ?? Infinity));
 
-  const getActivityMeta = (days) => {
-    if (days === null) return { label: 'No logs yet', color: 'var(--text-muted)', pct: 0 };
-    if (days === 0) return { label: 'Today', color: 'var(--success)', pct: 100 };
-    if (days <= 7) return { label: `${days}d ago`, color: 'var(--success)', pct: Math.round((1 - days / 7) * 60 + 40) };
-    if (days <= 14) return { label: `${days}d ago`, color: 'var(--warning)', pct: Math.round((1 - (days - 7) / 7) * 35 + 5) };
-    return { label: `${days}d ago`, color: 'var(--danger)', pct: 5 };
+  const activeThisWeek = clients.filter(client =>
+    getClientActivityDates(client.id, { getWorkoutLogs, getSchedule }).some(d => d >= weekStart)
+  ).length;
+
+  const formatDaysSince = (days) => {
+    if (days === null) return 'No activity yet';
+    if (days === 0) return 'Today';
+    return `${days}d ago`;
   };
 
   return (
-    <div className="client-activity-list">
-      {activity.map(({ client, daysSince }) => {
-        const { label, color, pct } = getActivityMeta(daysSince);
-        return (
-          <Link key={client.id} to={`/clients/${client.id}`} className="client-activity-item">
-            <div className="client-activity-avatar">{client.name?.[0] || '?'}</div>
-            <div className="client-activity-info">
-              <div className="client-activity-name">{client.name}</div>
-              <div className="client-activity-bar-wrap">
-                <div className="client-activity-bar" style={{ width: `${pct}%`, background: color }} />
+    <div className="card mb-16">
+      <button type="button" className="client-activity-summary-toggle" onClick={() => setExpanded(v => !v)}>
+        <Users size={16} />
+        <span>Active this week: <strong>{activeThisWeek}/{clients.length}</strong> clients</span>
+        <ChevronDown size={16} className={`client-activity-chevron${expanded ? ' open' : ''}`} />
+      </button>
+      {expanded && (
+        <div className="client-activity-list">
+          {activity.map(({ client, daysSince, label }) => (
+            <Link key={client.id} to={`/clients/${client.id}`} className="client-activity-item">
+              <div className="client-activity-avatar">{client.name?.[0] || '?'}</div>
+              <div className="client-activity-info">
+                <div className="client-activity-name">{client.name}</div>
+                {label && <div className="client-activity-detail">{label}</div>}
               </div>
-            </div>
-            <span className="client-activity-label" style={{ color }}>{label}</span>
-          </Link>
-        );
-      })}
+              <span className="client-activity-label">{formatDaysSince(daysSince)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -226,7 +228,6 @@ export default function TrainerDashboard() {
   const allPlans = getWorkoutPlans({ trainerId: currentUser.id });
   const totalPlans = allPlans.length;
   const today = localToday();
-  const todayMs = new Date(today).getTime();
   const todaySchedule = getSchedule({ trainerId: currentUser.id, date: today });
   const unread = getUnreadCount(currentUser.id);
   const recentMessages = getMessages(currentUser.id)
@@ -272,20 +273,7 @@ export default function TrainerDashboard() {
   // "Last activity" = most recent of (last workout log, last completed session) — a client
   // who trains weekly via booked sessions but rarely logs workouts is still active, not churning.
   const churnClients = clients.reduce((acc, client) => {
-    const latestLog = getWorkoutLogs(client.id).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    const latestSession = getSchedule({ clientId: client.id })
-      .filter(s => s.status === 'completed')
-      .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    const logMs = latestLog ? new Date(latestLog.date).getTime() : null;
-    const sessionMs = latestSession ? new Date(latestSession.date).getTime() : null;
-    const lastActivityMs = logMs !== null && sessionMs !== null ? Math.max(logMs, sessionMs) : (logMs ?? sessionMs);
-    const daysSince = lastActivityMs !== null
-      ? Math.floor((todayMs - lastActivityMs) / 86400000)
-      : null;
-    const lastActivityLabel = lastActivityMs === null ? null
-      : sessionMs !== null && sessionMs >= (logMs ?? -Infinity)
-        ? (latestSession.type || 'Session')
-        : (allPlans.find(p => p.id === latestLog.planId)?.name || latestLog.workoutName || 'Workout');
+    const { daysSince, label: lastActivityLabel } = getLastActivity(client.id, { getWorkoutLogs, getSchedule, plans: allPlans, today });
     const inactive = daysSince === null || daysSince >= CHURN_INACTIVE_DAYS;
     if (inactive && !isSnoozed(client.churnSnoozedUntil, today)) {
       acc.push({ client, daysSince, lastActivityLabel });
@@ -513,6 +501,22 @@ export default function TrainerDashboard() {
       )}
       {snoozeMenuFor && <div className="needs-attention-snooze-backdrop" onClick={() => setSnoozeMenuFor(null)} />}
 
+      {/* Client Activity — status summary, not a warning system (Needs Attention owns that) */}
+      {clients.length === 0 ? (
+        <div className="card mb-16">
+          <EmptyState
+            inCard={false}
+            compact
+            icon={Users}
+            title="No clients yet"
+            description="Invite your first client to see their activity here."
+            action={{ label: 'Get Invite Code', to: '/clients' }}
+          />
+        </div>
+      ) : (
+        <ClientActivitySummary clients={clients} getWorkoutLogs={getWorkoutLogs} getSchedule={getSchedule} plans={allPlans} today={today} />
+      )}
+
       {/* Today + Messages */}
       <div className="grid-2 mb-16">
         <div className="card">
@@ -587,38 +591,17 @@ export default function TrainerDashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid-2">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">This Week&apos;s Sessions</h3>
-            <Link to="/schedule" className="btn btn-outline btn-sm">Schedule</Link>
-          </div>
-          <div style={{ padding: '8px 4px 0' }}>
-            <WeeklySessionsChart weekDays={weekDays} schedule={weekSchedule} today={today} />
-          </div>
-          <div className="week-chart-footer">
-            <span>{weekSchedule.length} session{weekSchedule.length !== 1 ? 's' : ''} this week</span>
-            <span style={{ color: 'var(--success)' }}>{confirmedCount} confirmed</span>
-          </div>
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title">This Week&apos;s Sessions</h3>
+          <Link to="/schedule" className="btn btn-outline btn-sm">Schedule</Link>
         </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Client Activity</h3>
-            <Link to="/clients" className="btn btn-outline btn-sm">View All</Link>
-          </div>
-          {clients.length === 0 ? (
-            <EmptyState
-              inCard={false}
-              compact
-              icon={Users}
-              title="No clients yet"
-              description="Invite your first client to see their activity here."
-              action={{ label: 'Get Invite Code', to: '/clients' }}
-            />
-          ) : (
-            <ClientActivityList clients={clients} getWorkoutLogs={getWorkoutLogs} today={today} />
-          )}
+        <div style={{ padding: '8px 4px 0' }}>
+          <WeeklySessionsChart weekDays={weekDays} schedule={weekSchedule} today={today} />
+        </div>
+        <div className="week-chart-footer">
+          <span>{weekSchedule.length} session{weekSchedule.length !== 1 ? 's' : ''} this week</span>
+          <span style={{ color: 'var(--success)' }}>{confirmedCount} confirmed</span>
         </div>
       </div>
 

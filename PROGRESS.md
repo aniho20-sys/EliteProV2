@@ -212,6 +212,15 @@
 - 呢兩類未郁，留返俾 Ani 拍板係咪都要轉英文（詳情見對話回覆）
 - 12 個 credit emulator test 保持全綠；`npm run build` 通過
 
+### 「活躍」定義統一 + Client Activity 卡重新定位（Session 35）
+- 舊 bug：Needs Attention 流失風險 / Client Activity / 學生端 This Week stat 淨係計 `workoutLogs`，令上堂為主、少自己 log 嘅學生（如 Wan、Timmy）被誤標做 inactive
+- 新增 `src/utils/activityUtils.js`：`getLastActivity()` = max(最後 workout log 日期, 最後完成嘅 session 日期)；`getClientActivityDates()` 回傳 log 日期 + completed session 日期嘅聯集，供「本週活躍」類統計共用
+- `TrainerDashboard.jsx`：`churnClients` 改用 `getLastActivity()`；舊 `ClientActivityList`（progress bar 列表）換做 `ClientActivitySummary`——首頁淨係一行「Active this week: X/Y clients」摘要，撳開先展開全清單（按最近活動排序，中性灰色日數，唔用紅黃綠警告色），位置搬去 Needs Attention 之下；「This Week's Sessions」獨立做返一張全寬卡
+- `ClientDashboard.jsx`：「This Week」stat 改用共用嘅 `getClientActivityDates()`，唔再自己另外計 log-only 邏輯
+- `index.css`：新增摘要卡 toggle/chevron/展開清單樣式，刪走舊 progress-bar 相關 CSS
+- 12 個 credit emulator test 保持全綠；`npm run build` 通過
+- 未驗證：邊啲學生實際上會由流失風險清單消失、7日活躍率實際數值——需要 Ani 喺真實 production 環境自己核實（sandbox 冇真實客戶資料）
+
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）
 - Stat card 全面轉用 stat-strip/stat-pill 精簡橫向排列（TrainerDashboard、ClientDashboard、BusinessAnalyticsPage、InvoicePage 都套用）
