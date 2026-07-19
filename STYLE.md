@@ -109,8 +109,8 @@ Three tiers. Every page/section must declare which one it is (see table below) �
 |---|---|
 | Exercise Library (list) | Compact |
 | Workout Log (set rows) | Compact |
-| Clients list | Compact |
-| Messages (contact list) | Compact |
+| Clients list | Spacious — reviewed during Phase 2 and kept as a card grid (age/height/weight/goals/tags at a glance); a bare compact row would strip data trainers rely on, so this is intentionally not converted |
+| Messages (contact list) | Compact — already the standard avatar + 2-line preview messaging idiom; tightened avatar/padding in Phase 2 rather than restructured |
 | Schedule (day list) | Regular |
 | Client Detail (tabs) | Regular |
 | Workout Plans (builder) | Regular |

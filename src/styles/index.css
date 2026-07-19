@@ -1986,8 +1986,8 @@ tr:hover { background: var(--bg-card-hover); }
 .contact-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all 0.2s var(--ease);
@@ -1999,14 +1999,14 @@ tr:hover { background: var(--bg-card-hover); }
   border-color: rgba(67, 97, 238, 0.15);
 }
 .contact-avatar {
-  width: 42px; height: 42px;
+  width: 38px; height: 38px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--primary), var(--accent));
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: white;
   flex-shrink: 0;
 }
