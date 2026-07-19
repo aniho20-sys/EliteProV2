@@ -221,6 +221,16 @@
 - 12 個 credit emulator test 保持全綠；`npm run build` 通過
 - 未驗證：邊啲學生實際上會由流失風險清單消失、7日活躍率實際數值——需要 Ani 喺真實 production 環境自己核實（sandbox 冇真實客戶資料）
 
+### UI 統一規範 STYLE.md + Phase 2 執法（Session 36，員工D）
+- 出咗 `STYLE.md`：色板（每個 semantic 色列明用途）、5級字級、8px 間距 scale、compact/regular/spacious 三檔密度 + 逐頁分類表、empty state 格式規範（icon+一句解釋+action 掣）、微交互標準、英文規矩重申、audit 已知債附錄。Ani 批准，門檻確認 ≤2 danger / ≤5 warning。
+- **範疇1**：剩餘堂數顏色門檻由 5 個唔同版本（threshold 2/3/5 混用，「安全色」有 hardcode `#06d6a0`/`var(--success)`/`var(--text-muted)` 三種）統一做 `sessionUtils.js` 嘅 `getSessionColor()` + `SESSION_DANGER_THRESHOLD`/`SESSION_WARNING_THRESHOLD` 常數，5 個 call site 全部改用
+- **範疇2**：hardcode hex 換 variable（新增 `--danger-light`、`--warning-dark`，dark theme 另有 override）；`.loading-screen` dark mode 閃白色 bug 修復（`#ffffff` → `var(--bg-card)`）；loading brand text 嘅一次性藍紫青漸層改用返同 `.sidebar-logo` 一致嘅 primary/accent brand token
+- **範疇3**：5 個 empty state 補返 action 掣（ClientDashboard「No sessions today」→ Book a Session、ClientDetailPage「No workout logs」→ Log a Session、ExerciseProgress「No training data」→ Log a Workout、StudioManagementPage/StudioBookingPage 都補埋）
+- **範疇4**：審視 ClientsPage 同 MessagesPage 嘅密度定位（同 Ani 確認）——MessagesPage contact-item 微調（avatar 42→38px, padding 12→10px），保留 2 行 preview；ClientsPage card grid **刻意保留**，因為顯示緊年齡/身高/體重/目標等資料，同 Exercise Library 純掃描列表性質完全唔同，`STYLE.md` 密度表已更新記錄呢個決定
+- **範疇5**：Dark mode pass——刪走一條死 CSS（重複嘅 `.tag-warning` rule，第一條永遠俾第二條蓋過）；用 headless browser（Playwright + 預裝 chromium）實際截圖驗證 LoginPage/Privacy/Terms 喺 light+dark 兩個 theme 底下嘅顯示，順便發現同修咗一個真 bug：`.login-switch` 兩個 button 冇換行,「Sign up」同「Forgot password?」擠埋一行,改用 flex column + gap 令佢哋分行
+- 已登入頁面（Dashboard/Schedule/Messages 等）需要真實 Firebase Auth 帳號先睇到,sandbox 冇密碼,未能實際截圖驗證——麻煩 Ani 上線後自己睇吓 dark mode 顯示
+- 5 個細 commit,每個範疇獨立 push,12 個 credit emulator test 全程保持全綠,`npm run build` 全部通過
+
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）
 - Stat card 全面轉用 stat-strip/stat-pill 精簡橫向排列（TrainerDashboard、ClientDashboard、BusinessAnalyticsPage、InvoicePage 都套用）
