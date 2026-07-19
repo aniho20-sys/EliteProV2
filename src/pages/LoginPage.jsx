@@ -154,7 +154,6 @@ export default function LoginPage() {
             <button
               className="btn-link"
               onClick={() => { setShowForgot(true); setForgotEmail(email); setError(''); setInfo(''); }}
-              style={{ marginTop: 4 }}
             >
               Forgot password?
             </button>
