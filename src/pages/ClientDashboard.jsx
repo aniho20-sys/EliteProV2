@@ -199,7 +199,8 @@ export default function ClientDashboard() {
               compact
               icon={CalendarOff}
               title="No sessions today"
-              description="Your schedule is clear. Book one anytime from the Schedule page."
+              description="Your schedule is clear."
+              action={{ label: 'Book a Session', to: '/schedule' }}
             />
           ) : (
             todaySchedule.map(s => (

@@ -86,7 +86,7 @@ export default function StudioBookingPage() {
       <div className="card mb-16">
         <h3 className="card-title mb-16">Available Slots — {selectedDate}</h3>
         {availableSlots.length === 0 ? (
-          <EmptyState inCard={false} compact icon={Calendar} title="No available slots" description="Try a different date or studio." />
+          <EmptyState inCard={false} compact icon={Calendar} title="No available slots" description="Try a different date or studio." action={{ label: 'Try Next Day', onClick: () => setSelectedDate(d => localDateAdd(d, 1)) }} />
         ) : (
           <div className="slot-book-grid">
             {availableSlots.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(slot => (

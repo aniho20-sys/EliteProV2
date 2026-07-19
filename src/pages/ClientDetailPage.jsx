@@ -634,6 +634,7 @@ export default function ClientDetailPage() {
               icon={NotebookPen}
               title="No workout logs yet"
               description="This client hasn't logged a workout yet. Logs will appear here once they do."
+              action={{ label: 'Log a Session', onClick: () => navigate('/log', { state: { clientId: client.id, clientName: client.name } }) }}
             />
           ) : (
             [...logs].reverse().map(l => {

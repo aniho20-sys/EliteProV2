@@ -167,7 +167,7 @@ export default function StudioManagementPage() {
       )}
 
       {studios.length === 0 ? (
-        <EmptyState icon={Building2} title="No studios yet" description="Add your first studio to start managing time slots." />
+        <EmptyState icon={Building2} title="No studios yet" description="Add your first studio to start managing time slots." action={{ label: 'Add Studio', onClick: () => setShowAddForm(true) }} />
       ) : (
         studios.map(studio => {
           const studioAllSlots = allSlots.filter(s => s.studioId === studio.id);

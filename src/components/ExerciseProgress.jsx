@@ -94,6 +94,7 @@ export default function ExerciseProgress({ clientId }) {
         icon={Dumbbell}
         title="No training data yet"
         description="Complete workout sessions to see exercise progression charts."
+        action={{ label: 'Log a Workout', to: '/log' }}
       />
     );
   }
