@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users, Trophy } from 'lucide-react';
 import { localToday, localDateAdd } from '../utils/dateUtils';
+import { getSessionColor } from '../utils/sessionUtils';
 import EmptyState from '../components/EmptyState';
 
 const SORT_OPTIONS = [
@@ -123,7 +124,7 @@ function SessionsBar({ used, total }) {
   if (total === null) return <span className="text-sm text-muted">Unlimited</span>;
   const pct = Math.min((used / total) * 100, 100);
   const remaining = total - used;
-  const color = remaining <= 2 ? 'var(--danger)' : remaining <= 5 ? 'var(--warning)' : 'var(--success)';
+  const color = getSessionColor(remaining);
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>

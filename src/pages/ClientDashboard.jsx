@@ -4,6 +4,7 @@ import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, Chevr
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { getClientActivityDates } from '../utils/activityUtils';
+import { getSessionColor, SESSION_WARNING_THRESHOLD } from '../utils/sessionUtils';
 import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
@@ -122,29 +123,29 @@ export default function ClientDashboard() {
       )}
 
       {sessTotal !== null && (
-        <div className="hero-card mb-16" style={sessRemaining <= 3 ? { background: 'var(--warning)' } : undefined}>
+        <div className="hero-card mb-16" style={sessRemaining <= SESSION_WARNING_THRESHOLD ? { background: getSessionColor(sessRemaining) } : undefined}>
           <div className="hero-card-inner">
             <div className="flex-between mb-12" style={{ alignItems: 'baseline' }}>
-              <span className="hero-card-label" style={sessRemaining <= 3 ? { color: 'var(--warning)' } : undefined}>Your package</span>
+              <span className="hero-card-label" style={sessRemaining <= SESSION_WARNING_THRESHOLD ? { color: getSessionColor(sessRemaining) } : undefined}>Your package</span>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
                 {sessRemaining}
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> session{sessRemaining === 1 ? '' : 's'} left</span>
               </span>
             </div>
             <div className="session-progress-bar mb-12">
-              <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessRemaining <= 3 ? 'var(--warning)' : 'var(--brand-gradient)' }} />
+              <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessRemaining <= SESSION_WARNING_THRESHOLD ? getSessionColor(sessRemaining) : 'var(--brand-gradient)' }} />
             </div>
-            {sessRemaining <= 3 && (
+            {sessRemaining <= SESSION_WARNING_THRESHOLD && (
               trainer?.renewalRate && trainer?.renewalRateNext ? (
                 <button
                   className="text-sm mb-12"
                   onClick={() => setShowPaymentSheet(true)}
-                  style={{ color: 'var(--warning)', fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  style={{ color: getSessionColor(sessRemaining), fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
                   Renew early to keep your current rate <ChevronRight size={14} />
                 </button>
               ) : (
-                <p className="text-sm mb-12" style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                <p className="text-sm mb-12" style={{ color: getSessionColor(sessRemaining), fontWeight: 600 }}>
                   Running low — contact your trainer to top up
                 </p>
               )

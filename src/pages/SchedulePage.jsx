@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
-import { getSessionColor } from '../utils/sessionUtils';
+import { getSessionColor, SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { localToday, localDateAdd, parseLocalDate } from '../utils/dateUtils';
@@ -379,8 +379,7 @@ export default function SchedulePage() {
               if (!isTrainer || s.status === 'completed' || s.status === 'cancelled') return null;
               const { remaining, total } = getSessionStats(s.clientId);
               if (total === null) return null;
-              const color = remaining <= 2 ? 'var(--danger)' : remaining <= 5 ? 'var(--warning)' : 'var(--text-muted)';
-              return <span style={{ fontSize: '0.72rem', color, fontWeight: 600, marginLeft: 6 }}>{remaining} left</span>;
+              return <span style={{ fontSize: '0.72rem', color: getSessionColor(remaining), fontWeight: 600, marginLeft: 6 }}>{remaining} left</span>;
             })();
             return (
               <div key={s.id} className="schedule-item">
@@ -481,9 +480,9 @@ export default function SchedulePage() {
                 return (
                   <div className="recap-row">
                     <span className="form-label">Sessions</span>
-                    <span style={{ color: remaining <= 2 ? 'var(--danger)' : 'var(--text)', fontWeight: 600 }}>
+                    <span style={{ color: getSessionColor(remaining), fontWeight: 600 }}>
                       {remaining} remaining → after: {afterComplete}
-                      {remaining <= 2 && <span style={{ marginLeft: 6, fontSize: '0.8rem' }}>⚠️ Low</span>}
+                      {remaining <= SESSION_DANGER_THRESHOLD && <span style={{ marginLeft: 6, fontSize: '0.8rem' }}>⚠️ Low</span>}
                     </span>
                   </div>
                 );
