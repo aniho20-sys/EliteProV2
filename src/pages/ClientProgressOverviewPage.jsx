@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users, Trophy } from 'lucide-react';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import { getSessionColor } from '../utils/sessionUtils';
+import { getLastActivity } from '../utils/activityUtils';
 import EmptyState from '../components/EmptyState';
 
 const SORT_OPTIONS = [
@@ -107,12 +108,6 @@ function TrendIcon({ change, goodDirection = 'down' }) {
     : <TrendingUp size={14} style={{ color: isGood ? 'var(--success)' : 'var(--danger)' }} />;
 }
 
-function daysSince(dateStr) {
-  if (!dateStr) return null;
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  return diff;
-}
-
 function formatDaysAgo(days) {
   if (days === null) return '—';
   if (days === 0) return 'Today';
@@ -138,14 +133,11 @@ function SessionsBar({ used, total }) {
   );
 }
 
-function ClientCard({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain, onClick }) {
+function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain, onClick }) {
   const latest = bodyStats[bodyStats.length - 1];
   const prev = bodyStats.length > 1 ? bodyStats[bodyStats.length - 2] : null;
   const weightChange = latest && prev ? latest.weight - prev.weight : null;
   const bfChange = latest && prev ? latest.bodyFat - prev.bodyFat : null;
-
-  const lastLogDate = logs.length > 0 ? [...logs].sort((a, b) => b.date.localeCompare(a.date))[0]?.date : null;
-  const daysSinceLog = daysSince(lastLogDate);
 
   const weightSparkline = bodyStats
     .filter(s => s.weight != null && s.weight !== '')
@@ -280,8 +272,7 @@ export default function ClientProgressOverviewPage() {
     const latest = bodyStats[bodyStats.length - 1];
     const prev = bodyStats.length > 1 ? bodyStats[bodyStats.length - 2] : null;
     const weightChange = latest && prev ? latest.weight - prev.weight : null;
-    const lastLog = logs.length > 0 ? [...logs].sort((a, b) => b.date.localeCompare(a.date))[0] : null;
-    const daysSinceLog = daysSince(lastLog?.date);
+    const daysSinceLog = getLastActivity(client.id, { getWorkoutLogs, getSchedule, today }).daysSince;
     const volume30d = calcVolumeInRange(logs, start30d, today);
     const volumePrev30d = calcVolumeInRange(logs, start60d, start30d);
     const volumeChange = volumePrev30d > 0 ? ((volume30d - volumePrev30d) / volumePrev30d) * 100 : null;
@@ -343,14 +334,14 @@ export default function ClientProgressOverviewPage() {
           </div>
 
           <div className="client-progress-grid">
-            {sorted.map(({ client, bodyStats, logs, nextSession, sessionStats, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain }) => (
+            {sorted.map(({ client, bodyStats, nextSession, sessionStats, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain }) => (
               <ClientCard
                 key={client.id}
                 client={client}
                 bodyStats={bodyStats}
-                logs={logs}
                 nextSession={nextSession}
                 sessionStats={sessionStats}
+                daysSinceLog={daysSinceLog}
                 volume30d={volume30d}
                 volumeChange={volumeChange}
                 sessions30d={sessions30d}
