@@ -356,8 +356,9 @@
 |------|------|
 | Top-Up 新 rate 選擇器 + `creditLedger` 寫入 | Session 33 尾段先加，仲未見教練確認測試（要先喺 Profile 設定 Renewal Pricing 先會顯示） |
 | Credit 續約提醒（3堂/1堂提示、常駐 banner、payment sheet） | 已部署，教練未回報測試結果 |
-| Reschedule cap | `ROADMAP.md` Phase 1 提到「reschedule cap」，但現有 code 入面搵唔到獨立嘅「reschedule」動作（只有 cancel + 重新 book），懷疑呢個名詞可能係指緊「每月2次早取消上限」——**待 Ani 澄清係咪同一件事，定係要開返一個獨立嘅 reschedule 功能** |
 | 從 Landing Page signup 開始嘅全程 E2E | 見即時行動清單，未做過 |
+
+**Reschedule cap 已澄清（2026-07-20，Ani 確認）**：`ROADMAP.md` Phase 1 提到嘅「reschedule cap」即係現有嘅「每月2次早取消上限」，唔係獨立功能，唔使另開。呢個場景已經有 12 個自動化測試入面嘅「早取消上限」相關 case 覆蓋（見上面「已用自動化測試驗證」一節），移出「未實測」清單。
 
 ---
 

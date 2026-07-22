@@ -12,15 +12,22 @@ the credit, capped at 2 free early-cancels per client per month; cancelling
 within 24h keeps the charge (`onScheduleCreditUpdate` Cloud Function). Bookings
 made before this shipped are caught up automatically (charged once, on
 Mark Complete or late-cancel) so old and new bookings coexist without double-
-charging. Trainer-confirmed working for booking and early-cancellation; full
-acceptance testing across all remaining scenarios (reschedule, top-up rate
-selection, renewal reminders) is still in progress.
+charging. Trainer-confirmed working for booking and early-cancellation.
+"Reschedule cap" (confirmed 2026-07-20) refers to this same 2-per-month
+early-cancel cap, not a separate feature — already covered by the 12-test
+automated suite. Remaining acceptance testing: top-up rate selection and
+renewal reminders still need trainer confirmation with a real account.
 
 ## Phase 2 — UI Cleanup
 Polish and simplify existing screens before adding new features.
 
-**Current status:** To be confirmed — no dedicated UI cleanup work found in
-the current codebase or recent commit history.
+**Current status:** Implemented (2026-07-20). `STYLE.md` design-system
+reference added (color usage rules, type scale, spacing, density tiers,
+empty-state contract, micro-interaction standards) and the app audited
+against it: session-remaining color logic unified into one utility,
+hardcoded hex colors tokenized, a dark-mode background bug fixed, empty
+states given action buttons, list density reviewed page-by-page, and a
+real login-page layout bug fixed along the way.
 
 ## Phase 3 — GoCardless Direct Debit Subscription Billing
 Monthly subscription plans (three tiers, 52-week annualised
