@@ -246,15 +246,10 @@ banks all 3 since 3 ≤ 4 (the cap); a 12-session tier client who used 2
 - **Initiating a pause** (client-facing action, or trainer-assisted):
   writes `status: 'paused'`, `pausedAt: <today>`,
   `pauseResumeDate: <chosen date>`, and appends to `pauseHistory`. Cap
-  enforcement (max 2/year) is checked at request time by counting
-  `pauseHistory` entries with `requestedAt` in the trailing 12 months
-  (rolling window from the request date, not calendar-year, so a client
-  who signed up mid-year isn't advantaged/disadvantaged by where Jan 1
-  falls — **flagging this as an assumption to confirm with Ani**, since
-  the existing early-cancel cap in the credit system instead resets by
-  calendar month; a rolling year is the more defensible reading of
-  "2 per year" but it's worth her explicit sign-off since it's a policy
-  detail, not a technical one).
+  enforcement (max 2/year, **confirmed by Ani 2026-07-20: rolling 12
+  months from the request date**, not calendar year) is checked at
+  request time by counting `pauseHistory` entries with `requestedAt` in
+  the trailing 12 months.
 - **Skipping the charge:** GoCardless subscriptions don't have a
   first-class "skip one payment" API call as far as the public docs
   describe — the two realistic options are (a) call GoCardless's
@@ -321,13 +316,13 @@ needed.
 
 ---
 
-## 8. Needs Attention Integration (Req 5)
+## 8. Needs Attention Integration (Req 5) + Client-Side Payment Recovery
 
 When a GC payment fails (`payments.failed` webhook event):
 
 - `subscriptions/{id}.lastPaymentStatus = 'failed'`,
   `paymentFailedAt = <today>`.
-- Push notification to the trainer immediately (reusing the existing
+- **Push notification to the trainer** immediately (reusing the existing
   `sendPush` helper — same mechanism as `onSessionsLow`), not waiting for
   a dashboard visit.
 - `TrainerDashboard.jsx`'s Needs Attention panel gets a new category
@@ -337,6 +332,31 @@ When a GC payment fails (`payments.failed` webhook event):
   `lastPaymentStatus === 'failed'`. This reuses the panel's existing
   category-grouping design rather than inventing a new widget — Needs
   Attention already owns "this needs the trainer's action now."
+- **Push notification to the client too** (added per Ani 2026-07-20 —
+  a failed payment must never be trainer-only-visible, waiting on the
+  trainer to manually chase the client). Same `sendPush` call, fired to
+  the client's own `fcmTokens` alongside the trainer's, e.g. *"Your
+  subscription payment didn't go through — update your payment method to
+  avoid a pause."*
+- **Client-facing recovery path** — the client must have a clear,
+  self-serve way to fix this without waiting on the trainer to notice
+  and chase them by message:
+  - `ClientDashboard.jsx` gets a persistent banner (same visual pattern
+    as the existing low-session-count hero-card highlight, §STYLE.md
+    danger-tier styling) whenever their own subscription has
+    `lastPaymentStatus === 'failed'`, with a single action button:
+    **"Update Payment Method"**.
+  - That button redirects to a GoCardless-hosted page for updating the
+    mandate/payment details (GoCardless supports this as a hosted flow —
+    exact endpoint to confirm during sandbox implementation, alongside
+    the pause-mechanism unknown in §5). This deliberately reuses
+    GoCardless's own hosted UI rather than building a custom card-entry
+    form in-app — same reasoning as the existing hosted-mandate signup
+    flow (§11 step 3), and it keeps ElitePro out of PCI-scope entirely.
+  - Once GoCardless confirms a successful retry (`payments.confirmed` for
+    the retried payment), `lastPaymentStatus` flips back to `'confirmed'`
+    and the banner clears automatically — no manual trainer/client
+    action needed to dismiss it.
 
 ---
 
