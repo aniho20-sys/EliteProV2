@@ -31,11 +31,17 @@ real login-page layout bug fixed along the way.
 
 ## Phase 3 — GoCardless Direct Debit Subscription Billing
 Monthly subscription plans (three tiers, 52-week annualised
-pricing, pro-rata first payment, roll-over logic). This replaces
-pack-based payments as the primary billing model.
+pricing, pro-rata first payment, roll-over logic). Packs and
+subscriptions are a permanent dual-mode structure, not a
+replacement: pack/pay-as-you-go stays as the low-commitment entry
+point, subscription is the discounted upgrade for clients who
+commit — both coexist indefinitely.
 
-**Current status:** Not started. No GoCardless integration, subscription
-tiers, or related billing code exist anywhere in the repository.
+**Current status:** Design phase (2026-07-20). Business terms confirmed
+by Ani (pricing, roll-over, pause, cancellation, GoCardless multi-tenant
+architecture) — see `reports/phase3-subscription-design.md` for the full
+design, pending her approval before implementation starts. No GoCardless
+integration or subscription code exists in the repository yet.
 
 ## Phase 4 — PWA / FCM Push Notifications
 Installable app experience + push reminders for bookings,
