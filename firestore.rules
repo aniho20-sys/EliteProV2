@@ -310,5 +310,28 @@ service cloud.firestore {
       allow update: if isOperator()
         || (isAuth() && request.auth.uid == appId && resource.data.status == 'pending');
     }
+
+    // ── Subscriptions (Phase 3 — GoCardless billing) ──
+    // Trainer or their own client can read; all writes are Cloud Functions /
+    // Admin SDK only (webhook handlers, scheduled pause/cancel jobs) — this is
+    // money-moving state, never client-writable even by the owning trainer.
+    // See reports/phase3-subscription-design.md.
+    match /subscriptions/{subId} {
+      allow read: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        resource.data.clientId == request.auth.uid
+      );
+      allow write: if false;
+    }
+
+    // ── GoCardless Connections (Phase 3) ──
+    // Per-trainer OAuth connection metadata (organisation id, environment,
+    // status) — NOT the access token itself, which lives in Secret Manager,
+    // never Firestore. Owning trainer can read own; write is server-side only
+    // (the OAuth callback Cloud Function).
+    match /gcConnections/{trainerId} {
+      allow read: if isOwner(trainerId);
+      allow write: if false;
+    }
   }
 }
