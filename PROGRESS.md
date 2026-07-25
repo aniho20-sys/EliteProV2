@@ -231,6 +231,15 @@
 - 已登入頁面（Dashboard/Schedule/Messages 等）需要真實 Firebase Auth 帳號先睇到,sandbox 冇密碼,未能實際截圖驗證——麻煩 Ani 上線後自己睇吓 dark mode 顯示
 - 5 個細 commit,每個範疇獨立 push,12 個 credit emulator test 全程保持全綠,`npm run build` 全部通過
 
+### Phase 3 訂閱制：設計 + Step 1-2 後端（Session 37）
+- 商業條款全部拍板：£65/堂 base、52週年化、三檔（4/8/12堂）、pack 唔訂閱 £75/堂、roll-over 封頂一半、pause 每年2次1個月通知、取消1個月通知冇罰款、GoCardless multi-tenant OAuth 架構（每個教練自己connect，Ani 係第一個）。設計文件 `reports/phase3-subscription-design.md`
+- **Step 1**：`subscriptions`/`gcConnections` schema + rules（全部 Cloud Function-only 寫入，money-moving state 唔准 client 寫）+ 13 個新 rules test
+- **Step 2**：GoCardless OAuth connect 後端（`gcOAuthStart`/`gcOAuthCallback`/`gcDisconnect`）。員工F security review 揪出原設計用 `state=trainerId` 冇真正防CSRF，改用 `gcOAuthNonce.js`：256-bit crypto-random nonce、10分鐘過期、claim/release/finalize 三段式（下游失敗唔燒nonce，可以重試）。10個新 nonce test（forged/reused/expired三大攻擊情境 + release重試路徑）
+- ProfilePage 加「GoCardless Connection」卡：三態（未連接/已連接顯示環境+日期/error類transient toast）、Connect+Disconnect（confirm彈窗講明會停晒訂閱扣數）
+- **事故 + CLAUDE.md 新增第29條**：commit 892b2ba/e624944 令 deploy 死咗——根因唔止「secret未set」，係成個 GCP project 從未 enable Secret Manager API，`defineSecret()` 呢種 deploy-time 驗證機制一炒就拖埋 9 個舊 function 部署唔到（Hosting/Rules 冇事）。修法：徹底移除 `defineSecret()`/`runWith({secrets})`，改喺 call 嗰刻先讀 secret，讀唔到就回「not configured」，deploy 永遠成功。寫低做咗常規（同#26冇terminal、#27唔准batch rewrite 同級）：**外部服務配置缺失只可以喺call嗰刻報錯，唔可以影響部署**
+- 已寫 `reports/gocardless-sandbox-setup-guide.md`——假設 Ani 冇 terminal，全部瀏覽器操作：GoCardless sandbox 開 Partner app、Google Cloud Console enable Secret Manager、建3個secret、IAM 加權限
+- 22 個 functions test（12 credit + 10 nonce）、33 個 rules test 全過，`npm run build` 通過
+
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）
 - Stat card 全面轉用 stat-strip/stat-pill 精簡橫向排列（TrainerDashboard、ClientDashboard、BusinessAnalyticsPage、InvoicePage 都套用）
