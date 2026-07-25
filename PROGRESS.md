@@ -430,11 +430,12 @@
 
 ### CI / Deployment 限制
 
-CI service account（`FIREBASE_SERVICE_ACCOUNT`）權限：
-- Firestore rules：`continue-on-error: true`，失敗唔報紅，**需人手在 Firebase Console 確認**（Session 33 期間多次 push 都喺 GitHub Actions 見到 `Deploy Firestore Rules` 步驟成功）
-- Cloud Functions：同上，而家係 **9 個** functions（`onAccountDelete`、`onNewMessage`、`onNewSchedule`、`onScheduleUpdate`、`onNewWorkoutPlan`、`onNewWorkoutLog`、`onSessionsLow`、`onScheduleBooked`、`onScheduleCreditUpdate`），Session 33 幾次 deploy 喺 GitHub Actions 都見到 `Deploy Functions` 步驟成功
+**Workflow 結構（Session 37 起，`.github/workflows/firebase-hosting.yml`）：** Hosting / Firestore Rules / Functions 而家係 **3 個獨立 job**（`deploy_hosting`、`deploy_rules`、`deploy_functions`），唔再係同一個 job 入面順序執行嘅步驟。改嘅原因：舊結構試過因為新增 `gcOAuthCallback`（第一個公開 HTTP function）撞到 IAM 權限問題，成個 job（連埋已經成功嘅 Hosting/Rules 步驟）一齊被打做紅色——雖然 Hosting/Rules 實際上已經部署成功，但 GitHub Actions 個 UI 會顯示成個 run 失敗，容易誤會做「乜都冧咗」。拆開之後三者互相獨立：一個壞唔會拖冧第二個嘅狀態顯示，各自嘅 CI 綠燈/紅燈準確反映自己嘅部署結果。
 
-**永久修復方式：** Google Cloud Console → IAM → 找到 CI service account → 加 Cloud Functions Admin + Cloud Run Admin 角色
+CI service account（`FIREBASE_SERVICE_ACCOUNT`）權限已知缺口：
+- Cloud Functions：部署**新嘅公開 HTTP function**（`onRequest`，例如 `gcOAuthCallback`）需要 `cloudfunctions.functions.setIamPolicy` 權限，而家個 CI service account 冇——2026-07-25 首次撞到（之前 9 個 function 全部係 Firestore trigger，唔需要呢個權限，所以未爆過）
+
+**永久修復方式：** Google Cloud Console → IAM → 找到 CI service account → 加 Cloud Functions Admin 角色
 
 ### Push Notifications 配置
 
