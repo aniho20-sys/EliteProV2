@@ -49,6 +49,10 @@ beforeEach(async () => {
     await setDoc(doc(db, 'gcConnections', TRAINER_A), {
       trainerId: TRAINER_A, gcOrganisationId: 'OR001', environment: 'sandbox', status: 'connected',
     });
+    await setDoc(doc(db, 'gcOAuthNonces', 'nonce-abc'), {
+      trainerId: TRAINER_A, createdAt: '2026-07-20T00:00:00.000Z',
+      expiresAt: '2026-07-20T00:10:00.000Z', used: false,
+    });
   });
 });
 
@@ -133,5 +137,35 @@ describe('gcConnections — no client-side writes, not even by the owning traine
   test('trainer A cannot update their own GC connection doc directly', async () => {
     const db = dbAs(TRAINER_A);
     await assertFails(updateDoc(doc(db, 'gcConnections', TRAINER_A), { status: 'disconnected' }));
+  });
+});
+
+describe('gcOAuthNonces — completely locked out of client access, no exceptions', () => {
+  test('the owning trainer cannot even read their own nonce', async () => {
+    const db = dbAs(TRAINER_A);
+    await assertFails(getDoc(doc(db, 'gcOAuthNonces', 'nonce-abc')));
+  });
+
+  test('a different trainer cannot read the nonce', async () => {
+    const db = dbAs(TRAINER_B);
+    await assertFails(getDoc(doc(db, 'gcOAuthNonces', 'nonce-abc')));
+  });
+
+  test('no one can create a nonce doc directly', async () => {
+    const db = dbAs(TRAINER_A);
+    await assertFails(setDoc(doc(db, 'gcOAuthNonces', 'nonce-forged'), {
+      trainerId: TRAINER_A, createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 600000).toISOString(), used: false,
+    }));
+  });
+
+  test('no one can mark a nonce as used directly (bypassing consumption logic)', async () => {
+    const db = dbAs(TRAINER_A);
+    await assertFails(updateDoc(doc(db, 'gcOAuthNonces', 'nonce-abc'), { used: true }));
+  });
+
+  test('no one can delete a nonce directly', async () => {
+    const db = dbAs(TRAINER_A);
+    await assertFails(deleteDoc(doc(db, 'gcOAuthNonces', 'nonce-abc')));
   });
 });

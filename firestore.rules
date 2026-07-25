@@ -333,5 +333,16 @@ service cloud.firestore {
       allow read: if isOwner(trainerId);
       allow write: if false;
     }
+
+    // ── GoCardless OAuth CSRF Nonces (Phase 3) ──
+    // Short-lived (10min), single-use tokens binding a gcOAuthCallback
+    // request back to the trainer who actually initiated it via gcOAuthStart.
+    // Never client-readable or writable — created and consumed entirely by
+    // Cloud Functions (see functions/gcOAuthNonce.js). A client being able to
+    // even read this collection would leak nonce values it has no business
+    // seeing; being able to write it would defeat the whole point.
+    match /gcOAuthNonces/{nonce} {
+      allow read, write: if false;
+    }
   }
 }

@@ -1,11 +1,30 @@
 /* global require, exports */
 const functions = require('firebase-functions/v1');
+const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { writeGcAccessToken } = require('./gcSecrets');
+const { createNonce, consumeNonce } = require('./gcOAuthNonce');
 
 initializeApp();
 const db = getFirestore();
+
+// ElitePro's own GoCardless Partner app credentials — one app, shared across
+// all trainers (this is NOT a per-trainer secret; per-trainer OAuth tokens
+// are handled separately in gcSecrets.js). Static, known at deploy time, so
+// these use Firebase's native defineSecret()/`firebase functions:secrets:set`
+// instead of the manual Secret Manager calls gcSecrets.js makes for the
+// dynamic per-trainer case. Never sent to any client.
+const GC_CLIENT_ID = defineSecret('GC_CLIENT_ID');
+const GC_CLIENT_SECRET = defineSecret('GC_CLIENT_SECRET');
+const GC_REDIRECT_URI = defineSecret('GC_REDIRECT_URI');
+
+// Sandbox only, per Ani's explicit instruction — do not point this at
+// GoCardless's live endpoints until the full Phase 3 sandbox UAT pass (see
+// reports/phase3-subscription-design.md §11 step 7) is signed off.
+const GC_AUTHORIZE_URL = 'https://connect-sandbox.gocardless.com/oauth/authorize';
+const GC_TOKEN_URL = 'https://connect-sandbox.gocardless.com/oauth/access_token';
 
 async function sendPush(userId, tokens, notification, data) {
   if (!tokens || tokens.length === 0) return;
@@ -350,4 +369,110 @@ exports.onSessionsLow = functions.firestore
         }
       }
     }
+  });
+
+// ─── Phase 3: GoCardless OAuth connect — start (trainer-invoked) ───
+// Callable function: verifies the caller is an authenticated trainer, then
+// returns the GoCardless-hosted authorize URL for the client to redirect to.
+// Builds a URL only — never touches a secret, never writes anything except
+// the short-lived CSRF nonce record (see gcOAuthNonce.js).
+exports.gcOAuthStart = functions
+  .runWith({ secrets: [GC_CLIENT_ID, GC_REDIRECT_URI] })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+    }
+    const trainerId = context.auth.uid;
+    const trainerSnap = await db.doc(`users/${trainerId}`).get();
+    if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
+      throw new functions.https.HttpsError('permission-denied', 'Trainers only');
+    }
+
+    // `state` is a crypto-random, single-use, 10-minute nonce bound to this
+    // trainerId server-side — never the trainerId itself, which would let
+    // anyone forge a state value for any known trainer UID.
+    const nonce = await createNonce(trainerId);
+
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: GC_CLIENT_ID.value(),
+      redirect_uri: GC_REDIRECT_URI.value(),
+      scope: 'read_write',
+      state: nonce,
+    });
+    return { url: `${GC_AUTHORIZE_URL}?${params.toString()}` };
+  });
+
+// ─── Phase 3: GoCardless OAuth connect — callback (public HTTP endpoint) ───
+// GoCardless redirects the trainer's browser here directly after they approve
+// the connection — there is no Firebase ID token on this request, so
+// authenticity comes entirely from `state` resolving to a nonce this app
+// itself issued via gcOAuthStart (see gcOAuthNonce.js for the four checks:
+// exists, not expired, not already used, and the trainerId it resolves to
+// is re-verified against a live trainer doc below) plus the code exchange
+// only succeeding with ElitePro's own registered client_secret.
+//
+// THIS IS THE ONLY FUNCTION THAT WRITES THE PER-TRAINER GOCARDLESS ACCESS
+// TOKEN. It writes to Secret Manager (via gcSecrets.writeGcAccessToken) —
+// never to Firestore, never anywhere a client SDK read could reach it.
+// Non-sensitive connection metadata (org id, status) goes to
+// gcConnections/{trainerId} via the Admin SDK, which is the "server-side
+// only" write path firestore.rules' `allow write: if false` is designed to
+// require.
+exports.gcOAuthCallback = functions
+  .runWith({ secrets: [GC_CLIENT_ID, GC_CLIENT_SECRET, GC_REDIRECT_URI] })
+  .https.onRequest(async (req, res) => {
+    const { code, state } = req.query;
+    if (!code || !state) {
+      res.status(400).send('Missing code or state');
+      return;
+    }
+
+    const nonceResult = await consumeNonce(String(state));
+    if (!nonceResult.ok) {
+      console.warn('[gcOAuthCallback] rejected state:', nonceResult.reason);
+      res.status(400).send('Invalid or expired request');
+      return;
+    }
+    const trainerId = nonceResult.trainerId;
+
+    // 4th check: the identity the nonce resolved to must still be a real,
+    // current trainer (not deleted/role-changed since gcOAuthStart issued it).
+    const trainerSnap = await db.doc(`users/${trainerId}`).get();
+    if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
+      res.status(400).send('Invalid trainer');
+      return;
+    }
+
+    const tokenRes = await fetch(GC_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: String(code),
+        client_id: GC_CLIENT_ID.value(),
+        client_secret: GC_CLIENT_SECRET.value(),
+        redirect_uri: GC_REDIRECT_URI.value(),
+      }),
+    });
+    if (!tokenRes.ok) {
+      console.error('[gcOAuthCallback] token exchange failed', await tokenRes.text());
+      res.status(502).send('GoCardless token exchange failed');
+      return;
+    }
+    const tokenJson = await tokenRes.json();
+
+    // WRITE PATH: token -> Secret Manager only.
+    await writeGcAccessToken(trainerId, tokenJson.access_token);
+
+    // Non-sensitive metadata -> Firestore, Admin SDK (bypasses client rules).
+    await db.doc(`gcConnections/${trainerId}`).set({
+      trainerId,
+      gcOrganisationId: tokenJson.organisation_id || null,
+      environment: 'sandbox',
+      status: 'connected',
+      connectedAt: new Date().toISOString(),
+    });
+
+    res.redirect('https://elitepro-16718.web.app/#/profile?gc=connected');
   });
