@@ -39,9 +39,14 @@ async function createNonce(trainerId) {
 //   4. the trainerId it resolves to is still a real, current trainer (re-
 //      checked by the caller against users/{trainerId} — this module only
 //      returns what the nonce recorded, callback re-verifies identity)
-// One-time use: a successful consume deletes the doc in the same
-// transaction, so a second attempt with the same nonce hits case 1 (gone)
-// rather than case 3 — either way, reuse is rejected.
+//
+// This CLAIMS the nonce (marks used: true) rather than deleting it — closing
+// the replay race window immediately — but does NOT delete it yet. If the
+// callback's downstream work (token exchange, Secret Manager write) then
+// fails, call releaseNonce() to roll it back to unused so the trainer isn't
+// stuck restarting the whole connect flow over an ElitePro-side failure that
+// had nothing to do with them. Only finalizeNonce() (called once the whole
+// flow actually succeeds) permanently removes it.
 const NONCE_FORMAT = /^[0-9a-f]{64}$/;
 
 async function consumeNonce(nonce) {
@@ -62,10 +67,32 @@ async function consumeNonce(nonce) {
     const data = snap.data();
     if (data.used) return { ok: false, reason: 'already_used' };
     if (new Date(data.expiresAt).getTime() < Date.now()) return { ok: false, reason: 'expired' };
-    tx.delete(ref);
+    tx.update(ref, { used: true, claimedAt: new Date().toISOString() });
     return { ok: true, trainerId: data.trainerId };
   });
 }
 
+// Rolls a claimed nonce back to unused. Called only when gcOAuthCallback's
+// downstream work fails after a successful consumeNonce() — an ElitePro-side
+// failure (e.g. a Secret Manager write that fails even after retries) should
+// not cost the trainer their whole connect attempt. No-op (silently ignored)
+// if the nonce is missing/expired/format-invalid — releasing is best-effort
+// cleanup, not something a caller should have to handle failing.
+async function releaseNonce(nonce) {
+  if (typeof nonce !== 'string' || !NONCE_FORMAT.test(nonce)) return;
+  await db().doc(`gcOAuthNonces/${nonce}`)
+    .update({ used: false, claimedAt: null })
+    .catch(() => {});
+}
+
+// Permanently removes a nonce once the full connect flow it authorized has
+// actually succeeded — true one-time use, now that it's been fully acted on.
+async function finalizeNonce(nonce) {
+  if (typeof nonce !== 'string' || !NONCE_FORMAT.test(nonce)) return;
+  await db().doc(`gcOAuthNonces/${nonce}`).delete().catch(() => {});
+}
+
 exports.createNonce = createNonce;
 exports.consumeNonce = consumeNonce;
+exports.releaseNonce = releaseNonce;
+exports.finalizeNonce = finalizeNonce;

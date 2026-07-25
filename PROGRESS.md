@@ -331,6 +331,7 @@
 | 15 | **Group Class 管理**（多 client 同一 session） |
 | 16 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple） |
 | 17 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成，現透過 `GYMLA_ENABLED=false` 暫時隱藏） |
+| 18 | **`gcOAuthCallback` rate limit**（Phase 3）——而家個 public HTTP endpoint 冇 rate limit，但 256-bit random nonce 空間本身已令 brute force 無意義，Ani 已確認唔急，記錄喺度日後想加先加 |
 
 ---
 

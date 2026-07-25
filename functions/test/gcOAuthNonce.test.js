@@ -20,7 +20,7 @@ process.env.GCLOUD_PROJECT = 'elitepro-16718';
 const admin = require('firebase-admin');
 admin.initializeApp();
 
-const { createNonce, consumeNonce } = require('../gcOAuthNonce');
+const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('../gcOAuthNonce');
 const db = admin.firestore();
 
 const TRAINER_ID = 'test-trainer-nonce-1';
@@ -86,9 +86,7 @@ describe('consumeNonce — the three required attack scenarios', () => {
 
     const second = await consumeNonce(nonce);
     expect(second.ok).toBe(false);
-    // one-time use deletes the doc on success, so the replay attempt sees
-    // "not_found" rather than "already_used" — either way, it's rejected.
-    expect(second.reason).toBe('not_found');
+    expect(second.reason).toBe('already_used');
   });
 
   test('expired state is rejected even though the nonce doc still exists', async () => {
@@ -104,13 +102,52 @@ describe('consumeNonce — the three required attack scenarios', () => {
 });
 
 describe('consumeNonce — happy path', () => {
-  test('a fresh, unexpired, unused nonce for a real trainer is accepted exactly once', async () => {
+  test('a fresh, unexpired, unused nonce for a real trainer is claimed (marked used), not deleted yet', async () => {
     const nonce = await createNonce(TRAINER_ID);
     const result = await consumeNonce(nonce);
     expect(result.ok).toBe(true);
     expect(result.trainerId).toBe(TRAINER_ID);
 
     const snap = await db.doc(`gcOAuthNonces/${nonce}`).get();
-    expect(snap.exists).toBe(false); // one-time use — deleted on consumption
+    expect(snap.exists).toBe(true);
+    expect(snap.data().used).toBe(true);
+  });
+});
+
+describe('releaseNonce — reliability: an ElitePro-side failure must not burn the nonce', () => {
+  test('a released nonce can be consumed again — the trainer can retry without restarting the whole connect flow', async () => {
+    const nonce = await createNonce(TRAINER_ID);
+    const first = await consumeNonce(nonce);
+    expect(first.ok).toBe(true);
+
+    // Simulate: token exchange succeeded, but our own Secret Manager write
+    // failed even after internal retries — gcOAuthCallback releases the nonce.
+    await releaseNonce(nonce);
+
+    const retry = await consumeNonce(nonce);
+    expect(retry.ok).toBe(true);
+    expect(retry.trainerId).toBe(TRAINER_ID);
+  });
+
+  test('releasing an unknown/malformed nonce is a silent no-op, never throws', async () => {
+    await expect(releaseNonce('not-a-real-nonce')).resolves.toBeUndefined();
+    await expect(releaseNonce('0'.repeat(64))).resolves.toBeUndefined();
+  });
+});
+
+describe('finalizeNonce — permanent removal once the full flow actually succeeds', () => {
+  test('a finalized nonce is gone — cannot be consumed again', async () => {
+    const nonce = await createNonce(TRAINER_ID);
+    const claimed = await consumeNonce(nonce);
+    expect(claimed.ok).toBe(true);
+
+    await finalizeNonce(nonce);
+
+    const snap = await db.doc(`gcOAuthNonces/${nonce}`).get();
+    expect(snap.exists).toBe(false);
+
+    const after = await consumeNonce(nonce);
+    expect(after.ok).toBe(false);
+    expect(after.reason).toBe('not_found');
   });
 });

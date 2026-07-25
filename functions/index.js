@@ -5,7 +5,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { writeGcAccessToken } = require('./gcSecrets');
-const { createNonce, consumeNonce } = require('./gcOAuthNonce');
+const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 
 initializeApp();
 const db = getFirestore();
@@ -419,19 +419,33 @@ exports.gcOAuthStart = functions
 // gcConnections/{trainerId} via the Admin SDK, which is the "server-side
 // only" write path firestore.rules' `allow write: if false` is designed to
 // require.
+const PROFILE_URL = 'https://elitepro-16718.web.app/#/profile';
+
 exports.gcOAuthCallback = functions
   .runWith({ secrets: [GC_CLIENT_ID, GC_CLIENT_SECRET, GC_REDIRECT_URI] })
   .https.onRequest(async (req, res) => {
-    const { code, state } = req.query;
+    const { code, state, error } = req.query;
+
+    // Trainer declined on GoCardless's own consent page — not a failure on
+    // our side, just release whatever nonce this was (best-effort, so a
+    // fresh Connect attempt starts clean) and send them back with a message
+    // ProfilePage can show as-is, not a generic/scary error.
+    if (error) {
+      console.log('[gcOAuthCallback] user declined on GoCardless:', error);
+      if (state) await releaseNonce(String(state));
+      res.redirect(`${PROFILE_URL}?gc=cancelled`);
+      return;
+    }
+
     if (!code || !state) {
-      res.status(400).send('Missing code or state');
+      res.redirect(`${PROFILE_URL}?gc=error`);
       return;
     }
 
     const nonceResult = await consumeNonce(String(state));
     if (!nonceResult.ok) {
       console.warn('[gcOAuthCallback] rejected state:', nonceResult.reason);
-      res.status(400).send('Invalid or expired request');
+      res.redirect(`${PROFILE_URL}?gc=error`);
       return;
     }
     const trainerId = nonceResult.trainerId;
@@ -440,7 +454,8 @@ exports.gcOAuthCallback = functions
     // current trainer (not deleted/role-changed since gcOAuthStart issued it).
     const trainerSnap = await db.doc(`users/${trainerId}`).get();
     if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
-      res.status(400).send('Invalid trainer');
+      await releaseNonce(String(state));
+      res.redirect(`${PROFILE_URL}?gc=error`);
       return;
     }
 
@@ -457,13 +472,28 @@ exports.gcOAuthCallback = functions
     });
     if (!tokenRes.ok) {
       console.error('[gcOAuthCallback] token exchange failed', await tokenRes.text());
-      res.status(502).send('GoCardless token exchange failed');
+      // GoCardless's own authorization code is now spent regardless of
+      // whether we release the nonce, so a retry needs a fresh Connect
+      // attempt either way — release for hygiene, not because it helps here.
+      await releaseNonce(String(state));
+      res.redirect(`${PROFILE_URL}?gc=error`);
       return;
     }
     const tokenJson = await tokenRes.json();
 
-    // WRITE PATH: token -> Secret Manager only.
-    await writeGcAccessToken(trainerId, tokenJson.access_token);
+    // WRITE PATH: token -> Secret Manager only. writeGcAccessToken retries
+    // transient failures internally (gcSecrets.js); if it still fails after
+    // that, release the nonce (rather than leaving it permanently burnt) so
+    // the trainer can retry without our own infra hiccup costing them a
+    // second trip through GoCardless's consent page.
+    try {
+      await writeGcAccessToken(trainerId, tokenJson.access_token);
+    } catch (err) {
+      console.error('[gcOAuthCallback] Secret Manager write failed after retries', err);
+      await releaseNonce(String(state));
+      res.redirect(`${PROFILE_URL}?gc=error`);
+      return;
+    }
 
     // Non-sensitive metadata -> Firestore, Admin SDK (bypasses client rules).
     await db.doc(`gcConnections/${trainerId}`).set({
@@ -474,5 +504,31 @@ exports.gcOAuthCallback = functions
       connectedAt: new Date().toISOString(),
     });
 
-    res.redirect('https://elitepro-16718.web.app/#/profile?gc=connected');
+    // Only now, with everything actually persisted, is the nonce truly spent.
+    await finalizeNonce(String(state));
+
+    res.redirect(`${PROFILE_URL}?gc=connected`);
+  });
+
+// ─── Phase 3: daily cleanup of expired GoCardless OAuth nonces ───
+// The first scheduled function in this codebase — a natural home for the
+// pause auto-resume / cancel-after-notice scheduled jobs Phase 3 will need
+// later (see reports/phase3-subscription-design.md §5/§6), not a one-off.
+// Expired nonces (used or not) are harmless leftover data — consumeNonce()
+// already rejects them on any access attempt — but they'd otherwise
+// accumulate in Firestore forever with nothing else ever removing them.
+exports.cleanupExpiredGcNonces = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async () => {
+    const now = new Date().toISOString();
+    const expiredSnap = await db.collection('gcOAuthNonces')
+      .where('expiresAt', '<', now)
+      .get();
+    if (expiredSnap.empty) return null;
+
+    const batch = db.batch();
+    expiredSnap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    console.log(`[cleanupExpiredGcNonces] deleted ${expiredSnap.size} expired nonce(s)`);
+    return null;
   });

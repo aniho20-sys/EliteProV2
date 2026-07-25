@@ -23,7 +23,34 @@ function secretId(trainerId) {
   return `gc-token-${trainerId}`;
 }
 
+const WRITE_RETRY_ATTEMPTS = 3;
+const WRITE_RETRY_DELAY_MS = 500;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Retries transient Secret Manager failures (network blips, brief
+// throttling) within this single request before giving up — so a trainer's
+// already-obtained GoCardless token isn't thrown away over something that
+// would have succeeded a moment later. gcOAuthCallback only needs to treat
+// this as a hard failure (and release the OAuth nonce for a clean retry —
+// see gcOAuthNonce.js) once every attempt here has been exhausted.
 async function writeGcAccessToken(trainerId, accessToken) {
+  let lastErr;
+  for (let attempt = 1; attempt <= WRITE_RETRY_ATTEMPTS; attempt++) {
+    try {
+      await writeGcAccessTokenOnce(trainerId, accessToken);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < WRITE_RETRY_ATTEMPTS) await sleep(WRITE_RETRY_DELAY_MS * attempt);
+    }
+  }
+  throw lastErr;
+}
+
+async function writeGcAccessTokenOnce(trainerId, accessToken) {
   const parent = `projects/${projectId()}`;
   const fullName = `${parent}/secrets/${secretId(trainerId)}`;
 
