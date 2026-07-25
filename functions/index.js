@@ -1,25 +1,26 @@
 /* global require, exports */
 const functions = require('firebase-functions/v1');
-const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
-const { writeGcAccessToken } = require('./gcSecrets');
+const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = require('./gcSecrets');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 
 initializeApp();
 const db = getFirestore();
 
-// ElitePro's own GoCardless Partner app credentials — one app, shared across
-// all trainers (this is NOT a per-trainer secret; per-trainer OAuth tokens
-// are handled separately in gcSecrets.js). Static, known at deploy time, so
-// these use Firebase's native defineSecret()/`firebase functions:secrets:set`
-// instead of the manual Secret Manager calls gcSecrets.js makes for the
-// dynamic per-trainer case. Never sent to any client.
-const GC_CLIENT_ID = defineSecret('GC_CLIENT_ID');
-const GC_CLIENT_SECRET = defineSecret('GC_CLIENT_SECRET');
-const GC_REDIRECT_URI = defineSecret('GC_REDIRECT_URI');
-
+// ElitePro's own GoCardless Partner app credentials (client_id/client_secret/
+// redirect_uri) are read at CALL TIME via gcSecrets.readGcAppCredentials(),
+// NOT declared here via defineSecret()/.runWith({secrets:[...]}). That
+// mechanism validates secrets at DEPLOY time — if Secret Manager isn't even
+// enabled yet on the project (as it wasn't when this was first written,
+// breaking the entire Functions deploy, not just these two functions), the
+// whole `firebase deploy --only functions` step fails, taking every other
+// function down with it. Reading at call time means deploy always succeeds
+// regardless of Secret Manager's state; gcOAuthStart/gcOAuthCallback simply
+// return a graceful "not configured" result until the secrets actually exist
+// (see reports/gocardless-sandbox-setup-guide.md).
+//
 // Sandbox only, per Ani's explicit instruction — do not point this at
 // GoCardless's live endpoints until the full Phase 3 sandbox UAT pass (see
 // reports/phase3-subscription-design.md §11 step 7) is signed off.
@@ -376,32 +377,35 @@ exports.onSessionsLow = functions.firestore
 // returns the GoCardless-hosted authorize URL for the client to redirect to.
 // Builds a URL only — never touches a secret, never writes anything except
 // the short-lived CSRF nonce record (see gcOAuthNonce.js).
-exports.gcOAuthStart = functions
-  .runWith({ secrets: [GC_CLIENT_ID, GC_REDIRECT_URI] })
-  .https.onCall(async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
-    }
-    const trainerId = context.auth.uid;
-    const trainerSnap = await db.doc(`users/${trainerId}`).get();
-    if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
-      throw new functions.https.HttpsError('permission-denied', 'Trainers only');
-    }
+exports.gcOAuthStart = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  }
+  const trainerId = context.auth.uid;
+  const trainerSnap = await db.doc(`users/${trainerId}`).get();
+  if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
+    throw new functions.https.HttpsError('permission-denied', 'Trainers only');
+  }
 
-    // `state` is a crypto-random, single-use, 10-minute nonce bound to this
-    // trainerId server-side — never the trainerId itself, which would let
-    // anyone forge a state value for any known trainer UID.
-    const nonce = await createNonce(trainerId);
+  const creds = await readGcAppCredentials();
+  if (!creds) {
+    throw new functions.https.HttpsError('failed-precondition', 'GoCardless is not configured yet');
+  }
 
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: GC_CLIENT_ID.value(),
-      redirect_uri: GC_REDIRECT_URI.value(),
-      scope: 'read_write',
-      state: nonce,
-    });
-    return { url: `${GC_AUTHORIZE_URL}?${params.toString()}` };
+  // `state` is a crypto-random, single-use, 10-minute nonce bound to this
+  // trainerId server-side — never the trainerId itself, which would let
+  // anyone forge a state value for any known trainer UID.
+  const nonce = await createNonce(trainerId);
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: creds.clientId,
+    redirect_uri: creds.redirectUri,
+    scope: 'read_write',
+    state: nonce,
   });
+  return { url: `${GC_AUTHORIZE_URL}?${params.toString()}` };
+});
 
 // ─── Phase 3: GoCardless OAuth connect — callback (public HTTP endpoint) ───
 // GoCardless redirects the trainer's browser here directly after they approve
@@ -421,94 +425,129 @@ exports.gcOAuthStart = functions
 // require.
 const PROFILE_URL = 'https://elitepro-16718.web.app/#/profile';
 
-exports.gcOAuthCallback = functions
-  .runWith({ secrets: [GC_CLIENT_ID, GC_CLIENT_SECRET, GC_REDIRECT_URI] })
-  .https.onRequest(async (req, res) => {
-    const { code, state, error } = req.query;
+exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
+  const { code, state, error } = req.query;
 
-    // Trainer declined on GoCardless's own consent page — not a failure on
-    // our side, just release whatever nonce this was (best-effort, so a
-    // fresh Connect attempt starts clean) and send them back with a message
-    // ProfilePage can show as-is, not a generic/scary error.
-    if (error) {
-      console.log('[gcOAuthCallback] user declined on GoCardless:', error);
-      if (state) await releaseNonce(String(state));
-      res.redirect(`${PROFILE_URL}?gc=cancelled`);
-      return;
-    }
+  // Trainer declined on GoCardless's own consent page — not a failure on
+  // our side, just release whatever nonce this was (best-effort, so a
+  // fresh Connect attempt starts clean) and send them back with a message
+  // ProfilePage can show as-is, not a generic/scary error.
+  if (error) {
+    console.log('[gcOAuthCallback] user declined on GoCardless:', error);
+    if (state) await releaseNonce(String(state));
+    res.redirect(`${PROFILE_URL}?gc=cancelled`);
+    return;
+  }
 
-    if (!code || !state) {
-      res.redirect(`${PROFILE_URL}?gc=error`);
-      return;
-    }
+  if (!code || !state) {
+    res.redirect(`${PROFILE_URL}?gc=error`);
+    return;
+  }
 
-    const nonceResult = await consumeNonce(String(state));
-    if (!nonceResult.ok) {
-      console.warn('[gcOAuthCallback] rejected state:', nonceResult.reason);
-      res.redirect(`${PROFILE_URL}?gc=error`);
-      return;
-    }
-    const trainerId = nonceResult.trainerId;
+  // Should never actually be reachable with a valid nonce if gcOAuthStart
+  // already refused to issue one — but check defensively in case
+  // credentials were removed between start and callback.
+  const creds = await readGcAppCredentials();
+  if (!creds) {
+    await releaseNonce(String(state));
+    res.redirect(`${PROFILE_URL}?gc=not-configured`);
+    return;
+  }
 
-    // 4th check: the identity the nonce resolved to must still be a real,
-    // current trainer (not deleted/role-changed since gcOAuthStart issued it).
-    const trainerSnap = await db.doc(`users/${trainerId}`).get();
-    if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
-      await releaseNonce(String(state));
-      res.redirect(`${PROFILE_URL}?gc=error`);
-      return;
-    }
+  const nonceResult = await consumeNonce(String(state));
+  if (!nonceResult.ok) {
+    console.warn('[gcOAuthCallback] rejected state:', nonceResult.reason);
+    res.redirect(`${PROFILE_URL}?gc=error`);
+    return;
+  }
+  const trainerId = nonceResult.trainerId;
 
-    const tokenRes = await fetch(GC_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: String(code),
-        client_id: GC_CLIENT_ID.value(),
-        client_secret: GC_CLIENT_SECRET.value(),
-        redirect_uri: GC_REDIRECT_URI.value(),
-      }),
-    });
-    if (!tokenRes.ok) {
-      console.error('[gcOAuthCallback] token exchange failed', await tokenRes.text());
-      // GoCardless's own authorization code is now spent regardless of
-      // whether we release the nonce, so a retry needs a fresh Connect
-      // attempt either way — release for hygiene, not because it helps here.
-      await releaseNonce(String(state));
-      res.redirect(`${PROFILE_URL}?gc=error`);
-      return;
-    }
-    const tokenJson = await tokenRes.json();
+  // 4th check: the identity the nonce resolved to must still be a real,
+  // current trainer (not deleted/role-changed since gcOAuthStart issued it).
+  const trainerSnap = await db.doc(`users/${trainerId}`).get();
+  if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
+    await releaseNonce(String(state));
+    res.redirect(`${PROFILE_URL}?gc=error`);
+    return;
+  }
 
-    // WRITE PATH: token -> Secret Manager only. writeGcAccessToken retries
-    // transient failures internally (gcSecrets.js); if it still fails after
-    // that, release the nonce (rather than leaving it permanently burnt) so
-    // the trainer can retry without our own infra hiccup costing them a
-    // second trip through GoCardless's consent page.
-    try {
-      await writeGcAccessToken(trainerId, tokenJson.access_token);
-    } catch (err) {
-      console.error('[gcOAuthCallback] Secret Manager write failed after retries', err);
-      await releaseNonce(String(state));
-      res.redirect(`${PROFILE_URL}?gc=error`);
-      return;
-    }
-
-    // Non-sensitive metadata -> Firestore, Admin SDK (bypasses client rules).
-    await db.doc(`gcConnections/${trainerId}`).set({
-      trainerId,
-      gcOrganisationId: tokenJson.organisation_id || null,
-      environment: 'sandbox',
-      status: 'connected',
-      connectedAt: new Date().toISOString(),
-    });
-
-    // Only now, with everything actually persisted, is the nonce truly spent.
-    await finalizeNonce(String(state));
-
-    res.redirect(`${PROFILE_URL}?gc=connected`);
+  const tokenRes = await fetch(GC_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: String(code),
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
+      redirect_uri: creds.redirectUri,
+    }),
   });
+  if (!tokenRes.ok) {
+    console.error('[gcOAuthCallback] token exchange failed', await tokenRes.text());
+    // GoCardless's own authorization code is now spent regardless of
+    // whether we release the nonce, so a retry needs a fresh Connect
+    // attempt either way — release for hygiene, not because it helps here.
+    await releaseNonce(String(state));
+    res.redirect(`${PROFILE_URL}?gc=error`);
+    return;
+  }
+  const tokenJson = await tokenRes.json();
+
+  // WRITE PATH: token -> Secret Manager only. writeGcAccessToken retries
+  // transient failures internally (gcSecrets.js); if it still fails after
+  // that, release the nonce (rather than leaving it permanently burnt) so
+  // the trainer can retry without our own infra hiccup costing them a
+  // second trip through GoCardless's consent page.
+  try {
+    await writeGcAccessToken(trainerId, tokenJson.access_token);
+  } catch (err) {
+    console.error('[gcOAuthCallback] Secret Manager write failed after retries', err);
+    await releaseNonce(String(state));
+    res.redirect(`${PROFILE_URL}?gc=error`);
+    return;
+  }
+
+  // Non-sensitive metadata -> Firestore, Admin SDK (bypasses client rules).
+  await db.doc(`gcConnections/${trainerId}`).set({
+    trainerId,
+    gcOrganisationId: tokenJson.organisation_id || null,
+    environment: 'sandbox',
+    status: 'connected',
+    connectedAt: new Date().toISOString(),
+  });
+
+  // Only now, with everything actually persisted, is the nonce truly spent.
+  await finalizeNonce(String(state));
+
+  res.redirect(`${PROFILE_URL}?gc=connected`);
+});
+
+// ─── Phase 3: GoCardless disconnect (trainer-invoked) ───
+// Deletes the trainer's Secret Manager token entirely and marks the
+// connection doc disconnected. Whether this should also call GoCardless's
+// own OAuth revocation endpoint is unverified (same category of unknown as
+// the pause mechanism — see reports/phase3-subscription-design.md) so it's
+// not attempted here; local disconnect is unconditional and immediate
+// either way.
+exports.gcDisconnect = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  }
+  const trainerId = context.auth.uid;
+  const trainerSnap = await db.doc(`users/${trainerId}`).get();
+  if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
+    throw new functions.https.HttpsError('permission-denied', 'Trainers only');
+  }
+
+  await deleteGcAccessToken(trainerId);
+  await db.doc(`gcConnections/${trainerId}`).set({
+    trainerId,
+    status: 'disconnected',
+    disconnectedAt: new Date().toISOString(),
+  }, { merge: true });
+
+  return { ok: true };
+});
 
 // ─── Phase 3: daily cleanup of expired GoCardless OAuth nonces ───
 // The first scheduled function in this codebase — a natural home for the

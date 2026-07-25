@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell, CreditCard } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
+import { SkeletonLine } from '../components/Skeleton';
 
 function InstallAppCard() {
   if (isStandalone()) {
@@ -57,8 +58,9 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getGcConnection, startGcConnect, disconnectGc } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission, token: fcmToken } = useNotifications();
   const isTrainer = currentUser.role === 'trainer';
@@ -119,6 +121,13 @@ export default function ProfilePage() {
   const [exportCopied, setExportCopied] = useState(false);
   const exportCopiedTimer = useRef(null);
 
+  // Trainer: GoCardless connection (Phase 3)
+  const [gcConnection, setGcConnection] = useState(null);
+  const [gcLoading, setGcLoading] = useState(true);
+  const [gcConnecting, setGcConnecting] = useState(false);
+  const [gcDisconnecting, setGcDisconnecting] = useState(false);
+  const [showGcDisconnectConfirm, setShowGcDisconnectConfirm] = useState(false);
+
   // Load invite code for trainer
   // getInviteCode/inviteCode deliberately excluded: getInviteCode is recreated on every
   // AppContext render, and re-running while inviteCode is still empty would issue
@@ -129,6 +138,68 @@ export default function ProfilePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTrainer, currentUser.id]);
+
+  // Load GoCardless connection status
+  useEffect(() => {
+    if (!isTrainer) { setGcLoading(false); return; }
+    getGcConnection(currentUser.id).then(conn => {
+      setGcConnection(conn);
+      setGcLoading(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTrainer, currentUser.id]);
+
+  // Handle the ?gc=connected|cancelled|error|not-configured redirect from
+  // gcOAuthCallback, then clean it out of the URL so a refresh doesn't
+  // re-show the toast.
+  useEffect(() => {
+    if (!isTrainer) return;
+    const gcStatus = new URLSearchParams(location.search).get('gc');
+    if (!gcStatus) return;
+
+    if (gcStatus === 'connected') {
+      toast('GoCardless connected');
+      getGcConnection(currentUser.id).then(setGcConnection);
+    } else if (gcStatus === 'cancelled') {
+      toast('You cancelled the GoCardless connection — you can try again anytime.', 'info');
+    } else if (gcStatus === 'not-configured') {
+      toast('GoCardless isn\'t set up yet — check back soon.', 'info');
+    } else {
+      toast('GoCardless connection failed — please try again.', 'error');
+    }
+    navigate('/profile', { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTrainer, location.search]);
+
+  const handleGcConnect = async () => {
+    setGcConnecting(true);
+    try {
+      const url = await startGcConnect();
+      window.location.href = url;
+    } catch (err) {
+      toast(
+        err?.code === 'functions/failed-precondition'
+          ? 'GoCardless isn\'t set up yet — check back soon.'
+          : 'Could not start GoCardless connection',
+        err?.code === 'functions/failed-precondition' ? 'info' : 'error'
+      );
+      setGcConnecting(false);
+    }
+  };
+
+  const handleGcDisconnect = async () => {
+    setGcDisconnecting(true);
+    try {
+      await disconnectGc();
+      setGcConnection(prev => ({ ...prev, status: 'disconnected' }));
+      toast('GoCardless disconnected');
+    } catch {
+      toast('Failed to disconnect — please try again', 'error');
+    } finally {
+      setGcDisconnecting(false);
+      setShowGcDisconnectConfirm(false);
+    }
+  };
 
   // Get trainer name for client
   const trainerName = !isTrainer && currentUser.trainerId
@@ -510,6 +581,38 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Trainer: GoCardless Connection (Phase 3) */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CreditCard size={18} /> GoCardless Connection
+          </h3>
+          <p className="invite-desc">Connect your own GoCardless account to enable subscription billing for your clients.</p>
+          {gcLoading ? (
+            <SkeletonLine width="60%" />
+          ) : gcConnection?.status === 'connected' ? (
+            <div className="mt-8">
+              <div className="flex gap-8 mb-8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <span className="tag tag-accent">Connected</span>
+                <span className="tag tag-primary" style={{ textTransform: 'capitalize' }}>{gcConnection.environment}</span>
+              </div>
+              <p className="text-sm text-muted mb-12">
+                Connected on {gcConnection.connectedAt
+                  ? new Date(gcConnection.connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : '—'}
+              </p>
+              <button className="btn btn-outline" onClick={() => setShowGcDisconnectConfirm(true)} style={{ width: '100%' }}>
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn-primary mt-8" onClick={handleGcConnect} disabled={gcConnecting} style={{ width: '100%' }}>
+              <CreditCard size={16} /> {gcConnecting ? 'Connecting...' : 'Connect GoCardless'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Trainer: Exercise Library Backup/Export */}
       {isTrainer && (
         <div className="card mb-16">
@@ -648,6 +751,31 @@ export default function ProfilePage() {
           <Trash2 size={16} /> Delete Account
         </button>
       </div>
+
+      {/* Disconnect GoCardless Confirmation Modal */}
+      {showGcDisconnectConfirm && (
+        <div className="modal-overlay" onClick={() => !gcDisconnecting && setShowGcDisconnectConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: 'var(--danger)' }}>
+              <AlertTriangle size={20} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Disconnect GoCardless?
+            </h3>
+            <p className="text-sm text-muted">
+              This will stop all subscription payment collection for your clients immediately.
+              Existing subscriptions will need to be reconnected before payments can resume —
+              this does not cancel them in GoCardless itself.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setShowGcDisconnectConfirm(false)} disabled={gcDisconnecting}>
+                Cancel
+              </button>
+              <button className="btn btn-danger" onClick={handleGcDisconnect} disabled={gcDisconnecting}>
+                {gcDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (

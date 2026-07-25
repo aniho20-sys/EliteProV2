@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { db, auth } from '../firebase';
+import { db, auth, functions } from '../firebase';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, writeBatch, getDocs, query, where, or, orderBy, runTransaction,
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
   GoogleAuthProvider,
@@ -643,6 +644,27 @@ export function AppProvider({ children }) {
     return { success: true, trainer };
   };
 
+  // ========== GoCardless Connection (Phase 3) ==========
+  // gcConnections is trainer-owned, low-frequency-change data (only changes
+  // when the trainer explicitly connects/disconnects) — a one-off fetch on
+  // demand fits better here than a permanent onSnapshot listener, so this
+  // doesn't need to touch markLoaded's fixed collection count.
+  const getGcConnection = async (trainerId) => {
+    const snap = await getDoc(doc(db, 'gcConnections', trainerId));
+    return snap.exists() ? snap.data() : null;
+  };
+
+  const startGcConnect = async () => {
+    const start = httpsCallable(functions, 'gcOAuthStart');
+    const result = await start();
+    return result.data.url;
+  };
+
+  const disconnectGc = async () => {
+    const disconnect = httpsCallable(functions, 'gcDisconnect');
+    await disconnect();
+  };
+
   // ========== Exercises ==========
   // Merges the current trainer's (or client's own trainer's) exerciseOverrides onto the
   // base list, so every page that lists exercises via getExercises() picks up the
@@ -879,6 +901,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer,
+    getGcConnection, startGcConnect, disconnectGc,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

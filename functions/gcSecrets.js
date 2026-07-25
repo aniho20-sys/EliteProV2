@@ -1,8 +1,17 @@
 /* global require, exports, process, Buffer */
 // Per-trainer GoCardless OAuth access tokens — dynamic, created one-per-trainer
-// at connect time, so they can't use Firebase's static defineSecret() (that's
-// for a fixed set of secrets known at deploy time, e.g. GC_CLIENT_SECRET in
-// index.js). This talks to Secret Manager directly instead.
+// at connect time. This module also reads ElitePro's own static app-level
+// GoCardless credentials (readGcAppCredentials, below) — both talk to Secret
+// Manager directly at CALL TIME rather than via Firebase's defineSecret()
+// deploy-time binding. defineSecret()/.runWith({secrets:[...]}) was the
+// original design for the app-level credentials, but it validates secrets
+// at DEPLOY time: when Secret Manager wasn't even enabled yet on this
+// project, that one binding failed the *entire* `firebase deploy --only
+// functions` step, taking every other function down with it (see
+// reports/gocardless-sandbox-setup-guide.md). Reading at call time instead
+// means deploy always succeeds regardless of Secret Manager's state; the
+// GoCardless-dependent functions just return a graceful "not configured"
+// result until the secrets actually exist.
 //
 // WRITE PATH: only gcOAuthCallback (index.js) calls writeGcAccessToken(),
 // immediately after exchanging a GoCardless OAuth code for a token.
@@ -77,5 +86,57 @@ async function readGcAccessToken(trainerId) {
   return version.payload.data.toString('utf8');
 }
 
+// Called only by gcDisconnect (index.js). Deletes the secret entirely —
+// there's no reason to keep a disconnected trainer's token around. Note:
+// this only removes ElitePro's copy; whether GoCardless's own OAuth
+// revocation endpoint should also be called here is flagged as unverified
+// in reports/phase3-subscription-design.md, same as the pause-mechanism
+// unknown — not committing to that API shape without confirming it in
+// sandbox first.
+async function deleteGcAccessToken(trainerId) {
+  const fullName = `projects/${projectId()}/secrets/${secretId(trainerId)}`;
+  try {
+    await secretClient.deleteSecret({ name: fullName });
+  } catch (err) {
+    if (err.code !== 5 /* NOT_FOUND */) throw err;
+  }
+}
+
+// ElitePro's own GoCardless Partner app credentials — one app, shared across
+// all trainers (not a per-trainer secret). Set up via
+// reports/gocardless-sandbox-setup-guide.md: three Secret Manager secrets
+// named exactly GC_CLIENT_ID, GC_CLIENT_SECRET, GC_REDIRECT_URI.
+const APP_SECRET_NAMES = {
+  clientId: 'GC_CLIENT_ID',
+  clientSecret: 'GC_CLIENT_SECRET',
+  redirectUri: 'GC_REDIRECT_URI',
+};
+
+async function readAppSecret(name) {
+  const fullName = `projects/${projectId()}/secrets/${name}/versions/latest`;
+  const [version] = await secretClient.accessSecretVersion({ name: fullName });
+  return version.payload.data.toString('utf8');
+}
+
+// Called by gcOAuthStart/gcOAuthCallback (index.js). Returns null — never
+// throws — if Secret Manager isn't enabled yet, or any of the three secrets
+// don't exist yet: either case means "not configured", which the caller
+// turns into a graceful failed-precondition response rather than a crash.
+async function readGcAppCredentials() {
+  try {
+    const [clientId, clientSecret, redirectUri] = await Promise.all([
+      readAppSecret(APP_SECRET_NAMES.clientId),
+      readAppSecret(APP_SECRET_NAMES.clientSecret),
+      readAppSecret(APP_SECRET_NAMES.redirectUri),
+    ]);
+    return { clientId, clientSecret, redirectUri };
+  } catch (err) {
+    console.warn('[gcSecrets] GoCardless app credentials not configured yet:', err.message);
+    return null;
+  }
+}
+
 exports.writeGcAccessToken = writeGcAccessToken;
 exports.readGcAccessToken = readGcAccessToken;
+exports.deleteGcAccessToken = deleteGcAccessToken;
+exports.readGcAppCredentials = readGcAppCredentials;
