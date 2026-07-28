@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { Plus, Printer, Trash2, CheckCircle, FileText, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { localToday } from '../utils/dateUtils';
 import { isSafeUrl } from '../utils/urlUtils';
+import { isIOS, isStandalone } from '../utils/deviceUtils';
 import { getInvoiceTotal } from '../utils/invoiceUtils';
+
+// iOS WebKit does not support window.print() at all inside a home-screen
+// "standalone" installed PWA — the print/share sheet silently never appears.
+// It works fine in a normal Safari tab, so on iOS-standalone we route the
+// print button through a real link (not setState) so tapping it escapes the
+// standalone container into Safari, where window.print() works as expected.
+const PRINT_ESCAPE_NEEDED = isIOS() && isStandalone();
+
+function printDeepLink(invoiceId) {
+  return `${window.location.origin}/#/invoices?print=${encodeURIComponent(invoiceId)}`;
+}
 
 const CURRENCIES = ['HKD', 'USD', 'GBP', 'EUR', 'SGD', 'AUD'];
 const EMPTY_ITEM = { description: '', qty: 1, unitPrice: 0 };
@@ -103,6 +116,8 @@ function InvoicePrint({ invoice, trainer, client, onClose }) {
 export default function InvoicePage() {
   const { currentUser, getClients, getInvoices, addInvoice, updateInvoice, deleteInvoice } = useApp();
   const toast = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const today = localToday();
   const clients = getClients(currentUser.id);
   const invoices = getInvoices(currentUser.id);
@@ -112,6 +127,19 @@ export default function InvoicePage() {
   const [printInvoice, setPrintInvoice] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [markingPaid, setMarkingPaid] = useState(null);
+
+  // Opens straight into the print view when landed on via printDeepLink() —
+  // the Safari-escape route for iOS-standalone (see PRINT_ESCAPE_NEEDED above).
+  useEffect(() => {
+    const printId = new URLSearchParams(location.search).get('print');
+    if (!printId) return;
+    const match = invoices.find(inv => inv.id === printId);
+    if (match) {
+      setPrintInvoice(match);
+      navigate('/invoices', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, invoices.length]);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     clientId: '', issueDate: today, dueDate: '', currency: 'HKD', notes: '', paymentUrl: '',
@@ -314,9 +342,15 @@ export default function InvoicePage() {
                 </div>
                 {inv.notes && <div className="invoice-card-notes">{inv.notes}</div>}
                 <div className="invoice-card-actions">
-                  <button className="btn btn-sm btn-outline" onClick={() => setPrintInvoice(inv)}>
-                    <Printer size={14} /> Print / Save as PDF
-                  </button>
+                  {PRINT_ESCAPE_NEEDED ? (
+                    <a href={printDeepLink(inv.id)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">
+                      <Printer size={14} /> Print / Save as PDF
+                    </a>
+                  ) : (
+                    <button className="btn btn-sm btn-outline" onClick={() => setPrintInvoice(inv)}>
+                      <Printer size={14} /> Print / Save as PDF
+                    </button>
+                  )}
                   {inv.paymentUrl && isSafeUrl(inv.paymentUrl) && inv.status !== 'paid' && (
                     <a href={inv.paymentUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-accent">
                       <ExternalLink size={14} /> Pay Now
