@@ -100,6 +100,10 @@ export default function ProfilePage() {
   });
   const [whSaving, setWhSaving] = useState(false);
 
+  // Trainer: business name (shown on printed invoices; falls back to trainer name if unset)
+  const [businessName, setBusinessName] = useState(currentUser.businessName || '');
+  const [businessNameSaving, setBusinessNameSaving] = useState(false);
+
   // Trainer: renewal pricing (shown to clients when they run low on sessions)
   const [renewalRate, setRenewalRate] = useState(currentUser.renewalRate ?? '');
   const [renewalRateNext, setRenewalRateNext] = useState(currentUser.renewalRateNext ?? '');
@@ -279,6 +283,18 @@ export default function ProfilePage() {
       toast('Failed to save working hours', 'error');
     } finally {
       setWhSaving(false);
+    }
+  };
+
+  const handleSaveBusinessName = async () => {
+    setBusinessNameSaving(true);
+    try {
+      await updateClient(currentUser.id, { businessName: businessName.trim() });
+      toast('Business name saved');
+    } catch {
+      toast('Failed to save business name', 'error');
+    } finally {
+      setBusinessNameSaving(false);
     }
   };
 
@@ -526,6 +542,22 @@ export default function ProfilePage() {
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveWorkHours} disabled={whSaving}>
             <Save size={16} /> {whSaving ? 'Saving...' : 'Save Hours'}
+          </button>
+        </div>
+      )}
+
+      {/* Trainer: Business Details */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">Business Details</h3>
+          <p className="invite-desc">Shown on printed invoices. Leave blank to use your name instead.</p>
+          <div className="form-group mt-8">
+            <label className="form-label">Business name</label>
+            <input className="form-input" placeholder="e.g. Ani Ho Personal Training" value={businessName}
+              onChange={e => setBusinessName(e.target.value)} />
+          </div>
+          <button className="btn btn-primary mt-8" onClick={handleSaveBusinessName} disabled={businessNameSaving}>
+            <Save size={16} /> {businessNameSaving ? 'Saving...' : 'Save Business Name'}
           </button>
         </div>
       )}

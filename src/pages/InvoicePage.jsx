@@ -25,14 +25,13 @@ function InvoicePrint({ invoice, trainer, client, onClose }) {
   return (
     <div className="invoice-print-overlay">
       <div className="invoice-print-actions no-print">
-        <button className="btn btn-primary" onClick={() => window.print()}><Printer size={16} /> Print / Save PDF</button>
+        <button className="btn btn-primary" onClick={() => window.print()}><Printer size={16} /> Print / Save as PDF</button>
         <button className="btn btn-outline" onClick={onClose}>Close</button>
       </div>
       <div className="invoice-print-doc">
         <div className="invoice-print-header">
           <div>
-            <div className="invoice-print-brand">ElitePro</div>
-            <div className="invoice-print-trainer">{trainer?.name}</div>
+            <div className="invoice-print-brand">{trainer?.businessName || trainer?.name}</div>
             <div className="invoice-print-trainer-email">{trainer?.email}</div>
           </div>
           <div className="invoice-print-meta">
@@ -316,7 +315,7 @@ export default function InvoicePage() {
                 {inv.notes && <div className="invoice-card-notes">{inv.notes}</div>}
                 <div className="invoice-card-actions">
                   <button className="btn btn-sm btn-outline" onClick={() => setPrintInvoice(inv)}>
-                    <Printer size={14} /> Print / PDF
+                    <Printer size={14} /> Print / Save as PDF
                   </button>
                   {inv.paymentUrl && isSafeUrl(inv.paymentUrl) && inv.status !== 'paid' && (
                     <a href={inv.paymentUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-accent">
