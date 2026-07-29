@@ -9,11 +9,16 @@ import { isSafeUrl } from '../utils/urlUtils';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
 import { getInvoiceTotal } from '../utils/invoiceUtils';
 
-// iOS WebKit does not support window.print() at all inside a home-screen
-// "standalone" installed PWA — the print/share sheet silently never appears.
-// It works fine in a normal Safari tab, so on iOS-standalone we route the
-// print button through a real link (not setState) so tapping it escapes the
-// standalone container into Safari, where window.print() works as expected.
+// iOS Safari has never implemented the window.print() JS API at all — calling
+// it is a silent no-op on iPhone/iPad, in a regular Safari tab or standalone
+// alike (only desktop browsers support triggering print via JS). The only way
+// to print/save-as-PDF on iOS is the OS-level flow via Safari's own Share
+// button in its browser chrome (Share → Print → pinch open the preview →
+// Share → Save to Files) — so on iOS we show instructions instead of a
+// non-functional button. A standalone ("added to Home Screen") install has NO
+// browser chrome at all, so there's no Share button to use in the first
+// place — the print button there must first escape into a real Safari tab
+// via a plain link (not setState) before those instructions apply.
 const PRINT_ESCAPE_NEEDED = isIOS() && isStandalone();
 
 function printDeepLink(invoiceId) {
@@ -38,7 +43,13 @@ function InvoicePrint({ invoice, trainer, client, onClose }) {
   return (
     <div className="invoice-print-overlay">
       <div className="invoice-print-actions no-print">
-        <button className="btn btn-primary" onClick={() => window.print()}><Printer size={16} /> Print / Save as PDF</button>
+        {isIOS() ? (
+          <div className="invoice-print-ios-hint">
+            <strong>On iPhone/iPad:</strong> tap Safari's <strong>Share</strong> button (the square with an arrow, in the address bar) → <strong>Print</strong> → pinch open the preview → <strong>Share</strong> → <strong>Save to Files</strong>.
+          </div>
+        ) : (
+          <button className="btn btn-primary" onClick={() => window.print()}><Printer size={16} /> Print / Save as PDF</button>
+        )}
         <button className="btn btn-outline" onClick={onClose}>Close</button>
       </div>
       <div className="invoice-print-doc">
