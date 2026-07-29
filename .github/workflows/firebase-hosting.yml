@@ -66,6 +66,9 @@ jobs:
       - name: Write Firebase credentials
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
+      - name: TEMP DEBUG — print service account email (remove after IAM diagnosis)
+        run: node -e "console.log('Service account email:', JSON.parse(require('fs').readFileSync('/tmp/sa.json','utf8')).client_email)"
+
       - name: Deploy Functions
         run: npx firebase-tools@13 deploy --only functions --project elitepro-16718 --non-interactive --force
         env:
