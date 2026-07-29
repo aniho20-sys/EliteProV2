@@ -6,7 +6,6 @@ import EmptyState from '../components/EmptyState';
 import { localToday } from '../utils/dateUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 import { getInvoiceTotal } from '../utils/invoiceUtils';
-import { generateInvoicePdfBytes, invoicePdfFilename } from '../utils/invoicePdf';
 
 const CURRENCIES = ['HKD', 'USD', 'GBP', 'EUR', 'SGD', 'AUD'];
 const EMPTY_ITEM = { description: '', qty: 1, unitPrice: 0 };
@@ -124,13 +123,16 @@ export default function InvoicePage() {
   // navigator.share() with a file IS supported on iOS (incl. standalone
   // home-screen installs) and pops the native Share sheet with the PDF
   // ready to save. Desktop/Android without file-share support fall back to
-  // a plain download link.
+  // a plain download link. The pdf-lib-backed module is imported
+  // dynamically so it's only fetched once a PDF is actually requested,
+  // not bundled eagerly into this route's chunk.
   const handleExportPdf = async (invoice) => {
     setExportingId(invoice.id);
     try {
+      const { generateInvoicePdfBytes, invoicePdfFilename } = await import('../utils/invoicePdf');
       const client = getClient(invoice.clientId);
       const bytes = await generateInvoicePdfBytes(invoice, currentUser, client);
-      const filename = invoicePdfFilename(invoice);
+      const filename = invoicePdfFilename(invoice, client);
       const file = new File([bytes], filename, { type: 'application/pdf' });
 
       if (navigator.canShare?.({ files: [file] })) {

@@ -1,12 +1,8 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { getInvoiceTotal } from './invoiceUtils';
 
 const PAGE_WIDTH = 595.28; // A4 in points
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 48;
-const BLACK = rgb(0, 0, 0);
-const GRAY = rgb(0.45, 0.45, 0.45);
-const LINE_GRAY = rgb(0.8, 0.8, 0.8);
 
 // pdf-lib does not wrap text on its own — long descriptions/notes would
 // otherwise run past the page edge and be clipped/unreadable.
@@ -32,7 +28,15 @@ function wrapText(str, font, size, maxWidth) {
 // PDF file the caller can hand to navigator.share()/download, since iOS
 // Safari has no JS-callable print-to-PDF API at all (see invoicePdf usage
 // in InvoicePage.jsx for why this exists instead of window.print()).
+// pdf-lib is imported dynamically here (not at module top-level) so it's
+// only fetched when a PDF is actually requested, not bundled into the
+// InvoicePage route chunk eagerly.
 export async function generateInvoicePdfBytes(invoice, trainer, client) {
+  const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+  const BLACK = rgb(0, 0, 0);
+  const GRAY = rgb(0.45, 0.45, 0.45);
+  const LINE_GRAY = rgb(0.8, 0.8, 0.8);
+
   const doc = await PDFDocument.create();
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -139,6 +143,12 @@ export async function generateInvoicePdfBytes(invoice, trainer, client) {
   return doc.save();
 }
 
-export function invoicePdfFilename(invoice) {
-  return `${invoice.invoiceNumber || 'invoice'}.pdf`;
+function sanitizeForFilename(str) {
+  return String(str || '').trim().replace(/[^a-zA-Z0-9]+/g, '');
+}
+
+export function invoicePdfFilename(invoice, client) {
+  const number = invoice.invoiceNumber || 'invoice';
+  const clientPart = sanitizeForFilename(client?.name);
+  return clientPart ? `${number}-${clientPart}.pdf` : `${number}.pdf`;
 }
