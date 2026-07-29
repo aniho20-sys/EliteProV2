@@ -432,10 +432,10 @@
 
 **Workflow 結構（Session 37 起，`.github/workflows/firebase-hosting.yml`）：** Hosting / Firestore Rules / Functions 而家係 **3 個獨立 job**（`deploy_hosting`、`deploy_rules`、`deploy_functions`），唔再係同一個 job 入面順序執行嘅步驟。改嘅原因：舊結構試過因為新增 `gcOAuthCallback`（第一個公開 HTTP function）撞到 IAM 權限問題，成個 job（連埋已經成功嘅 Hosting/Rules 步驟）一齊被打做紅色——雖然 Hosting/Rules 實際上已經部署成功，但 GitHub Actions 個 UI 會顯示成個 run 失敗，容易誤會做「乜都冧咗」。拆開之後三者互相獨立：一個壞唔會拖冧第二個嘅狀態顯示，各自嘅 CI 綠燈/紅燈準確反映自己嘅部署結果。
 
-CI service account（`FIREBASE_SERVICE_ACCOUNT`）權限已知缺口：
-- Cloud Functions：部署**新嘅公開 HTTP function**（`onRequest`，例如 `gcOAuthCallback`）需要 `cloudfunctions.functions.setIamPolicy` 權限，而家個 CI service account 冇——2026-07-25 首次撞到（之前 9 個 function 全部係 Firestore trigger，唔需要呢個權限，所以未爆過）
-
-**永久修復方式：** Google Cloud Console → IAM → 找到 CI service account → 加 Cloud Functions Admin 角色
+**（已解決，2026-07-29）** CI service account（`FIREBASE_SERVICE_ACCOUNT`）權限缺口：
+- Cloud Functions：部署**新嘅公開 HTTP function**（`onRequest`，例如 `gcOAuthCallback`）需要 `cloudfunctions.functions.setIamPolicy` 權限——2026-07-25 首次撞到（之前 9 個 function 全部係 Firestore trigger，唔需要呢個權限，所以未爆過），連續 4 次 deploy_functions run（#435-438）都係同一個 error，因為之前加錯咗 role 落唔啱嘅 account
+- **實際 CI 用嘅 service account**：`firebase-adminsdk-fbsvc@elitepro-16718.iam.gserviceaccount.com`（用臨時 debug step 喺 workflow 印出 `client_email` 確認，唔係之前假設嘅名）——加咗 **Cloud Functions Admin** 呢個 role 落呢個 account 之後，run #441 三個 job（deploy_hosting/deploy_rules/deploy_functions）全部 success，`gcOAuthStart`/`gcOAuthCallback`/`gcDisconnect`/`cleanupExpiredGcNonces` 正式上線
+- **教訓**：日後再撞到類似 IAM 權限錯誤，如果加咗 role 都仲係唔得，第一時間應該用 debug step 確認實際 service account email，唔好假設個名
 
 ### Push Notifications 配置
 
