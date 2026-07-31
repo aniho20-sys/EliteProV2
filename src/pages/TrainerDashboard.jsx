@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy, ClipboardList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -108,6 +108,9 @@ function buildDefaultMsg(client, reasons) {
   if (reasons.lowSessions) {
     const n = reasons.remaining;
     return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
+  }
+  if (reasons.missingProfile) {
+    return `Hey ${first}, could you fill out your training profile when you get a sec? It helps me plan your sessions safely (goals, experience, any injuries) 🙏`;
   }
   return `Hey ${first}, just checking in! Haven't seen a workout log in a while — everything okay? 🏋️`;
 }
@@ -282,12 +285,25 @@ export default function TrainerDashboard() {
     return acc;
   }, []).sort((a, b) => (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity));
 
-  const totalAttentionCount = renewalClients.length + churnClients.length;
+  // A client with a real upcoming session but no training profile is a safety gap
+  // (injuries/conditions the coach should know about) — no snooze here, since the
+  // only real resolution is the client actually completing it.
+  const trainingProfileClients = clients.reduce((acc, client) => {
+    if (client.intakeCompleted) return acc;
+    const hasUpcoming = getSchedule({ trainerId: currentUser.id, clientId: client.id })
+      .some(s => s.date >= today && s.status !== 'cancelled');
+    if (hasUpcoming) acc.push({ client });
+    return acc;
+  }, []);
+
+  const totalAttentionCount = renewalClients.length + churnClients.length + trainingProfileClients.length;
   const visibleRenewalCount = showAttentionAll ? renewalClients.length : Math.min(3, renewalClients.length);
-  const visibleChurnCount = showAttentionAll ? churnClients.length : Math.max(0, 3 - visibleRenewalCount);
+  const visibleChurnCount = showAttentionAll ? churnClients.length : Math.max(0, Math.min(3 - visibleRenewalCount, churnClients.length));
+  const visibleProfileCount = showAttentionAll ? trainingProfileClients.length : Math.max(0, 3 - visibleRenewalCount - visibleChurnCount);
   const visibleRenewal = renewalClients.slice(0, visibleRenewalCount);
   const visibleChurn = churnClients.slice(0, visibleChurnCount);
-  const hiddenAttentionCount = totalAttentionCount - visibleRenewal.length - visibleChurn.length;
+  const visibleProfile = trainingProfileClients.slice(0, visibleProfileCount);
+  const hiddenAttentionCount = totalAttentionCount - visibleRenewal.length - visibleChurn.length - visibleProfile.length;
 
   return (
     <div>
@@ -493,6 +509,38 @@ export default function TrainerDashboard() {
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {visibleProfile.length > 0 && (
+            <>
+              <div className="needs-attention-category">
+                <span className="needs-attention-category-dot" style={{ background: 'var(--warning)' }} />
+                Training profile incomplete <span className="text-muted">({trainingProfileClients.length})</span>
+              </div>
+              {visibleProfile.map(({ client }) => (
+                <div key={`profile-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--warning)' }}>
+                  <div className="needs-attention-item-top">
+                    <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
+                    <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="needs-attention-name">{client.name}</div>
+                      <div className="needs-attention-meta">
+                        <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                          <ClipboardList size={12} style={{ verticalAlign: -1 }} /> Has upcoming session, no profile
+                        </span>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="needs-attention-item-actions">
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleOpenQuickMsg(client, { inactive: false, lowSessions: false, missingProfile: true })}
+                    >
+                      <MessageCircle size={14} /> Ask to complete profile
+                    </button>
                   </div>
                 </div>
               ))}
