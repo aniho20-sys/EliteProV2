@@ -240,6 +240,12 @@
 - 已寫 `reports/gocardless-sandbox-setup-guide.md`——假設 Ani 冇 terminal，全部瀏覽器操作：GoCardless sandbox 開 Partner app、Google Cloud Console enable Secret Manager、建3個secret、IAM 加權限
 - 22 個 functions test（12 credit + 10 nonce）、33 個 rules test 全過，`npm run build` 通過
 
+### 🔴 嚴重bug修復：新學生完全用唔到onboarding問卷（2026-07-29）
+- **根因**：`firestore.rules` 嘅 `users/{userId}` self-update用緊field allowlist（`hasOnly([...])`），`intakeCompleted` 完全冇喺個list度——`saveIntakeForm()` 每次 `updateDoc` 都俾rules拒絕，`IntakeFormPage.jsx` 撳Submit定Skip都一樣彈「Failed to save, please try again」，`intakeCompleted` 永遠設唔到`true`，新學生100%困死喺問卷畫面，出唔到主app
+- **順手發現**：今日先加嘅 `businessName`（Business Details）同 `currency`（Renewal Pricing）**兩個都犯咗一模一樣嘅gap**——教練撳Save其實一直俾rules拒絕，一齊修埋
+- **修復**：`intakeCompleted`/`businessName`/`currency` 加入allowlist；新增 `firestore-tests/userSelfUpdate.rules.test.js`（4個test：client設intakeCompleted、trainer設businessName/currency、確認totalSessions/sessionOffset依然鎖死）；全部37個rules test（33舊+4新）通過
+- **教訓**：呢類「field allowlist漏咗新field」嘅bug，build/lint測唔到，只有實際against emulator/production嘅rules test先驗到得——日後加任何新嘅self-update field，一定要記得同步加入呢個allowlist，並且落emulator跑一次rules test先當完成
+
 ### Dashboard 全面改版（6月10-11日）
 - 新增 design tokens：`--brand-gradient`、`--font-display`（Bricolage Grotesque）、`--radius-lg`/`--radius-xl`，疊加喺現有 token 之上（唔係開一套新 token）
 - Stat card 全面轉用 stat-strip/stat-pill 精簡橫向排列（TrainerDashboard、ClientDashboard、BusinessAnalyticsPage、InvoicePage 都套用）

@@ -68,8 +68,9 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['name','email','avatar','fcmTokens','goals','notes',
                          'age','height','speciality','trainerId','inviteCode',
-                         'renewalRate','renewalRateNext','bankDetails',
-                         'renewalPrompt3Shown','renewalPrompt1Shown'])
+                         'renewalRate','renewalRateNext','bankDetails','currency',
+                         'renewalPrompt3Shown','renewalPrompt1Shown',
+                         'businessName','intakeCompleted'])
         // Trainer updating their own client's full profile (totalSessions, sessionOffset, etc.)
         // Session credit accounting itself (booking/cancel/complete) runs server-side via
         // Cloud Functions using the admin SDK, which bypasses these rules entirely — so no
