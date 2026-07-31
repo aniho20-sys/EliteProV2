@@ -2,14 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
-
-const GOALS = ['Weight Loss', 'Muscle Gain', 'Improve Fitness', 'Athletic Performance'];
-const FREQUENCIES = ['1x', '2x', '3x', '4x', '5x or more'];
-const EXPERIENCES = [
-  { value: 'Beginner', label: 'Beginner (less than 1 year)' },
-  { value: 'Intermediate', label: 'Intermediate (1–3 years)' },
-  { value: 'Advanced', label: 'Advanced (3+ years)' },
-];
+import { GOALS, FREQUENCIES, EXPERIENCES } from '../data/intakeOptions';
 
 export default function IntakeFormPage() {
   const { currentUser, saveIntakeForm } = useApp();
