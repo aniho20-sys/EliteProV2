@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
+import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -264,7 +265,7 @@ export default function TrainerDashboard() {
   // never hides the other.
   const renewalClients = clients.reduce((acc, client) => {
     const { remaining } = getSessionStats(client.id);
-    if (remaining !== null && remaining <= 2 && !isSnoozed(client.renewalSnoozedUntil, today)) {
+    if (remaining !== null && remaining <= SESSION_DANGER_THRESHOLD && !isSnoozed(client.renewalSnoozedUntil, today)) {
       acc.push({ client, remaining });
     }
     return acc;
