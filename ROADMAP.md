@@ -37,11 +37,15 @@ replacement: pack/pay-as-you-go stays as the low-commitment entry
 point, subscription is the discounted upgrade for clients who
 commit — both coexist indefinitely.
 
-**Current status:** Design phase (2026-07-20). Business terms confirmed
+**Current status:** In progress (as of 2026-07-29). Business terms confirmed
 by Ani (pricing, roll-over, pause, cancellation, GoCardless multi-tenant
 architecture) — see `reports/phase3-subscription-design.md` for the full
-design, pending her approval before implementation starts. No GoCardless
-integration or subscription code exists in the repository yet.
+design. Step 1 (`subscriptions`/`gcConnections`/`gcOAuthNonces` Firestore
+schema + rules) and Step 2 (GoCardless OAuth connect backend — `gcOAuthStart`/
+`gcOAuthCallback`/`gcDisconnect`/`cleanupExpiredGcNonces` Cloud Functions,
+CSRF-hardened nonce flow, ProfilePage Connect UI) are built and deployed live.
+Remaining: subscription creation/management UI, mandate creation via
+GoCardless, payment-failure handling, pause/cancel flows.
 
 ## Phase 4 — PWA / FCM Push Notifications
 Installable app experience + push reminders for bookings,
