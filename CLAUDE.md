@@ -59,6 +59,7 @@ src/
 │   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss; error toasts 6s)
 ├── data/
 │   ├── exercises.js          # Static exercise library (seeded into Firestore)
+│   ├── intakeOptions.js      # Shared GOALS/FREQUENCIES/EXPERIENCES constants for IntakeFormPage + TrainingProfilePage
 │   ├── metrics.js            # Body stat metric definitions: METRICS array + EMPTY_STAT_FORM
 │   └── sampleData.js         # Demo seed data (ghost clients, plans, logs, etc.)
 ├── hooks/
@@ -82,7 +83,8 @@ src/
 │   ├── MyWorkoutsPage.jsx            # Client: assigned workout plans
 │   ├── WorkoutLogPage.jsx            # Client: log workout sessions (rest timer, unit types, custom exercises, localStorage draft)
 │   ├── ProgressPage.jsx              # Client: body composition tab + exercise progression tab
-│   ├── IntakeFormPage.jsx            # Client: onboarding questionnaire (PAR-Q style)
+│   ├── IntakeFormPage.jsx            # Client: onboarding questionnaire (PAR-Q style), gated at first login by !intakeCompleted
+│   ├── TrainingProfilePage.jsx       # Client: revisit/edit intake answers anytime (route `/training-profile`, linked from Profile) — same questions as IntakeFormPage but single-scroll, no Skip
 │   ├── ProfilePage.jsx               # User profile, invite code, account management
 │   ├── OperatorDashboard.jsx         # gym啦 (operator): home — gated behind GYMLA_ENABLED
 │   ├── StudioManagementPage.jsx      # gym啦 (operator): manage studios + slots — gated behind GYMLA_ENABLED
@@ -208,6 +210,24 @@ Top-level config files:
       legs: number,      // cm
     }
   ]
+}
+```
+
+#### `intakeForms/{clientId}`
+Written by `saveIntakeForm(clientId, data)` — both the one-time onboarding gate (`IntakeFormPage.jsx`, forced when `!intakeCompleted`) and `TrainingProfilePage.jsx` (revisit/edit anytime via Profile → Training Profile) write to this same doc/function. Re-saving does not duplicate the `bodyStats` entry — `saveIntakeForm` only auto-logs one on the client's first-ever completion.
+```js
+{
+  clientId: string,
+  goals: string[],       // may include the literal 'other'; free text is goalsOther
+  goalsOther: string,
+  frequency: string,     // one of '1x'..'5x or more'
+  experience: string,    // 'Beginner' | 'Intermediate' | 'Advanced' | 'other'
+  experienceOther: string,
+  injuries: string,       // optional — safety info the trainer should see
+  height: number | null,  // cm, optional
+  weight: number | null,  // kg, optional
+  skipped: boolean,       // true if the client skipped rather than filled it in
+  completedAt: string,    // 'YYYY-MM-DD' — last-saved date, overwritten on each edit
 }
 ```
 
@@ -448,6 +468,10 @@ disconnectGc()                // calls gcDisconnect
 // Badges (write path only — see src/context/badgeUtils.js, no display UI yet)
 checkAndAwardBadges(clientId) // async — called from WorkoutLogPage on every log save; returns newly-earned badges
 
+// Intake Forms (client's own training profile — onboarding + TrainingProfilePage edits)
+saveIntakeForm(clientId, data)  // async — sets intakeCompleted:true; only auto-logs a bodyStat entry on first-ever completion
+getIntakeForm(clientId)          // async — fetches the client's saved intakeForms doc, or null
+
 // Body Stats
 getBodyStats(clientId)       // returns entries array (sorted by date)
 addBodyStat(clientId, stat)
@@ -537,6 +561,7 @@ Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 | `/my-workouts` | — | MyWorkoutsPage |
 | `/log` | — | WorkoutLogPage |
 | `/progress` | — | ProgressPage |
+| `/training-profile` | — | TrainingProfilePage |
 | `/privacy` | PrivacyPolicyPage (no auth) | PrivacyPolicyPage (no auth) |
 | `/terms` | TermsPage (no auth) | TermsPage (no auth) |
 
@@ -548,6 +573,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **Auth required** for all reads and writes
 - **users**: Any auth can read; self-create own profile; trainer can create/update their clients. `role` field is **immutable after creation** — prevents client→trainer privilege escalation
 - **bodyStats**: Only the client or their trainer can read/write; only the client can delete
+- **intakeForms**: Owner client or their trainer can read; only the owner client can create/update. **Delete is disabled**
 - **workoutPlans**: Owner trainer or assigned client can read; trainer creates/updates/deletes own plans. `trainerId` is immutable after creation
 - **workoutLogs**: Owner client or their trainer can read; clients create and update their own logs; trainers can update logs they created (full fields) or add `trainerNotes` to any client log; **delete is disabled**
 - **schedule**: Trainer, client, or any client of the same trainer can read; trainer books for own clients only, client books with own trainer only; `trainerId`+`clientId` are immutable after creation
