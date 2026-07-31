@@ -767,6 +767,12 @@ export function AppProvider({ children }) {
   // ========== Intake Forms ==========
 
   const saveIntakeForm = async (clientId, data) => {
+    // Also used by TrainingProfilePage to let a client revisit/edit their
+    // answers anytime (not just the one-time onboarding gate) — only
+    // auto-logging a body-stat entry on the client's FIRST-ever completion
+    // stops every later edit from adding a duplicate weight entry with the
+    // same value.
+    const isFirstCompletion = !users.find(u => u.id === clientId)?.intakeCompleted;
     const userUpdates = { intakeCompleted: true };
     if (!data.skipped && data.height) userUpdates.height = Number(data.height);
 
@@ -779,7 +785,7 @@ export function AppProvider({ children }) {
       updateDoc(doc(db, 'users', clientId), userUpdates),
     ]);
 
-    if (!data.skipped && data.weight) {
+    if (isFirstCompletion && !data.skipped && data.weight) {
       await addDoc(collection(db, 'bodyStats', clientId, 'entries'), {
         id: `stat-${Date.now()}`,
         date: localToday(),
