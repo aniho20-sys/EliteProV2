@@ -103,7 +103,7 @@ function AppRoutes() {
               {(isTrainer || currentUser?.role === 'client') && <Route path="/log" element={<WorkoutLogPage />} />}
               {currentUser?.role === 'client' && <Route path="/progress" element={<ProgressPage />} />}
               {isOperator && <Route path="/operator/studios" element={<StudioManagementPage />} />}
-              {(isTrainer || isOperator) && <Route path="/apply" element={<TrainerApplicationPage />} />}
+              {GYMLA_ENABLED && (isTrainer || isOperator) && <Route path="/apply" element={<TrainerApplicationPage />} />}
               {isTrainer && <Route path="/studios/book" element={<StudioBookingPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
