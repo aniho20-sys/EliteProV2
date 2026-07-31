@@ -8,6 +8,7 @@ import { friendlyAuthError } from '../utils/authErrors';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
+import { CURRENCIES } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
 
 function InstallAppCard() {
@@ -107,6 +108,7 @@ export default function ProfilePage() {
   // Trainer: renewal pricing (shown to clients when they run low on sessions)
   const [renewalRate, setRenewalRate] = useState(currentUser.renewalRate ?? '');
   const [renewalRateNext, setRenewalRateNext] = useState(currentUser.renewalRateNext ?? '');
+  const [renewalCurrency, setRenewalCurrency] = useState(currentUser.currency || 'GBP');
   const [renewalSaving, setRenewalSaving] = useState(false);
 
   // Trainer: bank details (shown to clients in the renewal payment sheet)
@@ -307,7 +309,7 @@ export default function ProfilePage() {
     }
     setRenewalSaving(true);
     try {
-      await updateClient(currentUser.id, { renewalRate: rate, renewalRateNext: rateNext });
+      await updateClient(currentUser.id, { renewalRate: rate, renewalRateNext: rateNext, currency: renewalCurrency });
       toast('Renewal rates saved');
     } catch {
       toast('Failed to save renewal rates', 'error');
@@ -577,6 +579,12 @@ export default function ProfilePage() {
               <label className="form-label">Rate after sessions run out</label>
               <input type="number" min="0" inputMode="decimal" className="form-input" placeholder="70"
                 value={renewalRateNext} onChange={e => setRenewalRateNext(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Currency</label>
+              <select className="form-select" value={renewalCurrency} onChange={e => setRenewalCurrency(e.target.value)}>
+                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveRenewalRates} disabled={renewalSaving}>

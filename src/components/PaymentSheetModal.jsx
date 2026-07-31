@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { formatCurrency } from '../utils/currencyUtils';
 
 // Renewal payment sheet — shown to a client renewing with their trainer.
 // Purely informational: the trainer still adds the credits themselves via the
@@ -50,7 +51,7 @@ export default function PaymentSheetModal({ client, trainer, remaining, onClose 
 
         {rate && (
           <div className="tag tag-accent mb-12" style={{ display: 'inline-block' }}>
-            Locks in £{rate}/session
+            Locks in {formatCurrency(rate, trainer?.currency)}/session
           </div>
         )}
 
@@ -83,7 +84,7 @@ export default function PaymentSheetModal({ client, trainer, remaining, onClose 
 
         <p className="text-sm text-muted mt-12" style={{ fontSize: '0.78rem', borderTop: '1px dashed var(--border)', paddingTop: 10 }}>
           Your rate is confirmed once payment is received while you still have sessions remaining
-          {trainer?.renewalRateNext ? ` — if your credit runs out first, renewal moves to £${trainer.renewalRateNext}/session.` : '.'}
+          {trainer?.renewalRateNext ? ` — if your credit runs out first, renewal moves to ${formatCurrency(trainer.renewalRateNext, trainer?.currency)}/session.` : '.'}
         </p>
       </div>
     </div>

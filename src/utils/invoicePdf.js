@@ -1,4 +1,5 @@
 import { getInvoiceTotal } from './invoiceUtils';
+import { formatCurrency } from './currencyUtils';
 
 const PAGE_WIDTH = 595.28; // A4 in points
 const PAGE_HEIGHT = 841.89;
@@ -108,8 +109,8 @@ export async function generateInvoicePdfBytes(invoice, trainer, client) {
     }
     y = rowTop;
     textRight(item.qty, colQty, 10, false);
-    textRight(`${invoice.currency} ${Number(item.unitPrice).toFixed(2)}`, colPrice, 10, false);
-    textRight(`${invoice.currency} ${amount.toFixed(2)}`, colAmount, 10, false);
+    textRight(formatCurrency(item.unitPrice, invoice.currency), colPrice, 10, false);
+    textRight(formatCurrency(amount, invoice.currency), colAmount, 10, false);
     y -= descLines.length * 14 + 4;
     page.drawLine({ start: { x: MARGIN, y: y + 6 }, end: { x: rightEdge, y: y + 6 }, thickness: 0.5, color: LINE_GRAY });
   }
@@ -119,7 +120,7 @@ export async function generateInvoicePdfBytes(invoice, trainer, client) {
   page.drawLine({ start: { x: MARGIN, y: y + 14 }, end: { x: rightEdge, y: y + 14 }, thickness: 1, color: LINE_GRAY });
   const total = getInvoiceTotal(invoice.items);
   textRight('Total', colPrice, 11, true);
-  textRight(`${invoice.currency} ${total.toFixed(2)}`, colAmount, 12, true);
+  textRight(formatCurrency(total, invoice.currency), colAmount, 12, true);
   y -= 34;
 
   if (invoice.notes) {

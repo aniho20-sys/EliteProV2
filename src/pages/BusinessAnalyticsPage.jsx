@@ -2,6 +2,7 @@ import { useApp } from '../context/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import { getInvoiceTotal } from '../utils/invoiceUtils';
+import { formatCurrency } from '../utils/currencyUtils';
 import { TrendingUp, Users, Calendar, DollarSign } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 
@@ -95,12 +96,12 @@ export default function BusinessAnalyticsPage() {
       <div className="stat-strip mb-16">
         <div className="stat-pill">
           <DollarSign size={15} style={{ color: 'var(--success)' }} />
-          <div className="stat-pill-value">{currency} {paidThisMonth.toLocaleString()}</div>
+          <div className="stat-pill-value">{formatCurrency(paidThisMonth, currency)}</div>
           <div className="stat-pill-label">Earned This Month</div>
         </div>
         <div className="stat-pill">
           <TrendingUp size={15} style={{ color: 'var(--primary-light)' }} />
-          <div className="stat-pill-value">{currency} {totalPaidYTD.toLocaleString()}</div>
+          <div className="stat-pill-value">{formatCurrency(totalPaidYTD, currency)}</div>
           <div className="stat-pill-label">Revenue YTD</div>
         </div>
         <div className="stat-pill">
@@ -131,7 +132,7 @@ export default function BusinessAnalyticsPage() {
                 <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={45} />
                 <Tooltip
                   contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                  formatter={v => [`${currency} ${v.toLocaleString()}`, 'Revenue']}
+                  formatter={v => [formatCurrency(v, currency), 'Revenue']}
                 />
                 <Bar dataKey="revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -211,7 +212,7 @@ export default function BusinessAnalyticsPage() {
           )}
           {totalUnpaid > 0 && (
             <div className="analytics-unpaid-banner">
-              <span className="text-sm" style={{ color: 'var(--warning)' }}>⚠ {currency} {totalUnpaid.toLocaleString()} in unpaid invoices</span>
+              <span className="text-sm" style={{ color: 'var(--warning)' }}>⚠ {formatCurrency(totalUnpaid, currency)} in unpaid invoices</span>
             </div>
           )}
         </div>

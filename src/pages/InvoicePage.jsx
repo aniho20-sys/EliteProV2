@@ -6,8 +6,8 @@ import EmptyState from '../components/EmptyState';
 import { localToday } from '../utils/dateUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 import { getInvoiceTotal } from '../utils/invoiceUtils';
+import { CURRENCIES, formatCurrency } from '../utils/currencyUtils';
 
-const CURRENCIES = ['HKD', 'USD', 'GBP', 'EUR', 'SGD', 'AUD'];
 const EMPTY_ITEM = { description: '', qty: 1, unitPrice: 0 };
 
 function isOverdue(inv, today) {
@@ -65,15 +65,15 @@ function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }
               <tr key={i}>
                 <td>{item.description}</td>
                 <td className="text-right">{item.qty}</td>
-                <td className="text-right">{invoice.currency} {Number(item.unitPrice).toFixed(2)}</td>
-                <td className="text-right">{invoice.currency} {(item.qty * item.unitPrice).toFixed(2)}</td>
+                <td className="text-right">{formatCurrency(item.unitPrice, invoice.currency)}</td>
+                <td className="text-right">{formatCurrency(item.qty * item.unitPrice, invoice.currency)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td colSpan={3} className="text-right invoice-total-label">Total</td>
-              <td className="text-right invoice-total-amount">{invoice.currency} {total.toFixed(2)}</td>
+              <td className="text-right invoice-total-amount">{formatCurrency(total, invoice.currency)}</td>
             </tr>
           </tfoot>
         </table>
@@ -357,7 +357,7 @@ export default function InvoicePage() {
                     <div className="invoice-card-date">Issued {inv.issueDate} · Due {inv.dueDate}</div>
                   </div>
                   <div className="invoice-card-right">
-                    <div className="invoice-card-amount">{inv.currency} {total.toFixed(2)}</div>
+                    <div className="invoice-card-amount">{formatCurrency(total, inv.currency)}</div>
                     <span className={`tag ${sl === 'paid' ? 'tag-accent' : sl === 'overdue' ? 'tag-danger' : 'tag-warning'}`}>
                       {sl}
                     </span>
@@ -466,7 +466,7 @@ export default function InvoicePage() {
                   onClick={() => setForm(p => ({ ...p, items: [...p.items, { ...EMPTY_ITEM }] }))}>
                   <Plus size={14} /> Add Item
                 </button>
-                <div className="invoice-form-total">Total: {form.currency} {formTotal.toFixed(2)}</div>
+                <div className="invoice-form-total">Total: {formatCurrency(formTotal, form.currency)}</div>
               </div>
 
               <div className="form-group">
