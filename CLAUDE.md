@@ -12,6 +12,7 @@ See `ROADMAP.md` for the source of truth on development phases (current and futu
 - **Backend**: Firebase (Firestore + Firebase Auth)
 - **Offline**: IndexedDB persistence via `enableIndexedDbPersistence`
 - **Styling**: Custom CSS with CSS variables (light/dark theme)
+- **PDF generation**: `pdf-lib` (dynamically imported client-side — see `src/utils/invoicePdf.js`; `window.print()` does not work on iOS Safari, see convention #30)
 - **Deployment**: Firebase Hosting via GitHub Actions CI
 
 ## Commands
@@ -52,6 +53,7 @@ src/
 │       └── WorkoutCompleteScreen.jsx # Post-save summary: volume, exercises, RPE, new PRs, closing message
 ├── context/
 │   ├── AppContext.jsx         # Global state + all Firestore/Auth operations
+│   ├── badgeUtils.js          # Session-count milestone badges (BADGE_MILESTONES, getNewBadges); written to `users/{clientId}.badges` on every workout log save — no UI reads/displays it yet (minimal display UI backlogged, see PROGRESS.md)
 │   ├── NotificationContext.jsx # FCM push notifications (code ready; Blaze restored 2026-06-22, Functions deployed and live)
 │   ├── ThemeContext.jsx       # Light/dark theme toggle (persisted to localStorage)
 │   └── ToastContext.jsx       # Toast notification system (3s auto-dismiss; error toasts 6s)
@@ -92,21 +94,33 @@ src/
 │   └── index.css             # Global styles (CSS variables, skeleton, empty states)
 ├── utils/
 │   ├── authErrors.js         # Firebase Auth error code → friendly message map
+│   ├── currencyUtils.js      # formatCurrency(amount, currencyCode) — single source of truth for money display, see convention #31
 │   ├── dateUtils.js          # Local timezone-safe date helpers: localToday, localDateAdd, parseLocalDate
 │   ├── exerciseUtils.js      # resolveExerciseName(library, id, fallback) — resolves exerciseId (incl. custom-* IDs) to a display name
+│   ├── invoicePdf.js         # Client-side PDF generation via pdf-lib (dynamically imported) — see convention #30
 │   ├── sessionUtils.js       # Session colour/label helpers
 │   ├── urlUtils.js           # URL safety validators: isSafeUrl(url), isYouTube(url)
+│   ├── workoutShareUtils.js  # Post-workout share text builder (buildWorkoutShareText, pickClosingMessage) for WorkoutCompleteScreen's native share button
 │   └── workoutUtils.js       # Workout set normalisation helpers (UNIT_OPTIONS, emptySet, hasValue, formatSet, etc.)
 ├── firebase.js               # Firebase init (db, auth exports)
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing + GYMLA_ENABLED flag
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (deployed and live on Blaze) — 9 functions:
+functions/                    # Cloud Functions (deployed and live on Blaze) — 13 functions:
 ├── index.js                  # onAccountDelete, onNewMessage, onNewSchedule, onScheduleUpdate,
 │                              # onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow (push to client when
 │                              # sessions remaining ≤ 3, push to trainer when ≤ 2), onScheduleBooked +
 │                              # onScheduleCreditUpdate (server-side session credit accounting — see
-│                              # "Session credit accounting" below)
+│                              # "Session credit accounting" below); Phase 3 GoCardless: gcOAuthStart
+│                              # (callable, builds authorize URL), gcOAuthCallback (public onRequest
+│                              # HTTP endpoint — no Firebase Auth context, CSRF-protected via
+│                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
+│                              # (daily scheduled function)
+├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
+│                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)
+├── gcSecrets.js               # Per-trainer GoCardless access tokens + app-level Partner credentials,
+│                              # read/written via Secret Manager SDK at call time (never defineSecret —
+│                              # see convention #29)
 └── package.json
 
 firestore-tests/              # firestore.rules verification (separate from functions/'s Jest suite)
@@ -345,6 +359,54 @@ Append-only top-up history — one entry per top-up, never updated/deleted (corr
 }
 ```
 
+#### `subscriptions/{subscriptionId}` (Phase 3 — schema + rules live, no creation UI yet)
+Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. No documents exist yet — subscription creation/mandate flow is unbuilt.
+```js
+{
+  id: string,
+  clientId: string,
+  trainerId: string,
+  tier: 4 | 8 | 12,             // monthly session quota
+  ratePerSession: number,       // locked at signup — immutable after creation
+  monthlyAmount: number,        // derived at creation, stored for display/audit
+  status: 'active' | 'paused' | 'past_due' | 'cancelled',
+  startDate: string,            // 'YYYY-MM-DD'
+  gcMandateId: string,
+  gcSubscriptionId: string,
+  currentPeriodStart: string,
+  currentPeriodEnd: string,
+  rolloverBanked: number,
+  pausedAt: string | null,
+  pauseResumeDate: string | null,
+  pauseHistory: [{ pausedAt: string, resumeDate: string, requestedAt: string }],
+}
+```
+
+#### `gcConnections/{trainerId}` (Phase 3 — live)
+Non-sensitive GoCardless connection metadata, written server-side only by `gcOAuthCallback`/`gcDisconnect` via the Admin SDK (bypasses `allow write: if false`). The actual OAuth access token never touches Firestore — see `functions/gcSecrets.js`.
+```js
+{
+  trainerId: string,
+  gcOrganisationId: string | null,
+  environment: 'sandbox' | 'live',
+  status: 'connected' | 'disconnected',
+  connectedAt: string,      // ISO datetime
+  disconnectedAt: string,   // ISO datetime, present after a disconnect
+}
+```
+
+#### `gcOAuthNonces/{nonce}` (Phase 3 — live)
+CSRF protection for the OAuth flow — never client-readable or writable (`allow read, write: if false`), created/consumed entirely server-side via `functions/gcOAuthNonce.js`'s claim → release-on-failure → finalize-on-success lifecycle. Doc id is the 256-bit random nonce itself.
+```js
+{
+  trainerId: string,
+  createdAt: string,     // ISO datetime
+  expiresAt: string,     // ISO datetime, 10 minutes after createdAt
+  used: boolean,         // true once claimed by gcOAuthCallback
+  claimedAt: string | null,
+}
+```
+
 ## State Management (AppContext)
 `AppContext` is the single source of truth. It subscribes to all Firestore collections with real-time `onSnapshot` listeners when a user is authenticated. All reads and writes go through context functions.
 
@@ -375,6 +437,14 @@ removeClient(clientId)       // sets trainerId to null (detaches client from tra
 // Credit Ledger
 getCreditLedger(clientId)    // async — fetches append-only top-up history, newest first
 addCreditLedgerEntry(clientId, { qty, rate })  // logs a top-up, adds sessions, resets renewal prompt flags
+
+// GoCardless Connection (Phase 3, trainer-only)
+getGcConnection(trainerId)   // async — one-off fetch of gcConnections/{trainerId}, not a live listener
+startGcConnect()             // calls gcOAuthStart, returns the GoCardless authorize URL to redirect to
+disconnectGc()                // calls gcDisconnect
+
+// Badges (write path only — see src/context/badgeUtils.js, no display UI yet)
+checkAndAwardBadges(clientId) // async — called from WorkoutLogPage on every log save; returns newly-earned badges
 
 // Body Stats
 getBodyStats(clientId)       // returns entries array (sorted by date)
@@ -484,6 +554,9 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **exerciseOverrides**: Trainer reads/writes own; client reads their own trainer's (read-only, never writes). `trainerId`+`exerciseId` are immutable after creation
 - **templates**: Trainer-only access to own templates. `trainerId` is immutable after creation
 - **invoices**: Trainer reads/writes own; client reads invoices addressed to them. `trainerId` is immutable after creation
+- **subscriptions**: Trainer or client owner can read; Cloud-Function-only writes (`allow write: if false`)
+- **gcConnections**: Owner trainer only can read; Cloud-Function-only writes (Admin SDK bypasses the rule)
+- **gcOAuthNonces**: No client read or write at all — created/consumed entirely server-side
 
 ## Styling Conventions
 - All styles live in `src/styles/index.css`
