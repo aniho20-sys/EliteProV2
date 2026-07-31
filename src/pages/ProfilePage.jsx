@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell, CreditCard } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell, CreditCard, ClipboardList } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
@@ -687,6 +687,34 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Client: Training Profile — accessible anytime, not just at onboarding */}
+      {!isTrainer && (
+        <div className="card mb-16">
+          {currentUser.intakeCompleted ? (
+            <>
+              <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ClipboardList size={18} /> Training Profile
+              </h3>
+              <p className="invite-desc">Your goals, experience, and any injuries your coach should know about.</p>
+              <button className="btn btn-outline mt-8" style={{ width: '100%' }} onClick={() => navigate('/training-profile')}>
+                Edit Training Profile
+              </button>
+            </>
+          ) : (
+            <div className="flex gap-8" style={{ alignItems: 'flex-start' }}>
+              <ClipboardList size={18} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div className="fw-bold" style={{ marginBottom: 2 }}>Complete your training profile</div>
+                <p className="text-sm text-muted" style={{ marginBottom: 12 }}>Help your coach plan your sessions safely — takes 2 minutes.</p>
+                <button className="btn btn-primary btn-sm" onClick={() => navigate('/training-profile')}>
+                  Complete Training Profile
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Notifications */}
       <div className="card mb-16">
         <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -700,21 +728,33 @@ export default function ProfilePage() {
               <span className="tag tag-accent">Enabled</span>
               <span className="text-sm text-muted">You'll receive push notifications for messages and session updates</span>
             </div>
-            <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
-              <button className="btn btn-sm btn-outline" onClick={() => {
-                new Notification('ElitePro Test 🔔', { body: 'Push notifications are working!', icon: '/favicon.svg' });
-                toast('Test notification sent!');
-              }}>
-                <Bell size={14} /> Send Test
-              </button>
-              <button className="btn btn-sm btn-outline" onClick={() => requestNotifPermission(currentUser.id)}>
-                <RotateCcw size={14} /> Re-register Token
-              </button>
-            </div>
+            {/* Debug tools — trainer-only, never shown to clients */}
+            {isTrainer && (
+              <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
+                <button className="btn btn-sm btn-outline" onClick={() => {
+                  new Notification('ElitePro Test 🔔', { body: 'Push notifications are working!', icon: '/favicon.svg' });
+                  toast('Test notification sent!');
+                }}>
+                  <Bell size={14} /> Send Test
+                </button>
+                <button className="btn btn-sm btn-outline" onClick={() => requestNotifPermission(currentUser.id)}>
+                  <RotateCcw size={14} /> Re-register Token
+                </button>
+              </div>
+            )}
             {!fcmToken && (
-              <p className="text-sm mt-8" style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>
-                ⚠️ Token not registered — tap Re-register Token
-              </p>
+              isTrainer ? (
+                <p className="text-sm mt-8" style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>
+                  ⚠️ Token not registered — tap Re-register Token
+                </p>
+              ) : (
+                <div className="mt-8">
+                  <p className="text-sm text-muted mb-8" style={{ fontSize: '0.8rem' }}>Notifications aren&apos;t fully set up on this device yet.</p>
+                  <button className="btn btn-sm btn-primary" onClick={() => requestNotifPermission(currentUser.id)}>
+                    <Bell size={14} /> Enable Notifications
+                  </button>
+                </div>
+              )
             )}
           </div>
         ) : notifPermission === 'denied' ? (
