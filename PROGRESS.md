@@ -339,8 +339,9 @@
 | 14 | **Trainer announcements / broadcast**（群發訊息） |
 | 15 | **Group Class 管理**（多 client 同一 session） |
 | 16 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple） |
-| 17 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成，現透過 `GYMLA_ENABLED=false` 暫時隱藏） |
+| 17 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成，現透過 `GYMLA_ENABLED=false` 暫時隱藏）。**打開`GYMLA_ENABLED`之前必查**（2026-07-28 audit發現）：全app約12個檔案各自宣告`isTrainer = currentUser.role === 'trainer'`，未計`operator`呢個第三角色——`{isTrainer ? <TrainerView/> : <ClientView/>}`呢類二元判斷，會將operator當client嚟render。而家冇事（`RoleSelectPage`根本冇俾人揀operator），但開關嗰日要重新audit呢12個檔案 |
 | 18 | **`gcOAuthCallback` rate limit**（Phase 3）——而家個 public HTTP endpoint 冇 rate limit，但 256-bit random nonce 空間本身已令 brute force 無意義，Ani 已確認唔急，記錄喺度日後想加先加 |
+| 19 | **Badges/Milestones 最小顯示UI**（2026-07-28 code health audit發現）——`checkAndAwardBadges` 寫入邏輯正常運作，`users/{clientId}.badges` 已經有真實數據，但成個app冇任何UI讀取/顯示過。Ani 決定：寫入邏輯照留，唔刪，補一個最小UI（學生 profile 顯示已解鎖 badge）先，唔急 |
 
 ---
 
