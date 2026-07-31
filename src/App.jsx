@@ -28,6 +28,7 @@ const ClientProgressOverviewPage = lazy(() => import('./pages/ClientProgressOver
 const InvoicePage = lazy(() => import('./pages/InvoicePage'));
 const BusinessAnalyticsPage = lazy(() => import('./pages/BusinessAnalyticsPage'));
 const IntakeFormPage = lazy(() => import('./pages/IntakeFormPage'));
+const TrainingProfilePage = lazy(() => import('./pages/TrainingProfilePage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -102,6 +103,7 @@ function AppRoutes() {
               {currentUser?.role === 'client' && <Route path="/my-workouts" element={<MyWorkoutsPage />} />}
               {(isTrainer || currentUser?.role === 'client') && <Route path="/log" element={<WorkoutLogPage />} />}
               {currentUser?.role === 'client' && <Route path="/progress" element={<ProgressPage />} />}
+              {currentUser?.role === 'client' && <Route path="/training-profile" element={<TrainingProfilePage />} />}
               {isOperator && <Route path="/operator/studios" element={<StudioManagementPage />} />}
               {GYMLA_ENABLED && (isTrainer || isOperator) && <Route path="/apply" element={<TrainerApplicationPage />} />}
               {isTrainer && <Route path="/studios/book" element={<StudioBookingPage />} />}
