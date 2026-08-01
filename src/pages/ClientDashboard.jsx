@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight, X } from 'lucide-react';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { getClientActivityDates } from '../utils/activityUtils';
-import { getSessionColor, SESSION_WARNING_THRESHOLD } from '../utils/sessionUtils';
+import { getSessionColor, SESSION_WARNING_THRESHOLD, RENEWAL_PROMPT_THRESHOLD } from '../utils/sessionUtils';
+import { formatCurrency } from '../utils/currencyUtils';
 import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
@@ -12,7 +13,7 @@ import PaymentSheetModal from '../components/PaymentSheetModal';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getClient, updateClient } = useApp();
+  const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getClient } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
@@ -31,23 +32,18 @@ export default function ClientDashboard() {
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
   const trainer = currentUser.trainerId ? getClient(currentUser.trainerId) : null;
 
-  const [renewalPrompt, setRenewalPrompt] = useState(null); // '3-left' | '1-left' | null
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
-  const promptFiredRef = useRef(false);
+  // Dismiss only hides the prompt for THIS view — it deliberately comes back on
+  // the next dashboard visit. The prompt is meant to keep nudging until the
+  // trainer confirms payment and tops the client up, which raises sessRemaining
+  // back above the threshold and clears it naturally.
+  const [renewalDismissed, setRenewalDismissed] = useState(false);
 
-  useEffect(() => {
-    if (sessRemaining === null || promptFiredRef.current) return;
-    if (!trainer?.renewalRate || !trainer?.renewalRateNext) return; // trainer hasn't set rates yet — nothing to show
-    if (!currentUser.renewalPrompt3Shown && sessRemaining <= 3 && sessRemaining >= 2) {
-      promptFiredRef.current = true;
-      setRenewalPrompt('3-left');
-      updateClient(currentUser.id, { renewalPrompt3Shown: true }).catch(() => {});
-    } else if (!currentUser.renewalPrompt1Shown && sessRemaining <= 1) {
-      promptFiredRef.current = true;
-      setRenewalPrompt('1-left');
-      updateClient(currentUser.id, { renewalPrompt1Shown: true }).catch(() => {});
-    }
-  }, [sessRemaining, currentUser.id, currentUser.renewalPrompt3Shown, currentUser.renewalPrompt1Shown, trainer, updateClient]);
+  const trainerHasRates = !!(trainer?.renewalRate && trainer?.renewalRateNext);
+  const showRenewalPrompt = sessRemaining !== null
+    && trainerHasRates
+    && sessRemaining <= RENEWAL_PROMPT_THRESHOLD
+    && !renewalDismissed;
 
   const totalWorkouts = logs.length;
   // "This Week" counts distinct training days — a logged workout OR a completed session —
@@ -158,23 +154,26 @@ export default function ClientDashboard() {
         </div>
       )}
 
-      {renewalPrompt && (
-        <div className="card mb-16" style={{ borderLeft: `3px solid ${renewalPrompt === '1-left' ? 'var(--danger)' : 'var(--warning)'}` }}>
+      {showRenewalPrompt && (
+        <div className="card mb-16" style={{ borderLeft: `3px solid ${sessRemaining <= 1 ? 'var(--danger)' : 'var(--warning)'}` }}>
           <div className="flex-between mb-8" style={{ alignItems: 'flex-start' }}>
             <h3 className="card-title" style={{ marginBottom: 0 }}>
-              {renewalPrompt === '1-left' ? 'Last session left' : `${sessRemaining} sessions left`}
+              {sessRemaining <= 0
+                ? 'No sessions left'
+                : sessRemaining === 1
+                  ? 'Last session left'
+                  : `${sessRemaining} sessions left`}
             </h3>
-            <button className="btn-icon" onClick={() => setRenewalPrompt(null)} aria-label="Dismiss"><X size={16} /></button>
+            <button className="btn-icon" onClick={() => setRenewalDismissed(true)} aria-label="Dismiss"><X size={16} /></button>
           </div>
           <p className="text-sm text-muted mb-12">
-            {renewalPrompt === '1-left'
-              ? <>This is your final session at <strong>£{trainer?.renewalRate}/session</strong>. Renew now to lock in your rate before it moves to £{trainer?.renewalRateNext}.</>
-              : <>Renew before they run out to keep your current rate <strong>(£{trainer?.renewalRate}/session)</strong>. After that, renewal is £{trainer?.renewalRateNext}/session.</>}
+            {sessRemaining <= 0
+              ? <>You&apos;ve used all your sessions. Renew now at <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}/session</strong>.</>
+              : sessRemaining === 1
+                ? <>This is your final session at <strong>{formatCurrency(trainer.renewalRate, trainer.currency)}/session</strong>. Renew now to lock in your rate before it moves to {formatCurrency(trainer.renewalRateNext, trainer.currency)}.</>
+                : <>Renew before they run out to keep your current rate <strong>({formatCurrency(trainer.renewalRate, trainer.currency)}/session)</strong>. After that, renewal is {formatCurrency(trainer.renewalRateNext, trainer.currency)}/session.</>}
           </p>
-          <div className="flex gap-8">
-            <button className="btn btn-primary btn-sm" onClick={() => { setShowPaymentSheet(true); setRenewalPrompt(null); }}>Renew</button>
-            <button className="btn btn-outline btn-sm" onClick={() => setRenewalPrompt(null)}>Dismiss</button>
-          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowPaymentSheet(true)}>Renew</button>
         </div>
       )}
 
