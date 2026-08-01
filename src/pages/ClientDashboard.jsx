@@ -131,15 +131,20 @@ export default function ClientDashboard() {
             <div className="session-progress-bar mb-12">
               <div className="session-progress-fill" style={{ width: `${Math.min(100, Math.round((sessUsed / sessTotal) * 100))}%`, background: sessRemaining <= SESSION_WARNING_THRESHOLD ? getSessionColor(sessRemaining) : 'var(--brand-gradient)' }} />
             </div>
+            {/* When the full renewal card below is showing it already makes this
+                offer, so the inline link would just repeat it. Once the client
+                dismisses that card this quietly takes over again. */}
             {sessRemaining <= SESSION_WARNING_THRESHOLD && (
-              trainer?.renewalRate && trainer?.renewalRateNext ? (
-                <button
-                  className="text-sm mb-12"
-                  onClick={() => setShowPaymentSheet(true)}
-                  style={{ color: getSessionColor(sessRemaining), fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                >
-                  Renew early to keep your current rate <ChevronRight size={14} />
-                </button>
+              trainerHasRates ? (
+                !showRenewalPrompt && (
+                  <button
+                    className="text-sm mb-12"
+                    onClick={() => setShowPaymentSheet(true)}
+                    style={{ color: getSessionColor(sessRemaining), fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    Renew early to keep your current rate <ChevronRight size={14} />
+                  </button>
+                )
               ) : (
                 <p className="text-sm mb-12" style={{ color: getSessionColor(sessRemaining), fontWeight: 600 }}>
                   Running low — contact your trainer to top up

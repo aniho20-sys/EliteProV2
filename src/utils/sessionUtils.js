@@ -2,11 +2,13 @@
 export const SESSION_DANGER_THRESHOLD = 2;
 export const SESSION_WARNING_THRESHOLD = 5;
 
-// At or below this, the client's dashboard shows the renewal rate-lock prompt
-// on EVERY visit (not once) until the trainer manually tops them up — see
-// ClientDashboard.jsx. Deliberately separate from the two colour thresholds
-// above: this one drives a revenue nudge, not a severity colour.
-export const RENEWAL_PROMPT_THRESHOLD = 3;
+// At or below this, the client gets the renewal rate-lock nudge — on EVERY
+// dashboard visit (not once) and again each time they book a session — until
+// the trainer manually tops them up. Kept separate from the two colour
+// thresholds above even though it currently equals SESSION_WARNING_THRESHOLD:
+// this one drives a revenue nudge, not a severity colour, and the two are
+// meant to be tunable independently.
+export const RENEWAL_PROMPT_THRESHOLD = 5;
 
 export function getSessionColor(remaining) {
   if (remaining === null) return 'var(--text-muted)';

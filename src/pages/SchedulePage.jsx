@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
-import { getSessionColor, SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
+import { getSessionColor, SESSION_DANGER_THRESHOLD, RENEWAL_PROMPT_THRESHOLD } from '../utils/sessionUtils';
+import { formatCurrency } from '../utils/currencyUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { localToday, localDateAdd, parseLocalDate } from '../utils/dateUtils';
@@ -196,7 +197,28 @@ export default function SchedulePage() {
       setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
       setShowAdd(false);
       setBookMode('session');
-      toast('Session booked');
+
+      // Booking deducts a credit immediately (onScheduleBooked), so the count
+      // the client should hear is one lower than the pre-booking figure — the
+      // context listener hasn't caught up yet at this point. Remind them about
+      // the rate lock on every booking once they're low, not just on the
+      // dashboard, since booking is the moment the number actually drops.
+      const trainer = isTrainer ? null : getClient(trainerId);
+      const remainingAfter = remaining === null ? null : Math.max(0, remaining - 1);
+      const shouldNudge = !isTrainer
+        && remainingAfter !== null
+        && remainingAfter <= RENEWAL_PROMPT_THRESHOLD
+        && trainer?.renewalRate && trainer?.renewalRateNext;
+
+      if (shouldNudge) {
+        toast(
+          `Session booked — ${remainingAfter} session${remainingAfter === 1 ? '' : 's'} left. Renew before they run out to keep your ${formatCurrency(trainer.renewalRate, trainer.currency)}/session rate.`,
+          'info',
+          8000
+        );
+      } else {
+        toast('Session booked');
+      }
     } catch (err) {
       toast(`Failed to book session: ${err?.message || 'unknown error'}`, 'error');
     } finally {
