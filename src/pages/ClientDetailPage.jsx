@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ArrowLeft, Plus, UserX, ClipboardList, NotebookPen, Trash2, TrendingUp, Play, ExternalLink, Pencil, X, Search, ChevronDown, ChevronUp, Timer, FileText } from 'lucide-react';
 import { getSessionColor } from '../utils/sessionUtils';
+import { formatCurrency } from '../utils/currencyUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
@@ -815,12 +816,12 @@ export default function ClientDetailPage() {
                 <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
                   {currentUser.renewalRate && (
                     <button className={`btn btn-sm ${topUpRate === currentUser.renewalRate ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRate)}>
-                      £{currentUser.renewalRate} (current rate)
+                      {formatCurrency(currentUser.renewalRate, currentUser.currency)} (current rate)
                     </button>
                   )}
                   {currentUser.renewalRateNext && (
                     <button className={`btn btn-sm ${topUpRate === currentUser.renewalRateNext ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRateNext)}>
-                      £{currentUser.renewalRateNext} (renewed after running out)
+                      {formatCurrency(currentUser.renewalRateNext, currentUser.currency)} (renewed after running out)
                     </button>
                   )}
                 </div>

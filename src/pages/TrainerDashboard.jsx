@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
 import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
+import { formatCurrency } from '../utils/currencyUtils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -119,7 +120,7 @@ function buildRenewalMsg(client, remaining, trainer) {
   const first = (client.name || 'there').split(' ')[0];
   const n = remaining;
   if (trainer?.renewalRate && trainer?.renewalRateNext) {
-    return `Hey ${first}, you've got ${n} session${n === 1 ? '' : 's'} left — renew now to keep your current rate (£${trainer.renewalRate}/session)! After that, renewal moves to £${trainer.renewalRateNext}/session.`;
+    return `Hey ${first}, you've got ${n} session${n === 1 ? '' : 's'} left — renew now to keep your current rate (${formatCurrency(trainer.renewalRate, trainer.currency)}/session)! After that, renewal moves to ${formatCurrency(trainer.renewalRateNext, trainer.currency)}/session.`;
   }
   return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
 }
