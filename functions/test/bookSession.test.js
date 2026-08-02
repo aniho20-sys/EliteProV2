@@ -42,6 +42,7 @@ const db = admin.firestore();
 
 const wrappedOnScheduleBooked = functionsTest.wrap(myFunctions.onScheduleBooked);
 const wrappedOnScheduleCreditUpdate = functionsTest.wrap(myFunctions.onScheduleCreditUpdate);
+const wrappedOnNewWorkoutLog = functionsTest.wrap(myFunctions.onNewWorkoutLog);
 
 // ── Test fixture IDs ──
 const TRAINER_ID = 'test-trainer-t1';
@@ -50,7 +51,7 @@ const CLIENT_ID = 'test-client-c1';
 // ── Helpers ──
 
 async function clearTestCollections() {
-  const cols = ['users', 'schedule'];
+  const cols = ['users', 'schedule', 'workoutLogs'];
   await Promise.all(cols.map(async (col) => {
     const snap = await db.collection(col).get();
     if (snap.empty) return;
@@ -270,5 +271,83 @@ describe('onScheduleCreditUpdate — Mark Complete', () => {
 
     const client = await getClient();
     expect(client.sessionOffset).toBe(2);
+  });
+});
+
+/**
+ * ⚠️ GUARDIAN TEST — DO NOT DELETE OR "SIMPLIFY" ⚠️
+ *
+ * This block exists specifically to prevent workout logs and session status
+ * from ever becoming coupled. See CLAUDE.md convention #32.
+ *
+ * A client logging a workout is THEIR OWN training record — including
+ * sessions they did alone at the gym with no coach involved. It must never
+ * mark a scheduled session complete, and must never spend a session credit.
+ * The only thing that completes a session is the trainer pressing Mark
+ * Complete in the recap modal.
+ *
+ * If someone later "optimises" this by auto-completing a session when a
+ * matching log appears, this test fails — and that failure is correct.
+ * The fix is to revert the optimisation, not to update the test.
+ */
+describe('GUARDIAN: workout logs must never touch session status or credit', () => {
+  beforeEach(clearTestCollections);
+
+  test('creating a workout log leaves session status and sessionOffset untouched', async () => {
+    await seedClient({ sessionOffset: 3, totalSessions: 10 });
+
+    // A confirmed session booked for the same day the client logs a workout —
+    // the exact shape someone would be tempted to auto-complete.
+    const { date } = sessionDateTime(2);
+    const { ref } = await createSchedule({
+      ...sessionDateTime(2),
+      status: 'confirmed',
+      deductedAtBooking: true,
+    });
+
+    const logRef = await db.collection('workoutLogs').add({
+      clientId: CLIENT_ID,
+      date,
+      logType: 'self_training',
+      entries: [{ exerciseId: 'squat', unit: 'weight_reps', sets: [{ weight: 60, reps: 5, completed: true }] }],
+      notes: 'Trained solo at the gym',
+    });
+    const logSnap = await logRef.get();
+
+    await wrappedOnNewWorkoutLog(logSnap);
+
+    const session = (await ref.get()).data();
+    expect(session.status).toBe('confirmed'); // NOT 'completed'
+
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(3); // unchanged — no credit spent
+  });
+
+  test('a trainer-logged pt_session log also does not complete the session or charge again', async () => {
+    await seedClient({ sessionOffset: 3, totalSessions: 10 });
+
+    const { date } = sessionDateTime(2);
+    const { ref } = await createSchedule({
+      ...sessionDateTime(2),
+      status: 'confirmed',
+      deductedAtBooking: true,
+    });
+
+    const logRef = await db.collection('workoutLogs').add({
+      clientId: CLIENT_ID,
+      trainerId: TRAINER_ID,
+      date,
+      logType: 'pt_session',
+      entries: [],
+    });
+    const logSnap = await logRef.get();
+
+    await wrappedOnNewWorkoutLog(logSnap);
+
+    const session = (await ref.get()).data();
+    expect(session.status).toBe('confirmed');
+
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(3);
   });
 });
