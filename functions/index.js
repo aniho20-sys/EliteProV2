@@ -362,6 +362,22 @@ exports.onScheduleCreditUpdate = functions.firestore
       return;
     }
 
+    // Reopen: the trainer pressed Mark Complete by mistake and is undoing it.
+    // For a LEGACY booking the completion is what charged the credit, so
+    // reopening has to refund it — otherwise complete → reopen → complete
+    // charges the client twice for one session. New-model bookings were
+    // charged at booking, so both directions are correctly no-ops for them.
+    if (before.status === 'completed' && after.status !== 'cancelled') {
+      if (after.deductedAtBooking) return;
+      await db.runTransaction(async (tx) => {
+        const clientDoc = await tx.get(clientRef);
+        if (!clientDoc.exists) return;
+        const current = clientDoc.data().sessionOffset ?? 0;
+        tx.update(clientRef, { sessionOffset: Math.max(0, current - 1) });
+      });
+      return;
+    }
+
     if (after.status === 'completed') {
       if (after.deductedAtBooking) return; // already charged at booking
       await db.runTransaction(async (tx) => {

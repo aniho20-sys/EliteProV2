@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock, RotateCcw } from 'lucide-react';
 import { getSessionColor, SESSION_DANGER_THRESHOLD, RENEWAL_PROMPT_THRESHOLD, OVERDRAFT_LIMIT } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { useToast } from '../context/ToastContext';
@@ -454,6 +454,16 @@ export default function SchedulePage() {
                     )}
                     {isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
                       <button className="btn-icon" aria-label="Mark session complete" onClick={() => openRecap(s)} title="Mark as complete"><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
+                    )}
+                    {isTrainer && s.status === 'completed' && (
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={() => updateStatus(s.id, 'confirmed')}
+                        disabled={updatingStatus === s.id}
+                        title="Undo Mark Complete"
+                      >
+                        <RotateCcw size={14} /> Reopen
+                      </button>
                     )}
                     {!isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
                       <button className="btn btn-sm btn-outline" onClick={() => handleClientCancel(s)} disabled={updatingStatus === s.id} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>Cancel</button>

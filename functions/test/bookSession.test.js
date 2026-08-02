@@ -279,6 +279,51 @@ describe('onScheduleCreditUpdate — Mark Complete', () => {
   });
 });
 
+describe('Reopen (undo Mark Complete)', () => {
+  beforeEach(clearTestCollections);
+
+  test('legacy booking: complete -> reopen -> complete charges exactly once, not twice', async () => {
+    await seedClient({ sessionOffset: 2, totalSessions: 10 });
+    const { ref, snap } = await createSchedule(sessionDateTime(-1)); // legacy, no flag
+
+    // 1. Mark Complete — legacy bookings are charged here
+    const toComplete = await updateScheduleStatus(ref, snap, { status: 'completed' });
+    await wrappedOnScheduleCreditUpdate(toComplete);
+    expect((await getClient()).sessionOffset).toBe(3);
+
+    // 2. Reopen — must refund, or the next complete double-charges
+    const completedSnap = await ref.get();
+    const toReopen = await updateScheduleStatus(ref, completedSnap, { status: 'confirmed' });
+    await wrappedOnScheduleCreditUpdate(toReopen);
+    expect((await getClient()).sessionOffset).toBe(2);
+
+    // 3. Complete again — back to charged exactly once overall
+    const reopenedSnap = await ref.get();
+    const toCompleteAgain = await updateScheduleStatus(ref, reopenedSnap, { status: 'completed' });
+    await wrappedOnScheduleCreditUpdate(toCompleteAgain);
+    expect((await getClient()).sessionOffset).toBe(3);
+  });
+
+  test('new-model booking: complete -> reopen -> complete never moves credit', async () => {
+    await seedClient({ sessionOffset: 5, totalSessions: 10 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(-1), deductedAtBooking: true });
+
+    const toComplete = await updateScheduleStatus(ref, snap, { status: 'completed' });
+    await wrappedOnScheduleCreditUpdate(toComplete);
+    expect((await getClient()).sessionOffset).toBe(5);
+
+    const completedSnap = await ref.get();
+    const toReopen = await updateScheduleStatus(ref, completedSnap, { status: 'confirmed' });
+    await wrappedOnScheduleCreditUpdate(toReopen);
+    expect((await getClient()).sessionOffset).toBe(5);
+
+    const reopenedSnap = await ref.get();
+    const toCompleteAgain = await updateScheduleStatus(ref, reopenedSnap, { status: 'completed' });
+    await wrappedOnScheduleCreditUpdate(toCompleteAgain);
+    expect((await getClient()).sessionOffset).toBe(5); // charged at booking, never here
+  });
+});
+
 describe('credit overdraft (1-session hard cap)', () => {
   beforeEach(clearTestCollections);
 
