@@ -240,6 +240,16 @@
 - 已寫 `reports/gocardless-sandbox-setup-guide.md`——假設 Ani 冇 terminal，全部瀏覽器操作：GoCardless sandbox 開 Partner app、Google Cloud Console enable Secret Manager、建3個secret、IAM 加權限
 - 22 個 functions test（12 credit + 10 nonce）、33 個 rules test 全過，`npm run build` 通過
 
+### Credit 透支 + Session complete 觸發條件（2026-08-01）
+設計文件：`reports/credit-overdraft-and-session-complete-design.md`（Ani 批准後動工）
+
+- **透支 booking**：1 堂硬上限，詳情見下面「Credit 透支」章節
+- **Needs Attention 加第四類「Session owed」**：`--danger` 色、排最前（欠緊錢急過快用完）、冇 snooze。已欠款嘅學生會**排除喺 Renewal 類之外**，避免同一個人為同一件事出現兩次
+- **CLAUDE.md #32（workout log ↔ session 狀態必須解耦）**：查證咗現狀本身已經係啱嘅（`WorkoutLogPage` 完全冇掂 schedule、`addWorkoutLog` 只寫 `workoutLogs`、`onNewWorkoutLog` 只 send push），所以**冇改任何 production code**，加嘅係規則同守門員 test
+- **Guardian test 驗證過真係有牙齒**：暫時將「log 咗就自動 complete 同日 session」呢個典型「順手優化」注入 `onNewWorkoutLog`，兩條 guardian test 即刻 fail（`Expected "confirmed" / Received "completed"`），還原後回復綠燈。一個 fail 唔到嘅守門員 test 冇價值，所以實測過而唔係靠估
+- **Reopen（撤銷 Mark Complete）+ 揪出一個真 bug**：completed session 本身冇路徑改返，撳錯只可以刪成條 booking。加 Reopen 掣嗰陣發現舊模式 booking（冇 `deductedAtBooking`）complete 會扣一堂、reopen 唔會退、再 complete 會**再扣多一次** —— 一堂收兩次錢。`onScheduleCreditUpdate` 加咗 reopen 退款令收費對稱
+- Test：12 → **32**（新增 6 條透支、2 條 reopen、2 條 guardian，其餘為原有）
+
 ### 🔴 嚴重bug修復：新學生完全用唔到onboarding問卷（2026-07-29）
 - **根因**：`firestore.rules` 嘅 `users/{userId}` self-update用緊field allowlist（`hasOnly([...])`），`intakeCompleted` 完全冇喺個list度——`saveIntakeForm()` 每次 `updateDoc` 都俾rules拒絕，`IntakeFormPage.jsx` 撳Submit定Skip都一樣彈「Failed to save, please try again」，`intakeCompleted` 永遠設唔到`true`，新學生100%困死喺問卷畫面，出唔到主app
 - **順手發現**：今日先加嘅 `businessName`（Business Details）同 `currency`（Renewal Pricing）**兩個都犯咗一模一樣嘅gap**——教練撳Save其實一直俾rules拒絕，一齊修埋
@@ -434,6 +444,25 @@
 | remaining | `totalSessions - sessionOffset` | 系統自動計算，唔儲存 |
 | `schedule.deductedAtBooking` | 呢條 booking 係咪已經喺 book 嗰刻扣咗 credit（新模式）| 系統自動（Cloud Function 寫入），冇呢個 flag = 舊模式 booking（Mark Complete/24小時內取消先扣） |
 | `earlyCancelMonth` / `earlyCancelCount` | 學員本月已用咗幾多次「24小時前免費取消」（上限2次，跨月reset）| 系統自動（`onScheduleCreditUpdate`） |
+| `schedule.bookedOnCredit` | 呢條 booking 係咪喺零 credit 情況下透支 book 嘅 | 系統自動（`onScheduleBooked`）；用嚟喺取消退款嗰陣準確判斷要唔要沖返 ledger |
+
+### Credit 透支：1 堂上限（2026-08-01）
+
+學生 credit 用完（`remaining === 0`）仍然可以 book 多一堂，計入下次續約；到 `remaining === -1` 就真正 block。透支唔用新欄位表示，純粹係 `remaining`（`totalSessions - sessionOffset`）變負數 —— 所以「續約自動扣返欠嗰堂」係現有算式自然做到，零新 code：top-up 加 `totalSessions`，`remaining` 由 `-1` 變 `qty - 1`。
+
+欠款記錄由 `onScheduleBooked` 喺**扣數同一個 transaction** 入面寫入 `creditLedger`（`{type:'overdraft', qty:-1}`），唔可以 client-side 寫 —— `firestore.rules` 本身只准教練建立 `creditLedger` doc，而且畀學生自己寫自己嘅欠款記錄本身就唔對。透支嗰條 booking 24 小時前取消會退返 credit，同時 append 一條 `{type:'overdraft_reversed', qty:+1}` 沖返（唔刪原entry，跟常規 #27 append-only），令 ledger 逐筆對得返 `remaining`。
+
+**⚠️ 決定記錄：透支上限用 client-side 攔截，Phase 5 要重新評估**
+
+`remaining <= -1` 嘅 block 淨係喺 `SchedulePage.jsx` 做，`firestore.rules` 嘅 schedule create 規則**冇檢查 credit**（只檢查師生關係）。即係話識用 API 嘅人理論上繞得過去 book 無限堂。
+
+Ani 2026-08-01 決定維持 client-side，理由：
+- 呢個攔截缺口係**現狀已經存在**，唔係透支功能引入
+- 而家所有學生都係 Ani 自己識嘅人，唔係陌生人
+- 就算真係有人繞過，教練 Needs Attention「Session owed」一定即刻見到，追得返
+- 另外兩個方案（Cloud Function 自動彈返 booking / Firestore rules 用 `get()` 比對）分別帶嚟 UX 複雜度同每次 booking 多一次 read 收費，同風險唔成正比
+
+**重新評估觸發點：Phase 5 venue marketplace 上線**。嗰陣會有外部教練同佢哋嘅學生入場，「學生係我識嘅人」呢個前提唔再成立，要重新衡量係咪值得加 server-side 強制。
 
 ### CI / Deployment 限制
 
