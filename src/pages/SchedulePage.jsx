@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
-import { getSessionColor, SESSION_DANGER_THRESHOLD, RENEWAL_PROMPT_THRESHOLD } from '../utils/sessionUtils';
+import { getSessionColor, SESSION_DANGER_THRESHOLD, RENEWAL_PROMPT_THRESHOLD, OVERDRAFT_LIMIT } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -33,6 +33,8 @@ export default function SchedulePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteModal, setDeleteModal] = useState(null); // { id, isBlocked }
+  const [overdraftModal, setOverdraftModal] = useState(false); // confirm booking on credit
+  const [blockedModal, setBlockedModal] = useState(false); // already owes a session
   const [deleting, setDeleting] = useState(false);
   const [lateCancelModal, setLateCancelModal] = useState(null); // session object
   const [cancelingLate, setCancelingLate] = useState(false);
@@ -182,11 +184,34 @@ export default function SchedulePage() {
 
     const targetClientId = isTrainer ? form.clientId : currentUser.id;
     const { remaining } = getSessionStats(targetClientId);
-    if (remaining !== null && remaining <= 0) {
-      toast('Session quota exceeded — add more sessions in client settings', 'error');
+
+    // Overdraft: a client with 0 left may book exactly one session on credit
+    // (CLAUDE.md #33). Past that they're hard-blocked. Enforcement is
+    // client-side by design — see PROGRESS.md for the decision and its Phase 5
+    // review trigger.
+    if (remaining !== null && remaining <= OVERDRAFT_LIMIT * -1) {
+      if (isTrainer) {
+        toast('This client already owes a session — top them up before booking again', 'error');
+      } else {
+        setBlockedModal(true);
+      }
       return;
     }
 
+    // Going from 0 into credit: the client must knowingly agree, since it
+    // becomes a charge on their next renewal. Not a toast — this is about money.
+    if (!isTrainer && remaining !== null && remaining <= 0) {
+      setOverdraftModal(true);
+      return;
+    }
+
+    await doBookSession(remaining);
+  };
+
+  // The actual write. Split out of handleAdd so the overdraft confirmation
+  // modal can complete the booking without re-running validation (and without
+  // re-triggering its own confirmation).
+  const doBookSession = async (remaining) => {
     setSaving(true);
     try {
       await addScheduleItem({
@@ -204,13 +229,16 @@ export default function SchedulePage() {
       // the rate lock on every booking once they're low, not just on the
       // dashboard, since booking is the moment the number actually drops.
       const trainer = isTrainer ? null : getClient(trainerId);
-      const remainingAfter = remaining === null ? null : Math.max(0, remaining - 1);
-      const shouldNudge = !isTrainer
-        && remainingAfter !== null
-        && remainingAfter <= RENEWAL_PROMPT_THRESHOLD
-        && trainer?.renewalRate && trainer?.renewalRateNext;
+      const remainingAfter = remaining === null ? null : remaining - 1;
+      const hasRates = trainer?.renewalRate && trainer?.renewalRateNext;
 
-      if (shouldNudge) {
+      if (!isTrainer && remainingAfter !== null && remainingAfter < 0 && hasRates) {
+        toast(
+          `Session booked on credit — this one will be added to your next renewal at ${formatCurrency(trainer.renewalRateNext, trainer.currency)}.`,
+          'info',
+          8000
+        );
+      } else if (!isTrainer && remainingAfter !== null && remainingAfter <= RENEWAL_PROMPT_THRESHOLD && hasRates) {
         toast(
           `Session booked — ${remainingAfter} session${remainingAfter === 1 ? '' : 's'} left. Renew before they run out to keep your ${formatCurrency(trainer.renewalRate, trainer.currency)}/session rate.`,
           'info',
@@ -438,6 +466,54 @@ export default function SchedulePage() {
           })
         )}
       </div>
+
+      {overdraftModal && (() => {
+        const t = getClient(trainerId);
+        const rate = t?.renewalRateNext;
+        return (
+          <div className="modal-overlay" onClick={() => setOverdraftModal(false)}>
+            <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+              <h3 className="modal-title">You have no sessions left</h3>
+              <p className="text-sm text-muted mb-16">
+                You can still book this one — it will be added to your next renewal
+                {rate ? <> at <strong>{formatCurrency(rate, t.currency)}/session</strong></> : null}.
+                After this you&apos;ll need to top up before booking again.
+              </p>
+              <div className="modal-actions">
+                <button className="btn btn-outline" onClick={() => setOverdraftModal(false)} disabled={saving}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={async () => {
+                    setOverdraftModal(false);
+                    await doBookSession(getSessionStats(currentUser.id).remaining);
+                  }}
+                >
+                  {saving ? 'Booking…' : 'Book anyway'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {blockedModal && (
+        <div className="modal-overlay" onClick={() => setBlockedModal(false)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Can&apos;t book — 1 session already owed</h3>
+            <p className="text-sm text-muted mb-16">
+              You&apos;ve already booked one session on credit. Message your coach to
+              top up your sessions before booking again.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setBlockedModal(false)}>Close</button>
+              <button className="btn btn-primary" onClick={() => { setBlockedModal(false); navigate('/messages'); }}>
+                Message coach
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteModal && (
         <div className="modal-overlay" onClick={() => setDeleteModal(null)}>

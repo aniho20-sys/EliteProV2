@@ -240,6 +240,15 @@ exports.onNewWorkoutLog = functions.firestore
 // ─── Session credit: deduct 1 credit the moment a real session is booked ───
 // Sessions ARE session credit — booking spends one immediately (not on completion).
 // Blocked time slots (no clientId) are skipped.
+//
+// OVERDRAFT: a client with 0 credit left may still book exactly one session on
+// credit (see CLAUDE.md #33). That pushes sessionOffset past totalSessions, so
+// `remaining` (= total - offset) goes to -1. The ledger entry recording the debt
+// is written HERE, server-side, in the same transaction as the deduction —
+// never client-side: firestore.rules only lets a trainer create creditLedger
+// docs, and a client writing their own debt record would be wrong regardless.
+// Nothing needs to "repay" the debt later: topping up adds to totalSessions,
+// so remaining goes from -1 to (qty - 1) by the existing arithmetic.
 exports.onScheduleBooked = functions.firestore
   .document('schedule/{schedId}')
   .onCreate(async (snap) => {
@@ -247,12 +256,34 @@ exports.onScheduleBooked = functions.firestore
     if (!sched || sched.isBlocked || !sched.clientId || sched.deductedAtBooking) return;
 
     const clientRef = db.doc(`users/${sched.clientId}`);
+    const ledgerRef = db.collection('creditLedger').doc();
+
     await db.runTransaction(async (tx) => {
       const clientDoc = await tx.get(clientRef);
       if (!clientDoc.exists) return;
-      const current = clientDoc.data().sessionOffset ?? 0;
-      tx.update(clientRef, { sessionOffset: current + 1 });
+      const data = clientDoc.data();
+      const current = data.sessionOffset ?? 0;
+      const total = data.totalSessions ?? null;
+      const newOffset = current + 1;
+
+      tx.update(clientRef, { sessionOffset: newOffset });
       tx.update(snap.ref, { deductedAtBooking: true });
+
+      // total === null means the trainer never set a package — unlimited, so
+      // there's no such thing as an overdraft to record.
+      if (total !== null && newOffset > total) {
+        tx.set(ledgerRef, {
+          clientId: sched.clientId,
+          trainerId: sched.trainerId ?? data.trainerId ?? null,
+          date: new Date().toISOString().slice(0, 10),
+          type: 'overdraft',
+          qty: -1,
+          rate: null, // set when the trainer actually tops up and charges
+          schedId: snap.ref.id,
+          addedBy: 'system',
+        });
+        tx.update(snap.ref, { bookedOnCredit: true });
+      }
     });
   });
 
@@ -297,6 +328,7 @@ exports.onScheduleCreditUpdate = functions.firestore
       if (isLate) return; // already charged at booking, stays charged
 
       const month = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+      const reversalRef = db.collection('creditLedger').doc();
       await db.runTransaction(async (tx) => {
         const clientDoc = await tx.get(clientRef);
         if (!clientDoc.exists) return;
@@ -309,6 +341,23 @@ exports.onScheduleCreditUpdate = functions.firestore
           earlyCancelMonth: month,
           earlyCancelCount: count + 1,
         });
+
+        // This booking was the one taken on credit, and it's now refunded — so
+        // the client no longer owes it. Reverse the debt entry rather than
+        // deleting it, keeping creditLedger append-only (CLAUDE.md #27) and
+        // leaving a ledger that still reconciles against `remaining`.
+        if (after.bookedOnCredit) {
+          tx.set(reversalRef, {
+            clientId: after.clientId,
+            trainerId: after.trainerId ?? data.trainerId ?? null,
+            date: new Date().toISOString().slice(0, 10),
+            type: 'overdraft_reversed',
+            qty: 1,
+            rate: null,
+            schedId: change.after.id,
+            addedBy: 'system',
+          });
+        }
       });
       return;
     }

@@ -50,8 +50,13 @@ const CLIENT_ID = 'test-client-c1';
 
 // ── Helpers ──
 
+async function ledgerEntries() {
+  const snap = await db.collection('creditLedger').where('clientId', '==', CLIENT_ID).get();
+  return snap.docs.map(d => d.data());
+}
+
 async function clearTestCollections() {
-  const cols = ['users', 'schedule', 'workoutLogs'];
+  const cols = ['users', 'schedule', 'workoutLogs', 'creditLedger'];
   await Promise.all(cols.map(async (col) => {
     const snap = await db.collection(col).get();
     if (snap.empty) return;
@@ -271,6 +276,87 @@ describe('onScheduleCreditUpdate — Mark Complete', () => {
 
     const client = await getClient();
     expect(client.sessionOffset).toBe(2);
+  });
+});
+
+describe('credit overdraft (1-session hard cap)', () => {
+  beforeEach(clearTestCollections);
+
+  test('booking at 0 remaining goes to -1 and records an overdraft ledger entry', async () => {
+    await seedClient({ sessionOffset: 10, totalSessions: 10 }); // remaining = 0
+    const { snap } = await createSchedule(sessionDateTime(48));
+
+    await wrappedOnScheduleBooked(snap);
+
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(11);
+    expect(client.totalSessions - client.sessionOffset).toBe(-1); // owes 1
+
+    const ledger = await ledgerEntries();
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]).toMatchObject({ type: 'overdraft', qty: -1, addedBy: 'system' });
+  });
+
+  test('the overdrawn booking is flagged bookedOnCredit', async () => {
+    await seedClient({ sessionOffset: 10, totalSessions: 10 });
+    const { ref, snap } = await createSchedule(sessionDateTime(48));
+
+    await wrappedOnScheduleBooked(snap);
+
+    expect((await ref.get()).data().bookedOnCredit).toBe(true);
+  });
+
+  test('a normal booking with credit left writes no ledger entry', async () => {
+    await seedClient({ sessionOffset: 2, totalSessions: 10 }); // remaining = 8
+    const { ref, snap } = await createSchedule(sessionDateTime(48));
+
+    await wrappedOnScheduleBooked(snap);
+
+    expect(await ledgerEntries()).toHaveLength(0);
+    expect((await ref.get()).data().bookedOnCredit).toBeUndefined();
+  });
+
+  test('a client with no package set (totalSessions null) never overdrafts', async () => {
+    await seedClient({ sessionOffset: 99 }); // no totalSessions — unlimited
+    const { snap } = await createSchedule(sessionDateTime(48));
+
+    await wrappedOnScheduleBooked(snap);
+
+    expect(await ledgerEntries()).toHaveLength(0);
+  });
+
+  test('topping up after an overdraft nets off the owed session automatically', async () => {
+    await seedClient({ sessionOffset: 10, totalSessions: 10 });
+    const { snap } = await createSchedule(sessionDateTime(48));
+    await wrappedOnScheduleBooked(snap); // now offset 11 / total 10 => -1
+
+    // Top-up is a plain totalSessions increase (addCreditLedgerEntry) — the
+    // debt repays itself through remaining = total - offset, with no special
+    // "repay" step anywhere.
+    await db.doc(`users/${CLIENT_ID}`).update({ totalSessions: 20 });
+
+    const client = await getClient();
+    expect(client.totalSessions - client.sessionOffset).toBe(9); // 10 bought - 1 owed
+  });
+
+  test('early-cancelling the overdrawn booking refunds it and reverses the ledger entry', async () => {
+    await seedClient({ sessionOffset: 10, totalSessions: 10 });
+    const { ref, snap } = await createSchedule(sessionDateTime(48));
+    await wrappedOnScheduleBooked(snap);
+
+    const afterBooking = await ref.get();
+    const change = await updateScheduleStatus(ref, afterBooking, { status: 'cancelled' });
+    await wrappedOnScheduleCreditUpdate(change);
+
+    const client = await getClient();
+    expect(client.totalSessions - client.sessionOffset).toBe(0); // no longer owes
+
+    const ledger = await ledgerEntries();
+    expect(ledger).toHaveLength(2);
+    // Append-only: the debt entry stays, a reversing entry is added on top, so
+    // the ledger still sums to the client's real balance.
+    expect(ledger.reduce((sum, e) => sum + e.qty, 0)).toBe(0);
+    expect(ledger.some(e => e.type === 'overdraft_reversed' && e.qty === 1)).toBe(true);
   });
 });
 

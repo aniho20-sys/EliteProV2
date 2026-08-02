@@ -10,6 +10,12 @@ export const SESSION_WARNING_THRESHOLD = 5;
 // meant to be tunable independently.
 export const RENEWAL_PROMPT_THRESHOLD = 5;
 
+// How many sessions a client may book after hitting zero credit. Hard cap of 1
+// (CLAUDE.md #33): at remaining === 0 they can still book one session on credit,
+// which is added to their next renewal; at remaining === -1 booking is blocked
+// until the trainer tops them up.
+export const OVERDRAFT_LIMIT = 1;
+
 export function getSessionColor(remaining) {
   if (remaining === null) return 'var(--text-muted)';
   if (remaining <= SESSION_DANGER_THRESHOLD) return 'var(--danger)';
