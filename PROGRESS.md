@@ -452,17 +452,17 @@
 
 欠款記錄由 `onScheduleBooked` 喺**扣數同一個 transaction** 入面寫入 `creditLedger`（`{type:'overdraft', qty:-1}`），唔可以 client-side 寫 —— `firestore.rules` 本身只准教練建立 `creditLedger` doc，而且畀學生自己寫自己嘅欠款記錄本身就唔對。透支嗰條 booking 24 小時前取消會退返 credit，同時 append 一條 `{type:'overdraft_reversed', qty:+1}` 沖返（唔刪原entry，跟常規 #27 append-only），令 ledger 逐筆對得返 `remaining`。
 
-**⚠️ 決定記錄：透支上限用 client-side 攔截，Phase 5 要重新評估**
+**決定記錄：由 client-side-only 改為 server-side 強制（2026-08-01 決定 → 2026-08-02 推翻）**
 
-`remaining <= -1` 嘅 block 淨係喺 `SchedulePage.jsx` 做，`firestore.rules` 嘅 schedule create 規則**冇檢查 credit**（只檢查師生關係）。即係話識用 API 嘅人理論上繞得過去 book 無限堂。
+原本決定係淨係喺 `SchedulePage.jsx` 攔截，理由係「就算有人繞過，Needs Attention 一定見到」——個威脅模型假設咗要**刻意**砌 API call 先繞得到。
 
-Ani 2026-08-01 決定維持 client-side，理由：
-- 呢個攔截缺口係**現狀已經存在**，唔係透支功能引入
-- 而家所有學生都係 Ani 自己識嘅人，唔係陌生人
-- 就算真係有人繞過，教練 Needs Attention「Session owed」一定即刻見到，追得返
-- 另外兩個方案（Cloud Function 自動彈返 booking / Firestore rules 用 `get()` 比對）分別帶嚟 UX 複雜度同每次 booking 多一次 read 收費，同風險唔成正比
+**2026-08-02 Ani 真機測試推翻咗呢個假設。** 實際上唔需要任何惡意行為：client-side 讀嘅 `remaining` 嚟自 Firestore listener，落後於 `onScheduleBooked` 呢個 background trigger。學生連續撳兩次 Book，兩次都讀到扣數前嘅數字、兩次都過到 client-side 檢查——實測 `remaining` 去到 **-2**，突破 1 堂上限。而且同場嗰個 modal 蓋住 bug（confirmation 窗俾 booking 表單遮住，學生以為冇反應而重複撳）正正大量製造呢個情境。
 
-**重新評估觸發點：Phase 5 venue marketplace 上線**。嗰陣會有外部教練同佢哋嘅學生入場，「學生係我識嘅人」呢個前提唔再成立，要重新衡量係咪值得加 server-side 強制。
+即係話個 cap 對**誠實用戶**都攔唔住，唔係單純嘅安全邊界問題。所以 `onScheduleBooked` 加咗 server-side 強制：一個 booking 如果會令 `newOffset > total + OVERDRAFT_LIMIT`，直接 `tx.delete(snap.ref)` 且唔扣數——Cloud Function 係唯一有一致 balance 視角嘅地方。Client-side 檢查保留做 UX 層（即時反饋、confirmation 文案），但唔再係唯一防線。
+
+Test cover：`two rapid bookings at 0 credit cannot both overdraw (the real bypass)`。
+
+Phase 5 仍然要重新評估 `firestore.rules` 層面要唔要再加一層（rules 到而家依然冇檢查 credit），但「正常用都會爆」呢個洞已經堵咗。
 
 ### CI / Deployment 限制
 

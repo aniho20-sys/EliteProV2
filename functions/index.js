@@ -9,6 +9,11 @@ const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gc
 initializeApp();
 const db = getFirestore();
 
+// How many sessions past zero a client may book on credit. Must stay in sync
+// with OVERDRAFT_LIMIT in src/utils/sessionUtils.js — the UI uses it to warn
+// and block, this file uses it as the actual enforcement (CLAUDE.md #33).
+const OVERDRAFT_LIMIT = 1;
+
 // ElitePro's own GoCardless Partner app credentials (client_id/client_secret/
 // redirect_uri) are read at CALL TIME via gcSecrets.readGcAppCredentials(),
 // NOT declared here via defineSecret()/.runWith({secrets:[...]}). That
@@ -265,6 +270,23 @@ exports.onScheduleBooked = functions.firestore
       const current = data.sessionOffset ?? 0;
       const total = data.totalSessions ?? null;
       const newOffset = current + 1;
+
+      // Enforce the overdraft cap HERE, not just in the UI. The client-side
+      // check reads `remaining` from a Firestore listener that lags behind this
+      // trigger, so two bookings made in quick succession both see the
+      // pre-deduction figure and sail past the limit (verified: it reached -2).
+      // This is the only place with a consistent view of the balance.
+      if (total !== null && newOffset > total + OVERDRAFT_LIMIT) {
+        console.warn(
+          `[onScheduleBooked] rejecting ${snap.ref.id}: client ${sched.clientId} ` +
+          `would go to ${total - newOffset}, past the ${OVERDRAFT_LIMIT}-session overdraft cap`
+        );
+        // Never charged, so nothing to refund — the booking simply must not
+        // exist. Deleting rather than cancelling avoids leaving the client a
+        // phantom "cancelled" session they never knowingly created.
+        tx.delete(snap.ref);
+        return;
+      }
 
       tx.update(clientRef, { sessionOffset: newOffset });
       tx.update(snap.ref, { deductedAtBooking: true });

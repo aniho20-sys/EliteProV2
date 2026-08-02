@@ -384,6 +384,66 @@ describe('credit overdraft (1-session hard cap)', () => {
     expect(client.totalSessions - client.sessionOffset).toBe(9); // 10 bought - 1 owed
   });
 
+  // Field-reported 2026-08-02: a client used book -> cancel -> book and the
+  // second booking appeared not to count. The cycle itself turned out to be
+  // accounted for correctly; what was actually broken is covered by the two
+  // cap tests below.
+  test('0 credit -> book -> early cancel -> book again still counts as an overdraft', async () => {
+    await seedClient({ sessionOffset: 10, totalSessions: 10 }); // remaining = 0
+
+    const first = await createSchedule(sessionDateTime(48));
+    await wrappedOnScheduleBooked(first.snap);
+    expect((await getClient()).totalSessions - (await getClient()).sessionOffset).toBe(-1);
+
+    const afterBooking = await first.ref.get();
+    const cancel = await updateScheduleStatus(first.ref, afterBooking, { status: 'cancelled' });
+    await wrappedOnScheduleCreditUpdate(cancel);
+    expect((await getClient()).totalSessions - (await getClient()).sessionOffset).toBe(0);
+
+    // Re-booking after the refund must overdraw again — not slip through free.
+    const second = await createSchedule(sessionDateTime(72));
+    await wrappedOnScheduleBooked(second.snap);
+
+    const client = await getClient();
+    expect(client.totalSessions - client.sessionOffset).toBe(-1); // owes again
+    expect((await second.ref.get()).data().bookedOnCredit).toBe(true);
+
+    // Ledger must still reconcile to the real balance, not drift.
+    const ledger = await ledgerEntries();
+    expect(ledger.reduce((sum, e) => sum + e.qty, 0)).toBe(-1);
+  });
+
+  test('a booking that would exceed the 1-session cap is rejected server-side, not charged', async () => {
+    await seedClient({ sessionOffset: 11, totalSessions: 10 }); // already at -1
+    const { ref, snap } = await createSchedule(sessionDateTime(48));
+
+    await wrappedOnScheduleBooked(snap);
+
+    // The UI blocks this, but the UI reads a lagging listener — the function is
+    // the only place with a consistent balance, so it has to hold the line too.
+    expect((await ref.get()).exists).toBe(false); // booking removed
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(11); // not charged
+    expect(await ledgerEntries()).toHaveLength(0);
+  });
+
+  test('two rapid bookings at 0 credit cannot both overdraw (the real bypass)', async () => {
+    await seedClient({ sessionOffset: 10, totalSessions: 10 }); // remaining = 0
+
+    // Both are created before either trigger runs — exactly what happens when a
+    // client taps Book twice before the listener catches up.
+    const a = await createSchedule(sessionDateTime(48));
+    const b = await createSchedule(sessionDateTime(72));
+    await wrappedOnScheduleBooked(a.snap);
+    await wrappedOnScheduleBooked(b.snap);
+
+    const client = await getClient();
+    expect(client.totalSessions - client.sessionOffset).toBe(-1); // capped, NOT -2
+    expect((await a.ref.get()).exists).toBe(true);
+    expect((await b.ref.get()).exists).toBe(false); // second one rejected
+    expect(await ledgerEntries()).toHaveLength(1);
+  });
+
   test('early-cancelling the overdrawn booking refunds it and reverses the ledger entry', async () => {
     await seedClient({ sessionOffset: 10, totalSessions: 10 });
     const { ref, snap } = await createSchedule(sessionDateTime(48));

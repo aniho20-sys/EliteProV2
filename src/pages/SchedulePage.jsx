@@ -186,13 +186,19 @@ export default function SchedulePage() {
     const { remaining } = getSessionStats(targetClientId);
 
     // Overdraft: a client with 0 left may book exactly one session on credit
-    // (CLAUDE.md #33). Past that they're hard-blocked. Enforcement is
-    // client-side by design — see PROGRESS.md for the decision and its Phase 5
-    // review trigger.
+    // (CLAUDE.md #33). Past that they're hard-blocked. These checks are the
+    // UX layer only — onScheduleBooked enforces the same cap server-side,
+    // because `remaining` here comes from a listener that lags the trigger.
+    // Both of these modals share .modal-overlay's z-index with the booking
+    // form, and render EARLIER in the JSX — so with the form still open it
+    // paints on top and the confirmation looks like "nothing happened" until
+    // the form is dismissed. Closing the form first is what actually makes
+    // them visible; the form's inputs survive in `form` state either way.
     if (remaining !== null && remaining <= OVERDRAFT_LIMIT * -1) {
       if (isTrainer) {
         toast('This client already owes a session — top them up before booking again', 'error');
       } else {
+        setShowAdd(false);
         setBlockedModal(true);
       }
       return;
@@ -201,6 +207,7 @@ export default function SchedulePage() {
     // Going from 0 into credit: the client must knowingly agree, since it
     // becomes a charge on their next renewal. Not a toast — this is about money.
     if (!isTrainer && remaining !== null && remaining <= 0) {
+      setShowAdd(false);
       setOverdraftModal(true);
       return;
     }
@@ -481,7 +488,7 @@ export default function SchedulePage() {
         const t = getClient(trainerId);
         const rate = t?.renewalRateNext;
         return (
-          <div className="modal-overlay" onClick={() => setOverdraftModal(false)}>
+          <div className="modal-overlay" onClick={() => { setOverdraftModal(false); setShowAdd(true); }}>
             <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
               <h3 className="modal-title">You have no sessions left</h3>
               <p className="text-sm text-muted mb-16">
@@ -490,7 +497,8 @@ export default function SchedulePage() {
                 After this you&apos;ll need to top up before booking again.
               </p>
               <div className="modal-actions">
-                <button className="btn btn-outline" onClick={() => setOverdraftModal(false)} disabled={saving}>Cancel</button>
+                {/* Backing out returns to the booking form with their inputs intact */}
+                <button className="btn btn-outline" onClick={() => { setOverdraftModal(false); setShowAdd(true); }} disabled={saving}>Cancel</button>
                 <button
                   className="btn btn-primary"
                   disabled={saving}
