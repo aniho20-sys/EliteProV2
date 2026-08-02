@@ -1091,7 +1091,11 @@ tr:hover { background: var(--bg-card-hover); }
   animation: slideUp 0.2s var(--ease);
 }
 @media (max-width: 640px) {
-  .modal { padding: 20px; border-radius: var(--radius-sm); margin: 0; }
+  /* margin:auto (not 0) so modals sit vertically centred on phones — with the
+     overlay's align-items:flex-start, auto margins absorb the free space when
+     the modal fits and collapse to the top when it doesn't, so tall modals
+     still scroll from the top instead of having their heading clipped. */
+  .modal { padding: 20px; border-radius: var(--radius-sm); margin: auto; }
   .modal-overlay { padding: 12px; padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom, 0px))); }
 }
 .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.2px; }
