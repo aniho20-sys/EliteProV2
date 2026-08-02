@@ -264,10 +264,22 @@ export default function TrainerDashboard() {
   const weekSchedule = getSchedule({ trainerId: currentUser.id }).filter(s => weekDays.includes(s.date) && !s.isBlocked && s.status !== 'cancelled');
   const confirmedCount = weekSchedule.filter(s => s.status === 'confirmed').length;
 
+  // Clients who booked a session on credit and now owe it. Money already owed
+  // beats "running low", so these are listed first and deliberately excluded
+  // from renewalClients below — otherwise the same person shows up twice for
+  // what is really one problem. No snooze: the only resolution is a top-up.
+  const owedClients = clients.reduce((acc, client) => {
+    const { remaining } = getSessionStats(client.id);
+    if (remaining !== null && remaining < 0) acc.push({ client, owed: Math.abs(remaining) });
+    return acc;
+  }, []).sort((a, b) => b.owed - a.owed);
+  const owedIds = new Set(owedClients.map(o => o.client.id));
+
   // Two independent tracks — a client can appear in both if they genuinely
   // qualify for both, and each has its own snooze so handling/snoozing one
   // never hides the other.
   const renewalClients = clients.reduce((acc, client) => {
+    if (owedIds.has(client.id)) return acc; // already surfaced as "Session owed"
     const { remaining } = getSessionStats(client.id);
     if (remaining !== null && remaining <= SESSION_DANGER_THRESHOLD && !isSnoozed(client.renewalSnoozedUntil, today)) {
       acc.push({ client, remaining });
@@ -297,14 +309,19 @@ export default function TrainerDashboard() {
     return acc;
   }, []);
 
-  const totalAttentionCount = renewalClients.length + churnClients.length + trainingProfileClients.length;
-  const visibleRenewalCount = showAttentionAll ? renewalClients.length : Math.min(3, renewalClients.length);
-  const visibleChurnCount = showAttentionAll ? churnClients.length : Math.max(0, Math.min(3 - visibleRenewalCount, churnClients.length));
-  const visibleProfileCount = showAttentionAll ? trainingProfileClients.length : Math.max(0, 3 - visibleRenewalCount - visibleChurnCount);
+  const totalAttentionCount = owedClients.length + renewalClients.length + churnClients.length + trainingProfileClients.length;
+  // Collapsed view shows the 3 most urgent across all categories, filled in
+  // priority order: owed money > renewal > churn > missing profile.
+  const cap = (n, used) => showAttentionAll ? n : Math.max(0, Math.min(3 - used, n));
+  const visibleOwedCount = showAttentionAll ? owedClients.length : Math.min(3, owedClients.length);
+  const visibleRenewalCount = cap(renewalClients.length, visibleOwedCount);
+  const visibleChurnCount = cap(churnClients.length, visibleOwedCount + visibleRenewalCount);
+  const visibleProfileCount = cap(trainingProfileClients.length, visibleOwedCount + visibleRenewalCount + visibleChurnCount);
+  const visibleOwed = owedClients.slice(0, visibleOwedCount);
   const visibleRenewal = renewalClients.slice(0, visibleRenewalCount);
   const visibleChurn = churnClients.slice(0, visibleChurnCount);
   const visibleProfile = trainingProfileClients.slice(0, visibleProfileCount);
-  const hiddenAttentionCount = totalAttentionCount - visibleRenewal.length - visibleChurn.length - visibleProfile.length;
+  const hiddenAttentionCount = totalAttentionCount - visibleOwed.length - visibleRenewal.length - visibleChurn.length - visibleProfile.length;
 
   return (
     <div>
@@ -418,6 +435,45 @@ export default function TrainerDashboard() {
               </button>
             )}
           </div>
+
+          {visibleOwed.length > 0 && (
+            <>
+              <div className="needs-attention-category">
+                <span className="needs-attention-category-dot" style={{ background: 'var(--danger)' }} />
+                Session owed <span className="text-muted">({owedClients.length})</span>
+              </div>
+              {visibleOwed.map(({ client, owed }) => (
+                <div key={`owed-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--danger)' }}>
+                  <div className="needs-attention-item-top">
+                    <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
+                    <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="needs-attention-name">{client.name}</div>
+                      <div className="needs-attention-meta">
+                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                          Owes {owed} session{owed === 1 ? '' : 's'}
+                        </span>
+                        {currentUser.renewalRateNext && (
+                          <span className="text-muted"> · {formatCurrency(currentUser.renewalRateNext, currentUser.currency)}/session</span>
+                        )}
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="needs-attention-item-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => navigate(`/clients/${client.id}`)}>
+                      Top up
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      disabled={sendingReminderFor === client.id}
+                      onClick={() => handleSendRenewalReminder(client, 0)}
+                    >
+                      <Send size={14} /> {sendingReminderFor === client.id ? 'Sending…' : 'Send reminder'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
 
           {visibleRenewal.length > 0 && (
             <>
