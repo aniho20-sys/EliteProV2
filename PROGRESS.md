@@ -1,6 +1,24 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：2026-07-14（Session 34 — Exercise Library 重新設計 Phase A+B、匯出動作庫功能、Phase C 大掃除批准執行、list view 密度重做、Needs Attention 流失風險 false-positive 修復、動作 list 全站 A-Z 排序、exerciseOverrides 疊加機制、UI 語言規則：全站英文清查）
+> 最後更新：**2026-08-03**（Session 35-38 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則）
+>
+> ⚠️ **所有 agent 開工前必讀。** 過時嘅 PROGRESS.md 曾經令 audit 判斷出錯，見「Phase 狀態速查」。
+
+---
+
+## 📍 Phase 狀態速查（agent 開工前先睇呢度）
+
+對照 `ROADMAP.md` 嘅 5 個 Phase。**唔好靠讀舊 session 記錄推斷狀態** —— 2026-07-28 個 code health audit 就係因為 ROADMAP 仲寫住「Phase 3 冇任何 code」而差啲判斷錯。
+
+| Phase | 狀態 | 實際情況（2026-08-03） |
+|---|---|---|
+| **1. Credit System UAT** | 🟡 部分完成 | Book 即扣、取消退款、早取消上限、透支 1 堂全部上線並有 test。剩返幾個真機場景未實測（見 P1 #4）|
+| **2. UI Cleanup** | ✅ 完成 | `STYLE.md` 建立並全app執法：session 顏色統一、hex 轉 variable、empty state 補 action、密度檢視、dark mode pass |
+| **3. GoCardless 訂閱** | 🟡 Step 1-2 已上線 | schema + rules + OAuth connect 後端（4 個 function）**已部署 live**。Step 3（訂閱管理UI + mandate 創建）未開工。⚠️ Connect 掣未有真人試過 sandbox flow |
+| **4. PWA / FCM Push** | ✅ 完成 live | PWA 可安裝、離線持久化、13 個 function 之中 6 個負責 push（訊息／排程／計劃／log／低堂數）|
+| **5. Venue Marketplace** | ⬜ 未開始 | gym啦 Sprint 1 code 已寫但 `GYMLA_ENABLED=false` 隱藏緊。開之前必查 `isTrainer`/operator 三態問題（見 backlog #17）|
+
+**現時測試覆蓋：** Cloud Functions 35 條（credit 25 + GoCardless nonce 10）、Firestore rules 37 條。全部要求 emulator 綠燈先當完成。
 
 ---
 
@@ -12,7 +30,7 @@
 |------|------|------|------|
 | 🔴 | 更新 Landing Page copy → 首5位 Founding Member，3個月免費 | 員工B | ⬜ |
 | 🔴 | 手機打開 `/#/landing` 確認版面效果 | 自己 | ⬜ |
-| 🔴 | Firebase Console → Functions 確認存在（而家係 **9 個** functions，含新增 `onScheduleBooked`/`onScheduleCreditUpdate`） | 自己 | ✅ CI 自動部署持續成功（`Deploy Functions` 步驟），人手 Console 覆核可選做 |
+| 🔴 | Firebase Console → Functions 確認存在（而家係 **13 個** functions，含 `onScheduleBooked`/`onScheduleCreditUpdate` + 4 個 Phase 3 GoCardless） | 自己 | ✅ CI 自動部署持續成功（`Deploy Functions` 步驟），人手 Console 覆核可選做 |
 | 🔴 | Firebase Console → Firestore Rules 確認係最新版本 | 自己 | ✅ CI `Deploy Firestore Rules` 步驟每次 push 都成功 |
 | 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | 🟡 部分完成——Book session 即扣/24小時前取消退款已由教練實測確認（見 Phase 1 Credit UAT），但未由 Landing Page signup 開始跑全程 |
 | 🟠 | iOS Safari + Android Chrome 各測試一次 | 自己 | ⬜ |
@@ -240,6 +258,48 @@
 - 已寫 `reports/gocardless-sandbox-setup-guide.md`——假設 Ani 冇 terminal，全部瀏覽器操作：GoCardless sandbox 開 Partner app、Google Cloud Console enable Secret Manager、建3個secret、IAM 加權限
 - 22 個 functions test（12 credit + 10 nonce）、33 個 rules test 全過，`npm run build` 通過
 
+### Invoice PDF：iOS 冇 window.print() → 客戶端生成 PDF（2026-07-29，Session 38）
+- **發現一個平台級限制**：iOS Safari **從來冇實作過 `window.print()`** —— 唔止 standalone PWA，連普通 Safari 分頁都係 silent no-op。原本個 Print 掣喺 Ani 部機一直「撳咗冇反應」，唔係 CSS 問題
+- 中途試過兩個錯方向（先以為係 standalone 限制加 escape link、再以為要出教學文字叫用戶自己撳 Safari Share），兩個都被 Ani 否決 —— **「將五步操作轉嫁俾用戶」唔算實現功能**
+- 最終方案：`src/utils/invoicePdf.js` 用 `pdf-lib` 客戶端直接砌 PDF，再交俾 `navigator.share({files})` 彈原生分享頁（iOS 15+ 含 standalone 都支援），唔支援就 fallback 做 `<a download>`
+- `pdf-lib` 用 **dynamic `import()`**，撳掣先載入，唔會入 InvoicePage 主 chunk（實測 436KB → 15KB）
+- 檔名 `INV-0003-Vivian001.pdf`；PDF 內容含 business name/教練名 fallback、項目表（長文字自動換行、多項目自動分頁）、總額、付款狀態
+- 新增 `businessName` 欄位（Profile → Business Details）
+- **寫入 CLAUDE.md #30**：以後任何 print/PDF/export 功能一律唔准用 `window.print()`
+
+### 學生 onboarding 全面修復 + Training Profile（2026-07-31，Session 38）
+- **問卷版面重做**（員工D）：每題獨立 section（24px 間距）、所有選項統一做 44px 觸控 pill（experience 由細粒 radio 改晒）、分兩步（目標/頻率/經驗 → 傷患/身高體重）+ 進度指示、Skip 降級做純文字連結。出 mockup screenshot 俾 Ani 批先落實
+- **`TrainingProfilePage` + `/training-profile` 路由**：學生**任何時候**都可以改問卷答案。之前 skip 咗就永久冇得填返，而入面有「傷患/身體狀況」呢啲教練安全資訊，唔可以永久缺失
+- Profile 加入口：未完成顯示溫和提示（用 `--primary` 唔用 danger 色），已完成顯示「Edit Training Profile」
+- **教練 Needs Attention 加「Training profile incomplete」類**：學生有 upcoming session 但未填 profile → 提醒跟進
+- **順手修一個關聯 bug**：`saveIntakeForm` 之前每次 save 都會寫多一條 body stat，改成只喺首次完成先自動記錄
+- 通知卡去 debug 化：「Send Test」「Re-register Token」改成教練專用，學生見到嘅係普通「Enable Notifications」
+- 掃過全 app 有冇其他 debug UI 漏俾用戶睇到 —— 冇
+
+### Code Health Audit + Top 5 修復（2026-07-28，員工C + 員工A）
+報告：`reports/code-health-audit-2026-07-28.md`
+
+三大類：重複邏輯、死 code、過期文檔。**查證方法係全 repo grep + 逐個 call site 驗行為差異**，唔係靠眼睇。
+
+已完成（Ani 批准 Top 5 + 追加）：
+- `badgeUtils.js` UTC 日期 bug（撞正 CLAUDE.md #18 自己寫低嘅反面教材）
+- ROADMAP.md Phase 3 狀態更新（原本仲寫住「冇任何 code」，實際已部署）
+- CLAUDE.md 補齊：9 → 13 functions、`subscriptions`/`gcConnections`/`gcOAuthNonces` 三個 collection schema、4 個 context function、3 個檔案
+- `TrainerDashboard` 用返 `SESSION_DANGER_THRESHOLD` 常數
+- `/apply` 路由補返 `GYMLA_ENABLED` gate（全 app gym啦 gating 唯一唔一致嗰處）
+- **貨幣統一**：新建 `utils/currencyUtils.js` 嘅 `formatCurrency()`，取代三套唔一致實現。其中 `PaymentSheetModal.jsx` 寫死「£」係**真 bug** —— 非 GBP 教練嘅學生會見到錯符號。分兩次修完（第一次掃漏咗 3 處，8-01 補齊）
+- **寫入 CLAUDE.md #31**：金額一律經 `formatCurrency`，唔准手寫 `.toFixed(2)` 或者寫死符號
+
+查證後確認**唔使做**嘅：死掣（grep 過零匹配）、完全冇 import 嘅檔案（static + dynamic import 雙重掃描，零孤兒）
+
+### 續約提示改為持續顯示（2026-08-01）
+- 原本 3 堂／1 堂各彈一次就永遠唔再出（`renewalPrompt3Shown`/`renewalPrompt1Shown`）。學生 dismiss 咗或者當日冇處理，之後堂數跌到零都唔會再見到優惠提示
+- 改成 **≤5 堂每次開主頁都彈**，直到教練收到錢手動 top up（堂數升返上去自動消失）。Dismiss 只收起當次
+- **book session 嗰刻都提示**（8 秒 toast）—— book 就係堂數真正跌嘅時刻
+- 順手修：0 堂嘅情況舊 code 當「Last session left」（即「仲有最後一堂」），實際已經用晒
+- 拆走嗰個一次性機制順帶清咗 `ClientDashboard` 唯一一個 `set-state-in-effect` lint error
+- 舊 Firestore 欄位保留唔動（跟 #27），只係唔再讀寫
+
 ### Credit 透支 + Session complete 觸發條件（2026-08-01）
 設計文件：`reports/credit-overdraft-and-session-complete-design.md`（Ani 批准後動工）
 
@@ -248,7 +308,16 @@
 - **CLAUDE.md #32（workout log ↔ session 狀態必須解耦）**：查證咗現狀本身已經係啱嘅（`WorkoutLogPage` 完全冇掂 schedule、`addWorkoutLog` 只寫 `workoutLogs`、`onNewWorkoutLog` 只 send push），所以**冇改任何 production code**，加嘅係規則同守門員 test
 - **Guardian test 驗證過真係有牙齒**：暫時將「log 咗就自動 complete 同日 session」呢個典型「順手優化」注入 `onNewWorkoutLog`，兩條 guardian test 即刻 fail（`Expected "confirmed" / Received "completed"`），還原後回復綠燈。一個 fail 唔到嘅守門員 test 冇價值，所以實測過而唔係靠估
 - **Reopen（撤銷 Mark Complete）+ 揪出一個真 bug**：completed session 本身冇路徑改返，撳錯只可以刪成條 booking。加 Reopen 掣嗰陣發現舊模式 booking（冇 `deductedAtBooking`）complete 會扣一堂、reopen 唔會退、再 complete 會**再扣多一次** —— 一堂收兩次錢。`onScheduleCreditUpdate` 加咗 reopen 退款令收費對稱
-- Test：12 → **32**（新增 6 條透支、2 條 reopen、2 條 guardian，其餘為原有）
+- Test：12 → **32**（新增 6 條透支、2 條 reopen、2 條 guardian，其餘為原有）；8-02 真機修復後再加到 **35**
+
+### 透支 booking 真機測試：兩個 bug（2026-08-02）
+Ani 用真學生帳號實測，揪出兩個自動化 test 覆蓋唔到嘅問題：
+
+- **Bug 1（UI 時序）**：學生 0 credit 撳 Book → 好似完全冇反應 → 關咗 booking 表單先見到確認窗。根因唔係 state 次序，係 **CSS 層級**：透支確認 modal 同 booking 表單 modal 同時 render，後者蓋住前者。呢個 bug 直接製造重複撳 Book 嘅行為，亦即 Bug 2 嘅溫床
+- **Bug 2（漏數，真金白銀）**：book（透支）→ 取消 → 再 book，第二次唔計透支。根因係取消嗰陣**沖返沖多咗** —— 退 credit 之餘冇正確還原狀態，令下一次 book 睇唔到欠款。修完之後 book-cancel-book 連環做都對得返
+- **最重要嘅發現**：呢兩個 bug 合埋證明咗 client-side-only 攔截喺**誠實用戶**手上都會爆（見上面「Credit 透支」章節嘅決定推翻記錄），所以 `onScheduleBooked` 加咗 server-side 硬上限
+- 新增 3 條 test：book-cancel-book 完整情境、連環 cancel ledger 一致性、two rapid bookings 唔可以同時透支
+- 順手修：`.modal-overlay` 喺手機由 `align-items: flex-start` 改成 `margin: auto` 置中（auto margin 喺內容過高時自動收成 0，所以長 modal 仍然由頂部捲，唔會俾裁走）—— 影響全 app 所有 modal，唔止透支嗰個
 
 ### 🔴 嚴重bug修復：新學生完全用唔到onboarding問卷（2026-07-29）
 - **根因**：`firestore.rules` 嘅 `users/{userId}` self-update用緊field allowlist（`hasOnly([...])`），`intakeCompleted` 完全冇喺個list度——`saveIntakeForm()` 每次 `updateDoc` 都俾rules拒絕，`IntakeFormPage.jsx` 撳Submit定Skip都一樣彈「Failed to save, please try again」，`intakeCompleted` 永遠設唔到`true`，新學生100%困死喺問卷畫面，出唔到主app
@@ -478,7 +547,7 @@ Phase 5 仍然要重新評估 `firestore.rules` 層面要唔要再加一層（ru
 | 項目 | 狀態 | 詳情 |
 |------|------|------|
 | VAPID Key | ✅ 已配置 | hardcode fallback 於 `NotificationContext.jsx`；`VITE_VAPID_KEY` env var 優先 |
-| Cloud Functions | ✅ CI 確認持續成功 | 而家 9 個 functions；Session 33 幾次 deploy 喺 GitHub Actions 都見到 `Deploy Functions` 成功，人手 Firebase Console 覆核可選做 |
+| Cloud Functions | ✅ CI 確認持續成功 | 而家 **13 個** functions（6 個負責 push）；`deploy_functions` job 自 2026-07-29 修好 IAM 之後連續綠燈，人手 Firebase Console 覆核可選做 |
 | iOS 支援 | ⚠️ 限制 | 需 PWA 模式（Add to Home Screen）；Safari 16.4+ 才支援 Web Push |
 | Android Chrome | ✅ 直接支援 | 無需 PWA 模式 |
 | Blaze Plan | ✅ 已啟用 | 用戶確認 |
