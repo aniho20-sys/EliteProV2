@@ -15,6 +15,7 @@ import {
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 import { localToday } from '../utils/dateUtils';
 import { canonicalExercise } from '../utils/exerciseUtils';
+import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
 
 const AppContext = createContext();
@@ -365,13 +366,10 @@ export function AppProvider({ children }) {
     if (!firebaseUser) return;
     let trainerId = null;
     if (role === 'client' && inviteCode) {
-      // Try in-memory first, fall back to Firestore query (users may not be loaded yet)
-      let trainer = findTrainerByCode(inviteCode);
-      if (!trainer) {
-        const snap = await getDocs(collection(db, 'users'));
-        const allUsers = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        trainer = allUsers.find(u => u.role === 'trainer' && u.inviteCode === inviteCode.toUpperCase()) || null;
-      }
+      // In-memory first, then a targeted Firestore query. The previous fallback read the
+      // ENTIRE users collection and filtered client-side — correct but O(all users) per
+      // signup; findTrainerByCodeRemote filters server-side instead.
+      const trainer = await findTrainerByCodeRemote(inviteCode);
       if (trainer) trainerId = trainer.id;
     }
     const profile = {
@@ -633,14 +631,73 @@ export function AppProvider({ children }) {
   };
 
   const findTrainerByCode = (code) => {
-    if (!code) return null;
-    return users.find(u => u.role === 'trainer' && u.inviteCode === code.toUpperCase()) || null;
+    const normalized = normalizeInviteCode(code);
+    if (!normalized) return null;
+    return users.find(u => u.role === 'trainer' && normalizeInviteCode(u.inviteCode) === normalized) || null;
   };
 
+  // The in-memory `users` array only ever holds the signed-in user plus people already
+  // related to them (own doc + own clients + own trainer). A client who hasn't connected
+  // to anyone yet therefore has NO trainer doc in memory, so an in-memory-only lookup can
+  // never succeed — the code has to be resolved against Firestore.
+  const findTrainerByCodeRemote = async (code) => {
+    const normalized = normalizeInviteCode(code);
+    if (!normalized) return null;
+    const local = findTrainerByCode(normalized);
+    if (local) return local;
+    // Deliberately a SINGLE-field query. Firestore auto-indexes every single field, but a
+    // second equality filter (role == 'trainer') can require a composite index — which, if
+    // missing in production, throws failed-precondition and breaks this exact flow again.
+    // Codes are unique enough that filtering role in JS costs nothing.
+    const snap = await getDocs(query(
+      collection(db, 'users'),
+      where('inviteCode', '==', normalized),
+    ));
+    const match = snap.docs.find(d => d.data().role === 'trainer');
+    return match ? { ...match.data(), id: match.id } : null;
+  };
+
+  // Returns { success } or { success: false, error, reason }. `reason` distinguishes a
+  // genuinely wrong code from a permission/network failure so the UI can say which —
+  // showing "Invalid invite code" for a dropped connection sends the client hunting for
+  // a typo that isn't there.
   const connectToTrainer = async (clientId, inviteCode) => {
-    const trainer = findTrainerByCode(inviteCode);
-    if (!trainer) return { success: false, error: 'Invalid invite code' };
-    await updateDoc(doc(db, 'users', clientId), { trainerId: trainer.id });
+    const normalized = normalizeInviteCode(inviteCode);
+    if (!normalized) {
+      return { success: false, reason: 'invalid', error: 'Enter your coach\'s invite code' };
+    }
+
+    let trainer;
+    try {
+      trainer = await findTrainerByCodeRemote(normalized);
+    } catch (err) {
+      console.error('[connectToTrainer] lookup failed', err);
+      return {
+        success: false,
+        reason: err?.code === 'permission-denied' ? 'permission' : 'network',
+        error: 'Could not check that code right now. Check your connection and try again.',
+      };
+    }
+
+    if (!trainer) {
+      return { success: false, reason: 'invalid', error: 'Invalid invite code' };
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', clientId), { trainerId: trainer.id });
+    } catch (err) {
+      console.error('[connectToTrainer] update failed', err);
+      return {
+        success: false,
+        reason: err?.code === 'permission-denied' ? 'permission' : 'network',
+        error: 'Code is valid, but saving failed. Check your connection and try again.',
+      };
+    }
+
+    // The self-doc listener refreshes `users`, but patch optimistically so the UI flips
+    // to the connected state immediately instead of waiting for the snapshot round-trip.
+    setUsers(prev => prev.map(u => (u.id === clientId ? { ...u, trainerId: trainer.id } : u)));
+    setCurrentUser(prev => (prev && prev.id === clientId ? { ...prev, trainerId: trainer.id } : prev));
     return { success: true, trainer };
   };
 
@@ -906,7 +963,7 @@ export function AppProvider({ children }) {
     getExerciseOverride, upsertExerciseOverride, deleteExerciseOverride,
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
-    getInviteCode, connectToTrainer,
+    getInviteCode, connectToTrainer, findTrainerByCodeRemote,
     getGcConnection, startGcConnect, disconnectGc,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,

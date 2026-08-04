@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Dumbbell, Users, Moon, Sun, ArrowRight, LogOut } from 'lucide-react';
 
 export default function RoleSelectPage() {
-  const { firebaseUser, completeProfile, logout } = useApp();
+  const { firebaseUser, completeProfile, findTrainerByCodeRemote, logout } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [prefilledCode] = useState(() => {
     const code = sessionStorage.getItem('elitepro_invite_code') || '';
@@ -24,6 +24,22 @@ export default function RoleSelectPage() {
     setError('');
     setSaving(true);
     try {
+      // Verify the code before creating the profile. Previously a wrong code was silently
+      // ignored: the profile was created with trainerId null and the student landed in the
+      // app believing they were connected to their coach.
+      if (role === 'client' && inviteCode.trim()) {
+        let trainer;
+        try {
+          trainer = await findTrainerByCodeRemote(inviteCode);
+        } catch {
+          setError('Could not check that invite code. Check your connection and try again.');
+          return;
+        }
+        if (!trainer) {
+          setError('Invalid invite code. Check it with your coach, or leave it blank and connect later from your profile.');
+          return;
+        }
+      }
       await completeProfile(role, name.trim(), inviteCode.trim() || null);
     } catch {
       setError('Failed to create profile. Please try again.');

@@ -343,14 +343,20 @@ export default function ProfilePage() {
   const handleConnect = async () => {
     if (!connectCode.trim()) return;
     setConnecting(true);
-    const result = await connectToTrainer(currentUser.id, connectCode.trim());
-    if (result.success) {
-      toast(`Connected to Coach ${result.trainer.name}!`);
-      setConnectCode('');
-    } else {
-      toast(result.error, 'error');
+    try {
+      const result = await connectToTrainer(currentUser.id, connectCode.trim());
+      if (result.success) {
+        toast(`Connected to Coach ${result.trainer.name}!`);
+        setConnectCode('');
+      } else {
+        toast(result.error, 'error');
+      }
+    } catch (err) {
+      console.error('[handleConnect]', err);
+      toast('Something went wrong. Please try again.', 'error');
+    } finally {
+      setConnecting(false);
     }
-    setConnecting(false);
   };
 
   const handleDeleteAccount = async () => {
