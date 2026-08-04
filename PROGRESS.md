@@ -310,6 +310,19 @@
 - **Reopen（撤銷 Mark Complete）+ 揪出一個真 bug**：completed session 本身冇路徑改返，撳錯只可以刪成條 booking。加 Reopen 掣嗰陣發現舊模式 booking（冇 `deductedAtBooking`）complete 會扣一堂、reopen 唔會退、再 complete 會**再扣多一次** —— 一堂收兩次錢。`onScheduleCreditUpdate` 加咗 reopen 退款令收費對稱
 - Test：12 → **32**（新增 6 條透支、2 條 reopen、2 條 guardian，其餘為原有）；8-02 真機修復後再加到 **35**
 
+### 🔴 學生輸入 invite code 連唔到教練（2026-08-04）
+完整報告：`reports/invite-code-bug-2026-08-04.md`
+
+- **真因唔係 rules、唔係大小寫、唔係 code 過期**（三個都逐一查證洗脫）：`connectToTrainer()` 淨係喺 AppContext 個 **in-memory `users` 陣列**度搵教練。而個陣列對一個未連結嘅學生嚟講**得佢自己一個 doc** —— 教練根本唔喺記憶體度，所以任何 code 都必然搵唔到 → 一律「Invalid invite code」。**100% 必然失敗**，唔係間歇性
+- 呢個 bug 由第一版寫落去就存在，唔係 regression
+- 修復：in-memory 搵唔到就發真 Firestore query。**刻意用單欄位 query**（只 filter `inviteCode`，`role` 喺 JS 過濾）—— 兩個 equality filter 可能需要 composite index，production 冇就會 `failed-precondition`，等於用另一種方式再壞一次
+- 錯誤訊息分開三種：`invalid` / `permission` / `network`，唔再將網絡問題顯示成「code 唔啱」
+- 新 `utils/inviteCodeUtils.js`：剝走 zero-width joiner、non-breaking space 等貼上時帶入嘅隱形字元
+- 順手揪到：註冊時打錯 code 原本係**靜靜雞當冇打過**（profile 照建、`trainerId` 留 null，學生以為連結咗）；`handleConnect` 冇 try/catch 會卡死粒掣；`completeProfile` fallback 讀成個 users collection
+- Test：新增 8 條 rules test（37 → **45**），含完整流程「學生輸 code → 寫 trainerId → 教練 client list 見到佢」
+- **誠實備註**：呢 8 條 test 唔會因為原本個 bug 而 fail（bug 喺 JS 層，repo 冇前端 test runner）。真正證實新舊行為差異嘅係一個用完即刪嘅 emulator repro harness。呢批 test 守嘅係「將來有人收緊 `users` read rule」呢個未來風險
+- **寫入 CLAUDE.md #34**：`AppContext` 個 `users` 只包含「同自己有關係嘅人」，任何要查「未有關係嘅用戶／場地」嘅功能唔可以靠佢 —— Phase 5 場地市集一開工就會踩中
+
 ### 透支 booking 真機測試：兩個 bug（2026-08-02）
 Ani 用真學生帳號實測，揪出兩個自動化 test 覆蓋唔到嘅問題：
 
@@ -426,6 +439,7 @@ Ani 用真學生帳號實測，揪出兩個自動化 test 覆蓋唔到嘅問題�
 | 16 | **Capacitor 原生化 + App Store 上架**（Apple Watch HealthKit、Sign in with Apple） |
 | 17 | **Gym啦 Sprint 2+**（Flow B 學生搵教練 Directory + In-App Booking；曝光追蹤；盲評系統；Sprint 1 已完成，現透過 `GYMLA_ENABLED=false` 暫時隱藏）。**打開`GYMLA_ENABLED`之前必查**（2026-07-28 audit發現）：全app約12個檔案各自宣告`isTrainer = currentUser.role === 'trainer'`，未計`operator`呢個第三角色——`{isTrainer ? <TrainerView/> : <ClientView/>}`呢類二元判斷，會將operator當client嚟render。而家冇事（`RoleSelectPage`根本冇俾人揀operator），但開關嗰日要重新audit呢12個檔案 |
 | 18 | **`gcOAuthCallback` rate limit**（Phase 3）——而家個 public HTTP endpoint 冇 rate limit，但 256-bit random nonce 空間本身已令 brute force 無意義，Ani 已確認唔急，記錄喺度日後想加先加 |
+| 20 | **ESLint 覆蓋範圍修正**（2026-08-04 修 invite code bug 時發現）——`npm run lint` 而家有 **226 個 pre-existing error**，全部係 `functions/` 同 `firestore-tests/` 嘅 Node/Jest 檔案報 `'test' is not defined` / `'expect' is not defined`（`eslint.config.js` 淨係設咗 `globals.browser`，冇為呢兩個 folder 設 Node/Jest globals）。**風險**：lint 長期紅色，新嘅真錯誤會完全被淹沒。**Ani 決定（2026-08-04）：而家唔好掂** —— 清理會製造大 diff 冚住真正嘅功能改動。將來做嗰陣，建議係為嗰兩個 folder 補返 Node/Jest globals，**唔好**一刀切加 ignore（咁會連 `functions/` 入面嘅真問題都一齊隱藏）。現階段驗證用 `npx eslint src/` 睇前端部分（現時 0 error） |
 | 19 | **Badges/Milestones 最小顯示UI**（2026-07-28 code health audit發現）——`checkAndAwardBadges` 寫入邏輯正常運作，`users/{clientId}.badges` 已經有真實數據，但成個app冇任何UI讀取/顯示過。Ani 決定：寫入邏輯照留，唔刪，補一個最小UI（學生 profile 顯示已解鎖 badge）先，唔急 |
 
 ---
