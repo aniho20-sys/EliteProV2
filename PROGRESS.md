@@ -12,7 +12,7 @@
 
 | Phase | 狀態 | 實際情況（2026-08-03） |
 |---|---|---|
-| **1. Credit System UAT** | 🟡 部分完成 | Book 即扣、取消退款、早取消上限、透支 1 堂全部上線並有 test。剩返幾個真機場景未實測（見 P1 #4）|
+| **1. Credit System UAT** | 🟡 部分完成 | Book 即扣、取消退款、早取消上限、透支 1 堂全部上線並有 test。透支兩條路徑已於 2026-08-04 真機實測通過。剩返 Top-Up rate 選擇器、續約提醒、Landing Page 全程 E2E 未實測 |
 | **2. UI Cleanup** | ✅ 完成 | `STYLE.md` 建立並全app執法：session 顏色統一、hex 轉 variable、empty state 補 action、密度檢視、dark mode pass |
 | **3. GoCardless 訂閱** | 🟡 Step 1-2 已上線 | schema + rules + OAuth connect 後端（4 個 function）**已部署 live**。Step 3（訂閱管理UI + mandate 創建）未開工。⚠️ Connect 掣未有真人試過 sandbox flow |
 | **4. PWA / FCM Push** | ✅ 完成 live | PWA 可安裝、離線持久化、13 個 function 之中 6 個負責 push（訊息／排程／計劃／log／低堂數）|
@@ -452,6 +452,8 @@ Ani 用真學生帳號實測，揪出兩個自動化 test 覆蓋唔到嘅問題�
 - **Book session 即扣 credit**：教練已實測、確認學生 book 完之後 remaining 堂數即刻跌一格
 - **24小時前取消退款**：教練已實測、確認退返 credit（見對話紀錄「成功左」）
 - **Top-Up 寫入即時反映**：`updateClient` optimistic patch fix 已確認解決「教練撳完 Top Up 個畫面唔郁」嘅 bug
+- **透支 booking 確認窗即時彈出**（2026-08-04 Ani 真學生帳號實測通過）：0 credit 撳 Book，確認窗即刻見到，唔再要關咗 booking 表單先出現。修復見 commit `6ec24a1`（z-index / render 次序）
+- **book → cancel → book 仍然計透支**（2026-08-04 Ani 真學生帳號實測通過）：繞過路徑已封，Needs Attention 正常顯示 Session owed。server-side 上限（`onScheduleBooked`）確認喺真實環境有效
 
 ### ✅ 已用自動化測試驗證（12 個 Jest test，`functions/test/bookSession.test.js`，跑真 Firestore emulator）
 - 24小時內取消（late-cancel）照收（新 booking 分支）
