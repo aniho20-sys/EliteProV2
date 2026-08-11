@@ -557,6 +557,9 @@ Phase 5 仍然要重新評估 `firestore.rules` 層面要唔要再加一層（ru
 - **零 source 改動**，35 條 test 一行都冇改照樣全綠
 - 唯一一條真係刪咗嘢嘅 breaking change 係 admin 13 剷走 legacy messaging API（`sendToDevice`/`sendMulticast`/`sendAll`），而我哋 6 個 push function 全部用 `getMessaging().send()`，冇撞到
 - **rollback 有期限**：10-31 之後 revert 咗都 deploy 唔返 nodejs20。所以呢類 runtime 升級一定要喺死線前幾個月做，唔可以拖到最後
+- **部署結果（run #473，2026-08-11）**：三個 job 全綠，`deploy_functions` 用咗 2 分 13 秒（runtime 一變就唔會再 `Skipped`，13 個 function 全部真正重建）。Deploy log 逐個顯示 `updating Node.js 22 (1st Gen) function ...` + `Successful update operation`，13/13 成功。原本嗰句 `Runtime Node.js 20 was deprecated ... 2026-10-31` 警告已經完全消失
+- **✅ Ani 真機實測通過（2026-08-11）**：三項全部正常 —— book 扣數、24 小時前取消退款、Mark Complete 唔重複扣。即係話 credit 兩個 function 喺 Node 22 + firebase-functions 6 之下行為同升級前一致
+- **⚠️ 一個預期落空（記低，唔好再重覆估錯）**：方案原本估升到 `firebase-functions` 6 就會清走 `package.json indicates an outdated version of firebase-functions` 呢句 deploy 警告 —— **實際冇清走**。因為 firebase-tools 係同**當時最新版**（7.3.2）比較，唔係同某個下限比，所以除非升到 7 否則一定繼續嘈。純 nag，唔影響功能，但唔好再當升級可以順手滅佢
 
 #### Secret 讀取方式：升級唔受影響（驗證 CLAUDE.md #29 個設計係啱）
 

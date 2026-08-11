@@ -14,7 +14,7 @@
 | 項目 | 而家 | 目標 | 理由 |
 |---|---|---|---|
 | **Node runtime** | 20 | **22** | 唯一有死線嗰樣 |
-| `firebase-functions` | 5.1.1 | **6.6.0** | 清走 deploy warning；7.3.2 亦存在，見下 |
+| `firebase-functions` | 5.1.1 | **6.6.0** | 跟上 admin 13；7.3.2 亦存在，見下 |
 | `firebase-admin` | 12.7.0 | **13.5.0** | 配合 ff6；14.2.0 要 node≥22，跳太遠 |
 | `@google-cloud/secret-manager` | 6.3.0 | **不變** | 冇必要郁，見第 6 節 |
 | `firebase-functions-test` | 3.5.0 | **不變** | 實測同 ff6 相容 |
@@ -172,13 +172,13 @@ accessSecretVersion ✓  deleteSecret ✓
 | | 內容 | 性質 |
 |---|---|---|
 | **Stage A** | `engines.node`: 20 → 22 | 🔴 死線必做，一行 |
-| **Stage B** | ff 5→6、admin 12→13 | 🟠 清走 deploy warning |
+| **Stage B** | ff 5→6、admin 12→13 | 🟠 跟上主流版本 |
 
 **建議兩個一齊做**，理由：
 
 1. 35 條 test 已經實測 A+B 一齊冇問題 —— 分開做唔會更安全
 2. 分兩次 = **Ani 要做兩次真機測試**
-3. B 唔做，個 "outdated firebase-functions" warning 一直喺 deploy log 度，將來會掩蓋真警告
+3. B 唔做，就會停留喺一個冇人再修 bug 嘅大版本上
 
 如果你想最保守，可以淨做 A（改一行）。兩個我都準備得到，你揀。
 
@@ -215,3 +215,20 @@ Ani 要求兩件事分開兩個 commit。實際情況：
 - **Commit 2**：**唔需要** —— 第二件事（secret 讀取方式）驗證結果係「已經正確、零改動」。冇 code 改就冇 commit。驗證結論記錄喺本報告第 6 節。
 
 如果你想連呢個結論都留喺 repo 入面（例如寫入 `PROGRESS.md` 或者 `gcSecrets.js` 註釋），我可以做第二個 commit —— 話我知。
+
+
+---
+
+## 附錄：部署後實測結果（2026-08-11 補回）
+
+**CI run #473** —— 三個 job 全綠，`deploy_functions` 2 分 13 秒。Deploy log 逐個顯示 `updating Node.js 22 (1st Gen) function ...`，13/13 `Successful update operation`。`Runtime Node.js 20 was deprecated ... 2026-10-31` 警告已消失。
+
+**Ani 真機實測 ✅ 三項全部通過**：book 扣數、24 小時前取消退款、Mark Complete 唔重複扣。
+
+### ⚠️ 更正本報告一個錯誤預期
+
+第 1 節同第 7 節原本寫升到 `firebase-functions` 6 可以「清走 deploy warning」。**實測冇清走** —— `package.json indicates an outdated version of firebase-functions` 喺升級後嘅 log 入面仍然出現。
+
+原因：`firebase-tools` 係同**當時最新版**（7.3.2）比較，唔係同某個支援下限比。所以只要唔係最新大版本就一定繼續嘈，升到 6 一樣中招。
+
+純屬 nag，唔影響任何功能，但呢個預期係錯嘅，兩處措辭已經改正。要真係滅佢就要升到 7（`/v1` subpath 實測仍在），係另一件事，另外評估。
