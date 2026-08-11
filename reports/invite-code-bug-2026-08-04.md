@@ -4,7 +4,7 @@
 **角色**：員工B（Dev）+ 員工E（QA）
 **Commit**：`c433aeb`
 **嚴重程度**：🔴 Blocker —— 學生 onboarding 第一步，撳唔通等於個 app 對佢完全冇用
-**狀態**：已修復並推上 `claude/fitness-app-features-LbxtG`，待真機覆測
+**狀態**：✅ **已修復並經真機驗證通過**（2026-08-11，見第 9 節）
 
 ---
 
@@ -164,3 +164,18 @@ export function normalizeInviteCode(code) {
 **`AppContext` 嘅 `users` 陣列只包含「同自己有關係嘅人」，唔係全站用戶。** 任何需要查「同我未有關係嘅人」嘅功能（invite code 係最典型例子，Phase 5 場地市集搵教練／搵場地會係下一個），都**唔可以**靠 in-memory 陣列，必須發真 query。
 
 呢條同 CLAUDE.md #26/#27/#29/#30 同一類 —— 係結構性前提，唔係一個 bug。建議下次 SA 週會考慮寫入 CLAUDE.md 做常規。
+
+
+---
+
+## 9. 真機驗證結果（2026-08-11 補回）
+
+**✅ 通過。**
+
+Ani 用**全新 email**（唔係現有帳號）喺 iPhone Safari 由 Landing Page 行足六步：註冊 → **輸入 invite code `3XQPKM`** → 填問卷 → 教練端 client list 見到新學生 → Book 一堂 → Mark Complete。**全程成功。**
+
+第 2 步（輸入 invite code）就係本報告修復嗰個 bug —— 修復 commit `c433aeb`，喺 production 確認生效。
+
+同一次 walkthrough 亦順帶驗證咗 2026-07-29 嗰個問卷 rules allowlist 修復（`1dfcaa3`）：新學生填完問卷出到主 app，冇再永久卡死。
+
+**兩個一星期內爆嘅 🔴 blocker，而家兩個都喺真實環境確認修好。**

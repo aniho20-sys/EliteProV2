@@ -32,8 +32,8 @@
 | 🔴 | 手機打開 `/#/landing` 確認版面效果 | 自己 | ⬜ |
 | 🔴 | Firebase Console → Functions 確認存在（而家係 **13 個** functions，含 `onScheduleBooked`/`onScheduleCreditUpdate` + 4 個 Phase 3 GoCardless） | 自己 | ✅ CI 自動部署持續成功（`Deploy Functions` 步驟），人手 Console 覆核可選做 |
 | 🔴 | Firebase Console → Firestore Rules 確認係最新版本 | 自己 | ✅ CI `Deploy Firestore Rules` 步驟每次 push 都成功 |
-| 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | 🟡 部分完成——Book session 即扣/24小時前取消退款已由教練實測確認（見 Phase 1 Credit UAT），但未由 Landing Page signup 開始跑全程 |
-| 🟠 | iOS Safari + Android Chrome 各測試一次 | 自己 | ⬜ |
+| 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | ✅ **2026-08-11 Ani 用全新 email 由 Landing Page 行到尾，全程成功**（含 invite code `3XQPKM` 連結教練）——呢條路第一次有人由頭行到尾 |
+| 🟠 | iOS Safari + Android Chrome 各測試一次 | 自己 | 🟡 iOS Safari ✅（全程 onboarding + credit 測試都喺 iPhone 做）；Android Chrome ⬜ |
 | 🟡 | 寫 WhatsApp 邀請訊息，直接搵5個教練朋友 | 員工X + 自己 | ⬜ |
 
 ---
@@ -454,6 +454,11 @@ Ani 用真學生帳號實測，揪出兩個自動化 test 覆蓋唔到嘅問題�
 - **Top-Up 寫入即時反映**：`updateClient` optimistic patch fix 已確認解決「教練撳完 Top Up 個畫面唔郁」嘅 bug
 - **透支 booking 確認窗即時彈出**（2026-08-04 Ani 真學生帳號實測通過）：0 credit 撳 Book，確認窗即刻見到，唔再要關咗 booking 表單先出現。修復見 commit `6ec24a1`（z-index / render 次序）
 - **book → cancel → book 仍然計透支**（2026-08-04 Ani 真學生帳號實測通過）：繞過路徑已封，Needs Attention 正常顯示 Session owed。server-side 上限（`onScheduleBooked`）確認喺真實環境有效
+- **🎉 完整 onboarding 全程實測通過**（2026-08-11，Ani 用**全新 email**，iPhone Safari）：Landing Page → 註冊 → **invite code `3XQPKM` 連結教練** → 填問卷 → 教練 client list 見到新學生 → Book 一堂 → Mark Complete，六步全部成功。**呢條路由 app 開始寫到而家第一次有人由頭行到尾。**
+  - 順帶正式確認咗 **invite code 修復（`c433aeb`）喺 production 生效** —— 見 `reports/invite-code-bug-2026-08-04.md`，之前一直標住「待真機覆測」
+  - 亦順帶確認咗 **問卷 rules allowlist 修復（`1dfcaa3`）生效** —— 新學生填完問卷出到主 app，冇再卡死
+  - **意義**：CEO 會（2026-08-06）將呢條 walkthrough 定為所有增長行動嘅前置條件，理由係「一星期爆兩個令新學生完全用唔到嘅 blocker，唔可以喺未驗證嘅地基上拉 Founding Member」。呢個 gate 而家開咗
+- **Node 22 升級後 credit 三項複測通過**（2026-08-11）：book 扣數、24 小時前取消退款、Mark Complete 唔重複扣
 
 ### ✅ 已用自動化測試驗證（12 個 Jest test，`functions/test/bookSession.test.js`，跑真 Firestore emulator）
 - 24小時內取消（late-cancel）照收（新 booking 分支）
