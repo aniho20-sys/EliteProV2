@@ -549,6 +549,25 @@ Test cover：`two rapid bookings at 0 credit cannot both overdraw (the real bypa
 
 Phase 5 仍然要重新評估 `firestore.rules` 層面要唔要再加一層（rules 到而家依然冇檢查 credit），但「正常用都會爆」呢個洞已經堵咗。
 
+### Node 22 升級（2026-08-10）
+方案：`reports/node22-upgrade-plan-2026-08-10.md`
+
+- **點解要做**：`nodejs20` runtime **2026-10-31 停用**，之後 13 個 function 一個都 deploy 唔到（Firebase 一個 codebase 當一個單位 deploy，見常規 #29）。升到 `nodejs22` 將死線推去 2027-10-31
+- 同場升 `firebase-functions` 5.1.1 → 6.6.0、`firebase-admin` 12.7.0 → 13.10.0。CI 唔使改 —— pin 住嘅 `firebase-tools@13` 本身已經支援 nodejs22
+- **零 source 改動**，35 條 test 一行都冇改照樣全綠
+- 唯一一條真係刪咗嘢嘅 breaking change 係 admin 13 剷走 legacy messaging API（`sendToDevice`/`sendMulticast`/`sendAll`），而我哋 6 個 push function 全部用 `getMessaging().send()`，冇撞到
+- **rollback 有期限**：10-31 之後 revert 咗都 deploy 唔返 nodejs20。所以呢類 runtime 升級一定要喺死線前幾個月做，唔可以拖到最後
+
+#### Secret 讀取方式：升級唔受影響（驗證 CLAUDE.md #29 個設計係啱）
+
+**結論：GoCardless secret 嘅讀取路徑完全唔受 firebase-functions 升級影響，零改動。**
+
+原因係結構性嘅：`gcSecrets.js` 直接用 **`@google-cloud/secret-manager` SDK** 讀 secret，唔係經 firebase-functions 嘅 `defineSecret()`。兩個係完全獨立嘅套件 —— **firebase-functions 升幾多個大版本都掂唔到呢條路**。實測 Secret Manager client 五個 method（`getSecret` / `createSecret` / `addSecretVersion` / `accessSecretVersion` / `deleteSecret`）全部仍在，而且個套件版本本身都唔使郁（維持 6.3.0）。
+
+**點解值得記低**：常規 #29（外部服務 config 唔可以係 deploy-time 依賴）當初係為咗解決「Secret Manager 未 enable 就冧咗成個 deploy」嗰單嘢而寫嘅。今次升級意外證實咗佢有第二重好處 —— **唔綁死喺 Firebase 嘅機制上面，等於連 Firebase 自己嘅 breaking change 都免疫**。如果當初用咗 `defineSecret()`，今次就要一齊驗證埋 secret binding 喺 v6 有冇改語意。呢個係「鬆耦合」嘅實際回報，唔係理論。
+
+（順帶記低：`@google-cloud/secret-manager@7.0.0` 要 `node >= 22`，升咗 Node 22 之後呢道門開咗，但 6.3.0 完全夠用，唔急升。）
+
 ### CI / Deployment 限制
 
 **Workflow 結構（Session 37 起，`.github/workflows/firebase-hosting.yml`）：** Hosting / Firestore Rules / Functions 而家係 **3 個獨立 job**（`deploy_hosting`、`deploy_rules`、`deploy_functions`），唔再係同一個 job 入面順序執行嘅步驟。改嘅原因：舊結構試過因為新增 `gcOAuthCallback`（第一個公開 HTTP function）撞到 IAM 權限問題，成個 job（連埋已經成功嘅 Hosting/Rules 步驟）一齊被打做紅色——雖然 Hosting/Rules 實際上已經部署成功，但 GitHub Actions 個 UI 會顯示成個 run 失敗，容易誤會做「乜都冧咗」。拆開之後三者互相獨立：一個壞唔會拖冧第二個嘅狀態顯示，各自嘅 CI 綠燈/紅燈準確反映自己嘅部署結果。
