@@ -273,13 +273,22 @@ export default function ExerciseLibraryPage() {
             >
               {g.value ? `${g.label}: ${g.value}` : g.label}
               {g.value ? (
-                <X size={12} className="ex-filter-pill-clear" onClick={e => { e.stopPropagation(); g.setValue(''); setOpenFilter(null); }} />
+                <span
+                  className="ex-filter-pill-clear"
+                  role="button"
+                  tabIndex={-1}
+                  aria-label={`Clear ${g.label} filter`}
+                  onClick={e => { e.stopPropagation(); g.setValue(''); setOpenFilter(null); }}
+                >
+                  <X size={12} />
+                </span>
               ) : (
                 <ChevronDown size={12} />
               )}
             </button>
           ))}
         </div>
+        {openFilter && <div className="ex-filter-pill-backdrop" onClick={() => setOpenFilter(null)} />}
         {openFilter && dropdownPos && (
           <div className="ex-filter-pill-dropdown" style={{ left: dropdownPos.left, top: dropdownPos.top }} onClick={e => e.stopPropagation()}>
             {filterGroups.find(g => g.key === openFilter).options.map(o => {
@@ -296,7 +305,6 @@ export default function ExerciseLibraryPage() {
           </div>
         )}
       </div>
-      {openFilter && <div className="ex-filter-pill-backdrop" onClick={() => setOpenFilter(null)} />}
 
       <div className="exercise-list">
         {filtered.map(ex => {

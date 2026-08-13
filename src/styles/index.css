@@ -2096,6 +2096,10 @@ tr:hover { background: var(--bg-card-hover); }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* Above .ex-filter-pill-backdrop so tapping a second pill switches groups directly
+     instead of being eaten by the backdrop and needing two taps. */
+  position: relative;
+  z-index: 20;
 }
 .ex-filter-pill-scroll::-webkit-scrollbar { display: none; }
 .ex-filter-pill {
@@ -2115,12 +2119,24 @@ tr:hover { background: var(--bg-card-hover); }
   transition: all 0.15s var(--ease);
 }
 .ex-filter-pill:hover { border-color: var(--primary); }
+.ex-filter-pill:active { transform: scale(0.96); }
 .ex-filter-pill.active { background: var(--primary-glow); border-color: var(--primary); color: var(--primary); }
-.ex-filter-pill-clear { flex-shrink: 0; }
+.ex-filter-pill-clear {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* The glyph is 12px; padding grows the tap target to ~32px and the negative margin
+     absorbs it again so the pill itself does not get any taller. */
+  padding: 10px;
+  margin: -10px -4px -10px 0;
+  cursor: pointer;
+}
+.ex-filter-pill-clear:active { opacity: 0.5; }
 .ex-filter-pill-dropdown {
   position: absolute;
   /* left/top set inline in JS — measured from the clicked pill, since the pill row scrolls horizontally */
-  z-index: 20;
+  z-index: 21;
   width: 240px;
   max-height: 280px;
   overflow-y: auto;
@@ -2133,6 +2149,11 @@ tr:hover { background: var(--bg-card-hover); }
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
 }
+/* Rendered INSIDE .ex-filter-pill-outer on purpose. That element is `position: sticky`
+   with a z-index, so it opens a stacking context and everything in here — including the
+   dropdown's z-index 21 — is sealed inside it. As a root-level sibling this backdrop was
+   compared against the outer's own z-index (5), not the dropdown's, and being higher it
+   painted over the open dropdown and swallowed every tap on an option. */
 .ex-filter-pill-backdrop { position: fixed; inset: 0; z-index: 10; }
 
 .exercise-list {
@@ -2338,6 +2359,7 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-equip-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .plan-equip-chip { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .plan-equip-chip:hover { border-color: var(--primary); color: var(--primary); }
+.plan-equip-chip:active { transform: scale(0.96); }
 .plan-equip-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
 .plan-unit-picker { display: flex; gap: 4px; flex-wrap: wrap; padding: 8px 0 4px 28px; }
 .plan-ex-notes-input { font-size: 0.75rem; padding: 6px 10px; margin: 4px 0 4px 28px; width: calc(100% - 28px); color: var(--text-muted); }
