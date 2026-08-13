@@ -682,7 +682,7 @@ export default function ClientDetailPage() {
                   </div>
                   {l.entries.map((entry, i) => (
                     <div key={i} className="plan-exercise">
-                      <span className="plan-exercise-name">{entry.name || getExerciseName(entry.exerciseId)}</span>
+                      <span className="plan-exercise-name">{getExerciseName(entry.exerciseId, entry.name)}</span>
                       <span className="plan-exercise-detail">
                         {entry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}
                       </span>
@@ -875,7 +875,7 @@ export default function ClientDetailPage() {
               return (
                 <div key={exIdx} className="mb-16" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span className="fw-bold text-sm">{entry.name || getExerciseName(entry.exerciseId)}</span>
+                    <span className="fw-bold text-sm">{getExerciseName(entry.exerciseId, entry.name)}</span>
                     <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogExercise(exIdx)} title="Remove exercise"><X size={14} /></button>
                   </div>
                   {entry.sets.length === 0

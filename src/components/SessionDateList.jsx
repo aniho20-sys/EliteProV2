@@ -97,7 +97,7 @@ export default function SessionDateList({ sessions, logs = [], exerciseLibrary =
                       const skipped = !entry.sets || entry.sets.length === 0;
                       return (
                         <div key={i} className={`plan-exercise ${skipped ? 'plan-exercise-skipped' : ''}`}>
-                          <span className="plan-exercise-name">{entry.name || resolveExerciseName(exerciseLibrary, entry.exerciseId, 'Exercise')}</span>
+                          <span className="plan-exercise-name">{resolveExerciseName(exerciseLibrary, entry.exerciseId, entry.name || 'Exercise')}</span>
                           <span className="plan-exercise-detail">
                             {skipped ? '—' : entry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}
                           </span>

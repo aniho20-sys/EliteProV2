@@ -30,3 +30,9 @@ export const exerciseFieldsValid = ({ muscle, equipment }) =>
 // added exercise appears in its correct alphabetical position rather than at the bottom.
 export const sortExercisesByName = (list) =>
   [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+// Soft-merged exercises stay in the library array forever so canonicalExercise() can keep
+// resolving historical exerciseIds through them (CLAUDE.md #27) — but they must never be
+// offered for selection again, or a trainer would just re-add the thing that was merged
+// away. Every list and picker filters through this; resolution paths deliberately do not.
+export const liveExercises = (library) => (library || []).filter(e => !e?.mergedInto);

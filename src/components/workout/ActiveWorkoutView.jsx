@@ -223,7 +223,7 @@ export default function ActiveWorkoutView({
               <div className="log-card-title">
                 <h3 className="card-title">
                   {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                  {entry.name || getExerciseName(entry.exerciseId)}
+                  {getExerciseName(entry.exerciseId, entry.name)}
                   {exercise && (
                     <button className="ex-info-btn" onClick={() => setSwapExIdx({ type: 'detail', exercise })} title="Exercise details">
                       <Info size={14} />
@@ -331,7 +331,7 @@ export default function ActiveWorkoutView({
           exerciseLibrary={exerciseLibrary}
           muscleGroups={muscleGroups}
           currentId={entries[swapExIdx]?.exerciseId}
-          currentName={entries[swapExIdx]?.name || getExerciseName(entries[swapExIdx]?.exerciseId)}
+          currentName={getExerciseName(entries[swapExIdx]?.exerciseId, entries[swapExIdx]?.name)}
           onSwap={ex => swapExercise(swapExIdx, ex)}
           onClose={() => setSwapExIdx(null)}
         />

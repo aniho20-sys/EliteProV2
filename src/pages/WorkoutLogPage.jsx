@@ -50,7 +50,10 @@ export default function WorkoutLogPage() {
 
   const timer = useRestTimer({ stopWhen: !showLog });
   const logDraftKey = `elitepro_active_log_${targetClientId}`;
-  const getExerciseName = (id) => resolveExerciseName(exerciseLibrary, id);
+  // fallback is used only when the id has no library record at all (ad-hoc custom-*
+  // entries). Passing a stored name as the fallback rather than checking it first is what
+  // lets a soft-merged exercise resolve to its survivor in historical entries.
+  const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const getExercise = (id) => exerciseLibrary.find(e => e.id === id);
 
   // Auto-start from navigation state (e.g. from ClientDashboard CTA)
@@ -110,7 +113,7 @@ export default function WorkoutLogPage() {
       const planSets = normalizeSets(ex);
       return {
         exerciseId: ex.exerciseId,
-        name: ex.name || getExerciseName(ex.exerciseId),
+        name: getExerciseName(ex.exerciseId, ex.name),
         unit,
         rest: ex.rest || 90,
         sets: planSets.map((ps, i) => {
@@ -176,7 +179,7 @@ export default function WorkoutLogPage() {
         const unit = e.unit || 'weight_reps';
         return {
           exerciseId: e.exerciseId,
-          name: e.name || getExerciseName(e.exerciseId) || e.exerciseId,
+          name: getExerciseName(e.exerciseId, e.name) || e.exerciseId,
           unit,
           sets: e.sets.filter(s => hasValue(s, unit)).map(s => {
             if (unit === 'reps_only') return { reps: Number(s.reps) };
@@ -190,7 +193,7 @@ export default function WorkoutLogPage() {
     const completedCount = logEntries.filter(e => e.sets.length > 0).length;
     const newPRs = entries.filter(e => e.exerciseId && isNewPR(e)).map(e => ({
       exerciseId: e.exerciseId,
-      name: e.name || getExerciseName(e.exerciseId) || e.exerciseId,
+      name: getExerciseName(e.exerciseId, e.name) || e.exerciseId,
       weight: Math.max(...e.sets.map(s => Number(s.weight) || 0)),
     }));
     const totalVolume = calcVolume(logEntries);
@@ -369,7 +372,7 @@ export default function WorkoutLogPage() {
           <div className="pr-grid">
             {Object.entries(prs).map(([exId, pr]) => (
               <div key={exId} className="pr-item">
-                <div className="pr-exercise">{pr.name || getExerciseName(exId, 'Custom exercise')}</div>
+                <div className="pr-exercise">{getExerciseName(exId, pr.name || 'Custom exercise')}</div>
                 <div className="pr-weight">{pr.weight}kg</div>
                 <div className="pr-date">{pr.date}</div>
               </div>
@@ -421,7 +424,7 @@ export default function WorkoutLogPage() {
             .filter(entry => entry.sets?.length > 0 && wasPRAtTime(l, entry))
             .map(entry => ({
               exerciseId: entry.exerciseId,
-              name: entry.name || getExerciseName(entry.exerciseId),
+              name: getExerciseName(entry.exerciseId, entry.name),
               weight: Math.max(...entry.sets.map(s => Number(s.weight) || 0)),
             }));
           const shareData = { planName, totalVolume, totalSets, exerciseCount: (l.entries || []).length, rpe: l.rpe, newPRs };
@@ -468,7 +471,7 @@ export default function WorkoutLogPage() {
                   <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''} ${skipped ? 'plan-exercise-skipped' : ''}`}>
                     <span className="plan-exercise-name">
                       {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
-                      {entry.name || getExerciseName(entry.exerciseId)}
+                      {getExerciseName(entry.exerciseId, entry.name)}
                     </span>
                     <span className="plan-exercise-detail">
                       {skipped ? '—' : entry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}
@@ -496,7 +499,7 @@ export default function WorkoutLogPage() {
             {editEntries.map((entry, exIdx) => (
               <div key={exIdx} className="mb-16">
                 <div className="fw-bold mb-8 text-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>{entry.name || getExerciseName(entry.exerciseId)}</span>
+                  <span>{getExerciseName(entry.exerciseId, entry.name)}</span>
                   <button className="btn-icon" style={{ color: 'var(--danger)', flexShrink: 0 }}
                     onClick={() => setEditEntries(prev => prev.filter((_, i) => i !== exIdx))}
                     title="Remove exercise">

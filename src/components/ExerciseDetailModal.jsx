@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { X, Play, ExternalLink, Dumbbell, Pencil, Trash2 } from 'lucide-react';
+import { X, Play, ExternalLink, Dumbbell, Pencil, Trash2, GitMerge } from 'lucide-react';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { useApp } from '../context/AppContext';
 
-export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelete }) {
+export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelete, onMerge }) {
   const { currentUser } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const [showEmbed, setShowEmbed] = useState(false);
@@ -23,9 +23,10 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
 
         <h3 className="ex-detail-title">{exercise.name}</h3>
 
-        {isTrainer && (onEdit || onDelete) && (
+        {isTrainer && (onEdit || onDelete || onMerge) && (
           <div className="ex-detail-trainer-actions">
             {onEdit && <button className="btn btn-sm btn-outline" onClick={() => onEdit(exercise)}><Pencil size={13} /> Edit</button>}
+            {onMerge && <button className="btn btn-sm btn-outline" onClick={() => onMerge(exercise)}><GitMerge size={13} /> Merge into…</button>}
             {onDelete && <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)' }} onClick={() => onDelete(exercise)}><Trash2 size={13} /> Delete</button>}
           </div>
         )}

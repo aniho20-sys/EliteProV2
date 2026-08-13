@@ -2199,6 +2199,26 @@ tr:hover { background: var(--bg-card-hover); }
 }
 .ex-dupe-match:active { transform: scale(0.98); }
 
+.merge-candidate-list { display: flex; flex-direction: column; gap: 8px; max-height: 45vh; overflow-y: auto; }
+.merge-candidate {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.merge-candidate:active { transform: scale(0.99); }
+.merge-candidate:disabled { opacity: 0.5; }
+.merge-candidate-name { font-weight: 600; font-size: 0.9rem; }
+.merge-candidate-meta { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+
 .ex-form-video-preview { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .ex-form-video-preview iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; }
 

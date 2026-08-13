@@ -302,7 +302,7 @@ export default function ClientDashboard() {
             <div className="pr-grid">
               {Object.entries(prs).slice(0, 6).map(([exId, pr]) => (
                 <div key={exId} className="pr-item">
-                  <div className="pr-exercise">{pr.name || getExerciseName(exId, 'Custom exercise')}</div>
+                  <div className="pr-exercise">{getExerciseName(exId, pr.name || 'Custom exercise')}</div>
                   <div className="pr-weight">{pr.weight}kg</div>
                   <div className="pr-date">{pr.date}</div>
                 </div>

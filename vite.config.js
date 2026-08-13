@@ -38,4 +38,11 @@ export default defineConfig({
     }),
   ],
   base: isGhPages ? '/EliteProV2/' : '/',
+  // Front-end unit tests only. functions/ and firestore-tests/ run on Jest against the
+  // Firestore emulator and have their own npm scripts — leaving them in vitest's default
+  // glob makes it try to run Jest suites and fail on missing globals.
+  test: {
+    include: ['src/**/*.test.{js,jsx}'],
+    environment: 'node',
+  },
 })

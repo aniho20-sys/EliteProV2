@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { liveExercises } from '../utils/exerciseUtils';
 import { Search, X } from 'lucide-react';
 
 export default function GlobalSearch({ onSelect }) {
@@ -23,7 +24,7 @@ export default function GlobalSearch({ onSelect }) {
       .filter(c => c && (c.name?.toLowerCase().includes(q) || c?.email?.toLowerCase().includes(q)))
       .slice(0, 4)
       .map(c => ({ type: 'Client', label: c.name, sub: c.email, action: () => navigate(`/clients/${c.id}`) })),
-    ...exercises
+    ...liveExercises(exercises)
       .filter(e => e && (e.name?.toLowerCase().includes(q) || e.muscle?.toLowerCase().includes(q)))
       .slice(0, 4)
       .map(e => ({ type: 'Exercise', label: e.name, sub: `${e.muscle} / ${e.equipment}`, action: () => navigate('/exercises') })),

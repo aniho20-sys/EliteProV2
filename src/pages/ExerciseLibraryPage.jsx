@@ -6,7 +6,7 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
-import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName } from '../utils/exerciseUtils';
+import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises } from '../utils/exerciseUtils';
 import { findDuplicateExercise, findFamilyVariants } from '../utils/exerciseDuplicates';
 import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exercises';
 
@@ -40,6 +40,9 @@ export default function ExerciseLibraryPage() {
   const [customizingEx, setCustomizingEx] = useState(null);
   const [customizeForm, setCustomizeForm] = useState(EMPTY_CUSTOMIZE);
   const [customizeSaving, setCustomizeSaving] = useState(false);
+  const [mergingEx, setMergingEx] = useState(null);
+  const [mergeSearch, setMergeSearch] = useState('');
+  const [mergeSaving, setMergeSaving] = useState(false);
   const nameInputRef = useRef(null);
   const pillOuterRef = useRef(null);
 
@@ -61,7 +64,7 @@ export default function ExerciseLibraryPage() {
     }
   }, [showModal]);
 
-  const filtered = sortExercisesByName(exercises.filter(e => {
+  const filtered = sortExercisesByName(liveExercises(exercises).filter(e => {
     const q = search.toLowerCase();
     const matchesText = !q || e.name.toLowerCase().includes(q) || (e.aliases || []).some(a => a.toLowerCase().includes(q));
     if (!matchesText) return false;
@@ -143,6 +146,38 @@ export default function ExerciseLibraryPage() {
       toast('Reset to default');
       setShowCustomize(false);
     } catch { toast('Failed to reset', 'error'); } finally { setCustomizeSaving(false); }
+  };
+
+  // Soft-merge (CLAUDE.md #27): the losing exercise keeps its document and gains a
+  // mergedInto pointer. Historical workoutPlans/workoutLogs keep their original
+  // exerciseId and resolve through that pointer at read time — nothing is rewritten,
+  // so the operation stays reversible by clearing the field.
+  const openMerge = (ex) => {
+    setMergingEx(ex);
+    setMergeSearch('');
+    setDetailExercise(null);
+  };
+
+  // Candidate survivors: every live exercise except the one being merged. Seed exercises
+  // are included — they have no document of their own, but they DO live in the same
+  // merged array canonicalExercise() searches, so a pointer at a seed id resolves fine
+  // (covered by src/utils/exerciseUtils.test.js).
+  const mergeCandidates = useMemo(() => {
+    if (!mergingEx) return [];
+    const q = mergeSearch.trim().toLowerCase();
+    return sortExercisesByName(
+      liveExercises(exercises).filter(e => e.id !== mergingEx.id && (!q || e.name.toLowerCase().includes(q))),
+    ).slice(0, 40);
+  }, [exercises, mergingEx, mergeSearch]);
+
+  const handleMerge = async (survivor) => {
+    if (!window.confirm(`Merge "${mergingEx.name}" into "${survivor.name}"?\n\nPast plans and logs keep working — they will show "${survivor.name}" from now on.`)) return;
+    setMergeSaving(true);
+    try {
+      await updateExercise(mergingEx.id, { mergedInto: survivor.id });
+      toast(`"${mergingEx.name}" merged into "${survivor.name}"`);
+      setMergingEx(null);
+    } catch { toast('Failed to merge', 'error'); } finally { setMergeSaving(false); }
   };
 
   const addAlias = () => {
@@ -421,12 +456,50 @@ export default function ExerciseLibraryPage() {
         </div>
       )}
 
+      {mergingEx && (
+        <div className="modal-overlay" onClick={() => setMergingEx(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="flex-between mb-16">
+              <h3 className="modal-title" style={{ marginBottom: 0 }}>Merge "{mergingEx.name}" into…</h3>
+              <button className="btn-icon" onClick={() => setMergingEx(null)}><X size={18} /></button>
+            </div>
+            <p className="text-sm text-muted mb-16">
+              Pick the exercise to keep. "{mergingEx.name}" stops appearing in lists, and past
+              plans and logs that used it will show the kept exercise instead. Nothing is deleted.
+            </p>
+            <input
+              className="form-input mb-16"
+              placeholder="Search exercises…"
+              value={mergeSearch}
+              onChange={e => setMergeSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="merge-candidate-list">
+              {mergeCandidates.length === 0 ? (
+                <p className="text-sm text-muted" style={{ textAlign: 'center', padding: 16 }}>No exercises found</p>
+              ) : mergeCandidates.map(ex => (
+                <button
+                  key={ex.id}
+                  className="merge-candidate"
+                  onClick={() => handleMerge(ex)}
+                  disabled={mergeSaving}
+                >
+                  <span className="merge-candidate-name">{ex.name}</span>
+                  <span className="merge-candidate-meta">{ex.equipment}{ex.trainerId ? '' : ' · Default'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {detailExercise && (
         <ExerciseDetailModal
           exercise={detailExercise}
           onClose={() => setDetailExercise(null)}
           onEdit={isTrainer ? (ex => ex.trainerId ? openEdit(ex) : openCustomize(ex)) : undefined}
           onDelete={isTrainer && detailExercise.trainerId ? handleDelete : undefined}
+          onMerge={isTrainer && detailExercise.trainerId ? openMerge : undefined}
         />
       )}
 
