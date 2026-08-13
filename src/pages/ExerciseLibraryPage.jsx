@@ -6,7 +6,7 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
-import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises } from '../utils/exerciseUtils';
+import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises, inferMovementPattern } from '../utils/exerciseUtils';
 import { findDuplicateExercise, findFamilyVariants } from '../utils/exerciseDuplicates';
 import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exercises';
 
@@ -43,6 +43,7 @@ export default function ExerciseLibraryPage() {
   const [mergingEx, setMergingEx] = useState(null);
   const [mergeSearch, setMergeSearch] = useState('');
   const [mergeSaving, setMergeSaving] = useState(false);
+  const [patternTouched, setPatternTouched] = useState(false);
   const nameInputRef = useRef(null);
   const pillOuterRef = useRef(null);
 
@@ -78,6 +79,7 @@ export default function ExerciseLibraryPage() {
     setEditingEx(null);
     setForm({ ...EMPTY_FORM, equipment: equipmentTypes[0] });
     setAliasInput('');
+    setPatternTouched(false);
     setShowModal(true);
   };
 
@@ -95,6 +97,9 @@ export default function ExerciseLibraryPage() {
       videoUrl: ex.videoUrl || '',
       unit: ex.unit || 'weight_reps',
     });
+    // An exercise that already carries a pattern keeps it; one that never got classified
+    // is still open to a suggestion while the name is being edited.
+    setPatternTouched(!!ex.movementPattern);
     setAliasInput('');
     setDetailExercise(null);
     setShowModal(true);
@@ -350,7 +355,23 @@ export default function ExerciseLibraryPage() {
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Exercise Name</label>
-                <input ref={nameInputRef} className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Bulgarian Split Squat" />
+                <input
+                  ref={nameInputRef}
+                  className="form-input"
+                  required
+                  value={form.name}
+                  onChange={e => {
+                    const name = e.target.value;
+                    setForm(f => ({
+                      ...f,
+                      name,
+                      // Keep suggesting from the name until the trainer picks a pattern by
+                      // hand — from then on their choice stands, even if they keep typing.
+                      movementPattern: patternTouched ? f.movementPattern : inferMovementPattern(name),
+                    }));
+                  }}
+                  placeholder="e.g. Bulgarian Split Squat"
+                />
                 {liveDuplicate && (
                   <div className="ex-dupe-warn">
                     <span>This exercise already exists ({liveDuplicate.equipment}).</span>
@@ -382,10 +403,17 @@ export default function ExerciseLibraryPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Movement Pattern <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <select className="form-select" value={form.movementPattern} onChange={e => setForm({ ...form, movementPattern: e.target.value })}>
+                <select
+                  className="form-select"
+                  value={form.movementPattern}
+                  onChange={e => { setPatternTouched(true); setForm({ ...form, movementPattern: e.target.value }); }}
+                >
                   <option value="">Unclassified</option>
                   {movementPatterns.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
+                {!patternTouched && form.movementPattern && (
+                  <p className="ex-dupe-hint">Suggested from the name — change it if it&apos;s wrong.</p>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Aliases <span className="text-muted" style={{ fontWeight: 400 }}>(alt. names / Chinese name, optional)</span></label>
