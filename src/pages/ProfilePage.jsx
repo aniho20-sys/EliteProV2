@@ -10,6 +10,7 @@ import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
 import { CURRENCIES } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
+import MovementPatternScanner from '../components/MovementPatternScanner';
 
 function InstallAppCard() {
   if (isStandalone()) {
@@ -672,6 +673,8 @@ export default function ProfilePage() {
           </button>
         </div>
       )}
+
+      {isTrainer && <MovementPatternScanner />}
 
       {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (

@@ -18,9 +18,11 @@ export const exerciseLibrary = [
 
   // Legs
   { id: 'squat', name: 'Barbell Squat', muscle: 'Quadriceps', equipment: 'Barbell', movementPattern: 'Squat', description: 'Bar on upper back, squat down until thighs are parallel, stand back up.', videoUrl: 'https://www.youtube.com/watch?v=ultWZbUMPL8' },
-  { id: 'leg-press', name: 'Leg Press', muscle: 'Quadriceps', equipment: 'Machine', description: 'Sit in leg press machine, press platform away by extending legs.', videoUrl: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ' },
+  { id: 'leg-press', name: 'Leg Press', muscle: 'Quadriceps', equipment: 'Machine', movementPattern: 'Squat', description: 'Sit in leg press machine, press platform away by extending legs.', videoUrl: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ' },
   { id: 'romanian-deadlift', name: 'Romanian Deadlift', muscle: 'Hamstrings', equipment: 'Barbell', movementPattern: 'Hinge', description: 'Hinge at hips with slight knee bend, lower bar along legs.', videoUrl: 'https://www.youtube.com/watch?v=jEy_czb3RKA' },
-  { id: 'leg-curl', name: 'Leg Curl', muscle: 'Hamstrings', equipment: 'Machine', description: 'Lie face down, curl weight towards glutes.', videoUrl: 'https://www.youtube.com/watch?v=1Tq3QdYUuHs' },
+  { id: 'leg-curl', name: 'Leg Curl', muscle: 'Hamstrings', equipment: 'Machine', movementPattern: 'Hinge', description: 'Lie face down, curl weight towards glutes.', videoUrl: 'https://www.youtube.com/watch?v=1Tq3QdYUuHs' },
+  // Calf Raise stays unclassified on purpose — the ankle is not one of the eight patterns
+  // and Ani's call was that leaving it blank beats forcing it into the nearest wrong one.
   { id: 'calf-raise', name: 'Calf Raise', muscle: 'Calves', equipment: 'Machine', description: 'Stand on platform edge, raise heels as high as possible.', videoUrl: 'https://www.youtube.com/watch?v=gwLzBJYoWlI' },
   { id: 'lunge', name: 'Lunge', muscle: 'Quadriceps', equipment: 'Dumbbell', movementPattern: 'Squat', description: 'Step forward, lower back knee towards ground, push back to start.', videoUrl: 'https://www.youtube.com/watch?v=QOVaHwm-Q6U' },
 

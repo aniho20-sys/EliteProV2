@@ -18,7 +18,7 @@
 | **4. PWA / FCM Push** | ✅ 完成 live | PWA 可安裝、離線持久化、13 個 function 之中 6 個負責 push（訊息／排程／計劃／log／低堂數）|
 | **5. Venue Marketplace** | ⬜ 未開始 | gym啦 Sprint 1 code 已寫但 `GYMLA_ENABLED=false` 隱藏緊。開之前必查 `isTrainer`/operator 三態問題（見 backlog #17）|
 
-**現時測試覆蓋：** Cloud Functions 35 條（credit 25 + GoCardless nonce 10，`cd functions && npm run test:emulator`）、Firestore rules 45 條（`cd firestore-tests && npm run test:emulator`）、**前端 vitest 9 條**（`npm test`，2026-08-13 新增，之前前端零覆蓋）。前兩套要求 emulator 綠燈先當完成。
+**現時測試覆蓋：** Cloud Functions 35 條（credit 25 + GoCardless nonce 10，`cd functions && npm run test:emulator`）、Firestore rules 45 條（`cd firestore-tests && npm run test:emulator`）、**前端 vitest 63 條**（`npm test`，2026-08-13 新增，之前前端零覆蓋）。前兩套要求 emulator 綠燈先當完成。
 
 ---
 
@@ -37,6 +37,7 @@
 | 🟡 | 寫 WhatsApp 邀請訊息，直接搵5個教練朋友 | 員工X + 自己 | ⬜ |
 | 🟠 | **喺 app 撳一次已批准嘅合併**：Exercise Library → Military press → Merge into… → Overhead Press。撳完檢查舊 plan / log 有冇顯示返「Overhead Press」 | 自己 | ⬜ |
 | 🟡 | 匯出 exercise library JSON（Profile → Export Exercise Library → Copy）貼返俾 agent，出完整「真重複 vs 同名唔同器材」審視表 | 自己 | ⬜ |
+| 🟠 | **Profile → Movement Pattern Auto-Classify → Scan My Library**，審核三組建議、剔完撳 Apply（42 條自建動作分類） | 自己 | ⬜ |
 
 ---
 
@@ -207,6 +208,21 @@
 - **`src/utils/exerciseUtils.test.js` 9 條全綠**，包括 Ani 指定嗰條「墓碑指向 seed」：`canonicalExercise()` 解析得到，因為 `getExercises()` 回傳嘅係**一個** merged 陣列（Firestore doc + 24 條 seed 都喺入面）。另覆蓋指標鏈、指標循環唔會 hang、dangling pointer fallback
 - ⚠️ **墓碑仲未寫**：`custom-military-press` 未有 `mergedInto`。要 Ani 喺 app 度撳（Exercise Library → Military press → Merge into… → Overhead Press），agent 冇 Firestore 寫入權限
 - 驗證：vitest 9/9、`npx eslint src/` 0 error（1 個 pre-existing warning）、`npm run build` 通過
+
+### Filter chips 死機修復 + movementPattern 自動分類（2026-08-13）
+報告：`reports/movement-pattern-2026-08-13.md`
+
+- **Filter chips 由 `b67cf69`（2026-07-24 摺埋式重做）第一日起就撳唔郁**，三組全死，Ani 真機揪到。真因唔關 JS 事：`.ex-filter-pill-outer` 係 `position: sticky` **加** `z-index`，兩者夾埋開咗 stacking context，將 dropdown 個 `z-index: 20` 封印咗喺入面；backdrop 係 root 層 `z-index: 10`，同外層個 `5` 比就贏咗，於是一塊全透明嘅 `inset: 0` 層鋪喺 dropdown 上面食晒所有 tap
+- 修復：backdrop 搬入同一個 stacking context、`.ex-filter-pill-scroll` 升 `z-index: 20`（順帶令「開住一個 dropdown 撳第二個 pill」一下就轉組）、清除 ✕ 觸控範圍由 12px 加到 ~32px
+- 順手揪到 `.ex-filter-pill` / `.plan-equip-chip` 冇 `:active`，全 app 就得佢哋兩個違反 `STYLE.md:147`（手機冇 hover，撳落去零回饋）
+- **`inferMovementPattern(name)`**（`utils/exerciseUtils.js`）：Ani 批准嘅關鍵字表 + 優先次序 `Carry → Locomotion → Hinge → Squat → Rotation → Core → Push → Pull`（原則係「主導髖膝動作為準」）。關鍵字用**字頭比對**而非 substring —— naive substring 會令 `Medicine ball th`**`row`** 判做 Pull，字頭比對同時免費拎到 `rows`/`pullup`/`pushdown` 呢類複數同連寫
+- **`KEYWORD_BLOCKERS`**：`kickback` 遇上 tricep、`curl` 遇上 leg/hamstring/nordic 就唔計。原本「Tricep kickback」同「Leg curl」各自只命中一個關鍵字 → **高信心** → 而高信心正正係 Ani 批一次過唔逐條睇嗰批。已寫成 **CLAUDE.md #35**
+- `movementPatterns` 由 7 個加到 8 個（新增 `Core`）
+- Seed 24 條全部分類完：21 條規則直接判、`Leg Press → Squat`、`Leg Curl → Hinge`（Ani 判）、**`Calf Raise` 刻意留空**（踝關節唔屬八個 pattern 任何一個，留空好過硬塞 —— 唔好日後「補返」一個 fallback）
+- 新增動作表單：打名嗰陣自動預填 movement pattern，一手動揀過就永久停止覆蓋（`patternTouched`）
+- **`components/MovementPatternScanner.jsx`**（Profile，教練限定）：對教練自己未分類嘅動作跑規則，按信心分三組、逐行 checkbox、高信心組預先剔好，撳 Apply 先寫入 Firestore。因為 agent 冇 Firestore 寫入權而 Ani 冇 terminal（#26），呢個係唯一可行嘅落地方式，做法同 Phase C「Apply Approved Cleanup」一致
+- 前端 test 9 → **63**（新 `src/utils/movementPattern.test.js` 54 條）；`npx eslint src/` 0 error；build ✓
+- **寫入 CLAUDE.md #36**：UI 改動唔可以用靜態 mockup／screenshot 驗收，一定要真機實測互動。filter 死咗三個星期同 invite code 100% 失敗都係同一個成因
 
 ### Exercise Library List View 密度重做（Session 34）
 - Ani 驗收 Phase A+B 之後打回頭：list view 實際效果係「細張卡片」唔係真正 list——重做：

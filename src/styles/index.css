@@ -5249,3 +5249,51 @@ tr:hover { background: var(--bg-card-hover); }
   .intake-card { padding: 24px 18px; }
   .intake-chip { padding: 10px 14px; font-size: 0.82rem; }
 }
+
+/* Movement Pattern Auto-Classify (Profile → trainer only) */
+.mp-scan-empty,
+.mp-scan-note {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.mp-scan-group { margin-top: 16px; }
+.mp-scan-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.mp-scan-group-title { font-size: 0.85rem; font-weight: 700; }
+.mp-scan-group-title.mp-high { color: var(--success); }
+.mp-scan-group-title.mp-medium { color: var(--warning); }
+.mp-scan-group-title.mp-low { color: var(--text-muted); }
+.mp-scan-group-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.mp-scan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Tall enough to be a comfortable tap target — the whole row is the checkbox label. */
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.mp-scan-row-static { cursor: default; opacity: 0.7; }
+.mp-scan-row:active:not(.mp-scan-row-static) { background: var(--primary-glow); }
+.mp-scan-row input[type="checkbox"] { flex-shrink: 0; width: 18px; height: 18px; }
+.mp-scan-row-body { flex: 1; min-width: 0; }
+.mp-scan-row-name { display: block; font-size: 0.85rem; font-weight: 600; }
+.mp-scan-row-meta {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-scan-actions { display: flex; gap: 8px; margin-top: 16px; }
+.mp-scan-actions .btn { flex: 1; }
