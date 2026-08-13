@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：**2026-08-03**（Session 35-38 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則）
+> 最後更新：**2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
 >
 > ⚠️ **所有 agent 開工前必讀。** 過時嘅 PROGRESS.md 曾經令 audit 判斷出錯，見「Phase 狀態速查」。
 
@@ -18,7 +18,7 @@
 | **4. PWA / FCM Push** | ✅ 完成 live | PWA 可安裝、離線持久化、13 個 function 之中 6 個負責 push（訊息／排程／計劃／log／低堂數）|
 | **5. Venue Marketplace** | ⬜ 未開始 | gym啦 Sprint 1 code 已寫但 `GYMLA_ENABLED=false` 隱藏緊。開之前必查 `isTrainer`/operator 三態問題（見 backlog #17）|
 
-**現時測試覆蓋：** Cloud Functions 35 條（credit 25 + GoCardless nonce 10）、Firestore rules 37 條。全部要求 emulator 綠燈先當完成。
+**現時測試覆蓋：** Cloud Functions 35 條（credit 25 + GoCardless nonce 10，`cd functions && npm run test:emulator`）、Firestore rules 45 條（`cd firestore-tests && npm run test:emulator`）、**前端 vitest 9 條**（`npm test`，2026-08-13 新增，之前前端零覆蓋）。前兩套要求 emulator 綠燈先當完成。
 
 ---
 
@@ -35,6 +35,8 @@
 | 🟠 | End-to-end 測試：Landing Page → Sign up → 加 client → Book session → Mark Complete → 確認堂數扣數 | 自己 | ✅ **2026-08-11 Ani 用全新 email 由 Landing Page 行到尾，全程成功**（含 invite code `3XQPKM` 連結教練）——呢條路第一次有人由頭行到尾 |
 | 🟠 | iOS Safari + Android Chrome 各測試一次 | 自己 | 🟡 iOS Safari ✅（全程 onboarding + credit 測試都喺 iPhone 做）；Android Chrome ⬜ |
 | 🟡 | 寫 WhatsApp 邀請訊息，直接搵5個教練朋友 | 員工X + 自己 | ⬜ |
+| 🟠 | **喺 app 撳一次已批准嘅合併**：Exercise Library → Military press → Merge into… → Overhead Press。撳完檢查舊 plan / log 有冇顯示返「Overhead Press」 | 自己 | ⬜ |
+| 🟡 | 匯出 exercise library JSON（Profile → Export Exercise Library → Copy）貼返俾 agent，出完整「真重複 vs 同名唔同器材」審視表 | 自己 | ⬜ |
 
 ---
 
@@ -191,6 +193,21 @@
 - **未處理，等 Ani 拍板**：`ex-1779565704448`「Mobility workout」——冇缺明確嘅改名/去留建議，Ani 呢次批准清單冇提到，留待下次
 - 12 個 credit emulator test 保持全綠；`npm run build` 通過
 
+### Exercise 重複定義 + 唯一性檢查 + 軟合併 UI（2026-08-11～13）
+報告：`reports/exercise-duplicates-2026-08-11.md`
+
+- **Ani 修訂咗「重複」嘅定義**：`動作名 + 器材` 組合先算重複。同名唔同器材（Shoulder Press Barbell vs Dumbbell）係合法嘅獨立 variant，**唔准合併**，只標做同一個 family。實裝喺新 `utils/exerciseDuplicates.js`：`familyKey(name)` 唔理器材（用嚟分組），`duplicateKey(name, equipment)` 計埋器材（撞到先算真重複）；兩者都會經 `normalizeExerciseName` 同 aliases 比對，而且**跳過墓碑**（有 `mergedInto` 嘅唔算現存記錄）
+- **三條新增動作路徑全部加咗唯一性檢查**：`ExerciseLibraryPage`（名+器材，撞到即刻顯示「已存在」+ 直接跳去嗰條）、`WorkoutPlansPage`（只喺 "save to library" 嗰個分支檢查，撞到就將現有嗰條加入 plan）、`ExerciseSwapModal`（呢個 tab 冇器材欄位，所以係**只比名**，將所有同名 variant 列出俾教練揀）
+- **已批准嘅合併：Military press（`custom-military-press`）→ Overhead Press（seed `overhead-press`）**。Seated Row vs Iso-Lateral Row、Leg Raise vs Hanging Leg Raise 經 Ani 確認係唔同動作，保留唔郁
+- **Ani 要求先驗證「墓碑指向 seed」解析得到，結果驗證途中揪出三個 blocker，全部修咗——如果照直接寫 `mergedInto`，合併會「表面上冇效果」**：
+  1. **歷史記錄唔會變**：10 處顯示位置寫住 `entry.name || resolveExerciseName(...)`，而 plan 係喺加入嗰刻就 copy 咗個 name（`WorkoutPlansPage.jsx:68`），stored name 會短路咗解析 → 合併完舊 plan/log 照樣顯示「Military press」。10 處全部倒轉做 **resolve 優先、stored name 做 fallback**（fallback 一定要留低，ad-hoc `custom-*` entry 冇 library 記錄，得靠佢）
+  2. **墓碑照樣揀得返**：全 app 冇任何地方過濾 `mergedInto`，合併完個動作仍然出現喺 Library / plan picker / swap modal / global search。新增 `liveExercises()` 套用落呢四處；**解析路徑刻意唔過濾**（要留住墓碑先解析到歷史）
+  3. **根本冇 UI 寫得到 `mergedInto`**：`grep` 全 `src/` 零命中，而 Ani 冇 terminal（#26）。`ExerciseDetailModal` 加咗 "Merge into…" 掣（教練限定，只對自建動作出現——seed 冇 doc，做唔到墓碑），`ExerciseLibraryPage` 加咗 survivor 搜尋 picker，寫入前有確認提示講明對歷史嘅影響。Rules 已核實准（`trainerId` 冇變）
+- **前端第一次有 test runner**：之前 repo 得 `functions/` 同 `firestore-tests/` 兩套 Jest，前端零覆蓋（呢個亦係點解 invite code bug 嘅 8 條 test 覆蓋唔到真因）。加咗 vitest，`vite.config.js` 用 `test.include: ['src/**/*.test.{js,jsx}']` 收窄範圍，否則 vitest 會撞去跑嗰兩套 Jest suite 然後 `beforeEach is not defined` 咁 fail
+- **`src/utils/exerciseUtils.test.js` 9 條全綠**，包括 Ani 指定嗰條「墓碑指向 seed」：`canonicalExercise()` 解析得到，因為 `getExercises()` 回傳嘅係**一個** merged 陣列（Firestore doc + 24 條 seed 都喺入面）。另覆蓋指標鏈、指標循環唔會 hang、dangling pointer fallback
+- ⚠️ **墓碑仲未寫**：`custom-military-press` 未有 `mergedInto`。要 Ani 喺 app 度撳（Exercise Library → Military press → Merge into… → Overhead Press），agent 冇 Firestore 寫入權限
+- 驗證：vitest 9/9、`npx eslint src/` 0 error（1 個 pre-existing warning）、`npm run build` 通過
+
 ### Exercise Library List View 密度重做（Session 34）
 - Ani 驗收 Phase A+B 之後打回頭：list view 實際效果係「細張卡片」唔係真正 list——重做：
   - 每行實高 56px、細分隔線、`.exercise-list` 淨係外層一個 rounded container，行本身冇圓角/白卡/陰影
@@ -320,7 +337,7 @@
 - 新 `utils/inviteCodeUtils.js`：剝走 zero-width joiner、non-breaking space 等貼上時帶入嘅隱形字元
 - 順手揪到：註冊時打錯 code 原本係**靜靜雞當冇打過**（profile 照建、`trainerId` 留 null，學生以為連結咗）；`handleConnect` 冇 try/catch 會卡死粒掣；`completeProfile` fallback 讀成個 users collection
 - Test：新增 8 條 rules test（37 → **45**），含完整流程「學生輸 code → 寫 trainerId → 教練 client list 見到佢」
-- **誠實備註**：呢 8 條 test 唔會因為原本個 bug 而 fail（bug 喺 JS 層，repo 冇前端 test runner）。真正證實新舊行為差異嘅係一個用完即刪嘅 emulator repro harness。呢批 test 守嘅係「將來有人收緊 `users` read rule」呢個未來風險
+- **誠實備註**：呢 8 條 test 唔會因為原本個 bug 而 fail（bug 喺 JS 層，而當時 repo 冇前端 test runner——2026-08-13 已加咗 vitest，見下面 exercise 重複嗰節）。真正證實新舊行為差異嘅係一個用完即刪嘅 emulator repro harness。呢批 test 守嘅係「將來有人收緊 `users` read rule」呢個未來風險
 - **寫入 CLAUDE.md #34**：`AppContext` 個 `users` 只包含「同自己有關係嘅人」，任何要查「未有關係嘅用戶／場地」嘅功能唔可以靠佢 —— Phase 5 場地市集一開工就會踩中
 
 ### 透支 booking 真機測試：兩個 bug（2026-08-02）
