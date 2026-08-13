@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
 import { sortExercisesByName } from '../../utils/exerciseUtils';
+import { findByExerciseName } from '../../utils/exerciseDuplicates';
 
 export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, currentId, currentName, onSwap, onClose, mode = 'swap' }) {
   const [search, setSearch] = useState('');
@@ -15,9 +16,18 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
     return matchName && matchMuscle;
   })).slice(0, 60);
 
+  // This tab has no equipment field — it creates an ad-hoc entry, not a library record —
+  // so the check here is name-only. Every live library exercise answering to that name is
+  // offered instead, across all its equipment variants, so the trainer picks the real one
+  // rather than typing a loose duplicate of something they already own.
+  const existingMatches = useMemo(
+    () => findByExerciseName(exerciseLibrary, customName),
+    [exerciseLibrary, customName],
+  );
+
   const handleAddCustom = () => {
     const name = customName.trim();
-    if (!name) return;
+    if (!name || existingMatches.length > 0) return;
     onSwap({ id: `custom-${Date.now()}`, name, unit: 'weight_reps', custom: true });
   };
 
@@ -51,11 +61,25 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
               autoFocus
               style={{ marginBottom: 12 }}
             />
+            {existingMatches.length > 0 && (
+              <div className="ex-dupe-warn" style={{ marginBottom: 12 }}>
+                <span>
+                  This exercise already exists{existingMatches.length > 1 ? ` in ${existingMatches.length} variants` : ''} — use it instead of creating a copy:
+                </span>
+                <div className="ex-dupe-matches">
+                  {existingMatches.map(ex => (
+                    <button key={ex.id} type="button" className="ex-dupe-match" onClick={() => onSwap(ex)}>
+                      {ex.name}{ex.equipment ? ` · ${ex.equipment}` : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button
               className="btn btn-accent"
               style={{ width: '100%' }}
               onClick={handleAddCustom}
-              disabled={!customName.trim()}
+              disabled={!customName.trim() || existingMatches.length > 0}
             >
               Add "{customName.trim() || '…'}"
             </button>

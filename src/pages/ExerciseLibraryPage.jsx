@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Search, Plus, X, SearchX, Play, ChevronDown } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -7,6 +7,7 @@ import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName } from '../utils/exerciseUtils';
+import { findDuplicateExercise, findFamilyVariants } from '../utils/exerciseDuplicates';
 import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exercises';
 
 const EMPTY_FORM = { name: '', muscles: [], equipment: '', movementPattern: '', aliases: [], description: '', instructions: '', commonMistakes: '', videoUrl: '', unit: 'weight_reps' };
@@ -161,6 +162,18 @@ export default function ExerciseLibraryPage() {
       toast('Pick at least one muscle group and an equipment type', 'error');
       return;
     }
+
+    // Same movement + same equipment already exists — refuse and take them to it.
+    // A matching name on DIFFERENT equipment is a legitimate variant and passes through
+    // (Shoulder Press Barbell and Shoulder Press Dumbbell both belong in the library).
+    const clash = findDuplicateExercise(exercises, exData, editingEx?.id);
+    if (clash) {
+      setShowModal(false);
+      setDetailExercise(clash);
+      toast(`"${clash.name}" (${clash.equipment}) already exists`, 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingEx) {
@@ -173,6 +186,21 @@ export default function ExerciseLibraryPage() {
       setShowModal(false);
     } catch { toast('Failed to save exercise', 'error'); } finally { setSaving(false); }
   };
+
+  // Same movement on other equipment — shown inline as a hint while typing, not a block.
+  const familyVariants = useMemo(
+    () => (form.name.trim() && form.equipment
+      ? findFamilyVariants(exercises, { name: form.name, equipment: form.equipment }, editingEx?.id)
+      : []),
+    [exercises, form.name, form.equipment, editingEx],
+  );
+
+  const liveDuplicate = useMemo(
+    () => (form.name.trim() && form.equipment
+      ? findDuplicateExercise(exercises, { name: form.name, equipment: form.equipment, aliases: form.aliases }, editingEx?.id)
+      : null),
+    [exercises, form.name, form.equipment, form.aliases, editingEx],
+  );
 
   const filterGroups = [
     { key: 'muscle', label: 'Muscle', options: muscleGroups, value: muscleFilter, setValue: setMuscleFilter },
@@ -280,6 +308,20 @@ export default function ExerciseLibraryPage() {
               <div className="form-group">
                 <label className="form-label">Exercise Name</label>
                 <input ref={nameInputRef} className="form-input" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Bulgarian Split Squat" />
+                {liveDuplicate && (
+                  <div className="ex-dupe-warn">
+                    <span>This exercise already exists ({liveDuplicate.equipment}).</span>
+                    <button type="button" className="ex-dupe-link" onClick={() => { setShowModal(false); setDetailExercise(liveDuplicate); }}>
+                      Go to it
+                    </button>
+                  </div>
+                )}
+                {!liveDuplicate && familyVariants.length > 0 && (
+                  <p className="ex-dupe-hint">
+                    You already have this movement on {familyVariants.map(v => v.equipment).join(', ')}.
+                    Adding a {form.equipment} version is fine — it is a separate variant.
+                  </p>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Muscle Groups <span className="text-muted" style={{ fontWeight: 400 }}>(at least 1 required)</span></label>

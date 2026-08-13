@@ -6,6 +6,7 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, emptySet, UNIT_OPTIONS } from '../utils/workoutUtils';
 import { resolveExerciseName, exerciseFieldsValid, sortExercisesByName } from '../utils/exerciseUtils';
+import { findDuplicateExercise } from '../utils/exerciseDuplicates';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
 const EMPTY_CUSTOM = { name: '', muscles: [], equipment: '', saveToLibrary: false };
@@ -160,6 +161,24 @@ export default function WorkoutPlansPage() {
     if (customForm.saveToLibrary && !exerciseFieldsValid({ muscle: muscleStr, equipment: customForm.equipment })) {
       toast('Pick at least one muscle group and an equipment type to save to the library', 'error');
       return;
+    }
+
+    // Only the save-to-library branch can create a duplicate library record. A plan-only
+    // custom entry lives on the plan and never enters the library, so nothing to clash with.
+    if (customForm.saveToLibrary) {
+      const clash = findDuplicateExercise(exerciseLibrary, { name, equipment: customForm.equipment });
+      if (clash) {
+        // "Go to it" here means using the existing exercise, which is what they were
+        // trying to achieve anyway — so add that one to the plan instead of creating a twin.
+        setForm(prev => ({
+          ...prev,
+          exercises: [...prev.exercises, { exerciseId: clash.id, name: clash.name, sets: Array.from({ length: 3 }, () => emptySet('weight_reps')), notes: '' }],
+        }));
+        setCustomForm(EMPTY_CUSTOM);
+        setShowCustomForm(false);
+        toast(`"${clash.name}" (${clash.equipment}) already exists — added the existing one`, 'info');
+        return;
+      }
     }
 
     setCustomSaving(true);

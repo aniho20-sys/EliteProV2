@@ -2159,6 +2159,46 @@ tr:hover { background: var(--bg-card-hover); }
 .exercise-row-meta { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .exercise-row-video-icon { flex-shrink: 0; color: var(--primary); }
 
+/* Duplicate-exercise feedback. The warn block is a hard stop (same movement + same
+   equipment); the hint is informational (same movement, different equipment = a
+   legitimate variant), so it deliberately uses muted text, not a warning colour. */
+.ex-dupe-warn {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--text);
+  font-size: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ex-dupe-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ex-dupe-hint { margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); }
+.ex-dupe-matches { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.ex-dupe-match {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.ex-dupe-match:active { transform: scale(0.98); }
+
 .ex-form-video-preview { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .ex-form-video-preview iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; }
 
