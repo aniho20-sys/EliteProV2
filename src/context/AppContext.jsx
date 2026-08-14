@@ -445,6 +445,14 @@ export function AppProvider({ children }) {
 
   // ========== Credit Ledger ==========
   // Append-only top-up history (fetched on demand — no realtime listener needed).
+  // Every top-up the trainer has ever recorded, across all their clients. Single-field
+  // query on purpose (CLAUDE.md #34) — adding a second equality filter would need a
+  // composite index that does not exist in production.
+  const getTrainerCreditLedger = async (trainerId) => {
+    const snap = await getDocs(query(collection(db, 'creditLedger'), where('trainerId', '==', trainerId)));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => b.date.localeCompare(a.date));
+  };
+
   const getCreditLedger = async (clientId) => {
     const snap = await getDocs(query(collection(db, 'creditLedger'), where('clientId', '==', clientId)));
     return snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => b.date.localeCompare(a.date));
@@ -950,7 +958,7 @@ export function AppProvider({ children }) {
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     deleteAccount,
-    getClients, getClient, updateClient, removeClient, getCreditLedger, addCreditLedgerEntry,
+    getClients, getClient, updateClient, removeClient, getCreditLedger, getTrainerCreditLedger, addCreditLedgerEntry,
     getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
     data: { users, workoutPlans, workoutLogs, schedule, messages, exercises, invoices },
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,

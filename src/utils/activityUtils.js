@@ -26,3 +26,13 @@ export function getLastActivity(clientId, { getWorkoutLogs, getSchedule, plans, 
     : (plans?.find(p => p.id === latestLog.planId)?.name || latestLog.workoutName || 'Workout');
   return { daysSince, label };
 }
+
+// Every "active / inactive / retained / at risk of churn" judgement in the app must come
+// from here, so they can never disagree about the same client. Retention on
+// BusinessAnalyticsPage was still asking workoutLogs on its own long after the trainer
+// dashboard had been fixed, which marked a client who trains only in booked sessions as
+// Inactive on one screen and Active on another.
+export function isActiveWithin(clientId, deps, days) {
+  const { daysSince } = getLastActivity(clientId, deps);
+  return daysSince !== null && daysSince <= days;
+}
