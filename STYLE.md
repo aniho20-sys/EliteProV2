@@ -153,7 +153,9 @@ Always `<EmptyState icon={...} title="..." description="..." action={{...}} />` 
 
 All in-app UI text is English — no exceptions (buttons, labels, placeholders, toasts, errors, empty states, modal copy). This is `CLAUDE.md` convention #28, restated here because it's a style-system concern, not just a wording concern: a UI string in the wrong language is a style violation the same way a hardcoded hex color is.
 
-Documented exceptions (do not touch without explicit sign-off): the "gym啦" brand name (currently behind `GYMLA_ENABLED=false`) and `LandingPage.jsx`'s bilingual marketing copy.
+Documented exception (do not touch without explicit sign-off): the "gym啦" brand name, currently behind `GYMLA_ENABLED=false`.
+
+`LandingPage.jsx` used to be the second exception — it carried full bilingual (English + Cantonese) marketing copy. The 2026-08-15 rewrite made it English-only, so the exception is retired and the page is now covered by the rule like every other page.
 
 ---
 
