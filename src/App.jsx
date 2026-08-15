@@ -55,6 +55,15 @@ function AppRoutes() {
   if (location.pathname === '/privacy') return <Suspense fallback={<LoadingScreen />}><PrivacyPolicyPage /></Suspense>;
   if (location.pathname === '/terms') return <Suspense fallback={<LoadingScreen />}><TermsPage /></Suspense>;
 
+  // A stranger arriving at the root URL gets the marketing page; a signed-in user falls
+  // through to their own dashboard below. /login is the way back in, and is also where an
+  // invited client must land — a coach's invite link points at the root, so sending that
+  // visitor to the marketing page would break the one flow the link exists for.
+  const hasInvite = !!sessionStorage.getItem('elitepro_invite_code');
+  if (!firebaseUser && authReady && !signingIn && location.pathname === '/' && !hasInvite) {
+    return <Suspense fallback={<LoadingScreen />}><LandingPage /></Suspense>;
+  }
+
   // Keep loading screen up while auth or data is unsettled:
   // - signingIn: Google sign-in popup in progress — prevents cross-component render race
   // - loading / !authReady: Firestore loading or redirect check pending

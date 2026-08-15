@@ -45,11 +45,29 @@
       media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
       href="/splash/apple-splash-2048x2732.png" />
 
-    <!-- Open Graph / social preview -->
-    <meta property="og:title" content="ElitePro - Fitness Training" />
-    <meta property="og:description" content="Fitness training platform for personal trainers and clients" />
-    <meta property="og:image" content="/icon-512-v3.png" />
+    <!-- Open Graph / social preview.
+         og:image MUST be an absolute URL — WhatsApp, Facebook and iMessage all discard a
+         relative path and fall back to a bare link. Update the host here (and og:url) if
+         the site moves to a custom domain. HashRouter keeps every route behind '#', which
+         crawlers never send to the server, so this one static set covers the whole site. -->
+    <meta property="og:site_name" content="ElitePro" />
+    <meta property="og:title" content="Run your coaching from one app instead of six." />
+    <meta property="og:description" content="Plans, bookings, session credits and payments for independent personal trainers. No setup fee, no commission. First 5 coaches get 3 months free." />
+    <meta property="og:image" content="https://elitepro-16718.web.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ElitePro — run your coaching from one app instead of six." />
+    <meta property="og:url" content="https://elitepro-16718.web.app/" />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_GB" />
+
+    <!-- Twitter/X reads its own namespace and ignores og: for card type -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Run your coaching from one app instead of six." />
+    <meta name="twitter:description" content="Plans, bookings, session credits and payments for independent personal trainers. No setup fee, no commission." />
+    <meta name="twitter:image" content="https://elitepro-16718.web.app/og-image.png" />
+
+    <meta name="description" content="ElitePro is an app for independent personal trainers: build plans, book sessions, track session credits and take payments. No setup fee and no commission." />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

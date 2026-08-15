@@ -91,7 +91,7 @@ export default function LandingPage() {
     <div className="lp">
       <header className="lp-bar">
         <span className="lp-logo">Elite<span>Pro</span></span>
-        <button className="lp-signin" onClick={() => navigate('/')}>Sign in</button>
+        <button className="lp-signin" onClick={() => navigate('/login')}>Sign in</button>
       </header>
 
       {/* 1 — Hero */}
