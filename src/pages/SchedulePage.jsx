@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock, RotateCcw } from 'lucide-react';
-import { getSessionColor, SESSION_DANGER_THRESHOLD, RENEWAL_PROMPT_THRESHOLD, OVERDRAFT_LIMIT } from '../utils/sessionUtils';
+import { getSessionColor, SESSION_DANGER_THRESHOLD, OVERDRAFT_LIMIT } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import RenewalPromptModal from '../components/RenewalPromptModal';
+import PaymentSheetModal from '../components/PaymentSheetModal';
+import { renewalPromptKind, renewalSnoozeUntil, RENEWAL_SNOOZE_FIELD } from '../utils/renewalPrompt';
 import { localToday, localDateAdd, parseLocalDate } from '../utils/dateUtils';
 
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
@@ -22,7 +25,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage } = useApp();
+  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage, updateClient } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const isTrainer = currentUser.role === 'trainer';
@@ -46,6 +49,8 @@ export default function SchedulePage() {
   const [recapSend, setRecapSend] = useState(true);
   const [savingRecap, setSavingRecap] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(null);
+  const [renewalPrompt, setRenewalPrompt] = useState(null); // { kind, remainingAfter, trainer }
+  const [paymentSheet, setPaymentSheet] = useState(null); // { trainer, remaining }
 
   const [bannerDismissed, setBannerDismissed] = useState(
     () => !!localStorage.getItem('elitepro_wh_banner_dismissed')
@@ -215,6 +220,21 @@ export default function SchedulePage() {
     await doBookSession(remaining);
   };
 
+  // "Remind me later" is a real answer, so it is recorded on the client's own profile
+  // rather than held in component state — otherwise the prompt would be back on their
+  // very next booking, which is the nagging this modal is meant to avoid.
+  const handleRenewalSnooze = async () => {
+    try {
+      await updateClient(currentUser.id, { [RENEWAL_SNOOZE_FIELD]: renewalSnoozeUntil(today) });
+    } catch {
+      // A failed snooze must not trap the client behind the modal — it simply means the
+      // prompt may reappear on the next booking.
+      toast('Could not save that — you may see this again next time.', 'error');
+    } finally {
+      setRenewalPrompt(null);
+    }
+  };
+
   // The actual write. Split out of handleAdd so the overdraft confirmation
   // modal can complete the booking without re-running validation (and without
   // re-triggering its own confirmation).
@@ -237,23 +257,15 @@ export default function SchedulePage() {
       // dashboard, since booking is the moment the number actually drops.
       const trainer = isTrainer ? null : getClient(trainerId);
       const remainingAfter = remaining === null ? null : remaining - 1;
-      const hasRates = trainer?.renewalRate && trainer?.renewalRateNext;
 
-      if (!isTrainer && remainingAfter !== null && remainingAfter < 0 && hasRates) {
-        toast(
-          `Session booked on credit — this one will be added to your next renewal at ${formatCurrency(trainer.renewalRateNext, trainer.currency)}.`,
-          'info',
-          8000
-        );
-      } else if (!isTrainer && remainingAfter !== null && remainingAfter <= RENEWAL_PROMPT_THRESHOLD && hasRates) {
-        toast(
-          `Session booked — ${remainingAfter} session${remainingAfter === 1 ? '' : 's'} left. Renew before they run out to keep your ${formatCurrency(trainer.renewalRate, trainer.currency)}/session rate.`,
-          'info',
-          8000
-        );
-      } else {
-        toast('Session booked');
-      }
+      // The booking itself is confirmed with a toast, because that IS a status message.
+      // The renewal ask is a separate decision and gets a modal that waits for an answer
+      // — it used to ride along as an 8-second toast and clients never read it.
+      toast('Session booked');
+      const kind = isTrainer
+        ? null
+        : renewalPromptKind({ remainingAfter, trainer, client: currentUser, today });
+      if (kind) setRenewalPrompt({ kind, remainingAfter, trainer });
     } catch (err) {
       toast(`Failed to book session: ${err?.message || 'unknown error'}`, 'error');
     } finally {
@@ -483,6 +495,28 @@ export default function SchedulePage() {
           })
         )}
       </div>
+
+      {renewalPrompt && (
+        <RenewalPromptModal
+          kind={renewalPrompt.kind}
+          remainingAfter={renewalPrompt.remainingAfter}
+          trainer={renewalPrompt.trainer}
+          onRenew={() => {
+            setPaymentSheet({ trainer: renewalPrompt.trainer, remaining: renewalPrompt.remainingAfter });
+            setRenewalPrompt(null);
+          }}
+          onLater={handleRenewalSnooze}
+        />
+      )}
+
+      {paymentSheet && (
+        <PaymentSheetModal
+          client={currentUser}
+          trainer={paymentSheet.trainer}
+          remaining={paymentSheet.remaining}
+          onClose={() => setPaymentSheet(null)}
+        />
+      )}
 
       {overdraftModal && (() => {
         const t = getClient(trainerId);

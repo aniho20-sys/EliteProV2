@@ -5513,3 +5513,24 @@ tr:hover { background: var(--bg-card-hover); }
   .lp-close { padding-bottom: 88px; }
   .lp-cta-block { width: auto; margin: 0 auto; }
 }
+
+/* Renewal prompt modal — the client's "renew or remind me later" decision.
+   No auto-dismiss and no bare close button by design: see RenewalPromptModal.jsx. */
+.renewal-modal { max-width: 400px; text-align: center; }
+.renewal-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--primary-glow);
+  color: var(--primary);
+}
+.renewal-modal-icon-danger { background: var(--danger-glow); color: var(--danger); }
+.renewal-modal-title { margin-bottom: 10px; }
+.renewal-modal-body { font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); }
+.renewal-modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+.renewal-modal-actions .btn { width: 100%; min-height: 48px; }
+.renewal-modal-note { margin-top: 12px; font-size: 0.75rem; color: var(--text-muted); }

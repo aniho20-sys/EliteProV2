@@ -474,6 +474,10 @@ export function AppProvider({ children }) {
       totalSessions: (client?.totalSessions ?? 0) + qty,
       renewalPrompt3Shown: false,
       renewalPrompt1Shown: false,
+      // A top-up is the answer the prompt was asking for, so any outstanding "remind me
+      // later" is spent. The balance going back up usually silences it anyway; this covers
+      // a small top-up that leaves the client still under the threshold.
+      renewalPromptSnoozedUntil: null,
     });
   };
 

@@ -49,7 +49,7 @@ export default function ClientDashboard() {
   // "This Week" counts distinct training days — a logged workout OR a completed session —
   // so clients who train via booked sessions without always logging aren't undercounted.
   // Shares getClientActivityDates() with TrainerDashboard so both sides agree on what counts.
-  const weekStart = localDateAdd(today, -7);
+  const weekStart = localDateAdd(-7);
   const thisWeekCount = getClientActivityDates(currentUser.id, { getWorkoutLogs, getSchedule })
     .filter(d => d >= weekStart).length;
 

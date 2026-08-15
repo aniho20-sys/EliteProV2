@@ -70,6 +70,7 @@ service cloud.firestore {
                          'age','height','speciality','trainerId','inviteCode',
                          'renewalRate','renewalRateNext','bankDetails','currency',
                          'renewalPrompt3Shown','renewalPrompt1Shown',
+                         'renewalPromptSnoozedUntil',
                          'businessName','intakeCompleted'])
         // Trainer updating their own client's full profile (totalSessions, sessionOffset, etc.)
         // Session credit accounting itself (booking/cancel/complete) runs server-side via
