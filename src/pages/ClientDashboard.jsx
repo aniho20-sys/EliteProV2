@@ -253,14 +253,20 @@ export default function ClientDashboard() {
               <Link to="/progress" className="btn btn-outline btn-sm">Details</Link>
             </div>
             <div className="body-stats-grid">
+              {/* Every measurement is optional — a client who only ever logs their weight
+                  is normal. Without the guard those rows render the literal string
+                  "undefinedcm", matching the '--' already used by the stat pill above. */}
               {[
-                { label: 'Weight', value: `${latestStat.weight}kg` },
-                { label: 'Body Fat', value: `${latestStat.bodyFat}%` },
-                { label: 'Chest', value: `${latestStat.chest}cm` },
-                { label: 'Waist', value: `${latestStat.waist}cm` },
-                { label: 'Arms', value: `${latestStat.arms}cm` },
-                { label: 'Legs', value: `${latestStat.legs}cm` },
-              ].map(s => (
+                { label: 'Weight', value: latestStat.weight, unit: 'kg' },
+                { label: 'Body Fat', value: latestStat.bodyFat, unit: '%' },
+                { label: 'Chest', value: latestStat.chest, unit: 'cm' },
+                { label: 'Waist', value: latestStat.waist, unit: 'cm' },
+                { label: 'Arms', value: latestStat.arms, unit: 'cm' },
+                { label: 'Legs', value: latestStat.legs, unit: 'cm' },
+              ].map(({ label, value, unit }) => ({
+                label,
+                value: (value === null || value === undefined || value === '') ? '--' : `${value}${unit}`,
+              })).map(s => (
                 <div key={s.label} className="body-stat-item">
                   <span className="body-stat-label">{s.label}</span>
                   <span className="body-stat-value">{s.value}</span>

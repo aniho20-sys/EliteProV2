@@ -59,7 +59,7 @@ function WeeklySessionsChart({ weekDays, schedule, today }) {
 // Needs Attention already owns the "this client needs action" call-out.
 function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, today }) {
   const [expanded, setExpanded] = useState(false);
-  const weekStart = localDateAdd(today, -7);
+  const weekStart = localDateAdd(-7);
 
   const activity = clients.map(client => ({
     client,

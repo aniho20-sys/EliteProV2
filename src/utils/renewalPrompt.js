@@ -1,4 +1,4 @@
-import { localToday, parseLocalDate } from './dateUtils';
+import { localToday, addDays } from './dateUtils';
 import { RENEWAL_PROMPT_THRESHOLD } from './sessionUtils';
 
 // How long "Remind me later" holds the prompt back. Long enough not to nag on every
@@ -11,15 +11,8 @@ export const RENEWAL_SNOOZE_DAYS = 3;
 // row — sharing one field would let either side silently clear the other's snooze.
 export const RENEWAL_SNOOZE_FIELD = 'renewalPromptSnoozedUntil';
 
-// Date maths on an explicit day rather than "now", so the caller (and the tests) decide
-// what today is. dateUtils' localDateAdd is always relative to the system clock.
-const addDays = (dateStr, days) => {
-  const d = parseLocalDate(dateStr);
-  d.setDate(d.getDate() + days);
-  const p = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-};
-
+// Date maths on an explicit day rather than "now", so the caller (and the tests)
+// decide what today is.
 export const renewalSnoozeUntil = (today = localToday()) => addDays(today, RENEWAL_SNOOZE_DAYS);
 
 export const isRenewalPromptSnoozed = (client, today = localToday()) => {

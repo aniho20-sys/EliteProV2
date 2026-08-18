@@ -9,6 +9,17 @@ export function localToday() {
   return fmtDate(new Date());
 }
 
+// Returns a date n days from ANOTHER date as YYYY-MM-DD, local timezone.
+// localDateAdd is always relative to the system clock; use this whenever the base is a
+// date you already have. Passing a date string to localDateAdd as if it took one silently
+// produces 'NaN-NaN-NaN', which then compares false against every real date — that shipped
+// twice (ClientDashboard and TrainerDashboard "This week" counters, both stuck at 0).
+export function addDays(dateStr, days) {
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() + days);
+  return fmtDate(d);
+}
+
 // Returns a date n days from today as YYYY-MM-DD in local timezone.
 export function localDateAdd(days) {
   const d = new Date();

@@ -18,7 +18,10 @@ import { canonicalExercise } from '../utils/exerciseUtils';
 import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
 
-const AppContext = createContext();
+// Exported so the screenshot renderer in mock/ can supply a stubbed value and mount the
+// real pages without Firebase. The app itself always goes through AppProvider/useApp.
+// eslint-disable-next-line react-refresh/only-export-components
+export const AppContext = createContext();
 const googleProvider = new GoogleAuthProvider();
 
 // Generate a short 6-char invite code

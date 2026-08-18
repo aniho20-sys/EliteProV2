@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { Building2, Calendar, X } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
-import { localToday, localDateAdd } from '../utils/dateUtils';
+import { localToday, localDateAdd, addDays } from '../utils/dateUtils';
 
 export default function StudioBookingPage() {
   const { currentUser, getStudios, getAvailableSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots } = useApp();
@@ -68,7 +68,7 @@ export default function StudioBookingPage() {
         <div className="form-row" style={{ flexWrap: 'wrap', gap: 12 }}>
           <div className="form-group" style={{ flex: '1 1 160px' }}>
             <label className="form-label">Date</label>
-            <input className="form-input" type="date" value={selectedDate} min={today} max={localDateAdd(today, 30)} onChange={e => setSelectedDate(e.target.value)} />
+            <input className="form-input" type="date" value={selectedDate} min={today} max={localDateAdd(30)} onChange={e => setSelectedDate(e.target.value)} />
           </div>
           <div className="form-group" style={{ flex: '2 1 200px' }}>
             <label className="form-label">Studio</label>
@@ -86,7 +86,7 @@ export default function StudioBookingPage() {
       <div className="card mb-16">
         <h3 className="card-title mb-16">Available Slots — {selectedDate}</h3>
         {availableSlots.length === 0 ? (
-          <EmptyState inCard={false} compact icon={Calendar} title="No available slots" description="Try a different date or studio." action={{ label: 'Try Next Day', onClick: () => setSelectedDate(d => localDateAdd(d, 1)) }} />
+          <EmptyState inCard={false} compact icon={Calendar} title="No available slots" description="Try a different date or studio." action={{ label: 'Try Next Day', onClick: () => setSelectedDate(d => addDays(d, 1)) }} />
         ) : (
           <div className="slot-book-grid">
             {availableSlots.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(slot => (
