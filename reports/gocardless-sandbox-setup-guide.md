@@ -1,118 +1,177 @@
 # GoCardless Sandbox + Secret Setup Guide
 
-For Ani — everything here is done through a web browser (desktop or mobile),
-no terminal/CLI needed. Do these in order. Nothing here touches production
-money — this is entirely the GoCardless **sandbox** environment.
+For Ani — everything here is done in a web browser (phone is fine), no
+terminal needed. Do the steps in order. Nothing here touches real money: it is
+entirely the GoCardless **sandbox** environment.
 
-A note on accuracy: steps 1–2 are on GoCardless's own website, which I can't
-browse live from here — the menu names might differ slightly from what I
-describe, but the concept ("create a Partner/OAuth app, get a client ID and
-secret") will be there somewhere, usually under Developer/API settings.
-Steps 3–5 are on Google's own Firebase/Cloud Console, which is more stable
-and I'm confident about the exact paths.
+**Last verified 2026-08-18.** Steps 1–2 were rewritten that day against
+GoCardless's own documentation after the original version sent Ani looking for
+a "Developer section somewhere" and she ended up on the live signup flow and
+its pricing page instead — see `reports/gocardless-access-findings-2026-08-18.md`.
+Every URL below was requested and confirmed to respond.
+
+> **You do NOT need GoCardless to approve anything to do this.** Approval
+> (compliance checks + a self-assessment review) is a **go-live** gate. Sandbox
+> partner apps are self-serve and instant.
 
 ---
 
-## 1. Create a GoCardless sandbox account (if you don't have one)
+## 1. Create a GoCardless sandbox account
+
+⚠️ **Do not start from `gocardless.com`.** The Sign up button there is the
+**real merchant** signup — it asks for company details and makes you pick a
+paid plan. That is the wrong door, and it is what blocked this for two weeks.
+
+The sandbox lives on a completely different host:
 
 1. Go to **https://manage-sandbox.gocardless.com/signup**
-2. Sign up with your email — this is a completely separate, free sandbox
-   account, not connected to any real bank/money.
+   (`/sign-up` works too — both confirmed responding)
+2. Enter an email and password
+3. Click the verification link in the email
+4. You land in the sandbox dashboard
 
-## 2. Register ElitePro as a GoCardless "Partner" / OAuth app
+There is **no plan to choose, no card, no price** anywhere in this flow.
 
-This is what lets ElitePro create GoCardless mandates on behalf of each
-trainer who connects their own account, instead of everyone sharing one
-GoCardless login.
+Three things to remember:
 
-1. Log into the sandbox dashboard: **https://manage-sandbox.gocardless.com**
-2. Look for a **Developer** or **API** section in the left-hand menu, then
-   something like **"Partner integrations"**, **"OAuth apps"**, or
-   **"Create app"**. If you can't find it, search GoCardless's help site for
-   "OAuth app" or "Partner API" — the sandbox and live dashboards use the
-   same layout, so any guide for either applies.
-3. Create a new app with:
-   - **Name**: `ElitePro`
-   - **Redirect URI** (must be typed *exactly*, including `https://`):
+- **Log back in at `manage-sandbox.gocardless.com`** — the login on the main
+  site is the live environment
+- **Sandbox data cannot be reset or deleted.** It behaves exactly like a live
+  account. To start clean you have to create a whole new sandbox account. Cancel
+  test mandates when you are done or the sandbox keeps emailing you
+- Sandbox has **all features enabled** by default (live accounts are limited by
+  plan)
+
+Test bank details, for later:
+
+| Field | Value |
+|---|---|
+| Sort code | `20-00-00` |
+| Account number | `55779911` |
+
+## 2. Register ElitePro as a partner (OAuth) app
+
+This is what lets ElitePro act on behalf of each trainer who connects their own
+GoCardless account, instead of everyone sharing one login.
+
+1. Go straight to
+   **https://manage-sandbox.gocardless.com/developers/partners/apps/create**
+2. Fill in:
+   - **App name**: `ElitePro`
+   - **Description**: anything, e.g. `Personal training session billing`
+   - **Homepage URL**: `https://elitepro-16718.web.app`
+   - **Redirect URL** — type/paste it **exactly**, including `https://`:
      ```
      https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback
      ```
-4. Once created, GoCardless shows you a **Client ID** and **Client Secret**.
-   Copy both somewhere safe for the next steps — **do not paste them to me
-   in chat**, they go straight into Google's Secret Manager (step 4 below).
+3. Create the app. You are returned to
+   **https://manage-sandbox.gocardless.com/developers/partners**, where the app
+   now appears
+4. Open it and copy the **Client ID** and **Client Secret**. Keep them somewhere
+   safe for step 4 — **do not paste them into chat**; they go straight into
+   Google's Secret Manager
+
+> **The redirect URL has to match byte-for-byte.** GoCardless compares the
+> `redirect_uri` we send against the list you registered here, as an exact
+> string. A trailing slash, `http` instead of `https`, or a different region in
+> the hostname all fail the same way. The URL above is not a guess — it was
+> requested on 2026-08-18 and answered with a redirect to
+> `/#/profile?gc=not-configured`, which is our own function's "credentials not
+> set up yet" path, so that is confirmed to be where it is deployed.
+>
+> Why that hostname: `gcOAuthCallback` is a 1st-gen HTTP function
+> (`functions.https.onRequest` in `functions/index.js`) with no `.region()`
+> call, so it sits in the default region **`us-central1`**. If anyone ever adds
+> a region setting or moves it to 2nd gen, this URL changes and both this
+> registration and the `GC_REDIRECT_URI` secret must be updated with it.
 
 ## 3. Enable the Secret Manager API on the project
 
-This is the step that was skipped before and broke the deploy — Secret
-Manager was never turned on for this Google Cloud project at all.
+This is the step that was skipped originally and broke the whole Functions
+deploy — Secret Manager had never been turned on for this Google Cloud project.
 
-1. Go to:
+1. Go to
    **https://console.cloud.google.com/apis/library/secretmanager.googleapis.com?project=elitepro-16718**
-2. Sign in with the Google account that owns/administers the
-   `elitepro-16718` Firebase project.
-3. Click the blue **"Enable"** button.
-4. Wait about a minute for it to finish — you'll see the page update to show
-   the API as enabled.
+2. Sign in with the Google account that administers the `elitepro-16718`
+   Firebase project
+3. Click the blue **Enable** button
+4. Wait about a minute for the page to show the API as enabled
 
 ## 4. Create the three secrets
 
-Still in Google Cloud Console (not GoCardless, not Firebase Console — same
-underlying Google account/project, just a different section of the same
-console):
+Still in Google Cloud Console (same Google account as Firebase, different
+section of the console):
 
-1. Go to:
+1. Go to
    **https://console.cloud.google.com/security/secret-manager?project=elitepro-16718**
-2. Click **"+ Create Secret"**.
-3. First secret:
-   - **Name**: `GC_CLIENT_ID` (must match exactly — capital letters, underscores)
-   - **Secret value**: paste the Client ID from step 2.4
-   - Leave everything else as default, click **"Create Secret"**.
-4. Repeat **"+ Create Secret"** two more times:
-   - **Name**: `GC_CLIENT_SECRET` → value: the Client Secret from step 2.4
-   - **Name**: `GC_REDIRECT_URI` → value: the exact same redirect URI from
-     step 2.3 (`https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback`)
+2. Click **+ Create Secret** three times, once for each row below. Names must
+   match exactly — all caps, underscores:
 
-You should end up with exactly three secrets listed on that page.
+| Secret name | Value |
+|---|---|
+| `GC_CLIENT_ID` | Client ID from step 2.4 |
+| `GC_CLIENT_SECRET` | Client Secret from step 2.4 |
+| `GC_REDIRECT_URI` | `https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback` |
+
+Leave every other option at its default. You should end up with exactly three
+secrets on that page.
+
+> `GC_REDIRECT_URI` must be the **same string** you registered in step 2 —
+> that is the value the app sends to GoCardless, and GoCardless matches it
+> against its own list. Two different strings that both "look right" will fail.
 
 ## 5. Give Cloud Functions permission to read/write secrets
 
-1. Go to:
+1. Go to
    **https://console.cloud.google.com/iam-admin/iam?project=elitepro-16718**
-2. Look down the list for a row whose email ends in
-   **`@appspot.gserviceaccount.com`** (this is the account Cloud Functions
-   actually runs as) — it's usually named something like "App Engine default
-   service account".
-3. Click the **pencil (edit)** icon on that row.
-4. Click **"+ Add Another Role"**.
-5. In the role picker, search for and add:
-   - **Secret Manager Admin** (covers reading the app-level credentials
-     *and* creating/writing/deleting the per-trainer connection tokens the
-     app manages automatically — a single broad role is simpler to set up
-     correctly than juggling several narrow ones for a first pass; can be
-     tightened later once everything's confirmed working)
-6. Click **"Save"**.
+2. Find the row whose email ends in **`@appspot.gserviceaccount.com`** — this is
+   the identity Cloud Functions runs as, usually shown as "App Engine default
+   service account"
+3. Click the **pencil (edit)** icon on that row
+4. Click **+ Add Another Role**
+5. Add **Secret Manager Admin** — the app both reads the three app-level
+   credentials and creates/writes/deletes a per-trainer token secret, so one
+   broad role is easier to get right on a first pass than several narrow ones.
+   It can be tightened once everything is confirmed working
+6. Click **Save**
 
-## 6. Trigger a redeploy
+## 6. No redeploy needed
 
-Once steps 1–5 are done, the next push to the `claude/fitness-app-features-LbxtG`
-branch will pick everything up automatically (Cloud Functions reads these
-secrets fresh on each call, no redeploy of the *code* is actually required —
-but if you want to double check it's all working, just ask and a small
-no-op commit can be pushed to re-trigger the CI deploy and confirm green).
+The functions read these secrets fresh on every call (CLAUDE.md #29), so there
+is nothing to redeploy. The moment steps 3–5 are done, `Connect GoCardless`
+starts working.
+
+If you want a green CI run to confirm anyway, ask and a no-op commit can be
+pushed.
+
+---
 
 ## What "done" looks like
 
-- Google Cloud Console's Secret Manager page shows exactly 3 secrets:
-  `GC_CLIENT_ID`, `GC_CLIENT_SECRET`, `GC_REDIRECT_URI`.
-- In the app, Profile page (as a trainer) → "GoCardless Connection" card →
-  tapping **"Connect GoCardless"** takes you to a real GoCardless sandbox
-  consent page (not an error toast).
-- After approving on GoCardless's page, you land back on the Profile page
-  with a "GoCardless connected" confirmation and the card shows
-  **Connected · sandbox**.
+- Secret Manager lists exactly three secrets: `GC_CLIENT_ID`,
+  `GC_CLIENT_SECRET`, `GC_REDIRECT_URI`
+- In the app, as a trainer: Profile → **GoCardless Connection** card → tapping
+  **Connect GoCardless** opens a real GoCardless sandbox consent page, not an
+  error toast
+- After approving, you land back on Profile with a confirmation and the card
+  reads **Connected · sandbox**
 
-If "Connect GoCardless" still shows *"GoCardless isn't set up yet"* after
-all this, the most likely culprits are: a typo in one of the three secret
-names (must match exactly, all-caps with underscores), or the IAM role in
-step 5 not having propagated yet (can take a few minutes) — let me know and
-I'll check the Cloud Functions logs for the specific error.
+## If it does not work
+
+| Symptom | Likely cause |
+|---|---|
+| "GoCardless isn't set up yet" | A typo in one of the three secret names, or the step 5 IAM role has not propagated yet (a few minutes) |
+| GoCardless shows a redirect-URI error before you approve | The string in step 2 and the `GC_REDIRECT_URI` secret are not identical |
+| You land back on Profile with `?gc=error` | The callback ran but something failed server-side — ask and the Cloud Functions logs will say which |
+| The signup page asks you to pick a plan | You are on `gocardless.com`, not `manage-sandbox.gocardless.com` — see step 1 |
+
+---
+
+## Sources
+
+- [Partners: connecting your users](https://developer.gocardless.com/partners/connecting-your-users/)
+- [Partners introduction](https://developer.gocardless.com/getting-started/partners/introduction/)
+- [Sandbox accounts (support)](https://support.gocardless.com/hc/en-us/articles/212553869-Sandbox-accounts)
+- `reports/gocardless-access-findings-2026-08-18.md` — the fuller write-up of
+  what was verified, including what could not be established (GoCardless
+  publishes no timeline for live approval)
