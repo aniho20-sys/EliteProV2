@@ -2291,6 +2291,11 @@ tr:hover { background: var(--bg-card-hover); }
   text-align: left;
   padding: 0;
   margin-bottom: 0;
+  /* A <button> does not inherit colour — the UA stylesheet gives it `buttontext`, which is
+     near-black. The plan name inside is a .card-title, which sets no colour of its own, so
+     it was rendering black-on-dark-card in dark mode. Invisible in light mode, which is
+     why it survived. Any bare button used purely as a wrapper needs this. */
+  color: inherit;
 }
 .plan-card-toggle:hover { opacity: 0.85; }
 .bulk-client-checklist {
