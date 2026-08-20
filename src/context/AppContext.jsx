@@ -726,6 +726,14 @@ export function AppProvider({ children }) {
     return snap.exists() ? snap.data() : null;
   };
 
+  // Owner-only operating numbers. The owner check lives in the Cloud Function, not here —
+  // a client-side role check on a page anyone can open is decoration, not access control.
+  const getPlatformStats = async () => {
+    const call = httpsCallable(functions, 'getPlatformStats');
+    const result = await call();
+    return result.data;
+  };
+
   const startGcConnect = async () => {
     const start = httpsCallable(functions, 'gcOAuthStart');
     const result = await start();
@@ -979,7 +987,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getGcConnection, startGcConnect, disconnectGc,
+    getGcConnection, startGcConnect, disconnectGc, getPlatformStats,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

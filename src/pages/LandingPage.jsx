@@ -2,16 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, X, Star } from 'lucide-react';
 
-// The single conversion point for the whole page. WhatsApp is the primary channel; until a
-// number is set here every CTA falls back to email so nothing is ever a dead link.
-const WHATSAPP_NUMBER = ''; // digits only, country code first, e.g. '85291234567'
-const CONTACT_EMAIL = 'aniho20@gmail.com';
-const WHATSAPP_MESSAGE = "Hi Ani — I'm a personal trainer and I'd like one of the founding member places.";
-
-const contactHref = WHATSAPP_NUMBER
-  ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
-  : `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Founding member place')}&body=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
-const contactLabel = WHATSAPP_NUMBER ? 'Message me on WhatsApp' : 'Email me';
+// The page is self-serve: every CTA goes straight to sign-up. Nobody has to message
+// anyone to get started, and the founding places are awarded by order of signup rather
+// than by application.
+const CTA_LABEL = 'Start free — no card required';
 
 const PAINS = [
   {
@@ -76,22 +70,26 @@ function Screenshot({ src, alt }) {
   );
 }
 
-function Cta({ block }) {
+function Cta({ block, onClick }) {
   return (
-    <a className={`lp-cta${block ? ' lp-cta-block' : ''}`} href={contactHref}>
-      {contactLabel} <ArrowRight size={18} />
-    </a>
+    <button type="button" className={`lp-cta${block ? ' lp-cta-block' : ''}`} onClick={onClick}>
+      {CTA_LABEL} <ArrowRight size={18} />
+    </button>
   );
 }
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const goSignUp = () => navigate('/login');
 
   return (
     <div className="lp">
       <header className="lp-bar">
         <span className="lp-logo">Elite<span>Pro</span></span>
-        <button className="lp-signin" onClick={() => navigate('/login')}>Sign in</button>
+        <div className="lp-signin-wrap">
+          <span className="lp-signin-note">Already have an account?</span>
+          <button className="lp-signin" onClick={() => navigate('/login')}>Sign in</button>
+        </div>
       </header>
 
       {/* 1 — Hero */}
@@ -101,7 +99,7 @@ export default function LandingPage() {
           Plans, bookings, session credits and payments for independent personal trainers.
           Your clients get their own app. You stop keeping score in your head.
         </p>
-        <Cta />
+        <Cta onClick={goSignUp} />
       </section>
 
       {/* 2 — The problem */}
@@ -174,16 +172,17 @@ export default function LandingPage() {
       {/* 5 — Founding members */}
       <section className="lp-founding">
         <div className="lp-founding-badge"><Star size={13} /> Founding members</div>
-        <h2>Five places. Three months free.</h2>
+        <h2>First five trainers. Three months free.</h2>
         <p>
-          I am looking for five independent trainers to use ElitePro properly with real
-          clients, and to tell me what is wrong with it. Three months free, no card, and the
-          things you ask for get built first.
+          The first five trainers to create an account get the founding rate automatically —
+          there is nothing to apply for and nobody to convince. I want five people using
+          ElitePro with real clients and telling me what is wrong with it, and the things
+          they ask for get built first.
         </p>
         <ul className="lp-founding-list">
-          <li><Check size={16} /> Three months free from the day you start</li>
+          <li><Check size={16} /> Three months free, applied the moment you sign up</li>
+          <li><Check size={16} /> No application, no waiting list, no interview</li>
           <li><Check size={16} /> No setup fee and no commission, then or later</li>
-          <li><Check size={16} /> Your feedback goes to the top of the list</li>
           <li><X size={16} /> Not for you if you do not want to be asked for feedback</li>
         </ul>
       </section>
@@ -191,7 +190,8 @@ export default function LandingPage() {
       {/* 6 — Close */}
       <section className="lp-close">
         <h2>Want one of the five?</h2>
-        <Cta block />
+        <Cta block onClick={goSignUp} />
+        <p className="lp-cta-sub">Takes a minute. You can add your first client straight away.</p>
         <p className="lp-note">
           I am a personal trainer. I built ElitePro because I was running my own clients out
           of a notes app and a spreadsheet, and I could never answer &ldquo;how many sessions

@@ -81,6 +81,21 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    // ── Owner operations ──
+    // OWNER_EMAIL is literal because rules cannot read secrets — it must
+    // stay in sync with the constant of the same name in functions/index.js.
+    // Everything here is written server-side by the Admin SDK, which bypasses these rules.
+    match /platformEvents/{eventId} {
+      allow read: if isAuth() && request.auth.token.email == 'aniho20@gmail.com';
+      allow write: if false;
+    }
+
+    // The Trigger Email extension's queue. Contains the owner's address and message
+    // bodies, and nothing in the app ever needs to read it from the client.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
     // ── Credit Ledger ──
     // Append-only history of top-ups (qty + rate + date). Trainer creates entries for
     // their own clients; trainer and that client can both read. No update/delete —

@@ -5539,3 +5539,39 @@ tr:hover { background: var(--bg-card-hover); }
 .renewal-modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
 .renewal-modal-actions .btn { width: 100%; min-height: 48px; }
 .renewal-modal-note { margin-top: 12px; font-size: 0.75rem; color: var(--text-muted); }
+
+/* Landing header sign-in: secondary to the main CTA, but findable by returning users. */
+.lp-signin-wrap { display: flex; align-items: center; gap: 8px; }
+.lp-signin-note { display: none; font-size: 0.75rem; color: var(--text-muted); }
+.lp-cta-sub { margin-top: 12px; font-size: 0.8rem; color: var(--text-muted); }
+@media (min-width: 560px) {
+  .lp-signin-note { display: inline; }
+}
+
+/* Platform Stats (Profile → owner only) */
+.platform-signup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+.platform-signup-num {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.platform-signup-body { flex: 1; min-width: 0; }
+.platform-signup-name { display: block; font-size: 0.85rem; font-weight: 600; }
+.platform-signup-meta {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

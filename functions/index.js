@@ -658,3 +658,129 @@ exports.cleanupExpiredGcNonces = functions.pubsub
     console.log(`[cleanupExpiredGcNonces] deleted ${expiredSnap.size} expired nonce(s)`);
     return null;
   });
+
+// ─── Owner operations: new-trainer signup alert + platform stats ───
+//
+// A trainer signing up is the only event on this platform that Ani has to react to
+// personally, so it is deliberately loud: a push to her phone, an email, AND a Firestore
+// record. The record is the one that matters — push and email can both silently fail
+// (token expired, extension not installed), and a missed signup is a lost founding member.
+//
+// OWNER_EMAIL is a literal on purpose. It also has to appear literally in firestore.rules,
+// which cannot read secrets, so keeping the two in one obvious place beats hiding one of
+// them. It identifies who to notify; it grants nothing on its own.
+const OWNER_EMAIL = 'aniho20@gmail.com';
+const FOUNDING_PLACES = 5;
+
+async function findOwner() {
+  const snap = await db.collection('users').where('email', '==', OWNER_EMAIL).limit(1).get();
+  return snap.empty ? null : snap.docs[0];
+}
+
+// Counting via the aggregation query rather than reading every document — this runs on
+// every signup and on every Profile visit, and only the number is ever needed.
+async function countRole(role) {
+  const agg = await db.collection('users').where('role', '==', role).count().get();
+  return agg.data().count;
+}
+
+exports.onNewTrainerSignup = functions.firestore
+  .document('users/{userId}')
+  .onCreate(async (snap) => {
+    const user = snap.data() || {};
+    // Clients are the trainers' customers, not Ani's — she only hears about trainers.
+    if (user.role !== 'trainer') return null;
+
+    const createdAt = new Date().toISOString();
+    const trainerNumber = await countRole('trainer');
+    const withinFounding = trainerNumber <= FOUNDING_PLACES;
+    const name = user.name || '(no name)';
+    const email = user.email || '(no email)';
+
+    // 1. The durable record. Written first and on its own, so a failure in either of the
+    //    delivery channels below can never cost Ani the signup itself.
+    await db.collection('platformEvents').add({
+      type: 'trainer_signup',
+      userId: snap.id,
+      name,
+      email,
+      trainerNumber,
+      withinFounding,
+      createdAt,
+      readByOwner: false,
+    });
+
+    const foundingLine = withinFounding
+      ? `Founding place ${trainerNumber} of ${FOUNDING_PLACES}.`
+      : `Founding places are gone (${FOUNDING_PLACES} of ${FOUNDING_PLACES} taken).`;
+
+    const owner = await findOwner();
+
+    // 2. Push, and 3. email — both best-effort and independent, so one failing does not
+    //    take the other down with it.
+    await Promise.allSettled([
+      owner
+        ? sendPush(owner.id, owner.data().fcmTokens, {
+          title: `New trainer: ${name}`,
+          body: `${email} — trainer #${trainerNumber}. ${foundingLine}`,
+        }, { url: '/#/profile' })
+        : Promise.resolve(),
+
+      // The Firebase "Trigger Email" extension sends anything written to `mail`. If the
+      // extension is not installed the document simply sits there unread — no crash, no
+      // deploy-time dependency (CLAUDE.md #29), and the platformEvents record above still
+      // exists either way.
+      db.collection('mail').add({
+        to: OWNER_EMAIL,
+        message: {
+          subject: `New ElitePro trainer: ${name} (#${trainerNumber})`,
+          text: [
+            `Name:  ${name}`,
+            `Email: ${email}`,
+            `Time:  ${createdAt}`,
+            `Trainer number: ${trainerNumber}`,
+            foundingLine,
+          ].join('\n'),
+        },
+      }),
+    ]);
+
+    console.log(`[onNewTrainerSignup] trainer #${trainerNumber} ${email} founding=${withinFounding}`);
+    return null;
+  });
+
+// Owner-only operating numbers for the Profile page. A callable rather than a stored
+// counter: it cannot drift, needs no backfill for the accounts that already exist, and
+// the owner check happens server-side where it cannot be edited away in devtools.
+exports.getPlatformStats = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  }
+  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+    throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  }
+
+  const [trainerCount, clientCount, recentSnap] = await Promise.all([
+    countRole('trainer'),
+    countRole('client'),
+    db.collection('platformEvents')
+      .where('type', '==', 'trainer_signup')
+      .get(),
+  ]);
+
+  // Sorted in JS rather than with orderBy so this needs no composite index (CLAUDE.md #34).
+  const recentSignups = recentSnap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, 10)
+    .map(({ id, name, email, createdAt, trainerNumber, withinFounding }) =>
+      ({ id, name, email, createdAt, trainerNumber, withinFounding }));
+
+  return {
+    trainerCount,
+    clientCount,
+    foundingPlaces: FOUNDING_PLACES,
+    foundingRemaining: Math.max(0, FOUNDING_PLACES - trainerCount),
+    recentSignups,
+  };
+});

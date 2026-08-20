@@ -11,6 +11,7 @@ import { isIOS, isStandalone } from '../utils/deviceUtils';
 import { CURRENCIES } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
 import MovementPatternScanner from '../components/MovementPatternScanner';
+import PlatformStatsCard from '../components/PlatformStatsCard';
 
 function InstallAppCard() {
   if (isStandalone()) {
@@ -675,6 +676,10 @@ export default function ProfilePage() {
       )}
 
       {isTrainer && <MovementPatternScanner />}
+
+      {/* Renders only for the owner — the component hides itself when the Cloud Function
+          refuses the call, so no role list needs maintaining here. */}
+      {isTrainer && <PlatformStatsCard />}
 
       {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (
