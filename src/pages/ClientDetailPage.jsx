@@ -422,21 +422,33 @@ export default function ClientDetailPage() {
         <div className="grid-2">
           <div className="card">
             <h3 className="card-title mb-16">Latest Body Stats</h3>
+            {/* Driven off METRICS, not off the entry's own keys. A bodyStat doc also
+                carries id/date/addedBy, and iterating the object rendered those as
+                measurements — a tile reading "b2cm" labelled "Id". Unmeasured metrics
+                show '--' rather than the string "undefinedcm". */}
             {latestStat ? (
               <div className="grid-3">
-                {Object.entries(latestStat).filter(([k]) => k !== 'date').map(([key, val]) => (
-                  <div key={key} className="text-center">
-                    <div className="fw-bold">{val}{key === 'bodyFat' ? '%' : key === 'weight' ? 'kg' : 'cm'}</div>
-                    <div className="text-sm text-muted">{key === 'bodyFat' ? 'Body Fat' : key.charAt(0).toUpperCase() + key.slice(1)}</div>
-                  </div>
-                ))}
+                {METRICS.map(({ key, label, unit }) => {
+                  const val = latestStat[key];
+                  const missing = val === null || val === undefined || val === '';
+                  return (
+                    <div key={key} className="text-center">
+                      <div className="fw-bold">{missing ? '--' : `${val}${unit}`}</div>
+                      <div className="text-sm text-muted">{label}</div>
+                    </div>
+                  );
+                })}
               </div>
             ) : <p className="text-muted">No stats recorded yet</p>}
           </div>
           <div className="card">
             <h3 className="card-title mb-16">Summary</h3>
             <p className="text-sm">Workout Plans: <strong>{plans.length}</strong></p>
-            <p className="text-sm mt-8">Completed Workouts: <strong>{logs.filter(l => l.completed).length}</strong></p>
+            {/* A workoutLog document has no `completed` field — only the individual sets
+                inside it do. Filtering on it counted 0 for every client ever. A saved log
+                is a completed workout, which is also how ClientDashboard's own total is
+                counted, so the two screens now agree. */}
+            <p className="text-sm mt-8">Completed Workouts: <strong>{logs.length}</strong></p>
             <p className="text-sm mt-8">Measurements: <strong>{stats.length} records</strong></p>
             <p className="text-sm mt-8">Member since: <strong>{client.joinDate}</strong></p>
             <div className="mt-16">

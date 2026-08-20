@@ -11,14 +11,16 @@
    never mounted by the app and never hot-reloaded into it. */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AppContext } from '../src/context/AppContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { ToastProvider } from '../src/context/ToastContext';
 import TrainerDashboard from '../src/pages/TrainerDashboard';
 import ClientDashboard from '../src/pages/ClientDashboard';
 import MyWorkoutsPage from '../src/pages/MyWorkoutsPage';
-import { exerciseLibrary } from '../src/data/exercises';
+import WorkoutPlansPage from '../src/pages/WorkoutPlansPage';
+import ClientDetailPage from '../src/pages/ClientDetailPage';
+import { exerciseLibrary, equipmentTypes } from '../src/data/exercises';
 import { localToday, localDateAdd } from '../src/utils/dateUtils';
 import '../src/styles/index.css';
 
@@ -37,7 +39,8 @@ const CLIENTS = [
     totalSessions: 10, sessionOffset: 11, intakeCompleted: true },
   // 2 — Renewal: running low but not yet overdrawn.
   { id: 'c2', role: 'client', name: 'Sam Reid', trainerId: 't1',
-    totalSessions: 12, sessionOffset: 10, intakeCompleted: true },
+    totalSessions: 12, sessionOffset: 10, intakeCompleted: true,
+    age: 34, height: 178, goals: 'Build strength, drop body fat', joinDate: '2026-03-04' },
   // 3 — Churn risk: healthy balance, but no log and no completed session for weeks.
   { id: 'c3', role: 'client', name: 'Jamie Wu', trainerId: 't1',
     totalSessions: 20, sessionOffset: 8, intakeCompleted: true },
@@ -122,6 +125,22 @@ const makeCtx = (currentUser) => ({
   getUnreadCount: () => 0,
   sendMessage: async () => {},
   markMessagesRead: async () => {},
+  addWorkoutPlan: async () => {},
+  updateWorkoutPlan: async () => {},
+  deleteWorkoutPlan: async () => {},
+  addWorkoutLog: async () => {},
+  updateWorkoutLog: async () => {},
+  addBodyStat: async () => {},
+  updateBodyStat: async () => {},
+  removeClient: async () => {},
+  addExercise: async () => {},
+  updateExercise: async () => {},
+  addCreditLedgerEntry: async () => {},
+  getCreditLedger: async () => [
+    { id: 'cl1', clientId: 'c1', date: day(-40), qty: 10, rate: 45 },
+  ],
+  getIntakeForm: async () => null,
+  equipmentTypes,
   data: { users: [TRAINER, ...CLIENTS], workoutPlans: PLANS, workoutLogs: LOGS, schedule: SCHEDULE, messages: [], exercises: exerciseLibrary, invoices: [] },
 });
 
@@ -134,12 +153,16 @@ const withDefaults = (ctx) => new Proxy(ctx, {
 
 // Each screen is rendered at phone width inside its own provider tree, exactly as the
 // real app mounts it, and captured by its data-shot id.
-function Screen({ id, width = 390, user, children }) {
+function Screen({ id, width = 390, user, path, element, children }) {
   return (
     <div data-shot={id} style={{ width, background: 'var(--bg)', padding: '16px 16px 24px' }}>
       <AppContext.Provider value={withDefaults(makeCtx(user))}>
         <ToastProvider>
-          <MemoryRouter>{children}</MemoryRouter>
+          <MemoryRouter initialEntries={[path || '/']}>
+            {path
+              ? <Routes><Route path={path.replace(/[^/]+$/, ':clientId')} element={element} /></Routes>
+              : children}
+          </MemoryRouter>
         </ToastProvider>
       </AppContext.Provider>
     </div>
@@ -151,8 +174,12 @@ createRoot(document.getElementById('root')).render(
     <ThemeProvider>
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', padding: 24, background: '#0b0d12' }}>
         <Screen id="dashboard" user={TRAINER}><TrainerDashboard /></Screen>
-        <Screen id="sessions" user={CLIENTS[1]}><ClientDashboard /></Screen>
-        <Screen id="plan" user={CLIENTS[1]}><MyWorkoutsPage /></Screen>
+        {/* Sections 2 and 3 of the landing page address the trainer, so they show the
+            trainer's own screens — the client-side equivalents (ClientDashboard's package
+            card, MyWorkoutsPage) are what the client sees, not what a coach evaluating the
+            product would recognise. */}
+        <Screen id="sessions" user={TRAINER} path="/clients/c2" element={<ClientDetailPage />} />
+        <Screen id="plan" user={TRAINER}><WorkoutPlansPage /></Screen>
       </div>
     </ThemeProvider>
   </React.StrictMode>,
