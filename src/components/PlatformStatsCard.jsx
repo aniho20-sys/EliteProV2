@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Star, ChevronDown } from 'lucide-react';
+import { BarChart3, Star, ChevronDown, Trash2, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SkeletonLine } from './Skeleton';
 
@@ -10,11 +10,14 @@ import { SkeletonLine } from './Skeleton';
 // client-side check alone would be decoration, since a page anyone can open cannot keep
 // its own secrets.
 export default function PlatformStatsCard() {
-  const { getPlatformStats, getAccountAudit } = useApp();
+  const { getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts } = useApp();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [audit, setAudit] = useState(null);
   const [auditing, setAuditing] = useState(false);
+  const [cleanup, setCleanup] = useState(null);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +38,30 @@ export default function PlatformStatsCard() {
     try { setAudit(await getAccountAudit()); }
     catch { setAudit({ failed: true }); }
     finally { setAuditing(false); }
+  };
+
+  const runPreview = async () => {
+    if (cleanupBusy) return;
+    setCleanupBusy(true);
+    setConfirming(false);
+    try { setCleanup(await previewTestAccountCleanup()); }
+    catch { setCleanup({ failed: true }); }
+    finally { setCleanupBusy(false); }
+  };
+
+  const runDelete = async () => {
+    if (cleanupBusy) return;
+    setCleanupBusy(true);
+    try {
+      const res = await deleteTestAccounts(cleanup.count);
+      setCleanup({ done: res.deleted, detached: res.detached });
+      setConfirming(false);
+      // The headline numbers are now wrong; pull them again rather than leave stale counts.
+      getPlatformStats().then(setStats).catch(() => {});
+      setAudit(null);
+    } catch (err) {
+      setCleanup({ failed: true, message: err?.message });
+    } finally { setCleanupBusy(false); }
   };
 
   if (error === 'hidden') return null;
@@ -147,6 +174,76 @@ export default function PlatformStatsCard() {
                       : t.dormant && <span className="tag">Unused</span>}
                   </div>
                 ))}
+              </>
+            )}
+          </div>
+
+          <div className="platform-audit">
+            <div className="fw-bold text-sm mb-8" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Trash2 size={14} /> Clean up test accounts
+            </div>
+            <p className="mp-scan-note" style={{ marginTop: 0 }}>
+              Removes accounts on <code>@example.com</code> only — a reserved domain no real
+              person can own. Your own account and anything with a real address is never a
+              candidate.
+            </p>
+
+            {cleanup?.done !== undefined ? (
+              <p className="mp-scan-note">
+                Deleted {cleanup.done} account{cleanup.done === 1 ? '' : 's'}
+                {cleanup.detached ? `, detached ${cleanup.detached} real client${cleanup.detached === 1 ? '' : 's'}` : ''}.
+              </p>
+            ) : cleanup?.failed ? (
+              <p className="mp-scan-note" style={{ color: 'var(--danger)' }}>
+                {cleanup.message || 'Could not load the list. Try again.'}
+              </p>
+            ) : !cleanup ? (
+              <button className="btn btn-outline btn-sm" onClick={runPreview} disabled={cleanupBusy} style={{ width: '100%' }}>
+                {cleanupBusy ? 'Checking…' : 'Show what would be deleted'}
+              </button>
+            ) : (
+              <>
+                <p className="mp-scan-note">
+                  <strong>{cleanup.count}</strong> account{cleanup.count === 1 ? '' : 's'} match
+                  ({cleanup.trainers} trainers, {cleanup.clients} clients).
+                  {cleanup.strandedClients.length > 0
+                    ? ` ${cleanup.strandedClients.length} real client(s) attached to these will be detached, not deleted.`
+                    : ' No real client is attached to any of them.'}
+                </p>
+                {cleanup.accounts.slice(0, 8).map(a => (
+                  <div key={a.id} className="platform-signup-row">
+                    <span className="platform-signup-body">
+                      <span className="platform-signup-name">{a.name || '(no name)'}</span>
+                      <span className="platform-signup-meta">{a.email} · {a.role}</span>
+                    </span>
+                  </div>
+                ))}
+                {cleanup.count > 8 && (
+                  <p className="mp-scan-note">…and {cleanup.count - 8} more, all on @example.com.</p>
+                )}
+
+                {!confirming ? (
+                  <div className="mp-scan-actions">
+                    <button className="btn btn-outline" onClick={() => setCleanup(null)} disabled={cleanupBusy}>Cancel</button>
+                    <button className="btn btn-danger" onClick={() => setConfirming(true)} disabled={cleanupBusy || cleanup.count === 0}>
+                      Delete {cleanup.count}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="mp-scan-note" style={{ color: 'var(--danger)', display: 'flex', gap: 6 }}>
+                      <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                      This cannot be undone. It removes the sign-in, the profile and everything
+                      attached to it.
+                    </p>
+                    <div className="mp-scan-actions">
+                      <button className="btn btn-outline" onClick={() => setConfirming(false)} disabled={cleanupBusy}>Keep them</button>
+                      <button className="btn btn-danger" onClick={runDelete} disabled={cleanupBusy}>
+                        {cleanupBusy ? 'Deleting…' : `Yes, delete ${cleanup.count}`}
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

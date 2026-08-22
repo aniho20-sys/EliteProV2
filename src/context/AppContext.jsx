@@ -742,6 +742,18 @@ export function AppProvider({ children }) {
     return result.data;
   };
 
+  // Owner-only test-account cleanup. Preview and delete are separate calls on purpose —
+  // nothing is removed without the owner seeing the exact list first.
+  const previewTestAccountCleanup = async () => {
+    const call = httpsCallable(functions, 'previewTestAccountCleanup');
+    return (await call()).data;
+  };
+
+  const deleteTestAccounts = async (expectedCount) => {
+    const call = httpsCallable(functions, 'deleteTestAccounts');
+    return (await call({ expectedCount })).data;
+  };
+
   const startGcConnect = async () => {
     const start = httpsCallable(functions, 'gcOAuthStart');
     const result = await start();
@@ -995,7 +1007,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit,
+    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

@@ -920,3 +920,129 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
     signupsByDate,
   };
 });
+
+// ─── Test-account cleanup (owner only) ───
+//
+// 2026-06-13/14 an automated test run created ~91 accounts directly against the production
+// project instead of the emulator. They are identifiable beyond doubt: every one has an
+// @example.com address, which is an IANA-reserved domain that cannot receive mail and that
+// no real person can own.
+//
+// That single fact is the whole safety story, so it is enforced in one place and nowhere
+// else decides who gets deleted.
+const TEST_EMAIL_DOMAIN = '@example.com';
+
+function isDeletableTestAccount(user) {
+  const email = String(user.email || '').trim().toLowerCase();
+  if (!email) return false;                      // no address: never touch it
+  if (email === OWNER_EMAIL) return false;        // belt and braces; Ani is not @example.com
+  return email.endsWith(TEST_EMAIL_DOMAIN);
+}
+
+async function findTestAccounts() {
+  const snap = await db.collection('users').get();
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const doomed = all.filter(isDeletableTestAccount);
+  const doomedIds = new Set(doomed.map(u => u.id));
+
+  // A real client attached to one of these test trainers must not be swept up with it.
+  // Detaching is reversible; deleting is not.
+  const strandedClients = all.filter(u =>
+    u.role === 'client' && !doomedIds.has(u.id) && u.trainerId && doomedIds.has(u.trainerId));
+
+  return { doomed, strandedClients };
+}
+
+exports.previewTestAccountCleanup = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+    throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  }
+
+  const { doomed, strandedClients } = await findTestAccounts();
+  return {
+    count: doomed.length,
+    trainers: doomed.filter(u => u.role === 'trainer').length,
+    clients: doomed.filter(u => u.role === 'client').length,
+    accounts: doomed.slice(0, 200).map(u => ({ id: u.id, name: u.name || '', email: u.email || '', role: u.role || '' })),
+    strandedClients: strandedClients.map(u => ({ id: u.id, name: u.name || '', email: u.email || '' })),
+  };
+});
+
+exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+    throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  }
+
+  const { doomed, strandedClients } = await findTestAccounts();
+
+  // The caller has to say how many accounts they were shown. If the set changed between
+  // the preview and the confirmation, this deletes nothing and says so — the alternative
+  // is silently removing an account the owner never saw.
+  const expected = Number(data && data.expectedCount);
+  if (!Number.isInteger(expected) || expected !== doomed.length) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `The list changed since you reviewed it (${doomed.length} now, you confirmed ${expected}). Nothing was deleted — preview again.`,
+    );
+  }
+  if (doomed.length === 0) return { deleted: 0, detached: 0 };
+
+  // Detach first. If anything later fails, a real client is already safe rather than
+  // pointing at a trainer that no longer exists.
+  for (const c of strandedClients) {
+    await db.doc(`users/${c.id}`).update({ trainerId: null });
+  }
+
+  let deleted = 0;
+  for (const user of doomed) {
+    const uid = user.id;
+
+    // Auth first: onAccountDelete cascades messages, logs, schedule, plans and exercises.
+    // Admin deletes fire it the same as any other, and a missing Auth record is fine —
+    // the Firestore side still gets cleaned below either way.
+    await getAuth().deleteUser(uid).catch(() => {});
+
+    // Everything onAccountDelete does not cover, plus the profile itself. Deleting a
+    // document that is already gone is a no-op, so this stays safe to re-run.
+    const subEntries = await db.collection(`bodyStats/${uid}/entries`).get().catch(() => ({ docs: [] }));
+    const [invTrainer, invClient, ledgerClient, ledgerTrainer, templates, overrides, plansAsClient, logsAsTrainer] =
+      await Promise.all([
+        db.collection('invoices').where('trainerId', '==', uid).get(),
+        db.collection('invoices').where('clientId', '==', uid).get(),
+        db.collection('creditLedger').where('clientId', '==', uid).get(),
+        db.collection('creditLedger').where('trainerId', '==', uid).get(),
+        db.collection('templates').where('trainerId', '==', uid).get(),
+        db.collection('exerciseOverrides').where('trainerId', '==', uid).get(),
+        db.collection('workoutPlans').where('clientId', '==', uid).get(),
+        db.collection('workoutLogs').where('trainerId', '==', uid).get(),
+      ]);
+
+    const refs = [
+      ...subEntries.docs.map(d => d.ref),
+      ...invTrainer.docs.map(d => d.ref),
+      ...invClient.docs.map(d => d.ref),
+      ...ledgerClient.docs.map(d => d.ref),
+      ...ledgerTrainer.docs.map(d => d.ref),
+      ...templates.docs.map(d => d.ref),
+      ...overrides.docs.map(d => d.ref),
+      ...plansAsClient.docs.map(d => d.ref),
+      ...logsAsTrainer.docs.map(d => d.ref),
+      db.doc(`bodyStats/${uid}`),
+      db.doc(`intakeForms/${uid}`),
+      db.doc(`users/${uid}`),
+    ];
+
+    // Firestore batches cap at 500 writes.
+    for (let i = 0; i < refs.length; i += 400) {
+      const batch = db.batch();
+      refs.slice(i, i + 400).forEach(ref => batch.delete(ref));
+      await batch.commit();
+    }
+    deleted += 1;
+  }
+
+  console.log(`[deleteTestAccounts] removed ${deleted} @example.com accounts, detached ${strandedClients.length} real clients`);
+  return { deleted, detached: strandedClients.length };
+});
