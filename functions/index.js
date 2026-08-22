@@ -3,6 +3,7 @@ const functions = require('firebase-functions/v1');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
 const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = require('./gcSecrets');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 
@@ -829,12 +830,33 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 
-  const [usersSnap, plansSnap, schedSnap, logsSnap] = await Promise.all([
+  const [usersSnap, plansSnap, schedSnap, logsSnap, authList] = await Promise.all([
     db.collection('users').get(),
     db.collection('workoutPlans').get(),
     db.collection('schedule').get(),
     db.collection('workoutLogs').get(),
+    // Firebase Auth is the authoritative record of who actually turned up. The Firestore
+    // profile only records the day the role was picked; Auth also knows how they signed in
+    // and, crucially, whether they ever came back. A test account never has a second
+    // visit — a real person does.
+    getAuth().listUsers(1000).catch(() => ({ users: [] })),
   ]);
+
+  const authByUid = {};
+  (authList.users || []).forEach(u => {
+    authByUid[u.uid] = {
+      provider: (u.providerData && u.providerData[0] && u.providerData[0].providerId) || 'unknown',
+      createdAt: u.metadata && u.metadata.creationTime ? u.metadata.creationTime.slice(0, 16) : null,
+      lastSignIn: u.metadata && u.metadata.lastSignInTime ? u.metadata.lastSignInTime.slice(0, 16) : null,
+    };
+  });
+  // A sign-in on a later day than the account was made. The single strongest signal that
+  // somebody meant it.
+  const returned = (uid) => {
+    const a = authByUid[uid];
+    if (!a || !a.createdAt || !a.lastSignIn) return false;
+    return new Date(a.lastSignIn).toDateString() !== new Date(a.createdAt).toDateString();
+  };
 
   const tally = (snap, key) => {
     const counts = {};
@@ -863,6 +885,9 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
       clients: clientsBy[t.id] || 0,
       plans: plansBy[t.id] || 0,
       sessions: sessionsBy[t.id] || 0,
+      provider: (authByUid[t.id] || {}).provider || 'unknown',
+      lastSignIn: (authByUid[t.id] || {}).lastSignIn || null,
+      returned: returned(t.id),
     }))
     // Anything that never gained a client, a plan or a session is an account that was
     // created and abandoned — which is what a testing run looks like from the outside.
@@ -887,6 +912,9 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
       dormantTrainers: trainers.filter(t => t.dormant).length,
       unattachedClients: clients.filter(c => !c.trainerId).length,
       clientsWithNoLogs: clients.filter(c => !logsBy[c.id]).length,
+      // Anyone, either role, who signed in again on a later day.
+      returnedEver: users.filter(u => returned(u.id)).length,
+      authRecordsFound: Object.keys(authByUid).length,
     },
     trainers,
     signupsByDate,

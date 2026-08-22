@@ -105,11 +105,16 @@ export default function PlatformStatsCard() {
             ) : (
               <>
                 <p className="mp-scan-note" style={{ marginTop: 0 }}>
-                  Every account here came from someone signing in and picking a role — nothing
-                  is seeded. <strong>{audit.totals.dormantTrainers} of {audit.totals.trainers}</strong> trainer
-                  accounts never gained a client, a plan or a session.{' '}
+                  Every account came from someone signing in and picking a role — nothing is
+                  seeded. <strong>{audit.totals.dormantTrainers} of {audit.totals.trainers}</strong> trainer
+                  accounts never gained a client, a plan or a session, and{' '}
                   <strong>{audit.totals.unattachedClients}</strong> client
                   {audit.totals.unattachedClients === 1 ? ' is' : 's are'} not connected to any trainer.
+                </p>
+                <p className="mp-scan-note">
+                  <strong>{audit.totals.returnedEver}</strong> account
+                  {audit.totals.returnedEver === 1 ? '' : 's'} signed in again on a later day.
+                  That is the number that means somebody meant it — a test account never comes back.
                 </p>
 
                 <div className="fw-bold text-sm mb-8">Signups by day</div>
@@ -130,10 +135,16 @@ export default function PlatformStatsCard() {
                     <span className="platform-signup-body">
                       <span className="platform-signup-name">{t.name}</span>
                       <span className="platform-signup-meta">
-                        {t.email} · joined {t.joinDate} · {t.clients} clients, {t.plans} plans, {t.sessions} sessions
+                        {t.email} · {t.provider.replace('.com', '')} · joined {t.joinDate}
+                        {t.lastSignIn ? ` · last seen ${t.lastSignIn.replace('T', ' ')}` : ''}
+                      </span>
+                      <span className="platform-signup-meta">
+                        {t.clients} clients, {t.plans} plans, {t.sessions} sessions
                       </span>
                     </span>
-                    {t.dormant && <span className="tag">Unused</span>}
+                    {t.returned
+                      ? <span className="tag tag-accent">Came back</span>
+                      : t.dormant && <span className="tag">Unused</span>}
                   </div>
                 ))}
               </>
