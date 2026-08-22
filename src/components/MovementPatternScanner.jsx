@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Wand2, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -30,6 +30,18 @@ export default function MovementPatternScanner() {
   const [skipped, setSkipped] = useState(0);
   const [selected, setSelected] = useState(new Set());
   const [applying, setApplying] = useState(false);
+
+  // A one-off migration tool, so it should not be furniture. Once every exercise the
+  // trainer created carries a pattern — which is the normal state for anyone who started
+  // after inferMovementPattern shipped, since the add form fills it in — the card is not
+  // rendered at all rather than sitting there offering a scan with nothing to find.
+  const unclassifiedCount = useMemo(
+    () => liveExercises(getExercises()).filter(e => e.trainerId === currentUser.id && !e.movementPattern).length,
+    // getExercises is recreated on every AppContext render; the exercises array behind it
+    // is what actually changes, and a stale count here only delays the card by one render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentUser.id],
+  );
 
   const scan = () => {
     // Only the trainer's own Firestore documents can be written: the seed exercises have no
@@ -83,6 +95,10 @@ export default function MovementPatternScanner() {
   })).filter(g => g.items.length);
 
   const pickedCount = (rows || []).filter(r => selected.has(r.id) && r.pattern).length;
+
+  // `rows` is non-null only after a scan in this visit; keep the card up in that case so
+  // the trainer sees the "all classified" confirmation for what they just applied.
+  if (unclassifiedCount === 0 && rows === null) return null;
 
   return (
     <div className="card mb-16">

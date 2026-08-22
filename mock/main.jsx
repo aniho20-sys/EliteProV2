@@ -15,11 +15,13 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AppContext } from '../src/context/AppContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { ToastProvider } from '../src/context/ToastContext';
+import { NotificationContext } from '../src/context/NotificationContext';
 import TrainerDashboard from '../src/pages/TrainerDashboard';
 import ClientDashboard from '../src/pages/ClientDashboard';
 import MyWorkoutsPage from '../src/pages/MyWorkoutsPage';
 import WorkoutPlansPage from '../src/pages/WorkoutPlansPage';
 import ClientDetailPage from '../src/pages/ClientDetailPage';
+import ProfilePage from '../src/pages/ProfilePage';
 import { exerciseLibrary, equipmentTypes } from '../src/data/exercises';
 import { localToday, localDateAdd } from '../src/utils/dateUtils';
 import '../src/styles/index.css';
@@ -140,9 +142,22 @@ const makeCtx = (currentUser) => ({
     { id: 'cl1', clientId: 'c1', date: day(-40), qty: 10, rate: 45 },
   ],
   getIntakeForm: async () => null,
+  getInviteCode: async () => 'ELITE1',
+  getGcConnection: async () => null,
+  logout: async () => {},
+  sendPasswordReset: async () => {},
+  deleteAccount: async () => {},
+  connectToTrainer: async () => ({ success: true }),
+  getPlatformStats: async () => { const e = new Error('denied'); e.code = 'functions/permission-denied'; throw e; },
   equipmentTypes,
   data: { users: [TRAINER, ...CLIENTS], workoutPlans: PLANS, workoutLogs: LOGS, schedule: SCHEDULE, messages: [], exercises: exerciseLibrary, invoices: [] },
 });
+
+// Notifications already granted and a token registered — the ordinary state for a trainer
+// who enabled them, so the Profile shot shows the real steady-state card.
+const FAKE_NOTIFICATIONS = {
+  permission: 'granted', supported: true, token: 'fake-token', requestPermission: async () => {},
+};
 
 // Anything a page reaches for that is not stubbed above resolves to a function returning
 // an empty list. The screens here only need read paths, and a mock that throws on an
@@ -155,8 +170,9 @@ const withDefaults = (ctx) => new Proxy(ctx, {
 // real app mounts it, and captured by its data-shot id.
 function Screen({ id, width = 390, user, path, element, children }) {
   return (
-    <div data-shot={id} style={{ width, background: 'var(--bg)', padding: '16px 16px 24px' }}>
+    <div data-shot={id} style={{ width, flexShrink: 0, background: 'var(--bg)', padding: '16px 16px 24px' }}>
       <AppContext.Provider value={withDefaults(makeCtx(user))}>
+        <NotificationContext.Provider value={FAKE_NOTIFICATIONS}>
         <ToastProvider>
           <MemoryRouter initialEntries={[path || '/']}>
             {path
@@ -164,6 +180,7 @@ function Screen({ id, width = 390, user, path, element, children }) {
               : children}
           </MemoryRouter>
         </ToastProvider>
+        </NotificationContext.Provider>
       </AppContext.Provider>
     </div>
   );
@@ -180,6 +197,7 @@ createRoot(document.getElementById('root')).render(
             product would recognise. */}
         <Screen id="sessions" user={TRAINER} path="/clients/c2" element={<ClientDetailPage />} />
         <Screen id="plan" user={TRAINER}><WorkoutPlansPage /></Screen>
+        <Screen id="profile" user={TRAINER}><ProfilePage /></Screen>
       </div>
     </ThemeProvider>
   </React.StrictMode>,

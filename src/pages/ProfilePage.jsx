@@ -563,7 +563,7 @@ export default function ProfilePage() {
           <p className="invite-desc">Shown on printed invoices. Leave blank to use your name instead.</p>
           <div className="form-group mt-8">
             <label className="form-label">Business name</label>
-            <input className="form-input" placeholder="e.g. Ani Ho Personal Training" value={businessName}
+            <input className="form-input" placeholder="e.g. Peak Form Personal Training" value={businessName}
               onChange={e => setBusinessName(e.target.value)} />
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveBusinessName} disabled={businessNameSaving}>
@@ -608,7 +608,7 @@ export default function ProfilePage() {
           <p className="invite-desc">Shown to clients in the renewal payment sheet so they can pay you directly.</p>
           <div className="form-group mt-8">
             <label className="form-label">Account name</label>
-            <input className="form-input" placeholder="e.g. Ani Ho PT" value={bankDetails.accountName}
+            <input className="form-input" placeholder="Name on your bank account" value={bankDetails.accountName}
               onChange={e => setBankDetails(b => ({ ...b, accountName: e.target.value }))} />
           </div>
           <div className="form-row">
@@ -667,7 +667,7 @@ export default function ProfilePage() {
           <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Dumbbell size={18} /> Exercise Library Backup
           </h3>
-          <p className="invite-desc">Copy your full exercise library as JSON — paste it somewhere safe, or share it for a data review.</p>
+          <p className="invite-desc">Export your exercise library as JSON for safekeeping.</p>
           <button className="btn btn-outline mt-8" onClick={handleExportExercises} style={{ width: '100%' }}>
             {exportCopied ? <Check size={16} /> : <Copy size={16} />}
             {exportCopied ? 'Copied!' : 'Copy Exercise Library as JSON'}
@@ -742,8 +742,10 @@ export default function ProfilePage() {
               <span className="tag tag-accent">Enabled</span>
               <span className="text-sm text-muted">You'll receive push notifications for messages and session updates</span>
             </div>
-            {/* Debug tools — trainer-only, never shown to clients */}
-            {isTrainer && (
+            {/* Developer tools. Gated on the dev build, not on role: a trainer is a
+                customer, and "Send Test" / "Re-register Token" are things only whoever is
+                debugging the FCM setup should ever see. */}
+            {import.meta.env.DEV && (
               <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
                 <button className="btn btn-sm btn-outline" onClick={() => {
                   new Notification('ElitePro Test 🔔', { body: 'Push notifications are working!', icon: '/favicon.svg' });
@@ -756,19 +758,16 @@ export default function ProfilePage() {
                 </button>
               </div>
             )}
+            {/* Same recovery path for everyone. Trainers used to get a red warning telling
+                them to tap a debug button, which is now gone — and which was never a
+                sensible thing to show a customer anyway. */}
             {!fcmToken && (
-              isTrainer ? (
-                <p className="text-sm mt-8" style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>
-                  ⚠️ Token not registered — tap Re-register Token
-                </p>
-              ) : (
-                <div className="mt-8">
-                  <p className="text-sm text-muted mb-8" style={{ fontSize: '0.8rem' }}>Notifications aren&apos;t fully set up on this device yet.</p>
-                  <button className="btn btn-sm btn-primary" onClick={() => requestNotifPermission(currentUser.id)}>
-                    <Bell size={14} /> Enable Notifications
-                  </button>
-                </div>
-              )
+              <div className="mt-8">
+                <p className="text-sm text-muted mb-8" style={{ fontSize: '0.8rem' }}>Notifications aren&apos;t fully set up on this device yet.</p>
+                <button className="btn btn-sm btn-primary" onClick={() => requestNotifPermission(currentUser.id)}>
+                  <Bell size={14} /> Enable Notifications
+                </button>
+              </div>
             )}
           </div>
         ) : notifPermission === 'denied' ? (
@@ -789,18 +788,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Founding Members Offer — trainer only */}
-      {isTrainer && !currentUser.subscription?.tier && (
-        <a
-          className="founding-member-banner mb-16"
-          href={`mailto:aniho20@gmail.com?subject=Founding Member Interest&body=Hi, I'd like to join ElitePro as a Founding Member.%0A%0AName: ${encodeURIComponent(currentUser.name)}%0AEmail: ${encodeURIComponent(currentUser.email)}`}
-        >
-          <div className="founding-member-badge"><Star size={14} /> Founding Member</div>
-          <h3 className="founding-member-title">Join before spots run out</h3>
-          <p className="founding-member-desc">First 50 trainers get 6 months free + 50% off forever when we launch paid plans.</p>
-          <div className="founding-member-cta">Express Interest <ChevronRight size={16} /></div>
-        </a>
-      )}
 
       {/* Install App */}
       <InstallAppCard />

@@ -58,7 +58,7 @@ All colors are CSS variables on `:root` (light) with overrides on `[data-theme="
 These are deliberate, not debt — do not "fix" them to use theme variables:
 
 - **Google Sign-In button** (`#4285F4`, `#34A853` gradient) — Google's own brand colors, must stay literal regardless of theme.
-- **Founding Member banner** (`#1a1a2e`/`#16213e`/`#0f3460` gradient + `#ffd700` gold badge) — a deliberately always-dark, always-gold premium treatment; it's the one place the "dark luxury + gold accent" brand direction is taken completely literally, independent of the user's light/dark theme choice.
+- **Landing page founding-member section** (`.lp-founding`: `#1a1a2e`/`#16213e`/`#0f3460` gradient + `#ffd700` gold badge) — a deliberately always-dark, always-gold premium treatment; it's the one place the "dark luxury + gold accent" brand direction is taken completely literally, independent of the user's light/dark theme choice. *(The in-app `.founding-member-banner` on Profile carried the same treatment and was removed on 2026-08-18 — a signed-in trainer is already a customer and does not need the pitch. Its CSS went with it.)*
 
 ---
 
