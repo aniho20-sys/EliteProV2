@@ -44,19 +44,28 @@ export default function PlatformStatsCard() {
         <>
           <div className="stat-strip mt-8 mb-16">
             <div className="stat-pill">
-              <div className="stat-pill-value">{stats.trainerCount}</div>
-              <div className="stat-pill-label">Trainers</div>
-            </div>
-            <div className="stat-pill">
-              <div className="stat-pill-value">{stats.clientCount}</div>
-              <div className="stat-pill-label">Clients</div>
+              <div className="stat-pill-value">{stats.signupCount}</div>
+              <div className="stat-pill-label">Signups</div>
             </div>
             <div className="stat-pill">
               <Star size={15} style={{ color: 'var(--warning)' }} />
               <div className="stat-pill-value">{stats.foundingRemaining}</div>
               <div className="stat-pill-label">Founding left</div>
             </div>
+            <div className="stat-pill">
+              <div className="stat-pill-value">{stats.clientCount}</div>
+              <div className="stat-pill-label">Clients</div>
+            </div>
           </div>
+
+          {/* Two different numbers, and conflating them is what made the founding places
+              read as gone before anyone had signed up. Signups counts trainers who arrived
+              after the offer went live; the total also counts every development and QA
+              account ever created. */}
+          <p className="mp-scan-note" style={{ marginTop: 0, marginBottom: 16 }}>
+            {stats.trainerCount} trainer account{stats.trainerCount === 1 ? '' : 's'} exist in total,
+            including old test accounts. Founding places count signups only.
+          </p>
 
           <div className="fw-bold text-sm mb-8">Recent trainer signups</div>
           {stats.recentSignups.length === 0 ? (
@@ -64,7 +73,7 @@ export default function PlatformStatsCard() {
           ) : (
             stats.recentSignups.map(s => (
               <div key={s.id} className="platform-signup-row">
-                <span className="platform-signup-num">#{s.trainerNumber}</span>
+                <span className="platform-signup-num">#{s.signupNumber}</span>
                 <span className="platform-signup-body">
                   <span className="platform-signup-name">{s.name}</span>
                   <span className="platform-signup-meta">

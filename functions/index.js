@@ -684,6 +684,19 @@ async function countRole(role) {
   return agg.data().count;
 }
 
+// Founding places are counted from signup EVENTS, not from how many trainer documents
+// exist. The users collection carries years of development and QA accounts — 37 of them
+// when this was first switched on — so counting documents reported the five founding
+// places as gone before a single real trainer had arrived. An event only exists for a
+// signup that happened after the offer went live, which is exactly what the offer means.
+async function countTrainerSignups() {
+  const agg = await db.collection('platformEvents')
+    .where('type', '==', 'trainer_signup')
+    .count()
+    .get();
+  return agg.data().count;
+}
+
 exports.onNewTrainerSignup = functions.firestore
   .document('users/{userId}')
   .onCreate(async (snap) => {
@@ -692,8 +705,12 @@ exports.onNewTrainerSignup = functions.firestore
     if (user.role !== 'trainer') return null;
 
     const createdAt = new Date().toISOString();
-    const trainerNumber = await countRole('trainer');
-    const withinFounding = trainerNumber <= FOUNDING_PLACES;
+    // Position in the signup queue, which is what the founding offer is about. The total
+    // number of trainer documents is recorded alongside it for Ani's own numbers, but it
+    // is not what decides a founding place.
+    const signupNumber = (await countTrainerSignups()) + 1;
+    const totalTrainers = await countRole('trainer');
+    const withinFounding = signupNumber <= FOUNDING_PLACES;
     const name = user.name || '(no name)';
     const email = user.email || '(no email)';
 
@@ -704,14 +721,15 @@ exports.onNewTrainerSignup = functions.firestore
       userId: snap.id,
       name,
       email,
-      trainerNumber,
+      signupNumber,
+      totalTrainers,
       withinFounding,
       createdAt,
       readByOwner: false,
     });
 
     const foundingLine = withinFounding
-      ? `Founding place ${trainerNumber} of ${FOUNDING_PLACES}.`
+      ? `Founding place ${signupNumber} of ${FOUNDING_PLACES}.`
       : `Founding places are gone (${FOUNDING_PLACES} of ${FOUNDING_PLACES} taken).`;
 
     const owner = await findOwner();
@@ -722,7 +740,7 @@ exports.onNewTrainerSignup = functions.firestore
       owner
         ? sendPush(owner.id, owner.data().fcmTokens, {
           title: `New trainer: ${name}`,
-          body: `${email} — trainer #${trainerNumber}. ${foundingLine}`,
+          body: `${email} — signup #${signupNumber}. ${foundingLine}`,
         }, { url: '/#/profile' })
         : Promise.resolve(),
 
@@ -733,19 +751,20 @@ exports.onNewTrainerSignup = functions.firestore
       db.collection('mail').add({
         to: OWNER_EMAIL,
         message: {
-          subject: `New ElitePro trainer: ${name} (#${trainerNumber})`,
+          subject: `New ElitePro trainer: ${name} (signup #${signupNumber})`,
           text: [
             `Name:  ${name}`,
             `Email: ${email}`,
             `Time:  ${createdAt}`,
-            `Trainer number: ${trainerNumber}`,
+            `Signup number: ${signupNumber}`,
+            `Trainer accounts in total: ${totalTrainers}`,
             foundingLine,
           ].join('\n'),
         },
       }),
     ]);
 
-    console.log(`[onNewTrainerSignup] trainer #${trainerNumber} ${email} founding=${withinFounding}`);
+    console.log(`[onNewTrainerSignup] signup #${signupNumber} ${email} founding=${withinFounding}`);
     return null;
   });
 
@@ -769,18 +788,27 @@ exports.getPlatformStats = functions.https.onCall(async (data, context) => {
   ]);
 
   // Sorted in JS rather than with orderBy so this needs no composite index (CLAUDE.md #34).
-  const recentSignups = recentSnap.docs
+  // Numbered here from the event order rather than from each record's stored number, so
+  // the records written before founding places moved off the document count still show
+  // their true position in the queue.
+  const ordered = recentSnap.docs
     .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    .slice(0, 10)
-    .map(({ id, name, email, createdAt, trainerNumber, withinFounding }) =>
-      ({ id, name, email, createdAt, trainerNumber, withinFounding }));
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    .map((e, i) => ({ ...e, signupNumber: i + 1, withinFounding: i + 1 <= FOUNDING_PLACES }));
+
+  const signupCount = ordered.length;
+  const recentSignups = ordered
+    .slice(-10)
+    .reverse()
+    .map(({ id, name, email, createdAt, signupNumber, withinFounding }) =>
+      ({ id, name, email, createdAt, signupNumber, withinFounding }));
 
   return {
     trainerCount,
     clientCount,
+    signupCount,
     foundingPlaces: FOUNDING_PLACES,
-    foundingRemaining: Math.max(0, FOUNDING_PLACES - trainerCount),
+    foundingRemaining: Math.max(0, FOUNDING_PLACES - signupCount),
     recentSignups,
   };
 });
