@@ -734,6 +734,14 @@ export function AppProvider({ children }) {
     return result.data;
   };
 
+  // Owner-only. Reads every user document, so it is behind the same server-side owner
+  // check and is only ever called when Ani opens the audit on purpose.
+  const getAccountAudit = async () => {
+    const call = httpsCallable(functions, 'getAccountAudit');
+    const result = await call();
+    return result.data;
+  };
+
   const startGcConnect = async () => {
     const start = httpsCallable(functions, 'gcOAuthStart');
     const result = await start();
@@ -987,7 +995,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getGcConnection, startGcConnect, disconnectGc, getPlatformStats,
+    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

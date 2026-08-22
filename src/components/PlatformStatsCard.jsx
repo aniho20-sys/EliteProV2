@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Star } from 'lucide-react';
+import { BarChart3, Star, ChevronDown } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SkeletonLine } from './Skeleton';
 
@@ -10,9 +10,11 @@ import { SkeletonLine } from './Skeleton';
 // client-side check alone would be decoration, since a page anyone can open cannot keep
 // its own secrets.
 export default function PlatformStatsCard() {
-  const { getPlatformStats } = useApp();
+  const { getPlatformStats, getAccountAudit } = useApp();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
+  const [audit, setAudit] = useState(null);
+  const [auditing, setAuditing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +28,14 @@ export default function PlatformStatsCard() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const runAudit = async () => {
+    if (auditing) return;
+    setAuditing(true);
+    try { setAudit(await getAccountAudit()); }
+    catch { setAudit({ failed: true }); }
+    finally { setAuditing(false); }
+  };
 
   if (error === 'hidden') return null;
 
@@ -84,6 +94,51 @@ export default function PlatformStatsCard() {
               </div>
             ))
           )}
+
+          <div className="platform-audit">
+            {!audit ? (
+              <button className="btn btn-outline btn-sm" onClick={runAudit} disabled={auditing} style={{ width: '100%' }}>
+                <ChevronDown size={14} /> {auditing ? 'Checking…' : 'Where did these accounts come from?'}
+              </button>
+            ) : audit.failed ? (
+              <p className="mp-scan-note">Could not load the audit. Try again.</p>
+            ) : (
+              <>
+                <p className="mp-scan-note" style={{ marginTop: 0 }}>
+                  Every account here came from someone signing in and picking a role — nothing
+                  is seeded. <strong>{audit.totals.dormantTrainers} of {audit.totals.trainers}</strong> trainer
+                  accounts never gained a client, a plan or a session.{' '}
+                  <strong>{audit.totals.unattachedClients}</strong> client
+                  {audit.totals.unattachedClients === 1 ? ' is' : 's are'} not connected to any trainer.
+                </p>
+
+                <div className="fw-bold text-sm mb-8">Signups by day</div>
+                {audit.signupsByDate.slice(0, 12).map(d => (
+                  <div key={d.date} className="platform-signup-row">
+                    <span className="platform-signup-body">
+                      <span className="platform-signup-name">{d.date}</span>
+                      <span className="platform-signup-meta">
+                        {d.trainers} trainer{d.trainers === 1 ? '' : 's'} · {d.clients} client{d.clients === 1 ? '' : 's'}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+
+                <div className="fw-bold text-sm mb-8 mt-16">Trainer accounts</div>
+                {audit.trainers.map(t => (
+                  <div key={t.id} className="platform-signup-row">
+                    <span className="platform-signup-body">
+                      <span className="platform-signup-name">{t.name}</span>
+                      <span className="platform-signup-meta">
+                        {t.email} · joined {t.joinDate} · {t.clients} clients, {t.plans} plans, {t.sessions} sessions
+                      </span>
+                    </span>
+                    {t.dormant && <span className="tag">Unused</span>}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </>
       )}
     </div>

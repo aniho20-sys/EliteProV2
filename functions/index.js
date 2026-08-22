@@ -812,3 +812,83 @@ exports.getPlatformStats = functions.https.onCall(async (data, context) => {
     recentSignups,
   };
 });
+
+// Owner-only account audit. Ani looked at 37 trainer accounts and 54 client accounts and
+// could not say what any of them were — and there is no other way for her to find out,
+// since she works from a phone and nobody has Firestore console habits here.
+//
+// Worth stating what this can and cannot tell you: completeProfile() is the ONLY code path
+// in the app that creates a users document, so every one of these is a real Firebase Auth
+// sign-in that reached the role picker. None of them were seeded. What separates Ani's own
+// testing from a stranger is the date they arrived and whether they ever did anything.
+exports.getAccountAudit = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  }
+  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+    throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  }
+
+  const [usersSnap, plansSnap, schedSnap, logsSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('workoutPlans').get(),
+    db.collection('schedule').get(),
+    db.collection('workoutLogs').get(),
+  ]);
+
+  const tally = (snap, key) => {
+    const counts = {};
+    snap.docs.forEach(d => {
+      const id = d.data()[key];
+      if (id) counts[id] = (counts[id] || 0) + 1;
+    });
+    return counts;
+  };
+  const plansBy = tally(plansSnap, 'trainerId');
+  const sessionsBy = tally(schedSnap, 'trainerId');
+  const logsBy = tally(logsSnap, 'clientId');
+
+  const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const clients = users.filter(u => u.role === 'client');
+  const clientsBy = {};
+  clients.forEach(c => { if (c.trainerId) clientsBy[c.trainerId] = (clientsBy[c.trainerId] || 0) + 1; });
+
+  const trainers = users
+    .filter(u => u.role === 'trainer')
+    .map(t => ({
+      id: t.id,
+      name: t.name || '(no name)',
+      email: t.email || '(no email)',
+      joinDate: t.joinDate || '(unknown)',
+      clients: clientsBy[t.id] || 0,
+      plans: plansBy[t.id] || 0,
+      sessions: sessionsBy[t.id] || 0,
+    }))
+    // Anything that never gained a client, a plan or a session is an account that was
+    // created and abandoned — which is what a testing run looks like from the outside.
+    .map(t => ({ ...t, dormant: t.clients === 0 && t.plans === 0 && t.sessions === 0 }))
+    .sort((a, b) => String(b.joinDate).localeCompare(String(a.joinDate)));
+
+  // Signups per day. A single day holding a dozen accounts is a testing session; one
+  // account on a day by itself is a person.
+  const byDate = {};
+  users.forEach(u => {
+    const d = u.joinDate || '(unknown)';
+    byDate[d] = byDate[d] || { date: d, trainers: 0, clients: 0 };
+    if (u.role === 'trainer') byDate[d].trainers += 1;
+    else if (u.role === 'client') byDate[d].clients += 1;
+  });
+  const signupsByDate = Object.values(byDate).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  return {
+    totals: {
+      trainers: trainers.length,
+      clients: clients.length,
+      dormantTrainers: trainers.filter(t => t.dormant).length,
+      unattachedClients: clients.filter(c => !c.trainerId).length,
+      clientsWithNoLogs: clients.filter(c => !logsBy[c.id]).length,
+    },
+    trainers,
+    signupsByDate,
+  };
+});
