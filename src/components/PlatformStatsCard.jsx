@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Star, ChevronDown, Trash2, AlertTriangle } from 'lucide-react';
+import { BarChart3, Star, ChevronDown, Trash2, AlertTriangle, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SkeletonLine } from './Skeleton';
 
@@ -10,7 +10,7 @@ import { SkeletonLine } from './Skeleton';
 // client-side check alone would be decoration, since a page anyone can open cannot keep
 // its own secrets.
 export default function PlatformStatsCard() {
-  const { getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts } = useApp();
+  const { getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail } = useApp();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [audit, setAudit] = useState(null);
@@ -18,6 +18,9 @@ export default function PlatformStatsCard() {
   const [cleanup, setCleanup] = useState(null);
   const [cleanupBusy, setCleanupBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [lookupEmail, setLookupEmail] = useState('');
+  const [lookups, setLookups] = useState([]);
+  const [lookingUp, setLookingUp] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +65,21 @@ export default function PlatformStatsCard() {
     } catch (err) {
       setCleanup({ failed: true, message: err?.message });
     } finally { setCleanupBusy(false); }
+  };
+
+  const runLookup = async (e) => {
+    e.preventDefault();
+    const email = lookupEmail.trim();
+    if (!email || lookingUp) return;
+    setLookingUp(true);
+    try {
+      const res = await lookupAccountByEmail(email);
+      // Kept as a list so two accounts can be compared side by side without re-typing.
+      setLookups(prev => [res, ...prev.filter(r => r.email !== res.email)]);
+      setLookupEmail('');
+    } catch (err) {
+      setLookups(prev => [{ email, failed: err?.message || 'Lookup failed' }, ...prev]);
+    } finally { setLookingUp(false); }
   };
 
   if (error === 'hidden') return null;
@@ -176,6 +194,57 @@ export default function PlatformStatsCard() {
                 ))}
               </>
             )}
+          </div>
+
+          <div className="platform-audit">
+            <div className="fw-bold text-sm mb-8" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Search size={14} /> Look up an account
+            </div>
+            <p className="mp-scan-note" style={{ marginTop: 0 }}>
+              Answers what the sign-in page cannot: whether an address has an account, and
+              whether it has a password to reset at all.
+            </p>
+            <form onSubmit={runLookup} className="lookup-row">
+              <input
+                className="form-input"
+                type="email"
+                placeholder="someone@example.com"
+                value={lookupEmail}
+                onChange={ev => setLookupEmail(ev.target.value)}
+              />
+              <button className="btn btn-outline" type="submit" disabled={lookingUp || !lookupEmail.trim()}>
+                {lookingUp ? '…' : 'Check'}
+              </button>
+            </form>
+            {lookups.map(r => (
+              <div key={r.email} className="platform-signup-row">
+                <span className="platform-signup-body">
+                  <span className="platform-signup-name">{r.email}</span>
+                  {r.failed ? (
+                    <span className="platform-signup-meta" style={{ color: 'var(--danger)' }}>{r.failed}</span>
+                  ) : !r.exists ? (
+                    <span className="platform-signup-meta" style={{ color: 'var(--danger)' }}>
+                      No account uses this address
+                    </span>
+                  ) : (
+                    <>
+                      <span className="platform-signup-meta">
+                        {r.providers.join(' + ')} · {r.role || 'no profile'}
+                        {r.disabled ? ' · DISABLED' : ''}
+                      </span>
+                      <span className="platform-signup-meta">
+                        created {String(r.createdAt || '').slice(0, 16)} · last seen {String(r.lastSignIn || '').slice(0, 16)}
+                      </span>
+                    </>
+                  )}
+                </span>
+                {r.exists && (
+                  <span className={`tag ${r.canResetPassword ? 'tag-accent' : 'tag-danger'}`}>
+                    {r.canResetPassword ? 'Can reset' : 'No password'}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
 
           <div className="platform-audit">

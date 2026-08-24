@@ -754,6 +754,13 @@ export function AppProvider({ children }) {
     return (await call({ expectedCount })).data;
   };
 
+  // Owner-only. Answers what the client cannot: whether an address has an account, and
+  // which sign-in providers it carries. See utils/passwordReset.js for why.
+  const lookupAccountByEmail = async (email) => {
+    const call = httpsCallable(functions, 'lookupAccountByEmail');
+    return (await call({ email })).data;
+  };
+
   const startGcConnect = async () => {
     const start = httpsCallable(functions, 'gcOAuthStart');
     const result = await start();
@@ -1007,7 +1014,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts,
+    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

@@ -5514,3 +5514,6 @@ tr:hover { background: var(--bg-card-hover); }
   white-space: nowrap;
 }
 .platform-audit { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.lookup-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.lookup-row .form-input { flex: 1; min-width: 0; }
+.lookup-row .btn { flex-shrink: 0; }
