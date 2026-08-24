@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, KeyRound } from 'lucide-react';
 import { friendlyAuthError } from '../utils/authErrors';
+import { passwordResetNotice, passwordResetError } from '../utils/passwordReset';
 import { isMobileOrPwa } from '../utils/deviceUtils';
 
 export default function LoginPage() {
@@ -53,12 +54,14 @@ export default function LoginPage() {
     setForgotLoading(true);
     try {
       await sendPasswordReset(forgotEmail.trim());
-      setInfo(`Password reset email sent to ${forgotEmail.trim()}. Check your inbox (and spam folder).`);
+      // Deliberately not "sent" — see utils/passwordReset.js. Firebase resolves this call
+      // for an address with no account and sends nothing, so the app does not know.
+      setInfo(passwordResetNotice(forgotEmail.trim()));
       setShowForgot(false);
       setForgotEmail('');
       setForgotError('');
     } catch (err) {
-      setForgotError(friendlyAuthError(err) || 'Failed to send reset email. Please try again.');
+      setForgotError(passwordResetError(err) || friendlyAuthError(err) || 'Failed to send reset email. Please try again.');
     } finally {
       setForgotLoading(false);
     }

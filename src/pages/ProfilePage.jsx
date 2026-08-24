@@ -5,6 +5,7 @@ import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRou
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { friendlyAuthError } from '../utils/authErrors';
+import { passwordResetNotice, passwordResetError } from '../utils/passwordReset';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
@@ -87,6 +88,7 @@ export default function ProfilePage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // Trainer: invite code state
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
@@ -228,12 +230,19 @@ export default function ProfilePage() {
     toast('Profile updated');
   };
 
+  // Here the address is the signed-in user's own, so the account definitely exists and the
+  // app can promise the email outright — unlike the sign-in page, where the address is
+  // typed and unverifiable.
   const handlePasswordReset = async () => {
+    if (resettingPassword) return;
+    setResettingPassword(true);
     try {
       await sendPasswordReset(currentUser.email);
-      toast(`Password reset email sent to ${currentUser.email}`);
+      toast(passwordResetNotice(currentUser.email, { accountKnown: true }), 'success', 6000);
     } catch (err) {
-      toast(friendlyAuthError(err) || 'Failed to send reset email. Please try again.', 'error');
+      toast(passwordResetError(err) || friendlyAuthError(err) || 'Failed to send reset email. Please try again.', 'error');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -809,7 +818,7 @@ export default function ProfilePage() {
 
         {/* Change Password — only for Email/Password Firebase Auth users */}
         {authProvider === 'email' && (
-          <button className="btn btn-outline mt-16" onClick={handlePasswordReset} style={{ width: '100%' }}>
+          <button className="btn btn-outline mt-16" onClick={handlePasswordReset} disabled={resettingPassword} style={{ width: '100%' }}>
             <KeyRound size={16} /> Send Password Reset Email
           </button>
         )}

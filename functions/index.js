@@ -1046,3 +1046,53 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
   console.log(`[deleteTestAccounts] removed ${deleted} @example.com accounts, detached ${strandedClients.length} real clients`);
   return { deleted, detached: strandedClients.length };
 });
+
+// Owner-only: what does Firebase actually know about this email address?
+//
+// The client cannot answer this. Email enumeration protection makes
+// sendPasswordResetEmail() resolve for an address with no account and send nothing, and
+// it disables fetchSignInMethodsForEmail entirely — so when a student says "I never got
+// the reset email", the app has no way to tell whether the address was wrong, whether
+// they signed up with Google and have no password at all, or whether the mail was simply
+// delivered to spam.
+//
+// The Admin SDK is not subject to that protection. This is owner-gated precisely because
+// an open version of it would be the enumeration oracle the protection exists to prevent.
+exports.lookupAccountByEmail = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+    throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  }
+
+  const email = String((data && data.email) || '').trim().toLowerCase();
+  if (!email) throw new functions.https.HttpsError('invalid-argument', 'Email required');
+
+  let user;
+  try {
+    user = await getAuth().getUserByEmail(email);
+  } catch (err) {
+    if (err && err.code === 'auth/user-not-found') {
+      return { exists: false, email };
+    }
+    throw new functions.https.HttpsError('internal', err.message || 'Lookup failed');
+  }
+
+  const providers = (user.providerData || []).map(p => p.providerId);
+  const profile = await db.doc(`users/${user.uid}`).get();
+
+  return {
+    exists: true,
+    email,
+    uid: user.uid,
+    providers,
+    // A Google-only account has no password to reset. Telling that person to use the reset
+    // email is the wrong instruction — they should sign in with Google.
+    canResetPassword: providers.includes('password'),
+    disabled: user.disabled,
+    emailVerified: user.emailVerified,
+    createdAt: user.metadata && user.metadata.creationTime ? user.metadata.creationTime : null,
+    lastSignIn: user.metadata && user.metadata.lastSignInTime ? user.metadata.lastSignInTime : null,
+    hasProfile: profile.exists,
+    role: profile.exists ? (profile.data().role || null) : null,
+  };
+});
