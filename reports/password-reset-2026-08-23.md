@@ -1,5 +1,20 @@
 # 🔴 學生收唔到 password reset email — 調查同修復
 
+> ## ⚠️ 更正（2026-08-23,原報告出咗之後）
+>
+> **真因唔係下面 §2 講嗰個。**
+>
+> Ani 之後同嗰個學生確認：**封信有寄出,學生亦都收到咗** —— 只不過**寄件人名唔係「ElitePro」**（Firebase 預設用 project id / `noreply@` 地址),所以學生喺 inbox 掃過都認唔出,以為冇收到。
+>
+> **即係話**：
+> - §2 講嘅 enumeration protection **依然係一個真實嘅缺陷**（app 講咗一句自己證明唔到嘅嘢),但**佢唔係今次呢單嘢嘅成因**
+> - 我當時將「Google 註冊冇密碼」列為兩個可能成因之一,**呢個亦都未經證實**,而 Ani 本人（Google 註冊)收得到 reset link 已經同佢有張力
+> - 真正嘅成因係**寄件人身份唔可辨認** —— 一個純粹嘅品牌／deliverability 問題,唔喺 code 入面
+>
+> **原報告以下內容全部保留唔改**,因為佢記錄咗當時查到嘅嘢同點解咁判斷。呢個更正框係要令任何人一打開就知結論改咗,唔使睇到 §8 先發現。修正後嘅行動見文末 §9。
+
+
+
 **日期**：2026-08-23
 **角色**：員工B（Dev）+ 員工E（QA）
 **Commit**：`bc24230`
@@ -180,3 +195,42 @@ grep sendEmailVerification / verifyBeforeUpdateEmail  →  全 repo 零命中
 第二種更難捉 —— 冇 error、冇 log、build 過、test 過、code review 都睇唔出,因為每一行 code 都係啱嘅。捉到佢嘅唯一方法係**問一句：呢個訊息係咪我證明得到?**
 
 呢個問題值得喺每次寫「成功」訊息嗰陣問一次。
+
+---
+
+## 9. 更正後嘅真因同行動（2026-08-23 補）
+
+### 9.1 真因
+
+**封信寄咗、學生收咗、但認唔出。**
+
+Firebase 預設寄件身份係 `noreply@elitepro-16718.firebaseapp.com`,顯示名係 **project id 而唔係 ElitePro**。一封由陌生寄件人寄嚟、講緊「重設密碼」嘅信,喺 inbox 入面同釣魚信冇分別 —— 學生掃過都唔會撳。
+
+### 9.2 已修（code）
+
+Reset 之後嘅提示,兩個版本都加咗**點樣搵**：
+
+> 「It can take a few minutes. Check your spam folder, and **search for "password reset" — the sender may not say ElitePro**.」
+
+⚠️ **刻意唔寫死實際寄件地址**：寄件人名係 Firebase Console 嘅設定,一改呢句就會過時。講「可能唔係 ElitePro」對兩種情況都啱。
+
+同時新增一條 test 守住呢句唔可以被刪。
+
+### 9.3 ⚠️ 未做 —— 要 Ani 喺 Console 改（agent 做唔到）
+
+呢個先係根治：
+
+| 去邊 | 改乜 |
+|---|---|
+| **Firebase Console → Authentication → Templates → Password reset** | 撳鉛筆 icon → 改 **sender name** 做 `ElitePro`;順便睇下 subject 有冇寫住 ElitePro |
+| （可選,長遠） | 設 **custom sender domain**,由 `noreply@elitepro.app` 寄,deliverability 同信任度都會好啲 —— 要買咗域名同設 DNS 先做得 |
+
+改完寄一封俾自己,確認 inbox 見到嘅係「ElitePro」。
+
+### 9.4 呢次學到嘅
+
+原報告 §8 講「呢個 bug 係運作正常但講咗唔真實嘅嘢」。更正之後,真正嘅教訓再深一層：
+
+**「用戶收唔到」同「用戶搵唔到」係兩件事,而由 code 嗰邊睇落去一模一樣。** 兩者嘅 log、error、test 結果全部相同。分辨得到嘅唯一方法係**問返用戶本人**,而唔係喺 code 度再查落去。
+
+我當時查完 code、查完 Google 文件,得出一個**技術上正確但事實上唔啱**嘅結論,而且寫得幾肯定。下次遇到「用戶話收唔到」呢類報告,第一個動作應該係叫用戶**搵下** —— 唔係即刻拆 code。

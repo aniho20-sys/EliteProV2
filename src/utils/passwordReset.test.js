@@ -23,10 +23,17 @@ describe('what the app promises after asking for a reset', () => {
     expect(passwordResetNotice('a@b.com', { accountKnown: true })).toMatch(/spam/i);
   });
 
-  test('the typed-address wording points at the two things that actually go wrong', () => {
-    const msg = passwordResetNotice('a@b.com');
-    expect(msg).toMatch(/different from the one you signed up with/i);
-    expect(msg).toMatch(/google/i);
+  test('both tell the reader what to search for', () => {
+    // The 2026-08-23 case: the email arrived and was never found, because the sender name
+    // is the Firebase project id rather than ElitePro.
+    for (const msg of [passwordResetNotice('a@b.com'), passwordResetNotice('a@b.com', { accountKnown: true })]) {
+      expect(msg).toMatch(/password reset/i);
+      expect(msg).toMatch(/sender may not say ElitePro/i);
+    }
+  });
+
+  test('the typed-address version also covers a wrong address', () => {
+    expect(passwordResetNotice('a@b.com')).toMatch(/different from the one you signed up with/i);
   });
 });
 

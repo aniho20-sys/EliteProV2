@@ -15,10 +15,18 @@
 
 // `accountKnown` is true only where the app already knows the address belongs to a real
 // account — Profile, where it is the signed-in user's own. There the promise is safe.
+// Naming the sender is not decoration. On 2026-08-23 a student did receive the reset
+// email and never found it, because Firebase sends from a noreply@ address whose display
+// name is the project id, not "ElitePro" — so it did not look like anything they had
+// asked for. Telling people what to search for is the part that actually gets them back
+// into their account. Deliberately does not quote the exact address: the sender name is a
+// Firebase Console setting and this copy must not go stale the day it changes.
+const WHERE_TO_LOOK = 'It can take a few minutes. Check your spam folder, and search for "password reset" — the sender may not say ElitePro.';
+
 export const passwordResetNotice = (email, { accountKnown = false } = {}) => (
   accountKnown
-    ? `Password reset email sent to ${email}. It can take a few minutes — check your spam folder too.`
-    : `If an account exists for ${email}, a reset link is on its way. It can take a few minutes — check your spam folder. If nothing arrives, the address may be different from the one you signed up with, or you may have signed up with Google.`
+    ? `Password reset email sent to ${email}. ${WHERE_TO_LOOK}`
+    : `If an account exists for ${email}, a reset link is on its way. ${WHERE_TO_LOOK} If nothing arrives, the address may be different from the one you signed up with.`
 );
 
 // Reset-specific failures worth naming separately. Everything else falls through to the
