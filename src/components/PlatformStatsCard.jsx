@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, Star, ChevronDown, Trash2, AlertTriangle, Search } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, isPermissionError } from '../context/AppContext';
 import { SkeletonLine } from './Skeleton';
 
 // Ani's own operating numbers, shown on her Profile and nobody else's.
@@ -29,7 +29,7 @@ export default function PlatformStatsCard() {
       .catch(err => {
         // permission-denied here means the signed-in account is not the owner, which is
         // the expected answer for everyone else — not something to shout about.
-        if (!cancelled) setError(err?.code === 'functions/permission-denied' ? 'hidden' : 'failed');
+        if (!cancelled) setError(isPermissionError(err) ? 'hidden' : 'failed');
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

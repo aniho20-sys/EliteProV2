@@ -24,6 +24,16 @@ import { getNewBadges } from './badgeUtils';
 export const AppContext = createContext();
 const googleProvider = new GoogleAuthProvider();
 
+// Firestore throws 'permission-denied'; the Functions SDK throws
+// 'functions/permission-denied' for the same condition. Callers that map an error to a
+// user-facing reason need both, or a permission failure gets reported as a bad connection
+// and the user is told to check their internet.
+// eslint-disable-next-line react-refresh/only-export-components
+export const isPermissionError = (err) => {
+  const code = err?.code || '';
+  return code === 'permission-denied' || code === 'functions/permission-denied';
+};
+
 // Generate a short 6-char invite code
 function generateInviteCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I/O/0/1
@@ -654,22 +664,22 @@ export function AppProvider({ children }) {
   // The in-memory `users` array only ever holds the signed-in user plus people already
   // related to them (own doc + own clients + own trainer). A client who hasn't connected
   // to anyone yet therefore has NO trainer doc in memory, so an in-memory-only lookup can
-  // never succeed — the code has to be resolved against Firestore.
+  // never succeed — the code has to be resolved elsewhere (CLAUDE.md #34).
+  //
+  // "Elsewhere" was a direct Firestore query until 2026-08-27. That required `users` to be
+  // readable by every signed-in account, which meant every email address on the platform
+  // was too. The query now lives in the resolveInviteCode callable, which runs on the Admin
+  // SDK and returns only the coach's id and name — so the rule could close to the three
+  // real relationships.
   const findTrainerByCodeRemote = async (code) => {
     const normalized = normalizeInviteCode(code);
     if (!normalized) return null;
+    // A trainer already in memory needs no round trip — this is the returning-student path.
     const local = findTrainerByCode(normalized);
     if (local) return local;
-    // Deliberately a SINGLE-field query. Firestore auto-indexes every single field, but a
-    // second equality filter (role == 'trainer') can require a composite index — which, if
-    // missing in production, throws failed-precondition and breaks this exact flow again.
-    // Codes are unique enough that filtering role in JS costs nothing.
-    const snap = await getDocs(query(
-      collection(db, 'users'),
-      where('inviteCode', '==', normalized),
-    ));
-    const match = snap.docs.find(d => d.data().role === 'trainer');
-    return match ? { ...match.data(), id: match.id } : null;
+    const resolve = httpsCallable(functions, 'resolveInviteCode');
+    const { data } = await resolve({ code: normalized });
+    return data && data.found ? data.trainer : null;
   };
 
   // Returns { success } or { success: false, error, reason }. `reason` distinguishes a
@@ -689,7 +699,10 @@ export function AppProvider({ children }) {
       console.error('[connectToTrainer] lookup failed', err);
       return {
         success: false,
-        reason: err?.code === 'permission-denied' ? 'permission' : 'network',
+        // The lookup is a callable now, and the Functions SDK prefixes its error codes
+        // ('functions/permission-denied'), so a bare equality check would silently report
+        // every permission failure as a network one.
+        reason: isPermissionError(err) ? 'permission' : 'network',
         error: 'Could not check that code right now. Check your connection and try again.',
       };
     }

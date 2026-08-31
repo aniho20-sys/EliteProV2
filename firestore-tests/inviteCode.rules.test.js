@@ -9,11 +9,16 @@ const { doc, setDoc, updateDoc, getDocs, collection, query, where } = require('f
 // only their own doc. The trainer was never in memory, so the lookup could not
 // succeed and every valid code came back "Invalid invite code".
 //
-// The fix resolves the code with a real Firestore query, so these tests pin the
-// two things that query depends on: that rules permit an unconnected client to
-// run it, and that the resulting trainerId write is accepted. If a future rules
-// tightening locks `users` reads down to related-users-only, this suite fails
-// instead of student onboarding silently dying in production again.
+// The fix resolved the code with a real Firestore query from the browser, and this
+// suite pinned what that query depended on. Its header used to end: "If a future
+// rules tightening locks `users` reads down to related-users-only, this suite fails
+// instead of student onboarding silently dying in production again."
+//
+// That is exactly what happened on 2026-08-27. Closing `users` to related-users-only
+// broke these tests loudly, which is the whole point of having written them — the
+// lookup moved into the resolveInviteCode callable rather than the rule being quietly
+// left open. The assertions below now pin the new shape: the client-side query is
+// REFUSED, the code still resolves server-side, and the connect flow still completes.
 //
 // Own PROJECT_ID per the note in subscriptions.rules.test.js (parallel Jest
 // workers + shared project = clearFirestore() races).
@@ -55,38 +60,51 @@ beforeEach(async () => {
   });
 });
 
-// Mirrors AppContext.findTrainerByCodeRemote: single-field query (always auto-indexed
-// by Firestore), role filtered in JS. A second equality filter would risk needing a
-// composite index that doesn't exist in production.
+// Mirrors the query inside the resolveInviteCode callable: single-field (always
+// auto-indexed by Firestore), role filtered in JS. A second equality filter would risk
+// needing a composite index that doesn't exist in production.
 const codeQuery = (db, code) => query(
   collection(db, 'users'),
   where('inviteCode', '==', code),
 );
 const trainersFrom = (snap) => snap.docs.filter(d => d.data().role === 'trainer');
 
-describe('invite code lookup', () => {
-  test('an unconnected client can query users by invite code', async () => {
+// Stands in for resolveInviteCode. That callable runs on the Admin SDK, which bypasses
+// rules entirely, so a rules-disabled context is the accurate simulation of it here.
+// (The callable's own behaviour is covered in functions/test/resolveInviteCode.test.js.)
+const resolveServerSide = async (code) => {
+  let result = null;
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const trainers = trainersFrom(await getDocs(codeQuery(context.firestore(), code)));
+    result = trainers.length ? { id: trainers[0].id, ...trainers[0].data() } : null;
+  });
+  return result;
+};
+
+describe('invite code lookup is no longer a client-side query', () => {
+  // Until 2026-08-27 this query ran from the browser, which is why `users` had
+  // `allow read: if isAuth()` — and that meant any signed-in account could list every
+  // user on the platform and harvest every email address. The lookup moved into the
+  // resolveInviteCode callable so this rule could close.
+  test('an unconnected client can NOT query users by invite code', async () => {
     const db = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
-    await assertSucceeds(getDocs(codeQuery(db, CODE)));
+    await assertFails(getDocs(codeQuery(db, CODE)));
   });
 
-  test('the lookup returns exactly the trainer owning that code', async () => {
-    const db = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
-    const trainers = trainersFrom(await getDocs(codeQuery(db, CODE)));
-    expect(trainers.length).toBe(1);
-    expect(trainers[0].id).toBe(TRAINER);
-    expect(trainers[0].data().name).toBe('Coach Ani');
-  });
-
-  test('an unknown code returns no match (genuine "invalid code", not a rules failure)', async () => {
-    const db = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
-    const trainers = trainersFrom(await getDocs(codeQuery(db, 'NOPE99')));
-    expect(trainers.length).toBe(0);
-  });
-
-  test('an unauthenticated visitor cannot look up invite codes', async () => {
+  test('an unauthenticated visitor cannot either', async () => {
     const db = testEnv.unauthenticatedContext().firestore();
     await assertFails(getDocs(codeQuery(db, CODE)));
+  });
+
+  test('the code still resolves server-side, to exactly the trainer owning it', async () => {
+    const trainer = await resolveServerSide(CODE);
+    expect(trainer).not.toBeNull();
+    expect(trainer.id).toBe(TRAINER);
+    expect(trainer.name).toBe('Coach Ani');
+  });
+
+  test('an unknown code resolves to nothing (genuine "invalid code", not a failure)', async () => {
+    expect(await resolveServerSide('NOPE99')).toBeNull();
   });
 });
 
@@ -94,10 +112,10 @@ describe('invite code connect flow (end to end)', () => {
   test('client connects with a valid code and appears in that trainer\'s client list', async () => {
     const clientDb = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
 
-    // 1. resolve the code
-    const trainers = trainersFrom(await getDocs(codeQuery(clientDb, CODE)));
-    expect(trainers.length).toBe(1);
-    const trainerId = trainers[0].id;
+    // 1. resolve the code (server-side, as resolveInviteCode does)
+    const resolved = await resolveServerSide(CODE);
+    expect(resolved).not.toBeNull();
+    const trainerId = resolved.id;
 
     // 2. write trainerId onto own profile (self-update allowlist must include it)
     await assertSucceeds(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { trainerId }));

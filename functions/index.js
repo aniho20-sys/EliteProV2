@@ -6,6 +6,7 @@ const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
 const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = require('./gcSecrets');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
+const { normalizeInviteCode } = require('./inviteCode');
 
 initializeApp();
 const db = getFirestore();
@@ -1045,6 +1046,44 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
 
   console.log(`[deleteTestAccounts] removed ${deleted} @example.com accounts, detached ${strandedClients.length} real clients`);
   return { deleted, detached: strandedClients.length };
+});
+
+// ── Invite code resolution ──
+// Resolving an invite code is the one lookup a user has to make BEFORE they have any
+// relationship with the person they are looking up, so it can never be served from
+// AppContext's in-memory `users` array (CLAUDE.md #34).
+//
+// It used to be a direct Firestore query from the client, which is why `users` carried
+// `allow read: if isAuth()` — every signed-in user could list every user document, and a
+// user document contains an email address. Moving the lookup here lets that rule close to
+// the three real relationships (own doc, own clients, own trainer) while the connect flow
+// keeps working for a student who has none of them yet.
+//
+// Returns only what the connect screen actually displays. The trainer's email, session
+// counts, bank details and rates are read but never sent back.
+//
+// Not rate limited. An authenticated caller can guess codes here, but a hit reveals only a
+// coach's display name, and before this function existed the same caller could simply read
+// the entire users collection — so this strictly reduces what a guesser gets. If codes ever
+// start protecting something that matters, add a per-caller limit then.
+exports.resolveInviteCode = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+
+  const code = normalizeInviteCode((data && data.code) || '');
+  if (!code) throw new functions.https.HttpsError('invalid-argument', 'Code required');
+
+  // Deliberately a SINGLE-field equality query. Firestore auto-indexes every single field,
+  // whereas adding `role == 'trainer'` as a second filter can require a composite index —
+  // which, missing in production, throws failed-precondition and breaks this exact flow
+  // again (#34). Role is filtered below in JS, where it costs nothing.
+  const snap = await db.collection('users').where('inviteCode', '==', code).limit(10).get();
+  const match = snap.docs.find(d => (d.data() || {}).role === 'trainer');
+  if (!match) return { found: false };
+
+  return {
+    found: true,
+    trainer: { id: match.id, name: (match.data() || {}).name || 'Coach' },
+  };
 });
 
 // Owner-only: what does Firebase actually know about this email address?

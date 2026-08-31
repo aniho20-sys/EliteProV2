@@ -36,6 +36,19 @@ jobs:
 
   deploy_rules:
     runs-on: ubuntu-latest
+    # Rules deploy AFTER functions, deliberately.
+    #
+    # These three jobs used to run in parallel, which is fine while rules only ever loosen.
+    # It stops being fine the moment a rule closes a door that a Cloud Function is meant to
+    # reopen: rules deploy in seconds, functions take minutes, so for the gap between them
+    # the door is shut and nothing is behind it. That is what tightening `users` on
+    # 2026-08-27 would have done — invite codes unresolvable for every new student until the
+    # functions job caught up, which is the 2026-08-04 outage again (CLAUDE.md #34).
+    #
+    # Cost of this ordering: a failed functions deploy now also blocks the rules deploy.
+    # That is the safer failure — the rules already in production keep matching the
+    # functions already in production.
+    needs: deploy_functions
     steps:
       - name: Checkout
         uses: actions/checkout@v4

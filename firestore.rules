@@ -46,10 +46,31 @@ service cloud.firestore {
     }
 
     // ── Users ──
-    // Any authed user can read user list (needed for client/trainer lookup, invite codes)
-    // Self-create own profile; self-update, or trainer updating their own client
+    // A user document holds an email address, so reading one is not harmless. This used to
+    // be `allow read: if isAuth()`, which let any signed-in account list every user on the
+    // platform and collect every address. Access is now limited to the three relationships
+    // the app actually has: your own document, your own clients, and your own coach.
+    //
+    // The one lookup that does NOT fit that shape is resolving an invite code, which by
+    // definition happens before any relationship exists (CLAUDE.md #34). Rules cannot see a
+    // query's where-clauses, so "allow a list only when it filters by inviteCode" is not
+    // expressible here — that lookup moved server-side to the resolveInviteCode callable,
+    // which returns the coach's id and name and nothing else.
+    //
+    // Self-create own profile; self-update, or trainer updating their own client.
     match /users/{userId} {
-      allow read: if isAuth();
+      // Single-document reads.
+      allow get: if isOwner(userId)
+        || isTrainerOf(userId)
+        || (isAuth() && userTrainerId() == userId);
+
+      // Queries. Rules are not filters: a query is allowed only if its constraints
+      // guarantee every document it could return satisfies this expression, so the two
+      // listeners in AppContext (where id == uid, where trainerId == uid) pass and an
+      // unconstrained read of the collection fails.
+      allow list: if isAuth()
+        && (resource.data.id == request.auth.uid
+            || resource.data.trainerId == request.auth.uid);
       // Self-create own profile, OR trainer creating a managed ghost client
       allow create: if isOwner(userId)
         || (isTrainer()
