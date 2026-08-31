@@ -57,7 +57,7 @@ export default function PlatformStatsCard() {
     setCleanupBusy(true);
     try {
       const res = await deleteTestAccounts(cleanup.count);
-      setCleanup({ done: res.deleted, detached: res.detached });
+      setCleanup({ done: res.deleted, detached: res.detached, remaining: res.remaining || 0 });
       setConfirming(false);
       // The headline numbers are now wrong; pull them again rather than leave stale counts.
       getPlatformStats().then(setStats).catch(() => {});
@@ -258,10 +258,23 @@ export default function PlatformStatsCard() {
             </p>
 
             {cleanup?.done !== undefined ? (
-              <p className="mp-scan-note">
-                Deleted {cleanup.done} account{cleanup.done === 1 ? '' : 's'}
-                {cleanup.detached ? `, detached ${cleanup.detached} real client${cleanup.detached === 1 ? '' : 's'}` : ''}.
-              </p>
+              <>
+                <p className="mp-scan-note">
+                  Deleted {cleanup.done} account{cleanup.done === 1 ? '' : 's'}
+                  {cleanup.detached ? `, detached ${cleanup.detached} real client${cleanup.detached === 1 ? '' : 's'}` : ''}.
+                </p>
+                {/* A run is capped, so "deleted 40" on its own would read as "finished". */}
+                {cleanup.remaining > 0 && (
+                  <>
+                    <p className="mp-scan-note">
+                      <strong>{cleanup.remaining}</strong> still to go — run it again.
+                    </p>
+                    <button className="btn btn-outline btn-sm" onClick={runPreview} disabled={cleanupBusy} style={{ width: '100%' }}>
+                      {cleanupBusy ? 'Checking…' : 'Show the rest'}
+                    </button>
+                  </>
+                )}
+              </>
             ) : cleanup?.failed ? (
               <p className="mp-scan-note" style={{ color: 'var(--danger)' }}>
                 {cleanup.message || 'Could not load the list. Try again.'}
@@ -274,7 +287,8 @@ export default function PlatformStatsCard() {
               <>
                 <p className="mp-scan-note">
                   <strong>{cleanup.count}</strong> account{cleanup.count === 1 ? '' : 's'} match
-                  ({cleanup.trainers} trainers, {cleanup.clients} clients).
+                  ({cleanup.trainers} trainers, {cleanup.clients} clients
+                  {cleanup.noProfile ? `, ${cleanup.noProfile} sign-in only` : ''}).
                   {cleanup.strandedClients.length > 0
                     ? ` ${cleanup.strandedClients.length} real client(s) attached to these will be detached, not deleted.`
                     : ' No real client is attached to any of them.'}
@@ -283,7 +297,7 @@ export default function PlatformStatsCard() {
                   <div key={a.id} className="platform-signup-row">
                     <span className="platform-signup-body">
                       <span className="platform-signup-name">{a.name || '(no name)'}</span>
-                      <span className="platform-signup-meta">{a.email} · {a.role}</span>
+                      <span className="platform-signup-meta">{a.email} · {a.role || 'sign-in only'}</span>
                     </span>
                   </div>
                 ))}

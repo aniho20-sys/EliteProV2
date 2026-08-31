@@ -7,6 +7,7 @@ const { getAuth } = require('firebase-admin/auth');
 const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = require('./gcSecrets');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
+const { selectTestAccounts } = require('./testAccounts');
 
 initializeApp();
 const db = getFirestore();
@@ -930,28 +931,38 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
 // no real person can own.
 //
 // That single fact is the whole safety story, so it is enforced in one place and nowhere
-// else decides who gets deleted.
-const TEST_EMAIL_DOMAIN = '@example.com';
+// else decides who gets deleted — see testAccounts.js.
 
-function isDeletableTestAccount(user) {
-  const email = String(user.email || '').trim().toLowerCase();
-  if (!email) return false;                      // no address: never touch it
-  if (email === OWNER_EMAIL) return false;        // belt and braces; Ani is not @example.com
-  return email.endsWith(TEST_EMAIL_DOMAIN);
+// listUsers returns at most 1000 per call, so a single call is a silent cap, not a list.
+async function listAllAuthUsers() {
+  const out = [];
+  let pageToken;
+  do {
+    const page = await getAuth().listUsers(1000, pageToken);
+    out.push(...(page.users || []));
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return out;
 }
 
+// Firebase Auth is the register of who actually exists. Firestore only holds profiles, and
+// an account can exist in Auth with no profile at all — a signup abandoned at the role
+// screen, or a script that created logins and never got as far as writing documents.
+//
+// This function used to read Firestore alone, which meant it could not see, report or
+// delete exactly the accounts that leave stray addresses behind. On 2026-08-31 the cleanup
+// reported everything gone, Firestore was genuinely clean, and the Auth user list was still
+// full of testtrainer…@example.com. The tool was not lying; it was looking in the wrong
+// place. Auth is now the primary source and Firestore is folded in for anything Auth has
+// already forgotten.
+// The selection itself lives in testAccounts.js, where it can be tested without an
+// emulator — the bug was never in the deleting, it was in deciding what to delete.
 async function findTestAccounts() {
-  const snap = await db.collection('users').get();
-  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  const doomed = all.filter(isDeletableTestAccount);
-  const doomedIds = new Set(doomed.map(u => u.id));
-
-  // A real client attached to one of these test trainers must not be swept up with it.
-  // Detaching is reversible; deleting is not.
-  const strandedClients = all.filter(u =>
-    u.role === 'client' && !doomedIds.has(u.id) && u.trainerId && doomedIds.has(u.trainerId));
-
-  return { doomed, strandedClients };
+  const [snap, authUsers] = await Promise.all([
+    db.collection('users').get(),
+    listAllAuthUsers(),
+  ]);
+  return selectTestAccounts(authUsers, snap.docs.map(d => ({ id: d.id, ...d.data() })));
 }
 
 exports.previewTestAccountCleanup = functions.https.onCall(async (data, context) => {
@@ -965,6 +976,9 @@ exports.previewTestAccountCleanup = functions.https.onCall(async (data, context)
     count: doomed.length,
     trainers: doomed.filter(u => u.role === 'trainer').length,
     clients: doomed.filter(u => u.role === 'client').length,
+    // Logins with no Firestore profile. They have no role, so without their own count they
+    // would vanish from the trainers/clients breakdown and the totals would not add up.
+    noProfile: doomed.filter(u => !u.hasProfile).length,
     accounts: doomed.slice(0, 200).map(u => ({ id: u.id, name: u.name || '', email: u.email || '', role: u.role || '' })),
     strandedClients: strandedClients.map(u => ({ id: u.id, name: u.name || '', email: u.email || '' })),
   };
@@ -988,7 +1002,7 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
       `The list changed since you reviewed it (${doomed.length} now, you confirmed ${expected}). Nothing was deleted — preview again.`,
     );
   }
-  if (doomed.length === 0) return { deleted: 0, detached: 0 };
+  if (doomed.length === 0) return { deleted: 0, detached: 0, remaining: 0 };
 
   // Detach first. If anything later fails, a real client is already safe rather than
   // pointing at a trainer that no longer exists.
@@ -996,8 +1010,15 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
     await db.doc(`users/${c.id}`).update({ trainerId: null });
   }
 
+  // Each account costs one Auth delete plus eight Firestore queries, all sequential, and a
+  // callable's client-side timeout is around a minute. A large sweep would be cut off
+  // part-way with no report of what actually happened. Every delete here is idempotent, so
+  // capping the run and saying how many are left is both safe and honest.
+  const MAX_PER_RUN = 40;
+  const batchOfDoomed = doomed.slice(0, MAX_PER_RUN);
+
   let deleted = 0;
-  for (const user of doomed) {
+  for (const user of batchOfDoomed) {
     const uid = user.id;
 
     // Auth first: onAccountDelete cascades messages, logs, schedule, plans and exercises.
@@ -1044,8 +1065,9 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
     deleted += 1;
   }
 
-  console.log(`[deleteTestAccounts] removed ${deleted} @example.com accounts, detached ${strandedClients.length} real clients`);
-  return { deleted, detached: strandedClients.length };
+  const remaining = doomed.length - deleted;
+  console.log(`[deleteTestAccounts] removed ${deleted} @example.com accounts, ${remaining} left, detached ${strandedClients.length} real clients`);
+  return { deleted, detached: strandedClients.length, remaining };
 });
 
 // ── Invite code resolution ──
