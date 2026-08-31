@@ -14,14 +14,37 @@
 // catch profiles whose Auth record has already been removed.
 
 const OWNER_EMAIL = 'aniho20@gmail.com';
-const TEST_EMAIL_DOMAIN = '@example.com';
+
+// Domains that provably cannot belong to a real person. Nothing else is ever swept
+// automatically — an address on a real domain is a judgement call, and judgement calls
+// belong to Ani, not to a loop.
+//
+//   example.com  IANA-reserved for documentation (RFC 2606). Cannot receive mail.
+//   test.local   .local is reserved for multicast DNS (RFC 6762). Never publicly
+//                resolvable, so no mailbox can exist behind it.
+//
+// This started as one domain and missed most of the mess. The 2026-06 run left
+// testtrainer<epoch>@example.com behind; an earlier one left trainer_<epoch>@test.local,
+// and those survived the first sweep untouched because the list had a single entry in it.
+// When adding to this list, the bar is "cannot route mail, by standard" — not "looks like
+// a test account".
+const DISPOSABLE_DOMAINS = ['@example.com', '@test.local'];
+
+// Kept on purpose whatever else is true. The QA pair is on @elitepro.test, which is also a
+// reserved domain, and CLAUDE.md keeps both permanently for multi-tenant testing — so if
+// .test is ever added above, these two must still survive it.
+const PROTECTED_EMAILS = [
+  OWNER_EMAIL,
+  'test-coach-b@elitepro.test',
+  'test-student-b@elitepro.test',
+];
 
 // Accepts either an Auth user record or a Firestore profile — both carry `email`.
 function isDeletableTestAccount(user) {
   const email = String((user && user.email) || '').trim().toLowerCase();
-  if (!email) return false;                // no address: never touch it
-  if (email === OWNER_EMAIL) return false; // belt and braces; Ani is not @example.com
-  return email.endsWith(TEST_EMAIL_DOMAIN);
+  if (!email) return false;                       // no address: no evidence, never touch it
+  if (PROTECTED_EMAILS.includes(email)) return false;
+  return DISPOSABLE_DOMAINS.some(d => email.endsWith(d));
 }
 
 // authUsers: Firebase Auth records ({ uid, email }).
@@ -58,4 +81,10 @@ function selectTestAccounts(authUsers, profiles) {
   return { doomed, strandedClients };
 }
 
-module.exports = { isDeletableTestAccount, selectTestAccounts, OWNER_EMAIL, TEST_EMAIL_DOMAIN };
+module.exports = {
+  isDeletableTestAccount,
+  selectTestAccounts,
+  OWNER_EMAIL,
+  DISPOSABLE_DOMAINS,
+  PROTECTED_EMAILS,
+};

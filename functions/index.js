@@ -925,13 +925,14 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
 
 // ─── Test-account cleanup (owner only) ───
 //
-// 2026-06-13/14 an automated test run created ~91 accounts directly against the production
-// project instead of the emulator. They are identifiable beyond doubt: every one has an
-// @example.com address, which is an IANA-reserved domain that cannot receive mail and that
-// no real person can own.
+// More than one automated test run has written accounts straight into the production
+// project instead of the emulator: 2026-06-13/14 left ~91 on testtrainer<epoch>@example.com,
+// and an earlier one left trainer_<epoch>@test.local.
 //
-// That single fact is the whole safety story, so it is enforced in one place and nowhere
-// else decides who gets deleted — see testAccounts.js.
+// They are identifiable beyond doubt because both domains are reserved by standard and can
+// never carry a mailbox. That fact is the entire safety story, so the list of such domains
+// lives in exactly one place and nothing else decides who gets deleted — see
+// testAccounts.js. Accounts on real domains are never swept, however test-like they look.
 
 // listUsers returns at most 1000 per call, so a single call is a silent cap, not a list.
 async function listAllAuthUsers() {
@@ -1066,7 +1067,7 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
   }
 
   const remaining = doomed.length - deleted;
-  console.log(`[deleteTestAccounts] removed ${deleted} @example.com accounts, ${remaining} left, detached ${strandedClients.length} real clients`);
+  console.log(`[deleteTestAccounts] removed ${deleted} reserved-domain accounts, ${remaining} left, detached ${strandedClients.length} real clients`);
   return { deleted, detached: strandedClients.length, remaining };
 });
 

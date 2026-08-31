@@ -19,9 +19,20 @@ const authUser = (uid, email) => ({ uid, email });
 const profile = (id, email, extra = {}) => ({ id, email, ...extra });
 
 describe('isDeletableTestAccount', () => {
-  test('@example.com is the only thing that qualifies', () => {
+  test('both reserved domains qualify, nothing else does', () => {
     expect(isDeletableTestAccount({ email: 'testtrainer1750000000@example.com' })).toBe(true);
+    expect(isDeletableTestAccount({ email: 'trainer_1781132378259@test.local' })).toBe(true);
     expect(isDeletableTestAccount({ email: 'someone@gmail.com' })).toBe(false);
+  });
+
+  test('a real domain is never a candidate, however test-like the address reads', () => {
+    // Everything here was on the account list on 2026-08-31 and none of it can be swept
+    // automatically: "Test" on a live gmail, the retired demo coach, and a real coach whose
+    // name happens to start with the letters of a test fixture. Sweeping by appearance is
+    // how a real account gets deleted.
+    for (const email of ['abc@gmail.com', 'coach@elitepro.com', 'mcstanleywong@gmail.com', 'tester@test.com']) {
+      expect(isDeletableTestAccount({ email })).toBe(false);
+    }
   });
 
   test('case and stray whitespace do not let one through or hold one back', () => {
@@ -54,6 +65,32 @@ describe('isDeletableTestAccount', () => {
     expect(isDeletableTestAccount({ email: 'a@notexample.com' })).toBe(false);
     expect(isDeletableTestAccount({ email: 'a@example.com.evil.net' })).toBe(false);
     expect(isDeletableTestAccount({ email: 'a@example.co' })).toBe(false);
+    expect(isDeletableTestAccount({ email: 'a@nottest.local' })).toBe(false);
+    expect(isDeletableTestAccount({ email: 'a@test.localhost' })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GUARDIAN
+// ---------------------------------------------------------------------------
+// The 2026-08-31 miss, take two. The first sweep reported success and left three
+// trainer_<epoch>@test.local accounts standing, because the domain list had one entry.
+describe('GUARDIAN: @test.local is swept', () => {
+  test.each([
+    'trainer_1781132378259@test.local',
+    'trainer_1781134919705@test.local',
+    'trainer_1781132248636@test.local',
+  ])('%s is selected', (email) => {
+    const { doomed } = selectTestAccounts([authUser('u', email)], []);
+    expect(doomed).toHaveLength(1);
+  });
+
+  test('the two domains are swept in the same pass, not one run each', () => {
+    const { doomed } = selectTestAccounts([
+      authUser('a', 'testtrainer1@example.com'),
+      authUser('b', 'trainer_1@test.local'),
+    ], []);
+    expect(doomed.map(d => d.id).sort()).toEqual(['a', 'b']);
   });
 });
 

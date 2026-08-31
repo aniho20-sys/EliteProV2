@@ -252,9 +252,9 @@ export default function PlatformStatsCard() {
               <Trash2 size={14} /> Clean up test accounts
             </div>
             <p className="mp-scan-note" style={{ marginTop: 0 }}>
-              Removes accounts on <code>@example.com</code> only — a reserved domain no real
-              person can own. Your own account and anything with a real address is never a
-              candidate.
+              Removes accounts on <code>@example.com</code> and <code>@test.local</code> only —
+              reserved domains that cannot carry a mailbox. Your own account, the QA pair, and
+              anything on a real address are never candidates.
             </p>
 
             {cleanup?.done !== undefined ? (
@@ -302,7 +302,7 @@ export default function PlatformStatsCard() {
                   </div>
                 ))}
                 {cleanup.count > 8 && (
-                  <p className="mp-scan-note">…and {cleanup.count - 8} more, all on @example.com.</p>
+                  <p className="mp-scan-note">…and {cleanup.count - 8} more, all on a reserved domain.</p>
                 )}
 
                 {!confirming ? (
