@@ -8,6 +8,7 @@ const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = requir
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
+const { summariseSignups } = require('./signupQueue');
 
 initializeApp();
 const db = getFirestore();
@@ -692,12 +693,16 @@ async function countRole(role) {
 // when this was first switched on — so counting documents reported the five founding
 // places as gone before a single real trainer had arrived. An event only exists for a
 // signup that happened after the offer went live, which is exactly what the offer means.
+// Excluded events stay in the collection — the record of what happened is not edited, only
+// what it counts towards (CLAUDE.md #27). Reads documents rather than count() because a
+// count() aggregation cannot skip them without a second equality filter, and two equality
+// filters can require a composite index that will not exist in production (#34). Signup
+// volume is small enough that reading them is free.
 async function countTrainerSignups() {
-  const agg = await db.collection('platformEvents')
+  const snap = await db.collection('platformEvents')
     .where('type', '==', 'trainer_signup')
-    .count()
     .get();
-  return agg.data().count;
+  return snap.docs.filter(d => !(d.data() || {}).excluded).length;
 }
 
 exports.onNewTrainerSignup = functions.firestore
@@ -790,30 +795,56 @@ exports.getPlatformStats = functions.https.onCall(async (data, context) => {
       .get(),
   ]);
 
-  // Sorted in JS rather than with orderBy so this needs no composite index (CLAUDE.md #34).
-  // Numbered here from the event order rather than from each record's stored number, so
-  // the records written before founding places moved off the document count still show
-  // their true position in the queue.
-  const ordered = recentSnap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
-    .map((e, i) => ({ ...e, signupNumber: i + 1, withinFounding: i + 1 <= FOUNDING_PLACES }));
+  // Ordered and numbered in JS rather than with orderBy, so this needs no composite index
+  // (CLAUDE.md #34). The queue arithmetic itself lives in signupQueue.js, where it is
+  // tested — it has been wrong in production twice.
+  const { rows, signupCount, excludedCount, foundingRemaining } = summariseSignups(
+    recentSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+    FOUNDING_PLACES,
+  );
 
-  const signupCount = ordered.length;
-  const recentSignups = ordered
+  const recentSignups = rows
     .slice(-10)
     .reverse()
-    .map(({ id, name, email, createdAt, signupNumber, withinFounding }) =>
-      ({ id, name, email, createdAt, signupNumber, withinFounding }));
+    .map(({ id, name, email, createdAt, excluded, signupNumber, withinFounding }) =>
+      ({ id, name, email, createdAt, excluded, signupNumber, withinFounding }));
 
   return {
     trainerCount,
     clientCount,
     signupCount,
+    excludedCount,
     foundingPlaces: FOUNDING_PLACES,
-    foundingRemaining: Math.max(0, FOUNDING_PLACES - signupCount),
+    foundingRemaining,
     recentSignups,
   };
+});
+
+// Owner-only: mark a signup event as not a real customer, or put it back.
+//
+// Ani tests the signup flow with her own addresses. Those are genuine events and the record
+// of them is never edited or deleted (CLAUDE.md #27) — but they are not customers, and on
+// 2026-08-31 one of them was holding founding place #1 and had pushed a notification to her
+// phone announcing itself. Only what an event counts towards changes here.
+exports.setSignupExcluded = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+    throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  }
+
+  const eventId = String((data && data.eventId) || '').trim();
+  if (!eventId) throw new functions.https.HttpsError('invalid-argument', 'eventId required');
+  const excluded = !!(data && data.excluded);
+
+  const ref = db.doc(`platformEvents/${eventId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new functions.https.HttpsError('not-found', 'No such signup');
+  if ((snap.data() || {}).type !== 'trainer_signup') {
+    throw new functions.https.HttpsError('failed-precondition', 'Not a signup event');
+  }
+
+  await ref.update({ excluded, excludedAt: excluded ? new Date().toISOString() : null });
+  return { eventId, excluded };
 });
 
 // Owner-only account audit. Ani looked at 37 trainer accounts and 54 client accounts and

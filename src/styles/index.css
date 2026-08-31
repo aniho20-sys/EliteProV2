@@ -5513,6 +5513,23 @@ tr:hover { background: var(--bg-card-hover); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A button does not inherit colour — the UA gives it `buttontext`, which reads as near
+   black on the dark card. Same trap as the plan-card toggle. */
+.platform-signup-toggle {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  /* Comfortably tappable without adding a visible box to a dense list. */
+  min-height: 28px;
+}
+.platform-signup-toggle:disabled { color: var(--text-muted); cursor: default; }
+
 .platform-audit { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 .lookup-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .lookup-row .form-input { flex: 1; min-width: 0; }

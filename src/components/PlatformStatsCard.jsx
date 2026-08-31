@@ -10,7 +10,7 @@ import { SkeletonLine } from './Skeleton';
 // client-side check alone would be decoration, since a page anyone can open cannot keep
 // its own secrets.
 export default function PlatformStatsCard() {
-  const { getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail } = useApp();
+  const { getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded } = useApp();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [audit, setAudit] = useState(null);
@@ -21,6 +21,7 @@ export default function PlatformStatsCard() {
   const [lookupEmail, setLookupEmail] = useState('');
   const [lookups, setLookups] = useState([]);
   const [lookingUp, setLookingUp] = useState(false);
+  const [excludingId, setExcludingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +66,18 @@ export default function PlatformStatsCard() {
     } catch (err) {
       setCleanup({ failed: true, message: err?.message });
     } finally { setCleanupBusy(false); }
+  };
+
+  const toggleExcluded = async (signup) => {
+    if (excludingId) return;
+    setExcludingId(signup.id);
+    try {
+      await setSignupExcluded(signup.id, !signup.excluded);
+      // Excluding one renumbers the queue behind it, so refetch rather than patch locally.
+      setStats(await getPlatformStats());
+    } catch {
+      setError('failed');
+    } finally { setExcludingId(null); }
   };
 
   const runLookup = async (e) => {
@@ -119,7 +132,10 @@ export default function PlatformStatsCard() {
               account ever created. */}
           <p className="mp-scan-note" style={{ marginTop: 0, marginBottom: 16 }}>
             {stats.trainerCount} trainer account{stats.trainerCount === 1 ? '' : 's'} exist in total,
-            including old test accounts. Founding places count signups only.
+            including old test accounts. Founding places count signups only
+            {stats.excludedCount
+              ? `, and ${stats.excludedCount} signup${stats.excludedCount === 1 ? ' you have' : 's you have'} marked as your own testing ${stats.excludedCount === 1 ? 'is' : 'are'} not counted`
+              : ''}.
           </p>
 
           <div className="fw-bold text-sm mb-8">Recent trainer signups</div>
@@ -127,15 +143,28 @@ export default function PlatformStatsCard() {
             <p className="mp-scan-note">No trainer has signed up yet.</p>
           ) : (
             stats.recentSignups.map(s => (
-              <div key={s.id} className="platform-signup-row">
-                <span className="platform-signup-num">#{s.signupNumber}</span>
+              <div key={s.id} className="platform-signup-row" style={s.excluded ? { opacity: 0.55 } : undefined}>
+                <span className="platform-signup-num">{s.excluded ? '—' : `#${s.signupNumber}`}</span>
                 <span className="platform-signup-body">
                   <span className="platform-signup-name">{s.name}</span>
                   <span className="platform-signup-meta">
                     {s.email} · {String(s.createdAt).slice(0, 16).replace('T', ' ')}
                   </span>
+                  {/* The event is never deleted, so this has to be reversible and has to
+                      say which way it currently sits. */}
+                  <button
+                    className="platform-signup-toggle"
+                    onClick={() => toggleExcluded(s)}
+                    disabled={excludingId === s.id}
+                  >
+                    {excludingId === s.id
+                      ? 'Saving…'
+                      : s.excluded ? 'Count this as a signup' : 'Not a real signup'}
+                  </button>
                 </span>
-                {s.withinFounding && <span className="tag tag-accent">Founding</span>}
+                {s.excluded
+                  ? <span className="tag">Not counted</span>
+                  : s.withinFounding && <span className="tag tag-accent">Founding</span>}
               </div>
             ))
           )}

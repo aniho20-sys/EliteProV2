@@ -52,6 +52,10 @@ function InstallAppCard() {
   );
 }
 
+// Matches OWNER_EMAIL in functions/index.js and firestore.rules. Used here only to hide
+// housekeeping cards from other trainers — the enforcing copies are the other two.
+const OWNER_EMAIL = 'aniho20@gmail.com';
+
 // Detect auth provider from Firebase user object
 function getAuthProvider(firebaseUser) {
   if (!firebaseUser) return 'unknown';
@@ -68,6 +72,9 @@ export default function ProfilePage() {
   const toast = useToast();
   const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission, token: fcmToken } = useNotifications();
   const isTrainer = currentUser.role === 'trainer';
+  // Only ever used to hide the owner's own housekeeping tools from other trainers. Never
+  // use it to gate anything that matters — a check in the browser protects nothing.
+  const isOwner = (currentUser.email || '').toLowerCase() === OWNER_EMAIL;
   const authProvider = getAuthProvider(firebaseUser);
   const isFirebaseAuth = !!firebaseUser;
 
@@ -670,8 +677,16 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Trainer: Exercise Library Backup/Export */}
-      {isTrainer && (
+      {/* Owner only. Copying a library out as raw JSON is a developer's affordance, not a
+          trainer's — it exists because Ani works from a phone with no terminal (CLAUDE.md
+          #26) and has no other way to take a copy of her own data. Every other trainer was
+          being shown a button whose output they would have no idea what to do with.
+
+          The check is client-side and that is fine here: this reads only the signed-in
+          trainer's own exercises, so hiding it is tidiness, not access control. Anything
+          that actually needed protecting would be gated in a Cloud Function, as Platform
+          Stats below is. */}
+      {isTrainer && isOwner && (
         <div className="card mb-16">
           <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Dumbbell size={18} /> Exercise Library Backup

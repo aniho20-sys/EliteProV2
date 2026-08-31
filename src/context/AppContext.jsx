@@ -747,6 +747,13 @@ export function AppProvider({ children }) {
     return result.data;
   };
 
+  // Owner-only. Marks one of Ani's own test signups as not counting towards founding
+  // places, or puts it back. The event itself is never edited or deleted.
+  const setSignupExcluded = async (eventId, excluded) => {
+    const call = httpsCallable(functions, 'setSignupExcluded');
+    return (await call({ eventId, excluded })).data;
+  };
+
   // Owner-only. Reads every user document, so it is behind the same server-side owner
   // check and is only ever called when Ani opens the audit on purpose.
   const getAccountAudit = async () => {
@@ -1027,7 +1034,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail,
+    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,
