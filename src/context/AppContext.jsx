@@ -747,6 +747,17 @@ export function AppProvider({ children }) {
     return result.data;
   };
 
+  // The person's explicit language choice from the Profile card. Only an explicit choice is
+  // written — the browser-derived default is never persisted, because a derived value on
+  // the document would look like something they picked. Trainers cannot reach this in
+  // phase 1 (no card is shown to them).
+  const setLanguage = async (language) => {
+    if (!currentUser) return;
+    await updateDoc(doc(db, 'users', currentUser.id), { language });
+    setCurrentUser(prev => (prev ? { ...prev, language } : prev));
+    setUsers(prev => prev.map(u => (u.id === currentUser.id ? { ...u, language } : u)));
+  };
+
   // Owner-only. Marks one of Ani's own test signups as not counting towards founding
   // places, or puts it back. The event itself is never edited or deleted.
   const setSignupExcluded = async (eventId, excluded) => {
@@ -1035,6 +1046,7 @@ export function AppProvider({ children }) {
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
     getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

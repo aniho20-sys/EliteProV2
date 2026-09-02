@@ -4,6 +4,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { LanguageProvider } from './i18n/LanguageContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import InstallPrompt from './components/InstallPrompt';
@@ -137,11 +138,13 @@ export default function App() {
       <ThemeProvider>
         <HashRouter>
           <AppProvider>
-            <ToastProvider>
-              <NotificationProvider>
-                <AppRoutes />
-              </NotificationProvider>
-            </ToastProvider>
+            <LanguageProvider>
+              <ToastProvider>
+                <NotificationProvider>
+                  <AppRoutes />
+                </NotificationProvider>
+              </ToastProvider>
+            </LanguageProvider>
           </AppProvider>
         </HashRouter>
       </ThemeProvider>

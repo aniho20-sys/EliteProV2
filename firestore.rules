@@ -92,7 +92,12 @@ service cloud.firestore {
                          'renewalRate','renewalRateNext','bankDetails','currency',
                          'renewalPrompt3Shown','renewalPrompt1Shown',
                          'renewalPromptSnoozedUntil',
-                         'businessName','intakeCompleted'])
+                         'businessName','intakeCompleted',
+                         'language'])
+          // language: the UI language chosen on the Profile card. Value-checked here so a
+          // bad write cannot park the client on a language the app does not have.
+          && (!('language' in request.resource.data)
+              || request.resource.data.language in ['en', 'zh-HK'])
         // Trainer updating their own client's full profile (totalSessions, sessionOffset, etc.)
         // Session credit accounting itself (booking/cancel/complete) runs server-side via
         // Cloud Functions using the admin SDK, which bypasses these rules entirely — so no

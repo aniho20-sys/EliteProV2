@@ -151,7 +151,11 @@ Always `<EmptyState icon={...} title="..." description="..." action={{...}} />` 
 
 ## 7. Language
 
-All in-app UI text is English — no exceptions (buttons, labels, placeholders, toasts, errors, empty states, modal copy). This is `CLAUDE.md` convention #28, restated here because it's a style-system concern, not just a wording concern: a UI string in the wrong language is a style violation the same way a hardcoded hex color is.
+All in-app UI text goes through `t()` from `src/i18n/en.js`; Traditional Chinese (Hong Kong) exists only in `src/i18n/zh-HK.js`, and only for lines Ani has approved. This is `CLAUDE.md` convention #28 (revised 2026-09-02), restated here because it's a style-system concern, not just a wording concern: a hardcoded UI string — in either language — is a style violation the same way a hardcoded hex color is.
+
+Training vocabulary (exercise names, sets/reps/kg/RPE/tempo, muscle/equipment/pattern tags, trainer-authored plan names and notes) is data, never translated — `CLAUDE.md` #39.
+
+Typography note for Chinese: neither `Inter` nor `Bricolage Grotesque` carries CJK glyphs, so Chinese text falls back to the system font (PingFang HK on iOS). Both font stacks gain `'PingFang HK', 'Noto Sans TC'` in the commit that first renders Chinese, and the display weight is capped at 700 for `:lang(zh)` because PingFang at 800 fills in.
 
 Documented exception (do not touch without explicit sign-off): the "gym啦" brand name, currently behind `GYMLA_ENABLED=false`.
 
@@ -183,7 +187,7 @@ Phase 2 fix: pick one threshold (recommend ≤2 danger / ≤5 warning / else suc
 
 ### 8.4 Chinese UI text
 
-Already fully swept per `CLAUDE.md` convention #28 (Session 34) — no known remaining leaks outside the two documented exceptions in §7.
+Swept clean of hardcoded Chinese in Session 34. Chinese is now being *added back on purpose*, through the i18n layer only — see `reports/i18n-proposal-2026-09-02.md` and §7 above. Any Chinese string found outside `src/i18n/zh-HK.js` is still a leak.
 
 ---
 

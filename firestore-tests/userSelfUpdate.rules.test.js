@@ -38,6 +38,34 @@ beforeEach(async () => {
 });
 
 describe('users/{userId} self-update allowlist', () => {
+  // 2026-09-02: the i18n language choice. Third field in this file added because of the
+  // same trap — a field missing from the allowlist fails silently at runtime with no error
+  // anywhere a developer looks, and only this suite catches it.
+  test('client can choose their UI language', async () => {
+    const db = testEnv.authenticatedContext(CLIENT_A).firestore();
+    await assertSucceeds(updateDoc(doc(db, 'users', CLIENT_A), { language: 'zh-HK' }));
+    await assertSucceeds(updateDoc(doc(db, 'users', CLIENT_A), { language: 'en' }));
+  });
+
+  test('a language the app does not have is refused', async () => {
+    // Otherwise a bad write leaves the client on a value resolveLanguage() ignores, and
+    // the card shows nothing selected forever.
+    const db = testEnv.authenticatedContext(CLIENT_A).firestore();
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { language: 'fr' }));
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { language: 'zh' }));
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { language: '' }));
+  });
+
+  test('client cannot set somebody else\'s language', async () => {
+    const db = testEnv.authenticatedContext(CLIENT_A).firestore();
+    await assertFails(updateDoc(doc(db, 'users', TRAINER_A), { language: 'zh-HK' }));
+  });
+
+  test('the language write cannot smuggle in extra sessions', async () => {
+    const db = testEnv.authenticatedContext(CLIENT_A).firestore();
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { language: 'zh-HK', totalSessions: 999 }));
+  });
+
   // 2026-08-15: the client-side renewal snooze. Same class of bug as intakeCompleted
   // above — a field missing from this allowlist fails silently at runtime, and the only
   // thing that catches it is a rules test against the emulator.
