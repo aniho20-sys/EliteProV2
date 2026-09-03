@@ -41,8 +41,11 @@ const en = {
   'dash.log_another': 'Log another session',
   "dash.start_today": "Start today's training",
   'dash.your_package': 'Your package',
-  'dash.sessions_left_word_one': 'session left',
-  'dash.sessions_left_word_other': 'sessions left',
+  // Holds the number as {count} rather than being a suffix bolted after it, so a language
+  // that puts the number in the middle ("剩餘 7 堂") is not forced into English word order.
+  // ClientDashboard splits this around the number to keep the digit in larger type.
+  'dash.sessions_left_phrase_one': '{count} session left',
+  'dash.sessions_left_phrase_other': '{count} sessions left',
   'dash.renew_early': 'Renew early to keep your current rate',
   'dash.running_low': 'Running low — contact your trainer to top up',
   'dash.sessions_used': '{used} of {total} sessions used',
@@ -327,9 +330,11 @@ const en = {
   'profile.app_installed_desc': 'ElitePro is running as a native app on your device.',
   'profile.install_title': 'Install as App',
   'profile.install_sub': 'Use offline \u00b7 Faster \u00b7 Feels native',
-  'profile.ios_tap_the': 'Tap the',
+  // One whole sentence, with {share} marking where the icon and the bolded word go. Split
+  // into three fixed fragments this forced Chinese into English word order — Ani's note,
+  // 2026-09-02: rewrite the sentence, do not translate the pieces.
+  'profile.ios_step1': 'Tap the {share} button in Safari',
   'profile.share': 'Share',
-  'profile.button_in_safari': 'button in Safari',
   'profile.scroll_tap': 'Scroll down and tap',
   'profile.add_to_home': '\u201cAdd to Home Screen\u201d',
   'profile.tap': 'Tap',
@@ -341,6 +346,8 @@ const en = {
   'profile.install_app_quoted': '\u201cInstall App\u201d',
   'profile.confirm_install': 'Confirm to install \u2014 look for the banner at the top of this page too',
   'profile.title': 'Profile',
+  'profile.language': 'Language',
+  'profile.language_desc': 'Choose the language for buttons, labels and messages. Exercise names and training units stay in English.',
   'profile.speciality': 'Speciality',
   'profile.not_connected': 'Not connected',
   'profile.age': 'Age',

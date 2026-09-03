@@ -28,6 +28,13 @@ export function LanguageProvider({ children }) {
     return () => { cancelled = true; };
   }, [lang, zh]);
 
+  // The document's own language, which is what :lang(zh) in the stylesheet matches on and
+  // what a screen reader uses to pick a voice. Set here rather than in index.html because
+  // it changes the moment someone switches, with no reload.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const value = useMemo(() => ({
     lang,
     setLanguage,

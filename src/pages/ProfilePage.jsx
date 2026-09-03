@@ -13,6 +13,7 @@ import { CURRENCIES } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
 import MovementPatternScanner from '../components/MovementPatternScanner';
 import PlatformStatsCard from '../components/PlatformStatsCard';
+import LanguagePicker from '../components/LanguagePicker';
 import { useLanguage } from '../i18n/LanguageContext';
 
 function InstallAppCard() {
@@ -39,7 +40,12 @@ function InstallAppCard() {
       </div>
       {isIOS() ? (
         <ol className="install-steps">
-          <li>{t('profile.ios_tap_the')} <Share2 size={13} style={{ verticalAlign: -2 }} /> <strong>{t('profile.share')}</strong> {t('profile.button_in_safari')}</li>
+          {/* One sentence per language: the icon and the bolded word are injected wherever
+              that language puts them, instead of the JSX pinning English word order. */}
+          {(() => {
+            const [before, after] = t('profile.ios_step1', { share: '\u0000' }).split('\u0000');
+            return <li>{before}<Share2 size={13} style={{ verticalAlign: -2 }} /> <strong>{t('profile.share')}</strong>{after}</li>;
+          })()}
           <li>{t('profile.scroll_tap')} <strong>{t('profile.add_to_home')}</strong></li>
           <li>{t('profile.tap')} <strong>{t('profile.add_quoted')}</strong> {t('profile.top_right')}</li>
         </ol>
@@ -715,6 +721,10 @@ export default function ProfilePage() {
       {/* Renders only for the owner — the component hides itself when the Cloud Function
           refuses the call, so no role list needs maintaining here. */}
       {isTrainer && <PlatformStatsCard />}
+
+      {/* Client: Language. Placed above Connect to Coach on purpose — a student who cannot
+          read the page needs to reach this before anything else on it. */}
+      <LanguagePicker />
 
       {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (

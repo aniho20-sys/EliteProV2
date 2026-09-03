@@ -43,6 +43,11 @@ export function translate({ en, zh }, lang, key, vars, { dev = false } = {}) {
   const fallback = lookup(en, key, vars);
   const value = preferred !== undefined ? preferred : fallback;
 
+  // An explicit null means this language needs no word here — Chinese joins a date and a
+  // time with nothing between them where English needs "at". Distinct from undefined,
+  // which means the key is missing and English should be used instead.
+  if (value === null) return '';
+
   if (value === undefined) {
     if (dev) {
       console.error(`[i18n] missing key "${key}" — add it to src/i18n/en.js`);

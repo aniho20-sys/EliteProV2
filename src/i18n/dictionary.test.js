@@ -93,7 +93,10 @@ describe('zh-HK translates only what English has', () => {
     expect(orphans, `in zh-HK.js but not in en.js: ${orphans.join(', ')}`).toEqual([]);
   });
 
-  test('no zh value is empty — an intentionally blank string would render as nothing', () => {
+  test('no zh value is empty — write null for a deliberate blank, never an empty string', () => {
+    // null is the explicit way to say "this language needs no word here" (see sched.at,
+    // where Chinese joins a date and a time with nothing between them). An empty string
+    // would look like a translation somebody forgot to finish.
     for (const [k, v] of Object.entries(zh)) expect(v, k).not.toBe('');
   });
 
@@ -182,7 +185,19 @@ describe('GUARDIAN: training vocabulary never enters the dictionaries', () => {
 // ---------------------------------------------------------------------------
 describe('GUARDIAN: zh-HK register is written Chinese, not spoken Cantonese', () => {
   // Cantonese-only characters. Any one of these in a UI string is colloquial by definition.
-  const COLLOQUIAL = ['嘅', '啲', '咗', '嚟', '唔', '喺', '俾', '畀', '乜', '咩', '而家', '點解', '仲', '佢', '睇', '揀', '嗰', '啱', '嘢', '冇', '咁', '噉', '呢個', '嗱'];
+  // Words that exist ONLY in Cantonese. Deliberately not bare 「呢」, which is an ordinary
+  // sentence-final particle in written Chinese too — a checker that fires on correct text
+  // gets switched off, and then it protects nothing.
+  //
+  // 呢度 / 嗰度 / 依家 were added on 2026-09-02 after Ani caught 「由呢度開始」 in the first
+  // draft of the dictionary. 「呢個」 was on the list and 「呢度」 was not, so the phrase
+  // passed. That is the whole failure mode of a keyword list: it catches what someone
+  // thought of, and the one nobody thought of is the one that ships.
+  const COLLOQUIAL = [
+    '嘅', '啲', '咗', '嚟', '唔', '喺', '俾', '畀', '乜', '咩', '而家', '依家',
+    '點解', '點樣', '仲', '佢', '睇', '揀', '嗰', '啱', '嘢', '冇', '咁', '噉',
+    '呢個', '呢度', '呢啲', '嗰度', '邊度', '邊個', '幾多', '嗱', '諗', '攞',
+  ];
   // Ani's ruling on Hong Kong usage, 2026-09-02.
   const WRONG_TERMS = [['課時', '堂'], ['私教', '教練'], ['預定', '預約'], ['剩下', '剩餘']];
 
@@ -204,5 +219,20 @@ describe('GUARDIAN: zh-HK register is written Chinese, not spoken Cantonese', ()
     for (const [k, v] of Object.entries(zh)) {
       expect(/\b(book|cancel|log|check)\b/i.test(String(v)), `${k} = "${v}"`).toBe(false);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GUARDIAN: the language picker's own labels stay literal.
+// ---------------------------------------------------------------------------
+describe('GUARDIAN: the way out of a language is readable in that language', () => {
+  test('LanguagePicker names each option in its own language, not through t()', () => {
+    // Routing these through t() would rename both options into whichever language the
+    // reader is already stuck in — which is precisely the person who needs to switch.
+    // CLAUDE.md #28 records this as the single exception to "never hardcode Chinese".
+    const src = readFileSync(new URL('../components/LanguagePicker.jsx', import.meta.url).pathname, 'utf8');
+    expect(src).toMatch(/label: 'English'/);
+    expect(src).toMatch(/label: '繁體中文'/);
+    expect(src).not.toMatch(/label: t\(/);
   });
 });

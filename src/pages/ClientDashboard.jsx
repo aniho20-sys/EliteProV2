@@ -135,8 +135,20 @@ export default function ClientDashboard() {
             <div className="flex-between mb-12" style={{ alignItems: 'baseline' }}>
               <span className="hero-card-label" style={sessRemaining <= SESSION_WARNING_THRESHOLD ? { color: getSessionColor(sessRemaining) } : undefined}>{t('dash.your_package')}</span>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
-                {sessRemaining}
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>{' '}{t('dash.sessions_left_word', { count: sessRemaining })}</span>
+                {/* Split around the number so the digit keeps its larger type wherever the
+                    language puts it — English leads with it ("7 sessions left"), Chinese
+                    wraps it (「剩餘 7 堂」). A fixed number-then-words layout cannot do both. */}
+                {(() => {
+                  const small = { fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' };
+                  const [before, after] = t('dash.sessions_left_phrase', { count: '\u0000' }).split('\u0000');
+                  return (
+                    <>
+                      {before && <span style={small}>{before}</span>}
+                      {sessRemaining}
+                      {after && <span style={small}>{after}</span>}
+                    </>
+                  );
+                })()}
               </span>
             </div>
             <div className="session-progress-bar mb-12">
