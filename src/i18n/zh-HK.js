@@ -279,7 +279,6 @@ const zhHK = {
   'profile.title': '個人檔案',
   'profile.language': '語言',
   'profile.language_desc': '選擇按鈕、標籤及訊息的語言。動作名稱及訓練單位維持英文。',
-  'profile.language_trainer_note': '教練頁面的翻譯尚未完成，未翻譯的部分會顯示英文。',
   'profile.not_connected': '未連接',
   'profile.age': '年齡',
   'profile.height': '身高',

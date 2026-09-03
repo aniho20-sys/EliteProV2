@@ -236,3 +236,36 @@ describe('GUARDIAN: the way out of a language is readable in that language', () 
     expect(src).not.toMatch(/label: t\(/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GATE: the picker cannot open to trainers before the dictionary is finished.
+// ---------------------------------------------------------------------------
+// Ani's sequencing rule, 2026-09-02: translate first, then open the switch. A trainer who
+// picks Chinese must get Chinese — not Chinese navigation over English pages.
+//
+// Written as a coupling rather than a promise. While LanguagePicker keeps its client-only
+// gate, zh coverage is reported and not enforced (a partly-translated client dictionary
+// falls back to English by design). The moment somebody removes that gate, this test starts
+// requiring every key in en.js to have a Chinese value, and the build fails until it does.
+// The two cannot drift apart, because the same file decides both.
+describe('GATE: opening the picker to trainers requires 100% coverage', () => {
+  const picker = readFileSync(new URL('../components/LanguagePicker.jsx', import.meta.url).pathname, 'utf8');
+  const gated = /CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED\s*=\s*true/.test(picker)
+    && /CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED\s*&&\s*currentUser\.role\s*!==\s*'client'/.test(picker);
+
+  test('the gate is either in force, or the dictionary is complete', () => {
+    if (gated) return; // still client-only: partial coverage is the documented design
+    const untranslated = [...enBases].filter(k => !zhBases.has(k));
+    expect(
+      untranslated,
+      `LanguagePicker is open to trainers but ${untranslated.length} keys have no Chinese:\n  ${untranslated.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  test('the gate check itself still matches the component', () => {
+    // If the constant is renamed, `gated` silently becomes false and the coverage rule
+    // starts firing — noisy, but never silently permissive. This asserts the detection is
+    // actually finding something, so a rename shows up as this test rather than a mystery.
+    expect(picker).toMatch(/CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED/);
+  });
+});

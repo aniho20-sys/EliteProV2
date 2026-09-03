@@ -11,9 +11,18 @@ import { SUPPORTED_LANGUAGES } from '../i18n/t';
 // would be exactly the wrong way round. That is also why these two strings are NOT in the
 // dictionary: they must not change with the current language.
 //
-// Shown to trainers as well as clients. The trainer dictionary is still mostly empty, so a
-// trainer who picks Chinese gets Chinese navigation and English where nothing is translated
-// yet — the note below says that outright rather than letting them find it.
+// Client-only until the trainer dictionary is complete.
+//
+// This was opened to trainers on 2026-09-02 and closed again the same day. Ani's ruling:
+// a trainer who picks Chinese must get Chinese, not Chinese navigation over English pages,
+// so translation comes first and the switch second. A warning label was not an acceptable
+// substitute for finishing the work.
+//
+// The gate below is not just a convention — dictionary.test.js reads this file, and the
+// moment CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED stops guarding the render, that suite starts
+// demanding 100% zh coverage of every key in en.js. Removing the gate without finishing
+// the translation fails the build.
+const CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED = true;
 const OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'zh-HK', label: '繁體中文' },
@@ -25,7 +34,7 @@ export default function LanguagePicker() {
   const [saving, setSaving] = useState(null);
 
   if (!currentUser) return null;
-  const isTrainer = currentUser.role === 'trainer';
+  if (CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED && currentUser.role !== 'client') return null;
 
   const choose = async (value) => {
     if (saving || value === lang) return;
@@ -60,9 +69,6 @@ export default function LanguagePicker() {
           </button>
         ))}
       </div>
-      {isTrainer && (
-        <p className="mp-scan-note">{t('profile.language_trainer_note')}</p>
-      )}
     </div>
   );
 }
