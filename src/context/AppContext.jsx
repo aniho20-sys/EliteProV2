@@ -785,7 +785,7 @@ export function AppProvider({ children }) {
   };
 
   // Owner-only. Answers what the client cannot: whether an address has an account, and
-  // which sign-in providers it carries. See utils/passwordReset.js for why.
+  // which sign-in providers it carries. See i18n/authMessages.js for why.
   const lookupAccountByEmail = async (email) => {
     const call = httpsCallable(functions, 'lookupAccountByEmail');
     return (await call({ email })).data;

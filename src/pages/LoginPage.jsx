@@ -3,15 +3,14 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, KeyRound } from 'lucide-react';
-import { friendlyAuthError } from '../utils/authErrors';
-import { passwordResetNotice, passwordResetError } from '../utils/passwordReset';
 import { isMobileOrPwa } from '../utils/deviceUtils';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 
 export default function LoginPage() {
   const { signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, googleAuthError, clearGoogleAuthError } = useApp();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
+  const authMsg = useAuthMessages();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,7 +24,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (googleAuthError) {
-      setError(friendlyAuthError(googleAuthError) || t('auth.err_google'));
+      setError(authMsg.authError(googleAuthError) || t('auth.err_google'));
       setAuthLoading(false);
       clearGoogleAuthError();
     }
@@ -57,14 +56,14 @@ export default function LoginPage() {
     setForgotLoading(true);
     try {
       await sendPasswordReset(forgotEmail.trim());
-      // Deliberately not "sent" — see utils/passwordReset.js. Firebase resolves this call
+      // Deliberately not "sent" — see i18n/authMessages.js. Firebase resolves this call
       // for an address with no account and sends nothing, so the app does not know.
-      setInfo(passwordResetNotice(forgotEmail.trim()));
+      setInfo(authMsg.resetNotice(forgotEmail.trim()));
       setShowForgot(false);
       setForgotEmail('');
       setForgotError('');
     } catch (err) {
-      setForgotError(passwordResetError(err) || friendlyAuthError(err) || t('auth.err_reset_failed'));
+      setForgotError(authMsg.resetError(err) || authMsg.authError(err) || t('auth.err_reset_failed'));
     } finally {
       setForgotLoading(false);
     }
@@ -86,7 +85,7 @@ export default function LoginPage() {
         await signInEmail(email, password);
       }
     } catch (err) {
-      setError(friendlyAuthError(err) || t('auth.err_generic'));
+      setError(authMsg.authError(err) || t('auth.err_generic'));
     } finally {
       setAuthLoading(false);
     }

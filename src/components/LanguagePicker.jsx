@@ -11,18 +11,18 @@ import { SUPPORTED_LANGUAGES } from '../i18n/t';
 // would be exactly the wrong way round. That is also why these two strings are NOT in the
 // dictionary: they must not change with the current language.
 //
-// Client-only until the trainer dictionary is complete.
+// Open to everyone since 2026-09-02, once the dictionary reached 100%.
 //
-// This was opened to trainers on 2026-09-02 and closed again the same day. Ani's ruling:
-// a trainer who picks Chinese must get Chinese, not Chinese navigation over English pages,
-// so translation comes first and the switch second. A warning label was not an acceptable
+// It was briefly opened before that and closed again the same day. Ani's ruling: a trainer
+// who picks Chinese must get Chinese, not Chinese navigation over English pages — so
+// translation came first and the switch second. A warning label was not an acceptable
 // substitute for finishing the work.
 //
-// The gate below is not just a convention — dictionary.test.js reads this file, and the
-// moment CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED stops guarding the render, that suite starts
-// demanding 100% zh coverage of every key in en.js. Removing the gate without finishing
-// the translation fails the build.
-const CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED = true;
+// The flag stays as the thing dictionary.test.js reads. While it is false, that suite
+// requires every key in en.js to have a Chinese value, and the build fails otherwise. So
+// the guarantee behind this switch is checked on every run rather than remembered: adding
+// an untranslated English key now breaks the build.
+const CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED = false;
 const OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'zh-HK', label: '繁體中文' },

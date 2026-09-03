@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import en from './en';
 import { translate, resolveLanguage } from './t';
+import { buildAuthMessages } from './authMessages';
 
 // Which language the signed-in person sees, and the t() bound to it.
 //
@@ -48,6 +49,15 @@ export function LanguageProvider({ children }) {
   }), [lang, zh, setLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+// The Firebase Auth and password-reset messages, bound to the current language. Separate
+// from t() only because they are a map of literal calls rather than a single lookup — see
+// authMessages.js for why they cannot just be t(err.code).
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAuthMessages() {
+  const { t } = useLanguage();
+  return useMemo(() => buildAuthMessages(t), [t]);
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

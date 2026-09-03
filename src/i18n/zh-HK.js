@@ -26,9 +26,10 @@
 //
 // 呢個檔案只會喺 lang === 'zh-HK' 嘅時候先 lazy load —— 英文用戶一個 byte 都唔會下載。
 //
-// 教練端由 2026-09-02 起都可以自己揀語言，但教練專用嘅 key（邀請碼、工作時間、業務資料、
-// 續堂定價、銀行資料、GoCardless、備份、Block Time、課堂總結）仲未翻譯，會 fallback 英文。
-// 語言掣入面有一句話俾教練知，唔會俾佢以為壞咗。
+// 6. 覆蓋率必須係 100%。Ani 定：教練揀咗中文就要全中文，唔可以一半中文一半英文。
+//    dictionary.test.js 有一條 gate 綁住 LanguagePicker —— 只要語言掣對教練開放而
+//    有任何一條 key 冇中文，個 build 就會 fail。所以「刻意唔譯」嘅嘢都要有值，
+//    並且喺旁邊寫低理由，唔可以就咁留空。
 
 const zhHK = {
   // ── 共用 ──
@@ -198,7 +199,8 @@ const zhHK = {
   'pay.locks_in': '鎖定價格 {rate}/堂',
   'pay.no_bank': '教練尚未提供銀行資料 —— 請直接聯絡教練安排續堂。',
   'pay.account_name': '戶口名稱',
-  // Sort code 係英國銀行編碼，香港冇對應概念 —— 刻意唔譯，fallback 英文。
+  // 保留英文：Sort Code 係英國銀行編碼，香港冇對應概念，譯咗反而認唔出。
+  'pay.sort_code': 'Sort Code',
   'pay.account_number': '戶口號碼',
   'pay.reference': '參考編號',
   'pay.copy_all': '複製全部',
@@ -248,6 +250,8 @@ const zhHK = {
   'auth.terms': '服務條款',
   'auth.and': '及',
   'auth.privacy': '私隱政策',
+  // 保留英文：電郵格式範例，唔係句子。
+  'auth.reset_email_placeholder': 'you@example.com',
   'auth.reset_title': '重設密碼',
   'auth.reset_intro': '輸入你註冊時使用的電郵，我們會發送重設密碼連結給你。',
   'auth.send_reset': '發送重設連結',
@@ -350,6 +354,172 @@ const zhHK = {
   'profile.toast_account_deleted': '帳戶已刪除',
   'profile.toast_delete_failed': '刪除帳戶失敗，請再試一次。',
   'profile.toast_generic_error': '發生錯誤，請再試一次。',
+  // ── 教練導航 ──
+  'nav.clients': '學生',
+  'nav.plans_full': '訓練計劃',
+  'nav.plans_short': '計劃',
+  'nav.progress_overview': '進度總覽',
+  'nav.invoices': '發票',
+  'nav.analytics': '數據分析',
+  'nav.messages': '訊息',
+  'nav.studios': '場地',
+  'nav.book_studio': '預約場地',
+  'nav.role_trainer': '教練',
+  'nav.role_operator': '場地管理員',
+
+  // ── 課堂（教練專用）──
+  'sched.wh_banner': '設定工作時間，學生就只能在你有空的時段預約。',
+  'sched.set_hours': '設定時間',
+  'sched.dismiss': '關閉',
+  'sched.dismiss_banner': '關閉提示',
+  // 空間好窄（學生名旁邊），Ani 批准破例用「剩」唔用「剩餘」。
+  'sched.n_left': '剩 {n} 堂',
+  'sched.confirm': '確認',
+  'sched.confirm_aria': '確認課堂',
+  'sched.cancel_session_aria': '取消課堂',
+  'sched.mark_as_complete': '標記為完成',
+  'sched.mark_complete_aria': '標記課堂為完成',
+  'sched.undo_complete': '取消完成標記',
+  'sched.reopen': '重開',
+  'sched.remove_block_aria': '移除封鎖',
+  'sched.remove_block_title': '移除封鎖',
+  'sched.remove_block_body': '此時段將重新開放預約。',
+  'sched.remove': '移除',
+  'sched.complete_session': '完成課堂',
+  'sched.client': '學生',
+  'sched.sessions': '堂數',
+  'sched.used_no_quota': '已使用：{used}．未設定堂數',
+  'sched.remaining_after': '剩餘 {remaining} → 完成後：{after}',
+  // 「堂數不足」而唔係「偏低」—— 呢個係要即刻跟進嘅警告，唔應該婉轉（Ani 2026-09-02）。
+  'sched.low': '⚠️ 堂數不足',
+  'sched.message_optional': '給學生的訊息（可選）',
+  'sched.note_placeholder': '為學生加一句備註…',
+  'sched.send_recap': '將總結訊息發送給學生',
+  'sched.mark_complete': '標記完成',
+  'sched.block_time': '封鎖時段',
+  'sched.duration_per_slot': '每節時長',
+  'sched.minutes': '{n} 分鐘',
+  'sched.time_slots': '時段',
+  'sched.n_selected': '已選 {n} 個',
+  'sched.label': '標籤',
+  'sched.label_placeholder': '例如：午膳、私人、會議',
+  'sched.blocking': '封鎖中…',
+  'sched.block_n_slots_other': '封鎖 {count} 個時段',
+  'sched.select_client': '選擇學生',
+  'sched.err_select_date': '請選擇日期',
+  'sched.err_select_slot': '請至少選擇一個時段',
+  'sched.err_select_client': '請選擇學生',
+  'sched.err_owes_session': '此學生已欠 1 堂 —— 請先增加堂數才再預約',
+  'sched.toast_slots_blocked_other': '已封鎖 {count} 個時段',
+  'sched.err_block_failed': '封鎖時段失敗：{msg}',
+  'sched.toast_block_removed': '已移除封鎖',
+  'sched.toast_session_deleted': '已刪除課堂',
+  // {status} 本身已經係中文（已完成／已取消），所以用「已更新為」帶出嚟。
+  'sched.toast_status': '課堂已更新為{status}',
+  'sched.err_complete_failed': '完成課堂失敗：{msg}',
+  'sched.toast_marked_complete': '已標記課堂為完成',
+
+  // ── 個人檔案（教練專用）──
+  'profile.speciality': '專長',
+  // 保留英文：品牌名。
+  'profile.provider_google': 'Google',
+  'profile.invite_clients': '邀請學生',
+  'profile.invite_desc': '分享邀請連結，學生即可連接到你。',
+  'profile.share_whatsapp': '透過 WhatsApp 分享',
+  'profile.copied': '已複製！',
+  'profile.copy_link': '複製連結',
+  'profile.copy_code': '複製邀請碼',
+  'profile.more_share': '更多分享方式',
+  'profile.toast_code_copied': '已複製邀請碼！',
+  'profile.toast_link_copied': '已複製邀請連結！',
+  'profile.working_hours': '工作時間',
+  'profile.working_hours_desc': '設定你有空的時段，學生只能在此範圍內預約。',
+  'profile.start': '開始',
+  'profile.end': '結束',
+  'profile.save_hours': '儲存時間',
+  'profile.saving_dots': '儲存中…',
+  'profile.toast_end_before_start': '結束時間必須晚於開始時間',
+  'profile.toast_hours_saved': '已儲存工作時間',
+  'profile.toast_hours_failed': '儲存工作時間失敗',
+  'profile.business_details': '業務資料',
+  'profile.business_desc': '顯示於發票上。留空則使用你的姓名。',
+  'profile.business_name': '業務名稱',
+  // 範例公司名保留英文，只譯「例如」（Ani 批：#7 保留英文）。
+  'profile.business_placeholder': '例如：Peak Form Personal Training',
+  'profile.save_business': '儲存業務名稱',
+  'profile.toast_business_saved': '已儲存業務名稱',
+  'profile.toast_business_failed': '儲存業務名稱失敗',
+  'profile.renewal_pricing': '續堂定價',
+  'profile.renewal_desc': '學生堂數不足時會看到，讓他們知道現在續堂與稍後續堂的價格差別。',
+  'profile.current_rate': '現有價格（每堂）',
+  'profile.rate_after': '堂數用完後的價格',
+  'profile.currency': '貨幣',
+  'profile.save_rates': '儲存價格',
+  'profile.toast_rates_invalid': '兩個價格都必須是大於 0 的數字',
+  'profile.toast_rates_saved': '已儲存續堂價格',
+  'profile.toast_rates_failed': '儲存續堂價格失敗',
+  'profile.bank_details': '銀行資料',
+  'profile.bank_desc': '顯示於學生的續堂付款資料中，方便他們直接付款給你。',
+  'profile.bank_name_placeholder': '你銀行戶口上的名稱',
+  'profile.sort_placeholder': '例如 12-34-56',
+  'profile.acct_placeholder': '例如 12345678',
+  'profile.save_bank': '儲存銀行資料',
+  'profile.toast_bank_saved': '已儲存銀行資料',
+  'profile.toast_bank_failed': '儲存銀行資料失敗',
+  // 品牌名 GoCardless 唔譯，其餘照譯。
+  'profile.gc_title': 'GoCardless 連接',
+  'profile.gc_desc': '連接你自己的 GoCardless 帳戶，即可為學生開啟訂閱收費。',
+  'profile.connected': '已連接',
+  'profile.connected_on': '連接日期：{date}',
+  'profile.connect_gc': '連接 GoCardless',
+  // 「解除連接」唔用「中斷連接」——「中斷」似意外斷線，而且要同 delete_li_clients 一致
+  // （Ani 2026-09-02）。
+  'profile.disconnect': '解除連接',
+  'profile.disconnecting': '解除連接中…',
+  'profile.gc_disconnect_title': '確定解除 GoCardless 連接？',
+  'profile.gc_disconnect_body': '這會立即停止向所有學生收取訂閱費用。現有訂閱必須重新連接才可恢復收款 —— 但不會在 GoCardless 中取消訂閱本身。',
+  'profile.toast_gc_connected': '已連接 GoCardless',
+  'profile.toast_gc_cancelled': '你取消了 GoCardless 連接 —— 隨時可以再試。',
+  'profile.toast_gc_failed': 'GoCardless 連接失敗 —— 請再試一次。',
+  'profile.toast_gc_disconnected': '已解除 GoCardless 連接',
+  'profile.toast_gc_disconnect_failed': '解除連接失敗 —— 請再試一次',
+  'profile.backup_title': '動作庫備份',
+  'profile.backup_desc': '將動作庫匯出為 JSON 備份。',
+  'profile.copy_library': '複製動作庫為 JSON',
+  'profile.toast_exported': '已複製 {count} 個動作為 JSON',
+  'profile.delete_li_clients': '你的學生將與你解除連接',
+  'profile.toast_test_notif': '已發送測試通知！',
+
+  // ── 登入錯誤（Firebase Auth）──
+  'err.generic': '發生錯誤，請再試一次。',
+  'err.user_not_found': '找不到使用此電郵的帳戶。',
+  'err.wrong_password': '密碼不正確，請再試一次。',
+  'err.invalid_credential': '電郵或密碼不正確。',
+  'err.email_in_use': '此電郵已註冊，請改為登入。',
+  'err.weak_password': '密碼至少需要 6 個字元。',
+  'err.invalid_email': '請輸入有效的電郵地址。',
+  'err.missing_email': '請輸入電郵地址。',
+  'err.too_many_requests': '嘗試次數過多，請稍候再試。',
+  'err.network': '網絡錯誤，請檢查連線後再試。',
+  'err.requires_recent_login': '為安全起見，請先登出再重新登入。',
+  'err.user_disabled': '此帳戶已被停用，請聯絡客戶支援。',
+  'err.operation_not_allowed': '此登入方式未啟用。',
+  'err.unauthorized_domain': '此網域未獲授權登入，請聯絡客戶支援。',
+  'err.internal': '發生內部錯誤，請再試一次。',
+  'err.popup_blocked': '彈出視窗被封鎖 —— 請允許彈出視窗後再試',
+  'err.web_storage': '你的瀏覽器封鎖了必要的儲存功能。請關閉私密瀏覽模式或改用其他瀏覽器。',
+
+  // ── 密碼重設 ──
+  // 「password reset」保留英文：Firebase 寄出嘅信本身係英文，搜中文搵唔到（Ani 批 #9）。
+  'reset.where_to_look': '可能需要幾分鐘。請檢查垃圾郵件資料夾，並搜尋「password reset」—— 寄件人未必顯示 ElitePro。',
+  'reset.sent': '重設密碼電郵已發送至 {email}。{where}',
+  'reset.maybe_sent': '如果 {email} 有帳戶，重設連結將會發送。{where} 如果收不到，可能與你註冊時使用的電郵不同。',
+  'reset.err_quota': '今日發送的重設電郵已達上限，請明天再試，或請教練用其他方式聯絡你。',
+  'reset.err_too_many': '此裝置嘗試次數過多，請稍候幾分鐘再試。',
+  'reset.err_invalid_email': '這不是有效的電郵地址。',
+  'reset.err_missing_email': '請輸入電郵地址。',
+  'reset.err_network': '沒有網絡連線。請檢查網絡後再試 —— 目前尚未發送任何電郵。',
+  'reset.err_user_not_found': '沒有帳戶使用此電郵地址。請檢查拼寫，或改用你註冊時的電郵。',
 };
 
 export default zhHK;

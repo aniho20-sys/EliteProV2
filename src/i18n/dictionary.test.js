@@ -26,7 +26,10 @@ function walk(dir, out = []) {
 function referencedKeys() {
   const found = new Map();
   for (const file of walk(SRC)) {
-    if (file.includes('/i18n/')) continue;
+    // Skip the dictionaries themselves — they contain keys, not t() calls — but not the
+    // rest of i18n/. authMessages.js lives there and holds the literal t() calls for every
+    // Firebase error, so excluding the whole folder made 26 live keys look dead.
+    if (/i18n\/(en|zh-HK)\.js$/.test(file)) continue;
     const src = readFileSync(file, 'utf8');
     for (const m of src.matchAll(/\bt\(\s*(['"])([^'"]+)\1/g)) {
       const key = m[2];

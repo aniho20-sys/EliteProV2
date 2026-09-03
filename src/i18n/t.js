@@ -61,13 +61,11 @@ export function translate({ en, zh }, lang, key, vars, { dev = false } = {}) {
 // Which language a signed-in user sees: their own stored choice if they have made one,
 // otherwise the browser's.
 //
-// Anyone who is not a client is held at English until the trainer dictionary is complete.
-// Briefly lifted on 2026-09-02 and put back the same day: a trainer who picks Chinese must
-// get Chinese, not Chinese navigation over English pages. The stored value is preserved
-// either way, so a trainer who chose Chinese in that window gets it the moment the hold
-// comes off — nothing has to be re-chosen.
+// Everyone is treated the same. Trainers were held at English while their screens were
+// still untranslated; that hold came off on 2026-09-02 when the dictionary reached 100%.
+// Anyone who chose Chinese during the hold kept the stored value and gets it now without
+// having to choose again.
 export function resolveLanguage(user, browserLanguage) {
-  if (user && user.role && user.role !== 'client') return DEFAULT_LANGUAGE;
   if (user && SUPPORTED_LANGUAGES.includes(user.language)) return user.language;
   return browserDefault(browserLanguage);
 }

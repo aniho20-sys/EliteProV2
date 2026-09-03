@@ -107,22 +107,14 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage({ role: 'client', language: 'zh' }, 'en')).toBe('en');
   });
 
-  test('a trainer is held at English until the trainer dictionary is finished', () => {
-    // Opened to trainers on 2026-09-02 and closed again the same day. Ani's ruling: a
-    // trainer who picks Chinese must get Chinese, not Chinese navigation over English
-    // pages — so the hold stays until every key is translated.
-    expect(resolveLanguage({ role: 'trainer' }, 'zh-HK')).toBe('en');
-    expect(resolveLanguage({ role: 'trainer', language: 'zh-HK' }, 'zh-HK')).toBe('en');
-    expect(resolveLanguage({ role: 'operator', language: 'zh-HK' }, 'zh-HK')).toBe('en');
-  });
-
-  test('a stored trainer choice survives the hold rather than being erased', () => {
-    // Anyone who picked Chinese during that window still has language:'zh-HK' on their
-    // document. Nothing overwrites it, so lifting the hold is the only step needed — they
-    // do not have to notice and choose again.
-    const trainer = { role: 'trainer', language: 'zh-HK' };
-    expect(resolveLanguage(trainer, 'en')).toBe('en');
-    expect(trainer.language).toBe('zh-HK');
+  test('a trainer is treated the same as anyone else', () => {
+    // Trainers were held at English while their screens were untranslated. The hold came
+    // off on 2026-09-02 when the dictionary reached 100% — translate first, then open the
+    // switch, which is the order Ani set.
+    expect(resolveLanguage({ role: 'trainer', language: 'zh-HK' }, 'en')).toBe('zh-HK');
+    expect(resolveLanguage({ role: 'trainer', language: 'en' }, 'zh-HK')).toBe('en');
+    expect(resolveLanguage({ role: 'trainer' }, 'zh-HK')).toBe('zh-HK');
+    expect(resolveLanguage({ role: 'operator', language: 'zh-HK' }, 'en')).toBe('zh-HK');
   });
 });
 

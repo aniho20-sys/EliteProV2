@@ -4,8 +4,6 @@ import { useApp } from '../context/AppContext';
 import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell, CreditCard, ClipboardList } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
-import { friendlyAuthError } from '../utils/authErrors';
-import { passwordResetNotice, passwordResetError } from '../utils/passwordReset';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
@@ -14,7 +12,7 @@ import { SkeletonLine } from '../components/Skeleton';
 import MovementPatternScanner from '../components/MovementPatternScanner';
 import PlatformStatsCard from '../components/PlatformStatsCard';
 import LanguagePicker from '../components/LanguagePicker';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 
 function InstallAppCard() {
   const { t } = useLanguage();
@@ -79,6 +77,7 @@ export default function ProfilePage() {
   const location = useLocation();
   const toast = useToast();
   const { t } = useLanguage();
+  const authMsg = useAuthMessages();
   const { permission: notifPermission, supported: notifSupported, requestPermission: requestNotifPermission, token: fcmToken } = useNotifications();
   const isTrainer = currentUser.role === 'trainer';
   // Only ever used to hide the owner's own housekeeping tools from other trainers. Never
@@ -262,9 +261,9 @@ export default function ProfilePage() {
     setResettingPassword(true);
     try {
       await sendPasswordReset(currentUser.email);
-      toast(passwordResetNotice(currentUser.email, { accountKnown: true }), 'success', 6000);
+      toast(authMsg.resetNotice(currentUser.email, { accountKnown: true }), 'success', 6000);
     } catch (err) {
-      toast(passwordResetError(err) || friendlyAuthError(err) || 'Failed to send reset email. Please try again.', 'error');
+      toast(authMsg.resetError(err) || authMsg.authError(err) || t('auth.err_reset_failed'), 'error');
     } finally {
       setResettingPassword(false);
     }
@@ -410,7 +409,7 @@ export default function ProfilePage() {
       toast(t('profile.toast_account_deleted'), 'info');
       navigate('/');
     } catch (err) {
-      toast(friendlyAuthError(err) || t('profile.toast_delete_failed'), 'error');
+      toast(authMsg.authError(err) || t('profile.toast_delete_failed'), 'error');
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);

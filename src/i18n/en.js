@@ -467,6 +467,35 @@ const en = {
   'profile.toast_account_deleted': 'Account deleted',
   'profile.toast_delete_failed': 'Failed to delete account. Please try again.',
   'profile.toast_test_notif': 'Test notification sent!',
+  // ── Sign-in errors (Firebase Auth codes) ──
+  'err.generic': 'Something went wrong. Please try again.',
+  'err.user_not_found': 'No account found with this email.',
+  'err.wrong_password': 'Incorrect password. Please try again.',
+  'err.invalid_credential': 'Invalid email or password.',
+  'err.email_in_use': 'This email is already registered. Try signing in instead.',
+  'err.weak_password': 'Password must be at least 6 characters.',
+  'err.invalid_email': 'Please enter a valid email address.',
+  'err.missing_email': 'Please enter your email address.',
+  'err.too_many_requests': 'Too many attempts. Please wait a moment and try again.',
+  'err.network': 'Network error. Please check your connection and try again.',
+  'err.requires_recent_login': 'For security, please sign out and sign in again before doing this.',
+  'err.user_disabled': 'This account has been disabled. Please contact support.',
+  'err.operation_not_allowed': 'This sign-in method is not enabled.',
+  'err.unauthorized_domain': 'This domain is not authorised for sign-in. Please contact support.',
+  'err.internal': 'An internal error occurred. Please try again.',
+  'err.popup_blocked': 'popup blocked — please allow popups and try again',
+  'err.web_storage': 'Your browser blocks required storage. Try disabling private mode or use a different browser.',
+
+  // ── Password reset ──
+  'reset.where_to_look': 'It can take a few minutes. Check your spam folder, and search for "password reset" — the sender may not say ElitePro.',
+  'reset.sent': 'Password reset email sent to {email}. {where}',
+  'reset.maybe_sent': 'If an account exists for {email}, a reset link is on its way. {where} If nothing arrives, the address may be different from the one you signed up with.',
+  'reset.err_quota': 'Too many reset emails have been sent today. Please try again tomorrow, or ask your coach to reach you another way.',
+  'reset.err_too_many': 'Too many attempts from this device. Please wait a few minutes and try again.',
+  'reset.err_invalid_email': 'That does not look like a valid email address.',
+  'reset.err_missing_email': 'Please enter your email address.',
+  'reset.err_network': 'No connection. Check your internet and try again — nothing has been sent yet.',
+  'reset.err_user_not_found': 'No account uses that email address. Check the spelling, or try the address you signed up with.',
 };
 
 export default en;
