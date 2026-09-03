@@ -9,7 +9,17 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 // string in JSX is a bug — it is a sentence the Chinese user will never see translated —
 // so react/jsx-no-literals is enforced on exactly this list. Add a file here in the same
 // commit that translates it. Empty until the first page is converted.
-const TRANSLATED_FILES = []
+const TRANSLATED_FILES = [
+  'src/pages/ClientDashboard.jsx',
+  'src/pages/MyWorkoutsPage.jsx',
+  'src/pages/RoleSelectPage.jsx',
+  'src/components/RenewalPromptModal.jsx',
+  'src/components/PaymentSheetModal.jsx',
+  'src/components/Navigation.jsx',
+  'src/pages/LoginPage.jsx',
+  'src/pages/SchedulePage.jsx',
+  'src/pages/ProfilePage.jsx',
+]
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -30,11 +40,31 @@ export default defineConfig([
     files: TRANSLATED_FILES,
     plugins: { react },
     rules: {
+      // Catches visible text sitting directly in JSX. ignoreProps is on because prop values
+      // are overwhelmingly className/to/style, and flagging those buries the real finding.
+      // Literal placeholder/aria-label/title props are covered instead by the
+      // "no untranslated prop text" test in src/i18n/dictionary.test.js.
       'react/jsx-no-literals': ['error', {
         noStrings: true,
-        ignoreProps: false,
-        // Punctuation and glyphs that are not words in any language.
-        allowedStrings: ['·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '&nbsp;'],
+        ignoreProps: true,
+        allowedStrings: [
+          // Punctuation and glyphs that are not words in any language.
+          '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '.', ',', '&nbsp;',
+          // A warning glyph is an icon, not a word.
+          '⚠️',
+          // Step numerals in an ordered list.
+          '1', '2', '3',
+          // Training units. Never translated — CLAUDE.md #39.
+          'kg', 'cm', 'reps', 'sets', 'RPE',
+          // The wordmark, rendered as two spans for the gradient.
+          'Elite', 'Pro',
+          // The word the user must type to confirm account deletion. It is compared
+          // literally against 'DELETE', so translating it would make the confirmation
+          // impossible to satisfy in that language.
+          'DELETE',
+          // Developer tools behind import.meta.env.DEV. No user ever sees these.
+          'Send Test', 'Re-register Token',
+        ],
       }],
     },
   }] : []),

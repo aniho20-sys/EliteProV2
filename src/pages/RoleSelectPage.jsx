@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { Dumbbell, Users, Moon, Sun, ArrowRight, LogOut } from 'lucide-react';
 
 export default function RoleSelectPage() {
   const { firebaseUser, completeProfile, findTrainerByCodeRemote, logout } = useApp();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const [prefilledCode] = useState(() => {
     const code = sessionStorage.getItem('elitepro_invite_code') || '';
     sessionStorage.removeItem('elitepro_invite_code');
@@ -19,8 +21,8 @@ export default function RoleSelectPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!role) { setError('Please select a role'); return; }
-    if (!name.trim()) { setError('Please enter your name'); return; }
+    if (!role) { setError(t('role.err_select_role')); return; }
+    if (!name.trim()) { setError(t('role.err_enter_name')); return; }
     setError('');
     setSaving(true);
     try {
@@ -32,17 +34,17 @@ export default function RoleSelectPage() {
         try {
           trainer = await findTrainerByCodeRemote(inviteCode);
         } catch {
-          setError('Could not check that invite code. Check your connection and try again.');
+          setError(t('role.err_code_check'));
           return;
         }
         if (!trainer) {
-          setError('Invalid invite code. Check it with your coach, or leave it blank and connect later from your profile.');
+          setError(t('role.err_code_invalid'));
           return;
         }
       }
       await completeProfile(role, name.trim(), inviteCode.trim() || null);
     } catch {
-      setError('Failed to create profile. Please try again.');
+      setError(t('role.err_create_failed'));
     } finally {
       setSaving(false);
     }
@@ -57,9 +59,9 @@ export default function RoleSelectPage() {
         <div className="login-logo">
           Elite<span>Pro</span>
         </div>
-        <h2 className="role-select-title">Welcome! Set up your profile</h2>
+        <h2 className="role-select-title">{t('role.title')}</h2>
         <p className="role-select-subtitle">
-          Signed in as <strong>{firebaseUser?.email}</strong>
+          {t('role.signed_in_as')} <strong>{firebaseUser?.email}</strong>
         </p>
 
         {error && <div className="login-error">{error}</div>}
@@ -73,8 +75,8 @@ export default function RoleSelectPage() {
               onClick={() => setRole('trainer')}
             >
               <Users size={32} />
-              <strong>Trainer</strong>
-              <span>Manage clients &amp; create plans</span>
+              <strong>{t('role.trainer')}</strong>
+              <span>{t('role.trainer_desc')}</span>
             </button>
             <button
               type="button"
@@ -82,46 +84,46 @@ export default function RoleSelectPage() {
               onClick={() => setRole('client')}
             >
               <Dumbbell size={32} />
-              <strong>Client</strong>
-              <span>Track workouts &amp; progress</span>
+              <strong>{t('role.client')}</strong>
+              <span>{t('role.client_desc')}</span>
             </button>
           </div>
 
           {/* Name */}
           <div className="form-group">
-            <label className="form-label">Display Name</label>
+            <label className="form-label">{t('role.display_name')}</label>
             <input
               className="form-input" required
               value={name} onChange={e => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t('role.name_placeholder')}
             />
           </div>
 
           {/* Invite Code (for clients) */}
           {role === 'client' && (
             <div className="form-group">
-              <label className="form-label">Invite Code <span className="text-muted">(optional)</span></label>
+              <label className="form-label">{t('role.invite_code')} <span className="text-muted">{t('common.optional')}</span></label>
               <input
                 className="form-input"
                 value={inviteCode}
                 onChange={e => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="e.g. AX7K2M"
+                placeholder={t('role.code_placeholder')}
                 maxLength={6}
               />
               {prefilledCode
-                ? <small className="form-hint" style={{ color: 'var(--primary)' }}>Pre-filled from your coach&apos;s invite link</small>
-                : <small className="form-hint">Ask your coach for their 6-digit code, or skip and connect later in Profile.</small>
+                ? <small className="form-hint" style={{ color: 'var(--primary)' }}>{t('role.code_prefilled')}</small>
+                : <small className="form-hint">{t('role.code_hint')}</small>
               }
             </div>
           )}
 
           <button type="submit" className="btn btn-primary mt-16" style={{ width: '100%' }} disabled={saving}>
-            {saving ? 'Creating...' : 'Get Started'} {!saving && <ArrowRight size={16} />}
+            {saving ? t('role.creating') : t('role.get_started')} {!saving && <ArrowRight size={16} />}
           </button>
         </form>
 
         <button className="btn-link mt-16" onClick={logout}>
-          <LogOut size={14} /> Sign out and use a different account
+          <LogOut size={14} /> {t('role.use_different_account')}
         </button>
       </div>
     </div>

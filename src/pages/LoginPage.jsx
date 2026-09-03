@@ -6,10 +6,12 @@ import { Moon, Sun, Mail, LogIn, KeyRound } from 'lucide-react';
 import { friendlyAuthError } from '../utils/authErrors';
 import { passwordResetNotice, passwordResetError } from '../utils/passwordReset';
 import { isMobileOrPwa } from '../utils/deviceUtils';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function LoginPage() {
   const { signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, googleAuthError, clearGoogleAuthError } = useApp();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,10 +25,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (googleAuthError) {
-      setError(friendlyAuthError(googleAuthError) || 'Google sign-in failed. Please try again.');
+      setError(friendlyAuthError(googleAuthError) || t('auth.err_google'));
       setAuthLoading(false);
       clearGoogleAuthError();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleAuthError, clearGoogleAuthError]);
 
   const handleGoogleSignIn = async () => {
@@ -48,7 +51,7 @@ export default function LoginPage() {
     e.preventDefault();
     setForgotError('');
     if (!forgotEmail.trim()) {
-      setForgotError('Please enter your email');
+      setForgotError(t('auth.err_enter_email'));
       return;
     }
     setForgotLoading(true);
@@ -61,7 +64,7 @@ export default function LoginPage() {
       setForgotEmail('');
       setForgotError('');
     } catch (err) {
-      setForgotError(passwordResetError(err) || friendlyAuthError(err) || 'Failed to send reset email. Please try again.');
+      setForgotError(passwordResetError(err) || friendlyAuthError(err) || t('auth.err_reset_failed'));
     } finally {
       setForgotLoading(false);
     }
@@ -75,7 +78,7 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         if (password.length < 6) {
-          setError('Password must be at least 6 characters');
+          setError(t('auth.err_password_short'));
           return;
         }
         await signUpEmail(email, password);
@@ -83,7 +86,7 @@ export default function LoginPage() {
         await signInEmail(email, password);
       }
     } catch (err) {
-      setError(friendlyAuthError(err) || 'Authentication failed. Please try again.');
+      setError(friendlyAuthError(err) || t('auth.err_generic'));
     } finally {
       setAuthLoading(false);
     }
@@ -98,7 +101,7 @@ export default function LoginPage() {
         <div className="login-logo">
           Elite<span>Pro</span>
         </div>
-        <div className="login-subtitle">Fitness Training Platform</div>
+        <div className="login-subtitle">{t('auth.tagline')}</div>
 
         {error && <div className="login-error">{error}</div>}
         {info && <div className="login-info">{info}</div>}
@@ -115,50 +118,50 @@ export default function LoginPage() {
             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          {authLoading ? (isMobileOrPwa() ? 'Redirecting to Google…' : 'Signing in…') : 'Continue with Google'}
+          {authLoading ? (isMobileOrPwa() ? t('auth.google_redirecting') : t('auth.google_signing_in')) : t('auth.google_continue')}
         </button>
 
         {/* Divider */}
         <div className="login-divider">
-          <span>or</span>
+          <span>{t('auth.or')}</span>
         </div>
 
         {/* Email/Password Auth */}
         <form onSubmit={handleEmailAuth} autoComplete="on">
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label className="form-label">{t('auth.email')}</label>
             <input
               type="email" className="form-input" value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="Enter your email" required
+              placeholder={t('auth.email_placeholder')} required
               name="email" autoComplete="email"
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">{t('auth.password')}</label>
             <input
               type="password" className="form-input" value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder={isSignUp ? 'At least 6 characters' : 'Enter your password'} required
+              placeholder={isSignUp ? t('auth.password_placeholder_signup') : t('auth.password_placeholder_signin')} required
               name="password" autoComplete={isSignUp ? 'new-password' : 'current-password'}
             />
           </div>
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={authLoading}>
             {isSignUp ? <Mail size={16} /> : <LogIn size={16} />}
-            {isSignUp ? 'Create Account' : 'Sign In'}
+            {isSignUp ? t('auth.create_account') : t('auth.sign_in')}
           </button>
         </form>
 
         <div className="login-switch">
           <button className="btn-link" onClick={() => { setIsSignUp(!isSignUp); setError(''); setInfo(''); }}>
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            {isSignUp ? t('auth.have_account') : t('auth.no_account')}
           </button>
           {!isSignUp && (
             <button
               className="btn-link"
               onClick={() => { setShowForgot(true); setForgotEmail(email); setError(''); setInfo(''); }}
             >
-              Forgot password?
+              {t('auth.forgot')}
             </button>
           )}
         </div>
@@ -166,9 +169,9 @@ export default function LoginPage() {
 
       {/* Legal links */}
       <div className="login-legal">
-        By continuing, you agree to our{' '}
-        <Link to="/terms">Terms of Service</Link> and{' '}
-        <Link to="/privacy">Privacy Policy</Link>
+        {t('auth.legal_pre')}{' '}
+        <Link to="/terms">{t('auth.terms')}</Link> {t('auth.and')}{' '}
+        <Link to="/privacy">{t('auth.privacy')}</Link>
       </div>
 
       {/* Forgot Password Modal */}
@@ -177,21 +180,21 @@ export default function LoginPage() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">
               <KeyRound size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-              Reset Password
+              {t('auth.reset_title')}
             </h3>
             <p className="text-sm text-muted">
-              Enter the email you signed up with. We'll send you a link to reset your password.
+              {t('auth.reset_intro')}
             </p>
             {forgotError && <div className="login-error" style={{ marginBottom: 8 }}>{forgotError}</div>}
             <form onSubmit={handleForgotPassword}>
               <div className="form-group mt-8">
-                <label className="form-label">Email</label>
+                <label className="form-label">{t('auth.email')}</label>
                 <input
                   type="email"
                   className="form-input"
                   value={forgotEmail}
                   onChange={e => setForgotEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t('auth.reset_email_placeholder')}
                   name="email" autoComplete="email"
                   required
                 />
@@ -203,10 +206,10 @@ export default function LoginPage() {
                   onClick={() => { setShowForgot(false); setForgotEmail(''); setForgotError(''); }}
                   disabled={forgotLoading}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={forgotLoading}>
-                  <Mail size={16} /> {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                  <Mail size={16} /> {forgotLoading ? t('auth.sending') : t('auth.send_reset')}
                 </button>
               </div>
             </form>

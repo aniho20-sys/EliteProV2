@@ -1,4 +1,5 @@
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Play, ClipboardList, Dumbbell } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
@@ -8,6 +9,7 @@ import { resolveExerciseName } from '../utils/exerciseUtils';
 
 export default function MyWorkoutsPage() {
   const { currentUser, getWorkoutPlans, getExercises } = useApp();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const exercises = getExercises();
@@ -18,21 +20,21 @@ export default function MyWorkoutsPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">My Workouts</h1>
-        <p className="page-subtitle">{plans.length} workout plans assigned by your coach</p>
+        <h1 className="page-title">{t('plans.title')}</h1>
+        <p className="page-subtitle">{t('plans.subtitle', { count: plans.length })}</p>
       </div>
 
       {plans.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="No workout plans assigned yet"
+          title={t('plans.none_title')}
           description={currentUser.trainerId
-            ? 'Your coach hasn\'t assigned any plans yet. Message them to get started.'
-            : 'Connect to a coach first — they will assign workout plans for you.'}
+            ? t('plans.none_desc_connected')
+            : t('plans.none_desc_unconnected')}
           action={
             !currentUser.trainerId
-              ? { label: 'Connect to a Coach', to: '/profile' }
-              : { label: 'Message Your Coach', to: '/messages' }
+              ? { label: t('plans.connect_cta'), to: '/profile' }
+              : { label: t('plans.message_cta'), to: '/messages' }
           }
         />
       ) : (
@@ -47,7 +49,7 @@ export default function MyWorkoutsPage() {
                 className="btn btn-primary btn-sm"
                 onClick={() => navigate('/log', { state: { planId: p.id } })}
               >
-                <Dumbbell size={14} /> Start Workout
+                <Dumbbell size={14} /> {t('plans.start_workout')}
               </button>
             </div>
             {p.exercises.map((ex, i) => {
@@ -72,7 +74,7 @@ export default function MyWorkoutsPage() {
                         return (
                           <>
                             <div className="fw-bold" style={{ fontSize: '1.1rem' }}>
-                              {allSameReps ? `${sets.length} x ${reps[0]}` : `${sets.length} sets`}
+                              {allSameReps ? `${sets.length} x ${reps[0]}` : t('plans.sets_count', { count: sets.length })}
                             </div>
                             {hasWeight && <div className="text-sm text-muted">
                               {weights.every(w => w === weights[0]) ? `${weights[0]}kg` : weights.join('/') + 'kg'}
@@ -88,7 +90,7 @@ export default function MyWorkoutsPage() {
                     const url = ex.videoUrl || exercise?.videoUrl;
                     return url && isSafeUrl(url) ? (
                       <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mt-8">
-                        <Play size={14} /> Watch Demo
+                        <Play size={14} /> {t('plans.watch_demo')}
                       </a>
                     ) : null;
                   })()}

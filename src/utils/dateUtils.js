@@ -46,3 +46,13 @@ export function getGreeting() {
   if (hour < 18) return 'Afternoon';
   return 'Evening';
 }
+
+// Which part of the day it is, as a token rather than a word, for callers that render the
+// greeting through t(). Kept separate from getGreeting() above so the trainer dashboard —
+// English-only in phase 1 — keeps using the plain string with no change.
+export function getGreetingPart() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  return 'evening';
+}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight, X } from 'lucide-react';
-import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
+import { localToday, localDateAdd, getGreetingPart } from '../utils/dateUtils';
+import { formatDayDate } from '../i18n/format';
+import { useLanguage } from '../i18n/LanguageContext';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { getClientActivityDates } from '../utils/activityUtils';
 import { getSessionColor, SESSION_WARNING_THRESHOLD, RENEWAL_PROMPT_THRESHOLD } from '../utils/sessionUtils';
@@ -13,6 +15,7 @@ import PaymentSheetModal from '../components/PaymentSheetModal';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
+  const { lang, t } = useLanguage();
   const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getClient } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
@@ -31,6 +34,14 @@ export default function ClientDashboard() {
 
   const { used: sessUsed, total: sessTotal, remaining: sessRemaining } = getSessionStats(currentUser.id);
   const trainer = currentUser.trainerId ? getClient(currentUser.trainerId) : null;
+
+  // One literal t() per branch: the lint rule refuses t(variable), which is what keeps a
+  // data value from ever being looked up as a translation key.
+  const greeting = {
+    morning: t('dash.greeting_morning'),
+    afternoon: t('dash.greeting_afternoon'),
+    evening: t('dash.greeting_evening'),
+  }[getGreetingPart()];
 
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   // Dismiss only hides the prompt for THIS view — it deliberately comes back on
@@ -56,25 +67,25 @@ export default function ClientDashboard() {
   return (
     <div>
       <div className="page-header">
-        <div className="page-date">{formatDayDate(today)}</div>
-        <h1 className="page-title">{getGreeting()}, {currentUser.name.split(' ')[0]}</h1>
+        <div className="page-date">{formatDayDate(today, lang)}</div>
+        <h1 className="page-title">{greeting}, {currentUser.name.split(' ')[0]}</h1>
       </div>
 
       {logs.length === 0 && plans.length > 0 && (
         <div className="card onboarding-card mb-16">
-          <h3 className="card-title">Welcome! Get started:</h3>
+          <h3 className="card-title">{t('dash.onboarding_title')}</h3>
           <div className="onboarding-steps">
             <Link to="/my-workouts" className="onboarding-step">
               <span className="onboarding-num">1</span>
-              <span>Check your workout plans</span>
+              <span>{t('dash.onboarding_step1')}</span>
             </Link>
             <Link to="/log" className="onboarding-step">
               <span className="onboarding-num">2</span>
-              <span>Log your first workout</span>
+              <span>{t('dash.onboarding_step2')}</span>
             </Link>
             <Link to="/progress" className="onboarding-step">
               <span className="onboarding-num">3</span>
-              <span>Track your body stats</span>
+              <span>{t('dash.onboarding_step3')}</span>
             </Link>
           </div>
         </div>
@@ -85,22 +96,22 @@ export default function ClientDashboard() {
         <Link to="/log" className="stat-pill">
           <Flame size={15} style={{ color: 'var(--accent)' }} />
           <div className="stat-pill-value">{thisWeekCount}</div>
-          <div className="stat-pill-label">This Week</div>
+          <div className="stat-pill-label">{t('dash.stat_this_week')}</div>
         </Link>
         <Link to="/log" className="stat-pill">
           <Dumbbell size={15} style={{ color: 'var(--primary-light)' }} />
           <div className="stat-pill-value">{totalWorkouts}</div>
-          <div className="stat-pill-label">Total</div>
+          <div className="stat-pill-label">{t('dash.stat_total')}</div>
         </Link>
         <Link to="/progress" className="stat-pill">
           <Scale size={15} style={{ color: 'var(--danger)' }} />
           <div className="stat-pill-value">{latestStat ? `${latestStat.weight}kg` : '--'}</div>
-          <div className="stat-pill-label">Weight</div>
+          <div className="stat-pill-label">{t('common.weight')}</div>
         </Link>
         <Link to="/progress" className="stat-pill">
           <Trophy size={15} style={{ color: 'var(--warning)' }} />
           <div className="stat-pill-value">{Object.keys(prs).length}</div>
-          <div className="stat-pill-label">PRs</div>
+          <div className="stat-pill-label">{t('dash.stat_prs')}</div>
         </Link>
       </div>
 
@@ -111,7 +122,7 @@ export default function ClientDashboard() {
         >
           <div className="workout-cta-icon"><Play size={20} /></div>
           <div className="workout-cta-text">
-            <div className="workout-cta-label">{loggedToday ? 'Log another session' : "Start today's training"}</div>
+            <div className="workout-cta-label">{loggedToday ? t('dash.log_another') : t('dash.start_today')}</div>
             <div className="workout-cta-plan">{suggestedPlan.name}</div>
           </div>
           <ChevronRight size={20} className="workout-cta-arrow" />
@@ -122,10 +133,10 @@ export default function ClientDashboard() {
         <div className="hero-card mb-16" style={sessRemaining <= SESSION_WARNING_THRESHOLD ? { background: getSessionColor(sessRemaining) } : undefined}>
           <div className="hero-card-inner">
             <div className="flex-between mb-12" style={{ alignItems: 'baseline' }}>
-              <span className="hero-card-label" style={sessRemaining <= SESSION_WARNING_THRESHOLD ? { color: getSessionColor(sessRemaining) } : undefined}>Your package</span>
+              <span className="hero-card-label" style={sessRemaining <= SESSION_WARNING_THRESHOLD ? { color: getSessionColor(sessRemaining) } : undefined}>{t('dash.your_package')}</span>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem' }}>
                 {sessRemaining}
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}> session{sessRemaining === 1 ? '' : 's'} left</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>{' '}{t('dash.sessions_left_word', { count: sessRemaining })}</span>
               </span>
             </div>
             <div className="session-progress-bar mb-12">
@@ -142,18 +153,18 @@ export default function ClientDashboard() {
                     onClick={() => setShowPaymentSheet(true)}
                     style={{ color: getSessionColor(sessRemaining), fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
-                    Renew early to keep your current rate <ChevronRight size={14} />
+                    {t('dash.renew_early')} <ChevronRight size={14} />
                   </button>
                 )
               ) : (
                 <p className="text-sm mb-12" style={{ color: getSessionColor(sessRemaining), fontWeight: 600 }}>
-                  Running low — contact your trainer to top up
+                  {t('dash.running_low')}
                 </p>
               )
             )}
             <div className="flex-between" style={{ alignItems: 'center' }}>
-              <span className="text-sm text-muted">{sessUsed} of {sessTotal} sessions used</span>
-              <Link to="/schedule" className="btn btn-sm" style={{ background: 'var(--brand-gradient)', color: '#fff' }}>Book Session</Link>
+              <span className="text-sm text-muted">{t('dash.sessions_used', { used: sessUsed, total: sessTotal })}</span>
+              <Link to="/schedule" className="btn btn-sm" style={{ background: 'var(--brand-gradient)', color: '#fff' }}>{t('dash.book_session')}</Link>
             </div>
           </div>
         </div>
@@ -164,21 +175,21 @@ export default function ClientDashboard() {
           <div className="flex-between mb-8" style={{ alignItems: 'flex-start' }}>
             <h3 className="card-title" style={{ marginBottom: 0 }}>
               {sessRemaining <= 0
-                ? 'No sessions left'
+                ? t('dash.no_sessions_left')
                 : sessRemaining === 1
-                  ? 'Last session left'
-                  : `${sessRemaining} sessions left`}
+                  ? t('dash.last_session_left')
+                  : t('dash.sessions_left_count', { count: sessRemaining })}
             </h3>
-            <button className="btn-icon" onClick={() => setRenewalDismissed(true)} aria-label="Dismiss"><X size={16} /></button>
+            <button className="btn-icon" onClick={() => setRenewalDismissed(true)} aria-label={t('dash.dismiss')}><X size={16} /></button>
           </div>
           <p className="text-sm text-muted mb-12">
             {sessRemaining <= 0
-              ? <>You&apos;ve used all your sessions. Renew now at <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}/session</strong>.</>
+              ? <>{t('dash.renew_none_pre')}<strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}{t('common.per_session')}</strong>.</>
               : sessRemaining === 1
-                ? <>This is your final session at <strong>{formatCurrency(trainer.renewalRate, trainer.currency)}/session</strong>. Renew now to lock in your rate before it moves to {formatCurrency(trainer.renewalRateNext, trainer.currency)}.</>
-                : <>Renew before they run out to keep your current rate <strong>({formatCurrency(trainer.renewalRate, trainer.currency)}/session)</strong>. After that, renewal is {formatCurrency(trainer.renewalRateNext, trainer.currency)}/session.</>}
+                ? <>{t('dash.renew_last_pre')}<strong>{formatCurrency(trainer.renewalRate, trainer.currency)}{t('common.per_session')}</strong>{t('dash.renew_last_post', { next: formatCurrency(trainer.renewalRateNext, trainer.currency) })}</>
+                : <>{t('dash.renew_soon_pre')}<strong>({formatCurrency(trainer.renewalRate, trainer.currency)}{t('common.per_session')})</strong>{t('dash.renew_soon_post', { next: formatCurrency(trainer.renewalRateNext, trainer.currency) })}</>}
           </p>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowPaymentSheet(true)}>Renew</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowPaymentSheet(true)}>{t('dash.renew')}</button>
         </div>
       )}
 
@@ -194,17 +205,17 @@ export default function ClientDashboard() {
       <div className="grid-2">
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Today&apos;s Schedule</h3>
-            <Link to="/schedule" className="btn btn-outline btn-sm">View All</Link>
+            <h3 className="card-title">{t('dash.todays_schedule')}</h3>
+            <Link to="/schedule" className="btn btn-outline btn-sm">{t('common.view_all')}</Link>
           </div>
           {todaySchedule.length === 0 ? (
             <EmptyState
               inCard={false}
               compact
               icon={CalendarOff}
-              title="No sessions today"
-              description="Your schedule is clear."
-              action={{ label: 'Book a Session', to: '/schedule' }}
+              title={t('dash.no_sessions_today')}
+              description={t('dash.schedule_clear')}
+              action={{ label: t('dash.book_a_session'), to: '/schedule' }}
             />
           ) : (
             todaySchedule.map(s => (
@@ -212,7 +223,7 @@ export default function ClientDashboard() {
                 <div className="schedule-time">{s.time}</div>
                 <div className="schedule-info">
                   <div className="schedule-client">{s.type}</div>
-                  <div className="schedule-type">{s.duration}min</div>
+                  <div className="schedule-type">{t('dash.minutes_short', { n: s.duration })}</div>
                 </div>
                 <span className={`tag ${s.status === 'confirmed' ? 'tag-accent' : 'tag-warning'}`}>{s.status}</span>
               </Link>
@@ -222,24 +233,24 @@ export default function ClientDashboard() {
 
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">My Workout Plans</h3>
-            <Link to="/my-workouts" className="btn btn-outline btn-sm">View All</Link>
+            <h3 className="card-title">{t('dash.my_plans')}</h3>
+            <Link to="/my-workouts" className="btn btn-outline btn-sm">{t('common.view_all')}</Link>
           </div>
           {plans.length === 0 ? (
             <EmptyState
               inCard={false}
               compact
               icon={ClipboardList}
-              title="No plans assigned yet"
-              description={currentUser.trainerId ? 'Your coach will add a plan soon.' : 'Connect to a coach first from your profile.'}
-              action={!currentUser.trainerId ? { label: 'Connect Coach', to: '/profile' } : undefined}
+              title={t('dash.no_plans_yet')}
+              description={currentUser.trainerId ? t('dash.no_plans_coach_soon') : t('dash.no_plans_connect')}
+              action={!currentUser.trainerId ? { label: t('dash.connect_coach'), to: '/profile' } : undefined}
             />
           ) : (
             plans.map(p => (
               <Link key={p.id} to="/my-workouts" className="schedule-item schedule-item-link">
                 <div className="schedule-info">
                   <div className="schedule-client">{p.name}</div>
-                  <div className="schedule-type">{p.day} - {p.exercises.length} exercises</div>
+                  <div className="schedule-type">{t('dash.plan_meta', { day: p.day, count: p.exercises.length })}</div>
                 </div>
               </Link>
             ))
@@ -249,20 +260,20 @@ export default function ClientDashboard() {
         {latestStat && (
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Body Stats</h3>
-              <Link to="/progress" className="btn btn-outline btn-sm">Details</Link>
+              <h3 className="card-title">{t('dash.body_stats')}</h3>
+              <Link to="/progress" className="btn btn-outline btn-sm">{t('dash.details')}</Link>
             </div>
             <div className="body-stats-grid">
               {/* Every measurement is optional — a client who only ever logs their weight
                   is normal. Without the guard those rows render the literal string
                   "undefinedcm", matching the '--' already used by the stat pill above. */}
               {[
-                { label: 'Weight', value: latestStat.weight, unit: 'kg' },
-                { label: 'Body Fat', value: latestStat.bodyFat, unit: '%' },
-                { label: 'Chest', value: latestStat.chest, unit: 'cm' },
-                { label: 'Waist', value: latestStat.waist, unit: 'cm' },
-                { label: 'Arms', value: latestStat.arms, unit: 'cm' },
-                { label: 'Legs', value: latestStat.legs, unit: 'cm' },
+                { label: t('common.weight'), value: latestStat.weight, unit: 'kg' },
+                { label: t('dash.body_fat'), value: latestStat.bodyFat, unit: '%' },
+                { label: t('dash.chest'), value: latestStat.chest, unit: 'cm' },
+                { label: t('dash.waist'), value: latestStat.waist, unit: 'cm' },
+                { label: t('dash.arms'), value: latestStat.arms, unit: 'cm' },
+                { label: t('dash.legs'), value: latestStat.legs, unit: 'cm' },
               ].map(({ label, value, unit }) => ({
                 label,
                 value: (value === null || value === undefined || value === '') ? '--' : `${value}${unit}`,
@@ -279,18 +290,18 @@ export default function ClientDashboard() {
         {logs.length > 0 && (
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Recent Workouts</h3>
-              <Link to="/log" className="btn btn-outline btn-sm">View All</Link>
+              <h3 className="card-title">{t('dash.recent_workouts')}</h3>
+              <Link to="/log" className="btn btn-outline btn-sm">{t('common.view_all')}</Link>
             </div>
             {logs.slice(-3).reverse().map(l => {
               const plan = plans.find(p => p.id === l.planId);
               return (
                 <Link key={l.id} to="/log" className="schedule-item schedule-item-link">
                   <div className="schedule-info">
-                    <div className="schedule-client">{plan?.name || l.workoutName || 'Custom Workout'}</div>
-                    <div className="schedule-type">{l.date} - RPE: {l.rpe}/10</div>
+                    <div className="schedule-client">{plan?.name || l.workoutName || t('dash.custom_workout')}</div>
+                    <div className="schedule-type">{t('dash.log_meta', { date: l.date, rpe: l.rpe })}</div>
                   </div>
-                  <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Done' : 'Partial'}</span>
+                  <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? t('common.done') : t('dash.partial')}</span>
                 </Link>
               );
             })}
@@ -301,14 +312,14 @@ export default function ClientDashboard() {
           <div className="card">
             <div className="card-header">
               <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
-                <Trophy size={18} style={{ color: 'var(--warning)' }} /> Personal Records
+                <Trophy size={18} style={{ color: 'var(--warning)' }} /> {t('dash.personal_records')}
               </h3>
-              <span className="tag tag-warning">{Object.keys(prs).length} PRs</span>
+              <span className="tag tag-warning">{t('dash.pr_count', { count: Object.keys(prs).length })}</span>
             </div>
             <div className="pr-grid">
               {Object.entries(prs).slice(0, 6).map(([exId, pr]) => (
                 <div key={exId} className="pr-item">
-                  <div className="pr-exercise">{getExerciseName(exId, pr.name || 'Custom exercise')}</div>
+                  <div className="pr-exercise">{getExerciseName(exId, pr.name || t('dash.custom_exercise'))}</div>
                   <div className="pr-weight">{pr.weight}kg</div>
                   <div className="pr-date">{pr.date}</div>
                 </div>
@@ -319,7 +330,7 @@ export default function ClientDashboard() {
 
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Coach Notes</h3>
+            <h3 className="card-title">{t('dash.coach_notes')}</h3>
           </div>
           <NotesSection clientId={currentUser.id} />
         </div>

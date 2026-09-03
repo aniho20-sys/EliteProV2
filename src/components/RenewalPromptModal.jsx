@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { formatCurrency } from '../utils/currencyUtils';
 import { RENEWAL_SNOOZE_DAYS } from '../utils/renewalPrompt';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // The renewal ask, as a modal the client has to answer.
 //
@@ -11,6 +12,7 @@ import { RENEWAL_SNOOZE_DAYS } from '../utils/renewalPrompt';
 // leaving is "Remind me later", which is recorded so the prompt holds off for a few days
 // instead of reappearing on the client's very next booking.
 export default function RenewalPromptModal({ kind, remainingAfter, trainer, onRenew, onLater }) {
+  const { t } = useLanguage();
   const [snoozing, setSnoozing] = useState(false);
 
   const handleLater = async () => {
@@ -31,39 +33,39 @@ export default function RenewalPromptModal({ kind, remainingAfter, trainer, onRe
 
         <h3 className="modal-title renewal-modal-title">
           {overdraft
-            ? 'This session is on credit'
+            ? t('renewal.on_credit')
             : remainingAfter === 0
-              ? 'That was your last session'
-              : `${remainingAfter} session${remainingAfter === 1 ? '' : 's'} left`}
+              ? t('renewal.was_last')
+              : t('dash.sessions_left_count', { count: remainingAfter })}
         </h3>
 
         <p className="renewal-modal-body">
           {overdraft ? (
             <>
-              Your sessions have run out, so this booking will be added to your next
-              renewal at <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}/session</strong>.
-              Renewing now settles it and puts credit back on your account.
+              {t('renewal.overdraft_pre')}
+              <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}{t('common.per_session')}</strong>
+              {t('renewal.overdraft_post')}
             </>
           ) : (
             <>
-              Renew now to keep your current rate of{' '}
-              <strong>{formatCurrency(rate, trainer.currency)}/session</strong>. Once your
-              sessions run out, renewal moves to{' '}
-              <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}/session</strong>.
+              {t('renewal.keep_rate_pre')}
+              <strong>{formatCurrency(rate, trainer.currency)}{t('common.per_session')}</strong>
+              {t('renewal.keep_rate_mid')}
+              <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}{t('common.per_session')}</strong>.
             </>
           )}
         </p>
 
         <div className="renewal-modal-actions">
           <button className="btn btn-primary" onClick={onRenew} disabled={snoozing}>
-            Renew now
+            {t('renewal.renew_now')}
           </button>
           <button className="btn btn-outline" onClick={handleLater} disabled={snoozing}>
-            {snoozing ? 'Saving…' : 'Remind me later'}
+            {snoozing ? t('common.saving') : t('renewal.remind_later')}
           </button>
         </div>
         <p className="renewal-modal-note">
-          Remind me later hides this for {RENEWAL_SNOOZE_DAYS} days.
+          {t('renewal.snooze_note', { days: RENEWAL_SNOOZE_DAYS })}
         </p>
       </div>
     </div>

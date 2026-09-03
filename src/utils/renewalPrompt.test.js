@@ -105,10 +105,15 @@ describe('GUARDIAN: the renewal prompt must wait for an answer', () => {
 
   test('the modal offers both answers, not just a way out', () => {
     const src = read('../components/RenewalPromptModal.jsx');
-    expect(src).toMatch(/Renew now/);
-    expect(src).toMatch(/Remind me later/);
+    // The copy moved into the dictionary on 2026-09-02, so the guard follows it: the
+    // component must still render both keys, and en.js must still say what they mean.
+    expect(src).toMatch(/t\('renewal\.renew_now'\)/);
+    expect(src).toMatch(/t\('renewal\.remind_later'\)/);
     expect(src).toMatch(/onRenew/);
     expect(src).toMatch(/onLater/);
+    const dict = read('../i18n/en.js');
+    expect(dict).toMatch(/'renewal\.renew_now': 'Renew now'/);
+    expect(dict).toMatch(/'renewal\.remind_later': 'Remind me later'/);
   });
 
   test('the snooze is persisted to the profile, not just component state', () => {

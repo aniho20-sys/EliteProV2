@@ -3,8 +3,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import en from './en';
 import zh from './zh-HK';
-import { exerciseLibrary, muscleGroups, equipmentTypes, movementPatterns } from '../data/exercises';
-import { UNIT_OPTIONS } from '../utils/workoutUtils';
+import { exerciseLibrary, equipmentTypes, movementPatterns } from '../data/exercises';
+
 
 // The dictionaries are checked mechanically, because the failures they can produce are
 // exactly the kind nobody notices: a raw key rendered as text has no error attached, a
@@ -69,6 +69,19 @@ describe('English is the source of truth', () => {
   test('no English value is empty', () => {
     for (const [k, v] of Object.entries(en)) expect(v, k).not.toBe('');
   });
+
+  test('_one/_other are reserved for plurals and nothing else', () => {
+    // Written twice during the 2026-09-02 conversion and caught twice by the pairs test
+    // above: 'role.sign_out_other' and 'profile.provider_other' were ordinary keys whose
+    // names happened to end in _other, so the plural machinery read them as half a pair
+    // and the key looked simultaneously missing and unused. Naming this failure directly
+    // means the next person gets told what is wrong rather than deducing it.
+    const orphans = Object.keys(en).filter(k => (
+      (k.endsWith('_one') && !(`${base(k)}_other` in en))
+      || (k.endsWith('_other') && !(`${base(k)}_one` in en))
+    ));
+    expect(orphans, `not a plural pair — rename so it does not end in _one/_other: ${orphans.join(', ')}`).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -96,15 +109,54 @@ describe('zh-HK translates only what English has', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GUARDIAN: the props jsx-no-literals cannot see.
+// ---------------------------------------------------------------------------
+// That rule runs with ignoreProps, because flagging every className buries the finding.
+// The props that DO carry user-visible text are checked here instead — a hardcoded
+// placeholder is invisible to a reviewer and to the Chinese user alike.
+describe('GUARDIAN: no untranslated prop text in a translated file', () => {
+  const TRANSLATED = readFileSync(new URL('../../eslint.config.js', import.meta.url).pathname, 'utf8')
+    .match(/const TRANSLATED_FILES = \[([\s\S]*?)\]/)[1]
+    .match(/'([^']+)'/g)?.map(s => s.slice(1, -1)) || [];
+
+  const VISIBLE_PROPS = ['placeholder', 'aria-label', 'title', 'alt'];
+
+  test.each(TRANSLATED)('%s', (rel) => {
+    const src = readFileSync(new URL(`../../${rel}`, import.meta.url).pathname, 'utf8');
+    const offenders = [];
+    for (const prop of VISIBLE_PROPS) {
+      for (const m of src.matchAll(new RegExp(`${prop}=(["'])([^"']{2,})\\1`, 'g'))) {
+        // A value with no letters in it is a number or punctuation — a sample rate like
+        // "65", not a sentence. Those read the same in every language.
+        if (!/\p{L}/u.test(m[2])) continue;
+        offenders.push(`${prop}="${m[2]}"`);
+      }
+    }
+    expect(offenders, `hardcoded in ${rel}: ${offenders.join(', ')}`).toEqual([]);
+  });
+
+  test('the list itself is not silently empty', () => {
+    // A typo in the regex above would make every file "pass" by testing nothing.
+    expect(TRANSLATED.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GUARDIAN: training vocabulary is data, not UI, and is never translated.
 // ---------------------------------------------------------------------------
 describe('GUARDIAN: training vocabulary never enters the dictionaries', () => {
+  // Two lists are deliberately NOT value-checked, because their words are also ordinary UI
+  // words and banning them as values would ban the legitimate use:
+  //   muscle groups   — "Chest" is a muscle tag AND the label on a chest-measurement row
+  //   UNIT_OPTIONS    — "Time" is a workout unit AND the label on the booking time field
+  // What remains is the vocabulary that is never plausibly UI copy: exercise names,
+  // equipment, movement patterns, and the measurement words themselves. The muscle.* and
+  // unit.* namespace bans above are what protect the excluded two, and nothing can render
+  // either through t() anyway, because t() refuses a variable key.
   const vocabulary = [
     ...exerciseLibrary.map(e => e.name),
-    ...muscleGroups,
     ...equipmentTypes,
     ...movementPatterns,
-    ...UNIT_OPTIONS.map(u => u.label),
     'sets', 'reps', 'kg', 'RPE', 'tempo',
   ].map(s => s.toLowerCase());
 
