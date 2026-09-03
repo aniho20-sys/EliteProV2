@@ -530,6 +530,11 @@ export default function ProfilePage() {
         )}
       </div>
 
+      {/* Language, directly under the profile card and above everything role-specific.
+          Someone who cannot read this page has to reach the way out before they have to
+          read anything else on it, and a trainer's Profile is long. */}
+      <LanguagePicker />
+
       {/* Trainer: Invite Code Card */}
       {isTrainer && inviteCode && (
         <div className="card mb-16">
@@ -721,10 +726,6 @@ export default function ProfilePage() {
       {/* Renders only for the owner — the component hides itself when the Cloud Function
           refuses the call, so no role list needs maintaining here. */}
       {isTrainer && <PlatformStatsCard />}
-
-      {/* Client: Language. Placed above Connect to Coach on purpose — a student who cannot
-          read the page needs to reach this before anything else on it. */}
-      <LanguagePicker />
 
       {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (

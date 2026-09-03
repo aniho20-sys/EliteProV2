@@ -26,8 +26,9 @@
 //
 // 呢個檔案只會喺 lang === 'zh-HK' 嘅時候先 lazy load —— 英文用戶一個 byte 都唔會下載。
 //
-// 教練端第一階段維持英文，所以 en.js 入面嘅教練專用 key（邀請碼、工作時間、業務資料、
-// 續堂定價、銀行資料、GoCardless、備份、Block Time、課堂總結）刻意冇喺呢度出現。
+// 教練端由 2026-09-02 起都可以自己揀語言，但教練專用嘅 key（邀請碼、工作時間、業務資料、
+// 續堂定價、銀行資料、GoCardless、備份、Block Time、課堂總結）仲未翻譯，會 fallback 英文。
+// 語言掣入面有一句話俾教練知，唔會俾佢以為壞咗。
 
 const zhHK = {
   // ── 共用 ──
@@ -278,6 +279,7 @@ const zhHK = {
   'profile.title': '個人檔案',
   'profile.language': '語言',
   'profile.language_desc': '選擇按鈕、標籤及訊息的語言。動作名稱及訓練單位維持英文。',
+  'profile.language_trainer_note': '教練頁面的翻譯尚未完成，未翻譯的部分會顯示英文。',
   'profile.not_connected': '未連接',
   'profile.age': '年齡',
   'profile.height': '身高',

@@ -107,10 +107,14 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage({ role: 'client', language: 'zh' }, 'en')).toBe('en');
   });
 
-  test('phase 1: trainers are English regardless of browser or stored value', () => {
-    expect(resolveLanguage({ role: 'trainer' }, 'zh-HK')).toBe('en');
-    expect(resolveLanguage({ role: 'trainer', language: 'zh-HK' }, 'zh-HK')).toBe('en');
-    expect(resolveLanguage({ role: 'operator' }, 'zh-HK')).toBe('en');
+  test('a trainer gets the same treatment as anyone else', () => {
+    // Trainers were pinned to English until 2026-09-02, on the reasoning that their pages
+    // were not translated. Ani's call was that the choice belongs to the person either
+    // way; the picker warns that trainer screens are still partly English.
+    expect(resolveLanguage({ role: 'trainer', language: 'zh-HK' }, 'en')).toBe('zh-HK');
+    expect(resolveLanguage({ role: 'trainer', language: 'en' }, 'zh-HK')).toBe('en');
+    expect(resolveLanguage({ role: 'trainer' }, 'zh-HK')).toBe('zh-HK');
+    expect(resolveLanguage({ role: 'operator', language: 'zh-HK' }, 'en')).toBe('zh-HK');
   });
 });
 

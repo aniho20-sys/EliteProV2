@@ -58,11 +58,16 @@ export function translate({ en, zh }, lang, key, vars, { dev = false } = {}) {
   return interpolate(value, vars);
 }
 
-// Which language a signed-in user sees. Trainers are pinned to English during phase 1:
-// their pages are not translated yet and the language card is not shown to them, so a
-// trainer document never carries `language` and this never has to guess about one.
+// Which language a signed-in user sees: their own stored choice if they have made one,
+// otherwise the browser's.
+//
+// Trainers were pinned to English until 2026-09-02 on the reasoning that their pages were
+// not translated yet. Ani's call was that the choice belongs to the person regardless —
+// a Hong Kong trainer should not be told they may not have it because the work is
+// unfinished. What they get today is Chinese navigation and shared screens with English
+// where the trainer dictionary is still empty, which is the fallback behaving as designed
+// rather than a broken state. The picker says so before they choose.
 export function resolveLanguage(user, browserLanguage) {
-  if (user && user.role !== 'client') return DEFAULT_LANGUAGE;
   if (user && SUPPORTED_LANGUAGES.includes(user.language)) return user.language;
   return browserDefault(browserLanguage);
 }

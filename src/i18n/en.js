@@ -348,6 +348,7 @@ const en = {
   'profile.title': 'Profile',
   'profile.language': 'Language',
   'profile.language_desc': 'Choose the language for buttons, labels and messages. Exercise names and training units stay in English.',
+  'profile.language_trainer_note': 'Trainer screens are still being translated. Anything not translated yet stays in English.',
   'profile.speciality': 'Speciality',
   'profile.not_connected': 'Not connected',
   'profile.age': 'Age',

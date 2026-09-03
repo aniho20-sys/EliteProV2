@@ -5,9 +5,9 @@ import { translate, resolveLanguage } from './t';
 
 // Which language the signed-in person sees, and the t() bound to it.
 //
-// Resolution (see resolveLanguage): trainers are English in phase 1; a client sees the
-// language stored on their user document if they have chosen one, otherwise the browser's.
-// Only an explicit choice from the Profile card is written to Firestore — see setLanguage.
+// Resolution (see resolveLanguage): anyone signed in sees the language stored on their user
+// document if they have chosen one, otherwise the browser's. Only an explicit choice from
+// the Profile card is written to Firestore — see setLanguage.
 //
 // zh-HK.js is loaded with import() the first time it is needed, so an English user never
 // downloads it. In the moment between choosing Chinese and the chunk arriving, t() falls

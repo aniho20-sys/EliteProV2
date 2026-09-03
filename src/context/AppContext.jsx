@@ -749,8 +749,7 @@ export function AppProvider({ children }) {
 
   // The person's explicit language choice from the Profile card. Only an explicit choice is
   // written — the browser-derived default is never persisted, because a derived value on
-  // the document would look like something they picked. Trainers cannot reach this in
-  // phase 1 (no card is shown to them).
+  // the document would look like something they picked.
   const setLanguage = async (language) => {
     if (!currentUser) return;
     await updateDoc(doc(db, 'users', currentUser.id), { language });

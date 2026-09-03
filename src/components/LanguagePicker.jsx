@@ -11,8 +11,9 @@ import { SUPPORTED_LANGUAGES } from '../i18n/t';
 // would be exactly the wrong way round. That is also why these two strings are NOT in the
 // dictionary: they must not change with the current language.
 //
-// Trainers do not see this card in phase 1; their pages are not translated, so offering the
-// switch would promise something the app cannot deliver yet.
+// Shown to trainers as well as clients. The trainer dictionary is still mostly empty, so a
+// trainer who picks Chinese gets Chinese navigation and English where nothing is translated
+// yet — the note below says that outright rather than letting them find it.
 const OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'zh-HK', label: '繁體中文' },
@@ -23,7 +24,8 @@ export default function LanguagePicker() {
   const { lang, setLanguage, t } = useLanguage();
   const [saving, setSaving] = useState(null);
 
-  if (!currentUser || currentUser.role !== 'client') return null;
+  if (!currentUser) return null;
+  const isTrainer = currentUser.role === 'trainer';
 
   const choose = async (value) => {
     if (saving || value === lang) return;
@@ -58,6 +60,9 @@ export default function LanguagePicker() {
           </button>
         ))}
       </div>
+      {isTrainer && (
+        <p className="mp-scan-note">{t('profile.language_trainer_note')}</p>
+      )}
     </div>
   );
 }
