@@ -63,7 +63,7 @@ Success means a trainer runs their entire business inside ElitePro and their stu
 - Voice (English source copy, as shipped on the landing page): plain, second-person, concrete about the trainer's own day; problems named as scenes rather than features. No hype, no invented metrics.
 - Chinese register is fixed and mechanically tested: written Traditional Chinese, Hong Kong vocabulary, no Cantonese colloquialism in the interface. Cantonese is the language of internal working documents only.
 - The language picker's two options are written literally as `English` and `繁體中文` and are never translated.
-- Craft bar for new interface work, named by Ani on 2026-09-04: **Linear, Stripe Dashboard, Cal.com**. Their level of finish is the standard; the register is the software-tool canon executed straight, not a fitness-app idiom.
+- **The shipped visual system is the endorsed one.** On 2026-09-04 Ani reviewed three full alternative directions for the trainer dashboard (software-tool canon; dark-luxury gold per `STYLE.md`; a Hong Kong form book) and chose the existing app over all three. Treat the current look as the owner's deliberate preference, not an unfinished default, and do not reopen a wholesale redesign without her asking. The rejected explorations are kept in `demo/` for reference.
 
 ## Evidence on Hand
 
