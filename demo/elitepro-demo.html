@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ElitePro Design Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ElitePro — design demo (not the shipped app)
+   Near-monochrome graphite; the only chroma carries money or risk.
+   ============================================================ */
+
+:root{
+  color-scheme: light;
+  --bg:#FBFBFA;
+  --surface:#FFFFFF;
+  --surface-2:#F4F4F2;
+  --surface-3:#EDEDEA;
+  --line:#E3E3DF;
+  --line-strong:#CFCFCA;
+  --ink:#16171A;
+  --ink-2:#55575C;
+  --ink-3:#6E7176;
+  --on-ink:#FBFBFA;
+  --ok:#1C6E45;
+  --ok-tint:#E7F1EB;
+  --warn:#8A5808;
+  --warn-tint:#F6EEDF;
+  --risk:#A9241D;
+  --risk-tint:#F7E9E7;
+  --focus:#16171A;
+  --shadow:0 1px 2px rgba(20,21,24,.06), 0 2px 6px rgba(20,21,24,.04);
+  --sel:#DCDCD7;
+
+  --r:6px;
+  --r-lg:10px;
+  --rail:240px;
+  --mono:"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --sans:"Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme: dark){
+    color-scheme: dark;
+    --bg:#0D0E10;
+    --surface:#141619;
+    --surface-2:#1B1E22;
+    --surface-3:#23262B;
+    --line:#272A2F;
+    --line-strong:#3A3E44;
+    --ink:#F1F2F3;
+    --ink-2:#A7ABB1;
+    --ink-3:#888C93;
+    --on-ink:#0D0E10;
+    --ok:#5CBF8A;
+    --ok-tint:#13251C;
+    --warn:#E2A845;
+    --warn-tint:#261C0D;
+    --risk:#F0776B;
+    --risk-tint:#2A1512;
+    --focus:#F1F2F3;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --sel:#2E3238;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0D0E10;
+  --surface:#141619;
+  --surface-2:#1B1E22;
+  --surface-3:#23262B;
+  --line:#272A2F;
+  --line-strong:#3A3E44;
+  --ink:#F1F2F3;
+  --ink-2:#A7ABB1;
+  --ink-3:#888C93;
+  --on-ink:#0D0E10;
+  --ok:#5CBF8A;
+  --ok-tint:#13251C;
+  --warn:#E2A845;
+  --warn-tint:#261C0D;
+  --risk:#F0776B;
+  --risk-tint:#2A1512;
+  --focus:#F1F2F3;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+  --sel:#2E3238;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+html[lang="zh-HK"] body{ font-size:15px; letter-spacing:.005em }
+::selection{background:var(--sel);color:var(--ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+button:focus:not(:focus-visible){outline:none}
+* {scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:99px;border:3px solid var(--bg)}
+*::-webkit-scrollbar-track{background:transparent}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.015em;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input{font:inherit;color:inherit}
+svg{display:block;flex:none}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"tnum","zero"}
+
+/* ---------- demo chrome (outside the product) ---------- */
+.demobar{
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;gap:10px;
+  padding:7px 12px;
+  background:#16171A;color:#EDEDEA;
+  border-bottom:1px solid #000;
+}
+:root[data-theme="dark"] .demobar,
+:root:not([data-theme="light"]) .demobar{}
+.demobar-mark{
+  display:flex;align-items:center;gap:7px;
+  font-size:11px;letter-spacing:.02em;color:#9A9DA3;white-space:nowrap;
+}
+.demobar-long{display:none}
+@media (max-width:379px){
+  .demobar{gap:6px;padding-left:9px;padding-right:9px}
+  .demobar-short{display:none}
+  .seg button{padding:4px 7px}
+}
+@media (min-width:620px){
+  .demobar-long{display:inline}
+  .demobar-short{display:none}
+}
+.demobar-dot{width:5px;height:5px;border-radius:99px;background:#E2A845;flex:none}
+.demobar-spacer{flex:1 1 auto;min-width:0}
+.seg{display:flex;background:#26282C;border-radius:7px;padding:2px;gap:2px}
+.seg button{
+  padding:4px 9px;border-radius:5px;font-size:12px;font-weight:500;color:#A7ABB1;
+  transition:background .12s ease, color .12s ease;white-space:nowrap;
+}
+.seg button:hover{color:#EDEDEA}
+.seg button[aria-pressed="true"]{background:#EDEDEA;color:#16171A}
+.iconbtn-dark{
+  width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:#A7ABB1;
+  transition:background .12s ease,color .12s ease;
+}
+.iconbtn-dark:hover{background:#26282C;color:#EDEDEA}
+
+/* ---------- app shell ---------- */
+.app{
+  display:grid;
+  grid-template-columns:1fr;
+  min-height:100dvh;
+}
+.rail{display:none}
+.main{min-width:0;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky;top:36px;z-index:40;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:saturate(1.6) blur(12px);
+  -webkit-backdrop-filter:saturate(1.6) blur(12px);
+  border-bottom:1px solid var(--line);
+  padding:11px 16px 10px;
+}
+.topbar-row{display:flex;align-items:baseline;gap:10px}
+.topbar h1{font-size:19px;line-height:1.2}
+.topbar-sub{
+  margin-top:3px;display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--ink-3);
+}
+.sync{display:inline-flex;align-items:center;gap:5px}
+.sync svg{width:13px;height:13px}
+.topbar-who{
+  margin-left:auto;display:flex;align-items:center;gap:8px;
+  font-size:12.5px;color:var(--ink-2);white-space:nowrap;
+}
+.avatar{
+  width:26px;height:26px;border-radius:99px;background:var(--surface-3);
+  display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--ink-2);
+  border:1px solid var(--line);
+}
+
+/* ---------- ledger strip ---------- */
+.ledger{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+}
+.ledger-cell{padding:11px 14px 12px;border-right:1px solid var(--line);min-width:0}
+.ledger-cell:last-child{border-right:0}
+.ledger-label{
+  font-size:11px;color:var(--ink-3);line-height:1.35;
+  display:block;margin-bottom:5px;min-height:30px;
+  text-wrap:pretty;
+}
+.ledger-value{font-size:20px;font-weight:500;letter-spacing:-.02em;line-height:1.15;display:flex;align-items:baseline;gap:4px}
+.ledger-value .unit{font-size:12px;font-weight:400;color:var(--ink-3);letter-spacing:0}
+.ledger-value.is-risk{color:var(--risk)}
+.ledger-foot{
+  padding:7px 14px 8px;font-size:11px;color:var(--ink-3);
+  border-bottom:1px solid var(--line);background:var(--surface-2);
+  display:flex;align-items:center;gap:6px;
+}
+.ledger-foot svg{width:12px;height:12px}
+
+/* ---------- sections ---------- */
+.section{padding:20px 16px 0}
+.section-head{display:flex;align-items:baseline;gap:9px;margin-bottom:11px}
+.section-head h2{font-size:13px;font-weight:600;letter-spacing:.01em}
+.section-meta{font-size:12px;color:var(--ink-3)}
+.section-meta .sep{opacity:.5;padding:0 5px}
+
+/* ---------- day column ---------- */
+.day{position:relative;margin-left:2px}
+.slot{
+  position:relative;display:grid;
+  grid-template-columns:46px 1fr;gap:12px;
+  padding:0 0 2px;
+}
+.slot-time{
+  font-size:12px;color:var(--ink-3);padding-top:13px;text-align:right;
+  font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;
+}
+.slot-body{
+  position:relative;padding-left:19px;padding-bottom:14px;
+  border-left:1px solid var(--line);
+}
+.slot:last-child .slot-body{border-left-color:transparent}
+.slot-body::before{
+  content:"";position:absolute;left:-4.5px;top:16px;
+  width:8px;height:8px;border-radius:99px;
+  background:var(--bg);border:1.5px solid var(--line-strong);
+}
+.slot.is-done .slot-body::before{background:var(--line-strong);border-color:var(--line-strong)}
+.slot.is-next .slot-body::before{background:var(--ink);border-color:var(--ink)}
+.slot.is-off .slot-body::before{border-style:dashed}
+
+.entry{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:11px 12px 12px;box-shadow:var(--shadow);
+}
+.entry.is-quiet{background:transparent;box-shadow:none;border-color:var(--line);border-style:dashed}
+.entry-top{display:flex;align-items:center;gap:8px;min-width:0}
+.entry-name{font-size:15px;font-weight:500;letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry.is-done .entry-name{color:var(--ink-2)}
+.entry-type{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.entry-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.entry-actions{display:flex;gap:8px;margin-top:11px}
+
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 7px;border-radius:99px;font-size:11.5px;font-weight:500;
+  border:1px solid var(--line);color:var(--ink-2);background:var(--surface-2);
+  white-space:nowrap;
+}
+.chip .num{font-size:11.5px}
+.chip svg{width:12px;height:12px}
+.chip.is-ok{color:var(--ok);background:var(--ok-tint);border-color:color-mix(in srgb,var(--ok) 26%,transparent)}
+.chip.is-warn{color:var(--warn);background:var(--warn-tint);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.chip.is-risk{color:var(--risk);background:var(--risk-tint);border-color:color-mix(in srgb,var(--risk) 30%,transparent)}
+.chip.is-flat{background:transparent}
+
+.nowline{
+  display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;
+  margin:2px 0 10px;
+}
+.nowline-label{
+  font-size:11px;color:var(--ink);text-align:right;font-family:var(--mono);
+  font-variant-numeric:tabular-nums slashed-zero;font-weight:500;
+}
+.nowline-rule{position:relative;height:1px;background:var(--ink);margin-left:19px}
+.nowline-rule::before{
+  content:"";position:absolute;left:-23px;top:50%;transform:translateY(-50%);
+  width:5px;height:5px;border-radius:99px;background:var(--ink);
+}
+
+/* changed-row marker: holds until dismissed */
+.holdmark{
+  display:flex;align-items:flex-start;gap:8px;
+  margin-top:10px;padding:8px 9px;border-radius:var(--r);
+  background:var(--warn-tint);border:1px solid color-mix(in srgb,var(--warn) 26%,transparent);
+  font-size:12.5px;color:var(--warn);line-height:1.4;
+}
+.holdmark svg{width:14px;height:14px;margin-top:2px}
+.holdmark-text{flex:1 1 auto;min-width:0}
+.holdmark button{
+  font-size:12px;font-weight:500;color:var(--warn);text-decoration:underline;
+  text-underline-offset:2px;text-decoration-thickness:1px;flex:none;
+}
+.holdmark button:hover{text-decoration-thickness:2px}
+
+/* ---------- attention queue ---------- */
+.queue{border-top:1px solid var(--line);margin-top:2px}
+.qrow{border-bottom:1px solid var(--line)}
+.qhead{
+  width:100%;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+  padding:12px 2px;text-align:left;
+  transition:background .12s ease;
+}
+.qhead:hover{background:var(--surface-2)}
+.qname{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:500;letter-spacing:-.01em}
+.qreason{margin-top:3px;font-size:12.5px;color:var(--ink-3);line-height:1.4}
+.qreason strong{font-weight:500;font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero}
+.qreason.is-risk strong{color:var(--risk)}
+.qreason.is-warn strong{color:var(--warn)}
+.qright{display:flex;align-items:center;gap:9px;color:var(--ink-3)}
+.qchev{transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.qrow.is-open .qchev{transform:rotate(180deg)}
+.qpanel{display:none;padding:0 2px 14px}
+.qrow.is-open .qpanel{display:block}
+.qpanel-grid{
+  display:grid;grid-template-columns:1fr;gap:12px;
+  padding:12px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2);
+}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:3px 0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero}
+.kv dd.is-risk{color:var(--risk)}
+dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
+.form6{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.form6-label{font-size:11.5px;color:var(--ink-3)}
+.marks{display:flex;gap:5px}
+.mark{width:15px;height:15px;border-radius:3px;border:1px solid var(--line-strong);flex:none}
+.mark.is-hit{background:var(--ink);border-color:var(--ink)}
+.mark.is-miss{position:relative;background:transparent;border-color:var(--line-strong)}
+.mark.is-miss::after{
+  content:"";position:absolute;left:1px;right:1px;top:50%;
+  height:1px;background:var(--line-strong);transform:rotate(-45deg);
+}
+.mark.is-due{border-style:dashed;border-color:var(--line-strong);opacity:.7}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:32px;padding:0 12px;border-radius:var(--r);
+  font-size:13px;font-weight:500;letter-spacing:-.005em;white-space:nowrap;
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  transition:background .12s ease, border-color .12s ease, transform .06s ease;
+}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(.5px)}
+.btn svg{width:14px;height:14px}
+.btn-primary{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.btn-primary:hover{background:color-mix(in srgb,var(--ink) 88%, var(--bg))}
+.btn-sm{height:28px;padding:0 10px;font-size:12.5px}
+.btn-lg{height:44px;padding:0 16px;font-size:15px;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn[disabled]:hover{background:var(--surface)}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-ghost:hover{background:var(--surface-2);border-color:var(--line)}
+
+/* ---------- student screen ---------- */
+.plan-head{padding:16px 16px 0}
+.plan-title{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.plan-title h2{font-size:22px;letter-spacing:-.02em}
+.plan-sub{margin-top:5px;font-size:13px;color:var(--ink-3)}
+.credit-line{
+  margin:14px 16px 0;padding:11px 13px;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+}
+.credit-prefix{font-size:15px;color:var(--ink-2);align-self:center}
+.credit-prefix:empty{display:none}
+.credit-figure{font-size:26px;font-weight:500;letter-spacing:-.025em;line-height:1}
+.credit-body{min-width:0}
+.credit-label{font-size:12.5px;color:var(--ink-3);line-height:1.35}
+.credit-bar{
+  margin-top:8px;height:5px;border-radius:99px;background:var(--surface-3);
+  display:flex;gap:2px;overflow:hidden;
+}
+.credit-bar i{flex:1 1 0;background:var(--line-strong);border-radius:99px}
+.credit-bar i.is-left{background:var(--ink)}
+
+.ex{border-top:1px solid var(--line);padding:16px 16px 4px;margin-top:18px}
+.ex:first-of-type{margin-top:16px}
+.ex-head{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.ex-name{font-size:16px;font-weight:600;letter-spacing:-.015em}
+.ex-target{font-size:12.5px;color:var(--ink-3);font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero}
+.ex-note{font-size:12.5px;color:var(--ink-3);margin-bottom:11px}
+
+.setrow{
+  display:grid;grid-template-columns:26px 1fr 1fr 44px;gap:8px;align-items:center;
+  padding:5px 0;
+}
+.setrow-head{
+  font-size:11px;color:var(--ink-3);padding-bottom:2px;
+}
+.setrow-head span:nth-child(1){text-align:center}
+.set-no{
+  font-size:12.5px;color:var(--ink-3);text-align:center;
+  font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;
+}
+.field{
+  position:relative;display:flex;align-items:center;
+  border:1px solid var(--line-strong);border-radius:var(--r);background:var(--surface);
+  height:38px;padding:0 9px;transition:border-color .12s ease, background .12s ease;
+}
+.field:focus-within{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.field input{
+  width:100%;min-width:0;border:0;background:transparent;outline:none;
+  font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;
+  font-size:15px;padding:0;
+}
+.field input::placeholder{color:var(--ink-3);opacity:1}
+.field .suffix{font-size:11.5px;color:var(--ink-3);padding-left:5px;flex:none}
+.setrow.is-done .field{background:var(--surface-2);border-color:var(--line);border-style:dashed}
+.setrow.is-done .field input{color:var(--ink-2)}
+.tick{
+  width:38px;height:38px;border-radius:var(--r);
+  border:1px solid var(--line-strong);background:var(--surface);
+  display:grid;place-items:center;color:var(--ink-3);
+  transition:background .14s ease,border-color .14s ease,color .14s ease;
+}
+.tick:hover{background:var(--surface-2);color:var(--ink-2)}
+.tick svg{width:16px;height:16px}
+.setrow.is-done .tick{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.prev{
+  font-size:11.5px;color:var(--ink-3);
+  font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;
+  margin:0 0 10px;
+}
+.setrow-head span:nth-child(2),.setrow-head span:nth-child(3){padding-left:9px}
+.ex-add{margin:8px 0 4px}
+
+/* rest timer dock */
+.timer{
+  position:fixed;left:0;right:0;z-index:45;
+  bottom:calc(64px + env(safe-area-inset-bottom));
+  padding:0 12px 10px;
+  transform:translateY(14px);opacity:0;pointer-events:none;
+  transition:transform .32s cubic-bezier(.16,1,.3,1), opacity .22s ease;
+}
+.timer.is-up{transform:none;opacity:1;pointer-events:auto}
+.timer-inner{
+  max-width:640px;margin:0 auto;
+  background:var(--ink);color:var(--on-ink);
+  border-radius:10px;padding:10px 12px 0;
+  box-shadow:0 6px 20px rgba(20,21,24,.22), 0 2px 5px rgba(20,21,24,.14);
+}
+.timer-row{display:flex;align-items:center;gap:12px}
+.timer-label{font-size:12.5px;opacity:.72}
+.timer-count{
+  font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;
+  font-size:22px;font-weight:500;letter-spacing:-.01em;margin-left:auto;
+}
+.timer-btn{
+  font-size:12.5px;font-weight:500;padding:5px 9px;border-radius:6px;
+  background:color-mix(in srgb, var(--on-ink) 14%, transparent);
+  transition:background .12s ease;
+}
+.timer-btn:hover{background:color-mix(in srgb, var(--on-ink) 24%, transparent)}
+.timer-rule{height:2px;margin-top:9px;background:color-mix(in srgb,var(--on-ink) 22%,transparent);border-radius:99px;overflow:hidden}
+.timer-rule i{display:block;height:100%;width:100%;background:var(--on-ink);transform-origin:left center}
+.timer.is-done .timer-inner{animation:flash .5s ease 2}
+@keyframes flash{50%{background:color-mix(in srgb,var(--ink) 78%, var(--warn))}}
+
+.finish{padding:22px 16px 26px}
+
+/* ---------- bottom nav ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  background:color-mix(in srgb,var(--surface) 92%, transparent);
+  backdrop-filter:saturate(1.6) blur(14px);
+  -webkit-backdrop-filter:saturate(1.6) blur(14px);
+  border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tab{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:9px 2px 8px;font-size:10.5px;color:var(--ink-3);
+  transition:color .12s ease;
+}
+.tab svg{width:20px;height:20px}
+.tab:hover{color:var(--ink-2)}
+.tab[aria-current="page"]{color:var(--ink);font-weight:500}
+
+/* ---------- desktop ---------- */
+@media (min-width:1000px){
+  .app{grid-template-columns:var(--rail) 1fr}
+  .rail{
+    display:block;border-right:1px solid var(--line);background:var(--surface);
+    padding:18px 12px;position:sticky;top:36px;height:calc(100dvh - 36px);
+  }
+  .rail-brand{display:flex;align-items:center;gap:9px;padding:0 8px 16px;font-weight:600;letter-spacing:-.02em}
+  .rail-mark{width:24px;height:24px;border-radius:6px;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;font-size:12px;font-weight:600}
+  .rail a,.rail button.railitem{
+    display:flex;align-items:center;gap:10px;width:100%;
+    padding:7px 8px;border-radius:var(--r);font-size:13.5px;color:var(--ink-2);
+    text-decoration:none;transition:background .12s ease,color .12s ease;
+  }
+  .rail button.railitem:hover{background:var(--surface-2);color:var(--ink)}
+  .rail button.railitem[aria-current="page"]{background:var(--surface-3);color:var(--ink);font-weight:500}
+  .rail svg{width:17px;height:17px}
+  .rail-group{margin-top:16px;padding:0 8px 6px;font-size:11px;color:var(--ink-3)}
+  .tabbar{display:none}
+  .main{padding-bottom:40px}
+  .topbar{padding:16px 28px 14px}
+  .ledger{grid-template-columns:repeat(3,minmax(0,220px))}
+  .section{padding:24px 28px 0;max-width:1180px}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:start;padding:24px 28px 0;max-width:1180px}
+  .entry{max-width:520px}
+  .nowline-rule{max-width:520px}
+  .cols .section{padding:0}
+  .plan-head,.credit-line{max-width:720px}
+  .plan-head{padding:24px 28px 0}
+  .credit-line{margin:16px 28px 0}
+  .ex{padding:18px 28px 6px;max-width:720px}
+  .setrow{grid-template-columns:26px 140px 140px 44px}
+  .finish{padding:26px 28px 40px;max-width:720px}
+  .timer{bottom:22px;left:var(--rail);padding-left:28px;padding-right:28px}
+  .timer-inner{max-width:720px;margin-left:0}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  .timer{transform:none}
+}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="i-check"><path d="M20 6 9 17l-5-5"/></g>
+    <g id="i-chev"><path d="m6 9 6 6 6-6"/></g>
+    <g id="i-cal"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></g>
+    <g id="i-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></g>
+    <g id="i-msg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></g>
+    <g id="i-bar"><path d="M6.5 6.5v11M3.5 8.5v7M17.5 6.5v11M20.5 8.5v7M6.5 12h11"/></g>
+    <g id="i-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>
+    <g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 4V2M12 22v-2M6.34 6.34 4.93 4.93M19.07 19.07l-1.41-1.41M4 12H2M22 12h-2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></g>
+    <g id="i-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></g>
+    <g id="i-alert"><path d="m10.29 3.86-8.19 14A2 2 0 0 0 3.83 21h16.34a2 2 0 0 0 1.73-3.14l-8.19-14a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></g>
+    <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+    <g id="i-clock"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g>
+    <g id="i-cloud"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.2 9.2 4 4 0 0 0 7 17"/><path d="M12 12v8M9 17.5l3 3 3-3"/></g>
+    <g id="i-arrow"><path d="M5 12h14M13 6l6 6-6 6"/></g>
+    <g id="i-trend"><path d="M22 7l-8.5 8.5-5-5L2 17M16 7h6v6"/></g>
+    <g id="i-doc"><path d="M14 2v6h6M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></g>
+  </defs>
+</svg>
+
+<div class="demobar">
+  <span class="demobar-mark"><span class="demobar-dot"></span><span class="demobar-long" data-t="demo.mark">Design demo · synthetic data</span><span class="demobar-short" data-t="demo.mark_short">Demo</span></span>
+  <span class="demobar-spacer"></span>
+  <div class="seg" role="group" aria-label="Screen">
+    <button type="button" id="sw-trainer" aria-pressed="true" data-t="demo.trainer">Trainer</button>
+    <button type="button" id="sw-student" aria-pressed="false" data-t="demo.student">Student</button>
+  </div>
+  <div class="seg" role="group" aria-label="Language">
+    <button type="button" id="lang-en" aria-pressed="true">EN</button>
+    <button type="button" id="lang-zh" aria-pressed="false"><span class="demobar-long">繁體中文</span><span class="demobar-short">中文</span></button>
+  </div>
+  <button type="button" class="iconbtn-dark" id="themebtn" aria-label="Toggle theme">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-moon" id="themeicon"/></svg>
+  </button>
+</div>
+
+<div class="app">
+  <aside class="rail">
+    <div class="rail-brand"><span class="rail-mark">E</span><span>ElitePro</span></div>
+    <button type="button" class="railitem" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cal"/></svg><span data-t="nav.today">Today</span></button>
+    <button type="button" class="railitem" data-role="trainer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg><span data-t="nav.clients">Clients</span></button>
+    <button type="button" class="railitem" data-role="student" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-trend"/></svg><span data-t="nav.progress">Progress</span></button>
+    <button type="button" class="railitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bar"/></svg><span data-t="nav.plans">Plans</span></button>
+    <button type="button" class="railitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-msg"/></svg><span data-t="nav.messages">Messages</span></button>
+    <div class="rail-group" data-role="trainer" data-t="nav.group_business">Business</div>
+    <button type="button" class="railitem" data-role="trainer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-doc"/></svg><span data-t="nav.invoices">Invoices</span></button>
+    <button type="button" class="railitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg><span data-t="nav.profile">Profile</span></button>
+  </aside>
+
+  <main class="main">
+
+  <!-- ============ TRAINER ============ -->
+  <section id="screen-trainer">
+    <div class="topbar">
+      <div class="topbar-row">
+        <h1><span data-t="t.today">Today</span><span class="num" style="color:var(--ink-3);font-weight:400;font-size:15px;letter-spacing:0;margin-left:9px" data-t="t.date">4 Sep</span></h1>
+        <div class="topbar-who">
+          <span data-t="t.coach">Coach Ani</span>
+          <span class="avatar">A</span>
+        </div>
+      </div>
+      <div class="topbar-sub">
+        <span class="sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cloud"/></svg><span data-t="t.synced">Synced 09:14</span></span>
+      </div>
+    </div>
+
+    <div class="ledger">
+      <div class="ledger-cell">
+        <span class="ledger-label" data-t="t.delivered">Delivered this month</span>
+        <span class="ledger-value num">34</span>
+      </div>
+      <div class="ledger-cell">
+        <span class="ledger-label" data-t="t.outstanding_credits">Credits owed to clients</span>
+        <span class="ledger-value num">112</span>
+      </div>
+      <div class="ledger-cell">
+        <span class="ledger-label" data-t="t.unpaid">Unpaid</span>
+        <span class="ledger-value num is-risk">8,400<span class="unit">HKD</span></span>
+      </div>
+    </div>
+    <div class="ledger-foot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clock"/></svg>
+      <span data-t="t.asof">Counted to 09:14 · today's sessions not included</span>
+    </div>
+
+    <div class="cols">
+    <div class="section">
+      <div class="section-head">
+        <h2 data-t="t.sessions">Sessions</h2>
+        <span class="section-meta"><span class="num">5</span> <span data-t="t.booked">booked</span><span class="sep">·</span><span class="num">1</span> <span data-t="t.changed">changed</span></span>
+      </div>
+
+      <div class="day">
+        <div class="slot is-done">
+          <div class="slot-time">07:00</div>
+          <div class="slot-body">
+            <div class="entry is-done">
+              <div class="entry-top">
+                <span class="entry-name">Wing Lau</span>
+                <span class="entry-type" data-t="t.oneone">1-on-1</span>
+              </div>
+              <div class="entry-meta">
+                <span class="chip is-flat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg><span data-t="t.complete">Complete</span></span>
+                <span class="chip"><span class="num">8</span> <span data-t="t.left">left</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slot is-done">
+          <div class="slot-time">08:00</div>
+          <div class="slot-body">
+            <div class="entry is-done">
+              <div class="entry-top">
+                <span class="entry-name">Kelvin Chan</span>
+                <span class="entry-type" data-t="t.oneone">1-on-1</span>
+              </div>
+              <div class="entry-meta">
+                <span class="chip is-flat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg><span data-t="t.complete">Complete</span></span>
+                <span class="chip is-warn"><span class="num">2</span> <span data-t="t.left">left</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nowline" aria-hidden="true">
+          <div class="nowline-label">09:41</div>
+          <div class="nowline-rule"></div>
+        </div>
+
+        <div class="slot is-next">
+          <div class="slot-time">10:30</div>
+          <div class="slot-body">
+            <div class="entry">
+              <div class="entry-top">
+                <span class="entry-name">Priya Nair</span>
+                <span class="entry-type" data-t="t.assessment">Assessment</span>
+              </div>
+              <div class="entry-meta">
+                <span class="chip"><span class="num">5</span> <span data-t="t.left">left</span></span>
+                <span class="chip is-risk" data-t="t.invoice_overdue">Invoice 9 days overdue</span>
+              </div>
+              <div class="entry-actions">
+                <button type="button" class="btn btn-sm btn-primary" data-t="t.mark_complete">Mark complete</button>
+                <button type="button" class="btn btn-sm" data-t="t.message">Message</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slot">
+          <div class="slot-time">12:00</div>
+          <div class="slot-body">
+            <div class="entry">
+              <div class="entry-top">
+                <span class="entry-name">Marco Ferretti</span>
+                <span class="entry-type" data-t="t.oneone">1-on-1</span>
+              </div>
+              <div class="entry-meta">
+                <span class="chip is-risk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-alert"/></svg><span data-t="t.overdrawn">Overdrawn</span> <span class="num">−1</span></span>
+                <span class="chip is-flat" data-t="t.cap_reached">Booking cap reached</span>
+              </div>
+              <div class="entry-actions">
+                <button type="button" class="btn btn-sm btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"/></svg><span data-t="t.topup">Top up</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slot is-off">
+          <div class="slot-time">18:30</div>
+          <div class="slot-body">
+            <div class="entry is-quiet">
+              <div class="entry-top">
+                <span class="entry-name" style="text-decoration:line-through;color:var(--ink-3)">Chloe Wong</span>
+                <span class="entry-type" data-t="t.cancelled">Cancelled</span>
+              </div>
+              <div class="holdmark" id="holdmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-alert"/></svg>
+                <span class="holdmark-text"><span data-t="t.changed_at">Cancelled 07:52, more than 24h ahead.</span> <span data-t="t.refunded">1 credit refunded — 2nd free cancellation this month.</span></span>
+                <button type="button" id="dismiss-hold" data-t="t.got_it">Got it</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2 data-t="t.attention">Needs attention</h2>
+        <span class="section-meta"><span class="num">4</span></span>
+      </div>
+
+      <div class="queue">
+        <div class="qrow" id="q1">
+          <button type="button" class="qhead" aria-expanded="false" aria-controls="q1p">
+            <span>
+              <span class="qname">Marco Ferretti</span>
+              <span class="qreason is-risk"><span data-t="q.balance">Balance</span> <strong>−1</strong> · <span data-t="q.booked_today">booked 12:00 today</span></span>
+            </span>
+            <span class="qright">
+              <span class="chip is-risk" data-t="q.owes">Owes a session</span>
+              <svg class="qchev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg>
+            </span>
+          </button>
+          <div class="qpanel" id="q1p">
+            <div class="qpanel-grid">
+              <div class="form6">
+                <span class="form6-label" data-t="q.last6">Last 6 booked</span>
+                <span class="marks" role="img" aria-label="Four attended, one missed, one upcoming">
+                  <i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-miss"></i><i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-due"></i>
+                </span>
+              </div>
+              <dl>
+                <div class="kv"><dt data-t="q.purchased">Purchased</dt><dd class="num">10</dd></div>
+                <div class="kv"><dt data-t="q.used">Used</dt><dd class="num">11</dd></div>
+                <div class="kv"><dt data-t="q.balance">Balance</dt><dd class="num is-risk">−1</dd></div>
+                <div class="kv"><dt data-t="q.last_topup">Last top-up</dt><dd class="num">12 Jul · 10 × 480</dd></div>
+              </dl>
+              <div class="entry-actions" style="margin-top:0">
+                <button type="button" class="btn btn-sm btn-primary" data-t="t.topup">Top up</button>
+                <button type="button" class="btn btn-sm" data-t="q.payment_sheet">Send payment details</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qrow" id="q2">
+          <button type="button" class="qhead" aria-expanded="false" aria-controls="q2p">
+            <span>
+              <span class="qname">Kelvin Chan</span>
+              <span class="qreason is-warn"><strong>2</strong> <span data-t="q.left_books_weekly">left · books twice a week</span></span>
+            </span>
+            <span class="qright">
+              <span class="chip is-warn" data-t="q.two_weeks">Runs out in 1 week</span>
+              <svg class="qchev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg>
+            </span>
+          </button>
+          <div class="qpanel" id="q2p">
+            <div class="qpanel-grid">
+              <div class="form6">
+                <span class="form6-label" data-t="q.last6">Last 6 booked</span>
+                <span class="marks" role="img" aria-label="Six attended">
+                  <i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-hit"></i>
+                </span>
+              </div>
+              <dl>
+                <div class="kv"><dt data-t="q.purchased">Purchased</dt><dd class="num">20</dd></div>
+                <div class="kv"><dt data-t="q.used">Used</dt><dd class="num">18</dd></div>
+                <div class="kv"><dt data-t="q.balance">Balance</dt><dd class="num">2</dd></div>
+                <div class="kv"><dt data-t="q.rate">Renewal rate</dt><dd class="num">480 HKD</dd></div>
+              </dl>
+              <div class="entry-actions" style="margin-top:0">
+                <button type="button" class="btn btn-sm btn-primary" data-t="t.topup">Top up</button>
+                <button type="button" class="btn btn-sm" data-t="t.message">Message</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qrow" id="q3">
+          <button type="button" class="qhead" aria-expanded="false" aria-controls="q3p">
+            <span>
+              <span class="qname">Sam Tsang</span>
+              <span class="qreason"><span data-t="q.no_session">No session in</span> <strong>24</strong> <span data-t="q.days">days</span> · <span data-t="q.was_weekly">was weekly</span></span>
+            </span>
+            <span class="qright">
+              <span class="chip" data-t="q.drifting">Drifting</span>
+              <svg class="qchev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg>
+            </span>
+          </button>
+          <div class="qpanel" id="q3p">
+            <div class="qpanel-grid">
+              <div class="form6">
+                <span class="form6-label" data-t="q.last6">Last 6 booked</span>
+                <span class="marks" role="img" aria-label="Three attended, three missed">
+                  <i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-hit"></i><i class="mark is-miss"></i><i class="mark is-miss"></i><i class="mark is-miss"></i>
+                </span>
+              </div>
+              <dl>
+                <div class="kv"><dt data-t="q.balance">Balance</dt><dd class="num">6</dd></div>
+                <div class="kv"><dt data-t="q.last_session">Last session</dt><dd class="num">11 Aug</dd></div>
+                <div class="kv"><dt data-t="q.last_message">Last message</dt><dd class="num">14 Aug</dd></div>
+              </dl>
+              <div class="entry-actions" style="margin-top:0">
+                <button type="button" class="btn btn-sm btn-primary" data-t="t.message">Message</button>
+                <button type="button" class="btn btn-sm" data-t="q.book">Book a session</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qrow" id="q4">
+          <button type="button" class="qhead" aria-expanded="false" aria-controls="q4p">
+            <span>
+              <span class="qname">Priya Nair</span>
+              <span class="qreason is-risk"><strong>#1043</strong> · <strong>9</strong> <span data-t="q.days_overdue">days overdue</span> · <strong>2,400</strong> HKD</span>
+            </span>
+            <span class="qright">
+              <span class="chip is-risk" data-t="q.unpaid">Unpaid</span>
+              <svg class="qchev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg>
+            </span>
+          </button>
+          <div class="qpanel" id="q4p">
+            <div class="qpanel-grid">
+              <dl style="border-top:0;padding-top:0">
+                <div class="kv"><dt data-t="q.issued">Issued</dt><dd class="num">17 Aug</dd></div>
+                <div class="kv"><dt data-t="q.due">Due</dt><dd class="num">26 Aug</dd></div>
+                <div class="kv"><dt data-t="q.amount">Amount</dt><dd class="num is-risk">2,400 HKD</dd></div>
+                <div class="kv"><dt data-t="q.reminders">Reminders sent</dt><dd class="num">0</dd></div>
+              </dl>
+              <div class="entry-actions" style="margin-top:0">
+                <button type="button" class="btn btn-sm btn-primary" data-t="q.remind">Send reminder</button>
+                <button type="button" class="btn btn-sm" data-t="q.open_invoice">Open invoice</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ============ STUDENT ============ -->
+  <section id="screen-student" hidden>
+    <div class="topbar">
+      <div class="topbar-row">
+        <h1 data-t="s.today">Today</h1>
+        <div class="topbar-who">
+          <span data-t="s.name">Kelvin Chan</span>
+          <span class="avatar">K</span>
+        </div>
+      </div>
+      <div class="topbar-sub">
+        <span class="sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cloud"/></svg><span data-t="s.offline">Offline — saved on this phone, will sync</span></span>
+      </div>
+    </div>
+
+    <div class="credit-line">
+      <span class="credit-prefix" data-t="s.credit_prefix"></span><span class="credit-figure num">2</span>
+      <span class="credit-body">
+        <span class="credit-label" data-t="s.credit_label">sessions left with Coach Ani</span>
+        <span class="credit-bar" role="img" aria-label="2 of 20 sessions remaining">
+          <i class="is-left"></i><i class="is-left"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </span>
+      <button type="button" class="btn btn-sm" style="margin-left:auto" data-t="s.renew">Renew</button>
+    </div>
+
+    <div class="plan-head">
+      <div class="plan-title">
+        <h2>Upper A</h2>
+        <span class="chip is-flat"><span data-t="s.from_coach">From Coach Ani</span></span>
+      </div>
+      <p class="plan-sub"><span class="num">4</span> <span data-t="s.exercises">exercises</span> · <span data-t="s.est">about 55 min</span></p>
+    </div>
+
+    <div class="ex">
+      <div class="ex-head">
+        <span class="ex-name">Bench Press</span>
+        <span class="ex-target">4 × 8–12 · 90s</span>
+      </div>
+      <p class="ex-note" data-t="s.cue_bench">Pause one count on the chest. Stop two reps short of failure.</p>
+
+      <div class="setrow setrow-head" aria-hidden="true">
+        <span data-t="s.set">Set</span><span data-t="s.weight">Weight</span><span data-t="s.reps">Reps</span><span></span>
+      </div>
+      <div class="prev">last: 60 × 10, 60 × 9, 57.5 × 10</div>
+
+      <div class="setrow" data-set>
+        <span class="set-no">1</span>
+        <label class="field"><span class="sr">Set 1 weight</span><input inputmode="decimal" value="60"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Set 1 reps</span><input inputmode="numeric" value="10"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete set 1" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+      <div class="setrow" data-set>
+        <span class="set-no">2</span>
+        <label class="field"><span class="sr">Set 2 weight</span><input inputmode="decimal" value="60"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Set 2 reps</span><input inputmode="numeric" placeholder="—"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete set 2" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+      <div class="setrow" data-set>
+        <span class="set-no">3</span>
+        <label class="field"><span class="sr">Set 3 weight</span><input inputmode="decimal" placeholder="—"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Set 3 reps</span><input inputmode="numeric" placeholder="—"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete set 3" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+      <div class="setrow" data-set>
+        <span class="set-no">4</span>
+        <label class="field"><span class="sr">Set 4 weight</span><input inputmode="decimal" placeholder="—"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Set 4 reps</span><input inputmode="numeric" placeholder="—"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete set 4" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+      <div class="ex-add"><button type="button" class="btn btn-sm btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"/></svg><span data-t="s.add_set">Add set</span></button></div>
+    </div>
+
+    <div class="ex">
+      <div class="ex-head">
+        <span class="ex-name">Incline DB Press</span>
+        <span class="ex-target">3 × 10 · 75s</span>
+      </div>
+      <p class="ex-note" data-t="s.cue_incline">Same weight as last week. Add reps before adding load.</p>
+      <div class="setrow setrow-head" aria-hidden="true">
+        <span data-t="s.set">Set</span><span data-t="s.weight">Weight</span><span data-t="s.reps">Reps</span><span></span>
+      </div>
+      <div class="prev">last: 22.5 × 10, 22.5 × 10, 22.5 × 8</div>
+      <div class="setrow" data-set>
+        <span class="set-no">1</span>
+        <label class="field"><span class="sr">Incline set 1 weight</span><input inputmode="decimal" placeholder="22.5"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Incline set 1 reps</span><input inputmode="numeric" placeholder="10"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete incline set 1" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+      <div class="setrow" data-set>
+        <span class="set-no">2</span>
+        <label class="field"><span class="sr">Incline set 2 weight</span><input inputmode="decimal" placeholder="22.5"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Incline set 2 reps</span><input inputmode="numeric" placeholder="10"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete incline set 2" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+      <div class="setrow" data-set>
+        <span class="set-no">3</span>
+        <label class="field"><span class="sr">Incline set 3 weight</span><input inputmode="decimal" placeholder="22.5"><span class="suffix">kg</span></label>
+        <label class="field"><span class="sr">Incline set 3 reps</span><input inputmode="numeric" placeholder="10"><span class="suffix">reps</span></label>
+        <button type="button" class="tick" aria-label="Complete incline set 3" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></button>
+      </div>
+    </div>
+
+    <div class="finish">
+      <button type="button" class="btn btn-lg btn-primary" style="width:100%" data-t="s.finish">Finish workout</button>
+      <p style="margin-top:10px;font-size:12px;color:var(--ink-3);text-align:center" data-t="s.finish_note">Logging a workout never uses a session credit.</p>
+    </div>
+  </section>
+
+  </main>
+
+  <nav class="tabbar" id="tabbar-trainer">
+    <button type="button" class="tab" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cal"/></svg><span data-t="nav.today">Today</span></button>
+    <button type="button" class="tab" data-role="trainer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg><span data-t="nav.clients">Clients</span></button>
+    <button type="button" class="tab" data-role="student" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-trend"/></svg><span data-t="nav.progress">Progress</span></button>
+    <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bar"/></svg><span data-t="nav.plans">Plans</span></button>
+    <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-msg"/></svg><span data-t="nav.messages">Messages</span></button>
+    <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg><span data-t="nav.profile">Profile</span></button>
+  </nav>
+</div>
+
+<div class="timer" id="timer" role="status" aria-live="polite">
+  <div class="timer-inner">
+    <div class="timer-row">
+      <span class="timer-label" data-t="s.rest">Rest</span>
+      <button type="button" class="timer-btn" id="timer-add">+30s</button>
+      <button type="button" class="timer-btn" id="timer-skip" data-t="s.skip">Skip</button>
+      <span class="timer-count num" id="timer-count">1:30</span>
+    </div>
+    <div class="timer-rule"><i id="timer-fill"></i></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- dictionary: chrome only. Exercise names, sets/reps/kg stay English. ---------- */
+  var ZH = {
+    "demo.mark":"設計 demo · 示範數據","demo.mark_short":"Demo",
+    "t.date":"9月4日","nav.progress":"進度",
+    "demo.trainer":"教練","demo.student":"學生",
+    "nav.today":"今日","nav.clients":"學生","nav.plans":"計劃","nav.messages":"訊息","nav.profile":"個人",
+    "nav.group_business":"業務","nav.invoices":"發票",
+    "t.today":"今日","t.coach":"Ani 教練","t.synced":"09:14 已同步",
+    "t.delivered":"本月已完成","t.outstanding_credits":"學生未用堂數","t.unpaid":"未收款",
+    "t.asof":"計至 09:14 · 未計今日課堂",
+    "t.sessions":"課堂","t.booked":"已預約","t.changed":"有更改",
+    "t.oneone":"單對單","t.assessment":"體能評估","t.cancelled":"已取消",
+    "t.complete":"已完成","t.left":"堂",
+    "t.invoice_overdue":"發票逾期 9 日",
+    "t.overdrawn":"已透支","t.cap_reached":"已達透支上限",
+    "t.mark_complete":"標記完成","t.message":"發訊息","t.topup":"加堂",
+    "t.changed_at":"07:52 取消，距離課堂超過 24 小時。",
+    "t.refunded":"已退回 1 堂 —— 本月第 2 次免費取消。",
+    "t.got_it":"知道了",
+    "t.attention":"需要跟進",
+    "q.balance":"餘額","q.booked_today":"今日 12:00 已預約","q.owes":"欠 1 堂",
+    "q.last6":"最近 6 次預約","q.purchased":"已購買","q.used":"已使用","q.last_topup":"最近加堂",
+    "q.payment_sheet":"發送付款資料",
+    "q.left_books_weekly":"堂 · 每週兩堂","q.two_weeks":"約 1 週後用完","q.rate":"續約價",
+    "q.no_session":"已有","q.days":"日未上堂","q.was_weekly":"之前每週一堂","q.drifting":"疏遠中",
+    "q.last_session":"最近上堂","q.last_message":"最近訊息","q.book":"安排課堂",
+    "q.invoice":"發票","q.days_overdue":"日逾期","q.unpaid":"未付款",
+    "q.issued":"發出日期","q.due":"到期日","q.amount":"金額","q.reminders":"已發提醒",
+    "q.remind":"發送提醒","q.open_invoice":"開啟發票",
+    "s.today":"今日","s.name":"Kelvin Chan","s.offline":"離線 —— 已儲存在此手機，稍後同步",
+    "s.credit_prefix":"剩餘","s.credit_label":"堂 · Ani 教練","s.renew":"續堂",
+    "s.from_coach":"由 Ani 教練編排","s.exercises":"個動作","s.est":"約 55 分鐘",
+    "s.cue_bench":"胸口停一拍。保留兩下，不要練到力竭。",
+    "s.cue_incline":"與上星期相同重量。先增加次數，再增加重量。",
+    "s.set":"組","s.weight":"重量","s.reps":"次數","s.add_set":"加一組",
+    "s.rest":"休息","s.skip":"跳過",
+    "s.finish":"完成訓練",
+    "s.finish_note":"記錄訓練不會扣堂數。"
+  };
+  var EN = {};
+  document.querySelectorAll("[data-t]").forEach(function(el){ EN[el.getAttribute("data-t")] = el.textContent; });
+
+  var root = document.documentElement;
+  var lang = "en";
+  function applyLang(next){
+    lang = next;
+    var dict = next === "zh" ? ZH : EN;
+    root.setAttribute("lang", next === "zh" ? "zh-HK" : "en");
+    document.querySelectorAll("[data-t]").forEach(function(el){
+      var k = el.getAttribute("data-t");
+      var v = dict[k];
+      if (v === undefined) v = EN[k];
+      if (v !== undefined) el.textContent = v;
+    });
+    byId("lang-en").setAttribute("aria-pressed", String(next === "en"));
+    byId("lang-zh").setAttribute("aria-pressed", String(next === "zh"));
+  }
+  function byId(id){ return document.getElementById(id); }
+
+  byId("lang-en").addEventListener("click", function(){ applyLang("en"); });
+  byId("lang-zh").addEventListener("click", function(){ applyLang("zh"); });
+
+  /* ---------- theme ---------- */
+  function currentDark(){
+    var attr = root.getAttribute("data-theme");
+    if (attr) return attr === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function syncThemeIcon(){
+    byId("themeicon").setAttribute("href", currentDark() ? "#i-sun" : "#i-moon");
+    byId("themebtn").setAttribute("aria-label", currentDark() ? "Switch to light theme" : "Switch to dark theme");
+  }
+  byId("themebtn").addEventListener("click", function(){
+    root.setAttribute("data-theme", currentDark() ? "light" : "dark");
+    syncThemeIcon();
+  });
+  syncThemeIcon();
+
+  /* ---------- screen switch ---------- */
+  var timerEl = byId("timer");
+  function showScreen(which){
+    var trainer = which === "trainer";
+    byId("screen-trainer").hidden = !trainer;
+    byId("screen-student").hidden = trainer;
+    byId("sw-trainer").setAttribute("aria-pressed", String(trainer));
+    byId("sw-student").setAttribute("aria-pressed", String(!trainer));
+    document.querySelectorAll("[data-role]").forEach(function(el){
+      el.hidden = (el.getAttribute("data-role") === "trainer") !== trainer;
+    });
+    if (trainer) stopTimer();
+    window.scrollTo(0, 0);
+  }
+  byId("sw-trainer").addEventListener("click", function(){ showScreen("trainer"); });
+  byId("sw-student").addEventListener("click", function(){ showScreen("student"); });
+
+  /* ---------- attention queue: expand in place, never a modal ---------- */
+  document.querySelectorAll(".qhead").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var row = btn.closest(".qrow");
+      var open = row.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", String(open));
+    });
+  });
+
+  /* ---------- the change marker holds until acknowledged ---------- */
+  var dismiss = byId("dismiss-hold");
+  if (dismiss) dismiss.addEventListener("click", function(){
+    var mark = byId("holdmark");
+    if (mark) mark.remove();
+  });
+
+  /* ---------- signature interaction: set commit -> rest timer ---------- */
+  var TOTAL = 90, remain = 90, tick = null;
+  var countEl = byId("timer-count"), fillEl = byId("timer-fill");
+  function fmt(s){
+    var m = Math.floor(s / 60), r = s % 60;
+    return m + ":" + (r < 10 ? "0" : "") + r;
+  }
+  function paint(){
+    countEl.textContent = fmt(Math.max(remain, 0));
+    fillEl.style.transform = "scaleX(" + Math.max(remain, 0) / TOTAL + ")";
+  }
+  function stopTimer(){
+    if (tick) { clearInterval(tick); tick = null; }
+    timerEl.classList.remove("is-up", "is-done");
+  }
+  function startTimer(seconds){
+    TOTAL = seconds; remain = seconds;
+    timerEl.classList.remove("is-done");
+    timerEl.classList.add("is-up");
+    paint();
+    if (tick) clearInterval(tick);
+    tick = setInterval(function(){
+      remain -= 1;
+      paint();
+      if (remain <= 0){
+        clearInterval(tick); tick = null;
+        timerEl.classList.add("is-done");
+        setTimeout(function(){ timerEl.classList.remove("is-up", "is-done"); }, 2200);
+      }
+    }, 1000);
+  }
+  byId("timer-skip").addEventListener("click", stopTimer);
+  byId("timer-add").addEventListener("click", function(){
+    if (!timerEl.classList.contains("is-up")) return;
+    remain += 30; TOTAL = Math.max(TOTAL, remain); paint();
+  });
+
+  document.querySelectorAll(".tick").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var row = btn.closest(".setrow");
+      var done = row.classList.toggle("is-done");
+      btn.setAttribute("aria-pressed", String(done));
+      if (!done) return;
+      var inputs = row.querySelectorAll("input");
+      // a committed set keeps its numbers: fall back to the placeholder the plan suggested
+      inputs.forEach(function(inp){
+        if (!inp.value && inp.placeholder && inp.placeholder !== "—") inp.value = inp.placeholder;
+      });
+      var target = row.closest(".ex").querySelector(".ex-target");
+      var rest = 90;
+      if (target){
+        var m = target.textContent.match(/(\d+)s/);
+        if (m) rest = parseInt(m[1], 10);
+      }
+      startTimer(rest);
+    });
+  });
+
+  applyLang("en");
+})();
+</script>
+</body>
+</html>
