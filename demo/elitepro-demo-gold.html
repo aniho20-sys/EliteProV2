@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ElitePro Gold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ElitePro — variant A: dark luxury, gold reserved for money. Design demo. */
+:root{
+  color-scheme: dark;
+  --bg:#0B0A08; --bg-2:#0F0D0B;
+  --surface:#151210; --surface-2:#1C1815;
+  --line:#2A2521; --line-2:#3A342D;
+  --ink:#F4EFE6; --ink-2:#B6ADA0; --ink-3:#8C8477;
+  --gold:#D8B370; --gold-2:#EBD3A0; --gold-dim:#8A6F3C;
+  --gold-tint:rgba(216,179,112,.10);
+  --risk:#E8615A; --risk-tint:rgba(232,97,90,.12);
+  --ok:#79C39A;
+  --on-gold:#17130D;
+  --serif:"Instrument Serif","Songti TC","Noto Serif CJK TC","Source Han Serif TC",serif;
+  --sans:"Archivo",ui-sans-serif,system-ui,-apple-system,"PingFang HK","Noto Sans CJK TC",sans-serif;
+  --rail:236px;
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#F6F2EA; --bg-2:#FBF8F2;
+  --surface:#FFFDF8; --surface-2:#F1ECE1;
+  --line:#E0D8C8; --line-2:#CDC2AC;
+  --ink:#1A1610; --ink-2:#5B5347; --ink-3:#7A7164;
+  --gold:#8A6512; --gold-2:#6E4F08; --gold-dim:#C6AE79;
+  --gold-tint:rgba(138,101,18,.09);
+  --risk:#A3241D; --risk-tint:rgba(163,36,29,.09);
+  --ok:#1E6D46;
+  --on-gold:#FFFDF8;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+::selection{background:var(--gold-tint);color:var(--ink)}
+:focus-visible{outline:1.5px solid var(--gold);outline-offset:2px;border-radius:2px}
+*{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+*::-webkit-scrollbar{width:10px}
+*::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:3px solid var(--bg)}
+h1,h2{margin:0;font-weight:400}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+svg{display:block;flex:none}
+.fig{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* demo chrome */
+.demobar{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:10px;padding:7px 12px;background:#050505;color:#CFC7B8;border-bottom:1px solid #1A1613}
+.dm{display:flex;align-items:center;gap:7px;font-size:11px;color:#8C8477;white-space:nowrap}
+.dm i{width:5px;height:5px;border-radius:99px;background:var(--gold);display:block}
+.sp{flex:1}
+.seg{display:flex;background:#171310;border:1px solid #262019;border-radius:6px;padding:2px;gap:2px}
+.seg button{padding:4px 9px;border-radius:4px;font-size:12px;font-weight:500;color:#9C9384;white-space:nowrap;transition:.12s}
+.seg button:hover{color:#EFE7D8}
+.seg button[aria-pressed="true"]{background:var(--gold);color:#17130D}
+.ib{width:28px;height:28px;border-radius:5px;display:grid;place-items:center;color:#9C9384;transition:.12s}
+.ib:hover{background:#171310;color:#EFE7D8}
+.long{display:none}
+@media (min-width:600px){.long{display:inline}.short{display:none}}
+@media (max-width:379px){.demobar{gap:6px;padding:7px 8px}.seg button{padding:4px 6px;letter-spacing:0}}
+
+/* shell */
+.app{display:grid;grid-template-columns:1fr;min-height:100dvh}
+.rail{display:none}
+.main{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
+
+/* masthead */
+.mast{padding:20px 18px 0}
+.mast-row{display:flex;align-items:flex-end;gap:12px}
+.mast h1{font-family:var(--serif);font-size:38px;line-height:.95;letter-spacing:-.01em}
+.mast-date{font-size:12px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;padding-bottom:5px}
+.mast-who{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-2);padding-bottom:5px}
+.ava{width:27px;height:27px;border-radius:99px;border:1px solid var(--gold-dim);color:var(--gold);display:grid;place-items:center;font-size:11px;font-weight:600;font-family:var(--serif)}
+.mast-rule{height:1px;background:linear-gradient(90deg,var(--gold) 0%,var(--gold-dim) 22%,var(--line) 60%,transparent 100%);margin-top:14px}
+.mast-sub{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3);padding-top:8px}
+.mast-sub svg{width:13px;height:13px}
+
+/* ledger */
+.ledger{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:16px}
+.lc{background:var(--bg);padding:13px 14px 14px}
+.ll{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);min-height:26px;margin-bottom:6px;line-height:1.25}
+.lv{font-family:var(--serif);font-size:34px;line-height:.9;display:flex;align-items:baseline;gap:5px}
+.lv .u{font-family:var(--sans);font-size:11px;color:var(--ink-3);letter-spacing:.04em}
+.lv.gold{color:var(--gold)}
+.lv.risk{color:var(--risk)}
+.lfoot{font-size:11px;color:var(--ink-3);padding:9px 14px 10px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--line)}
+.lfoot svg{width:12px;height:12px}
+
+/* section headers */
+.sec{padding:22px 18px 0}
+.sh{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.sh h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.sh .m{font-size:11.5px;color:var(--ink-3);letter-spacing:.02em}
+.sh-rule{height:1px;background:var(--line);margin-bottom:2px}
+
+/* day list — ruled rows, no cards */
+.slot{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:14px 0 15px;border-bottom:1px solid var(--line);position:relative}
+.slot:last-child{border-bottom:0}
+.st{font-size:12.5px;color:var(--ink-3);letter-spacing:.03em;padding-top:2px;font-variant-numeric:tabular-nums}
+.slot.past .st,.slot.past .nm{color:var(--ink-3)}
+.top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.nm{font-size:17px;font-weight:500;letter-spacing:-.01em}
+.ty{font-size:12px;color:var(--ink-3);letter-spacing:.03em;text-transform:uppercase}
+.meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12.5px;color:var(--ink-2)}
+.meta b{font-weight:600;font-variant-numeric:tabular-nums}
+.pre:empty{display:none}
+.meta .gold{color:var(--gold)}
+.meta .risk{color:var(--risk)}
+.meta .ok{color:var(--ok)}
+.dot{width:4px;height:4px;border-radius:99px;background:var(--line-2);display:inline-block;vertical-align:middle}
+.acts{display:flex;gap:9px;margin-top:12px}
+.strike{text-decoration:line-through;color:var(--ink-3)}
+
+.now{display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:center;padding:2px 0 3px}
+.now-l{font-size:11.5px;color:var(--gold);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.now-r{height:1px;background:var(--gold);opacity:.62;position:relative}
+.now-r::after{content:"";position:absolute;right:0;top:-2px;width:5px;height:5px;border-radius:99px;background:var(--gold)}
+
+/* the change marker holds */
+.hold{margin-top:12px;border-left:1px solid var(--gold-dim);padding:2px 0 2px 12px;display:flex;gap:12px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.hold button{color:var(--gold);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;flex:none}
+.hold button:hover{color:var(--gold-2)}
+
+/* attention */
+.q{border-top:1px solid var(--line)}
+.qr{border-bottom:1px solid var(--line)}
+.qh{width:100%;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:14px 0;text-align:left;transition:.12s}
+.qh:hover .qn{color:var(--gold-2)}
+.qn{display:block;font-size:16px;font-weight:500;letter-spacing:-.01em;transition:.12s}
+.qw{display:block;margin-top:4px;font-size:12.5px;color:var(--ink-3);line-height:1.4}
+.qw b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.qw b.risk{color:var(--risk)}
+.qw b.gold{color:var(--gold)}
+.qt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap;display:flex;align-items:center;gap:9px}
+.qt .tag{padding:3px 8px;border:1px solid var(--line-2);border-radius:2px}
+.qt .tag.risk{color:var(--risk);border-color:color-mix(in srgb,var(--risk) 42%,transparent)}
+.qt .tag.gold{color:var(--gold);border-color:var(--gold-dim)}
+.chev{transition:transform .2s cubic-bezier(.2,.8,.2,1);color:var(--ink-3)}
+.qr.open .chev{transform:rotate(180deg)}
+.qp{display:none;padding-bottom:16px}
+.qr.open .qp{display:block}
+.qbox{border:1px solid var(--line);background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.035);padding:14px}
+:root[data-theme="light"] .qbox{box-shadow:none}
+.frow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.flab{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.marks{display:flex;gap:6px}
+.mk{width:16px;height:16px;border:1px solid var(--line-2);display:grid;place-items:center;font-size:10px;color:var(--ink-3);line-height:1}
+.mk.hit{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.mk.miss{color:var(--risk);border-color:color-mix(in srgb,var(--risk) 45%,transparent)}
+.kv{display:flex;justify-content:space-between;gap:14px;font-size:13px;padding:6px 0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;font-variant-numeric:tabular-nums}
+.kv dd.risk{color:var(--risk)}
+.kv dd.gold{color:var(--gold)}
+dl{margin:0;padding:8px 0 12px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 14px;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border:1px solid var(--line-2);color:var(--ink);background:transparent;transition:.14s;border-radius:2px}
+.btn:hover{border-color:var(--ink-3);background:var(--surface-2)}
+.btn svg{width:13px;height:13px}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.btn-gold:hover{background:var(--gold-2);border-color:var(--gold-2);color:var(--on-gold)}
+
+/* bottom nav */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,1fr);background:color-mix(in srgb,var(--bg-2) 94%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 2px 9px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);transition:.12s}
+.tab svg{width:19px;height:19px}
+.tab:hover{color:var(--ink-2)}
+.tab[aria-current="page"]{color:var(--gold)}
+
+@media (min-width:1000px){
+  .app{grid-template-columns:var(--rail) 1fr}
+  .rail{display:block;border-right:1px solid var(--line);padding:20px 12px;position:sticky;top:36px;height:calc(100dvh - 36px);background:var(--bg-2)}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px;font-family:var(--serif);font-size:21px;letter-spacing:.01em}
+  .brand i{width:26px;height:26px;border:1px solid var(--gold-dim);color:var(--gold);display:grid;place-items:center;font-size:12px;font-style:normal}
+  .ri{display:flex;align-items:center;gap:11px;width:100%;padding:8px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);transition:.12s;border-radius:2px}
+  .ri:hover{color:var(--ink);background:var(--surface)}
+  .ri[aria-current="page"]{color:var(--gold)}
+  .ri svg{width:16px;height:16px}
+  .rg{margin-top:18px;padding:0 8px 8px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);opacity:.6}
+  .tabs{display:none}
+  .main{padding-bottom:44px}
+  .mast{padding:26px 34px 0;max-width:1220px}
+  .ledger{margin:20px 34px 0;max-width:700px;border:1px solid var(--line)}
+  .lfoot{padding:9px 34px 10px;border-bottom:0}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.92fr);gap:52px;padding:26px 34px 0;max-width:1220px;align-items:start}
+  .sec{padding:0}
+  .mast h1{font-size:46px}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-cal"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="1"/></g>
+<g id="i-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></g>
+<g id="i-bar"><path d="M6.5 6.5v11M3.5 8.5v7M17.5 6.5v11M20.5 8.5v7M6.5 12h11"/></g>
+<g id="i-msg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></g>
+<g id="i-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>
+<g id="i-doc"><path d="M14 2v6h6M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></g>
+<g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 4V2M12 22v-2M6.34 6.34 4.93 4.93M19.07 19.07l-1.41-1.41M4 12H2M22 12h-2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></g>
+<g id="i-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></g>
+<g id="i-chev"><path d="m6 9 6 6 6-6"/></g>
+<g id="i-cloud"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.2 9.2 4 4 0 0 0 7 17"/><path d="M12 12v8M9 17.5l3 3 3-3"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+</defs></svg>
+
+<div class="demobar">
+  <span class="dm"><i></i><span class="long" data-t="d.mark">ElitePro · variant A · synthetic data</span><span class="short" data-t="d.short">Variant A</span></span>
+  <span class="sp"></span>
+  <div class="seg" role="group" aria-label="Language">
+    <button type="button" id="len" aria-pressed="true" aria-label="English">EN</button>
+    <button type="button" id="lzh" aria-pressed="false" aria-label="繁體中文"><span class="long">繁體中文</span><span class="short">中文</span></button>
+  </div>
+  <button type="button" class="ib" id="tbtn" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sun" id="ticon"/></svg></button>
+</div>
+
+<div class="app">
+<aside class="rail">
+  <div class="brand"><i>E</i><span>ElitePro</span></div>
+  <button type="button" class="ri" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cal"/></svg><span data-t="n.today">Today</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg><span data-t="n.clients">Clients</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bar"/></svg><span data-t="n.plans">Plans</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-msg"/></svg><span data-t="n.messages">Messages</span></button>
+  <div class="rg" data-t="n.business">Business</div>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-doc"/></svg><span data-t="n.invoices">Invoices</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg><span data-t="n.profile">Profile</span></button>
+</aside>
+
+<main class="main">
+  <div class="mast">
+    <div class="mast-row">
+      <h1 data-t="m.today">Today</h1>
+      <span class="mast-date fig" data-t="m.date">Thu 4 Sep</span>
+      <span class="mast-who"><span data-t="m.coach">Coach Ani</span><span class="ava">A</span></span>
+    </div>
+    <div class="mast-rule"></div>
+    <div class="mast-sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cloud"/></svg><span data-t="m.synced">Synced 09:14</span></div>
+  </div>
+
+  <div class="ledger">
+    <div class="lc"><span class="ll" data-t="l.delivered">Delivered · Sep</span><span class="lv fig">34</span></div>
+    <div class="lc"><span class="ll" data-t="l.credits">Credits held</span><span class="lv fig gold">112</span></div>
+    <div class="lc"><span class="ll" data-t="l.unpaid">Unpaid</span><span class="lv fig risk">8,400<span class="u">HKD</span></span></div>
+  </div>
+  <div class="lfoot"><span data-t="l.asof">Counted to 09:14 · today's sessions not included</span></div>
+
+  <div class="cols">
+  <div class="sec">
+    <div class="sh"><h2 data-t="s.sessions">Sessions</h2><span class="m"><span class="fig">5</span> <span data-t="s.booked">booked</span> · <span class="fig">1</span> <span data-t="s.changed">changed</span></span></div>
+    <div class="sh-rule"></div>
+
+    <div class="slot past">
+      <div class="st fig">07:00</div>
+      <div>
+        <div class="top"><span class="nm">Wing Lau</span><span class="ty" data-t="s.oneone">1-on-1</span></div>
+        <div class="meta"><span class="ok" data-t="s.complete">Complete</span><span class="dot"></span><span><span class="pre" data-t="s.leftpre"></span><b>8</b> <span data-t="s.left">left</span></span></div>
+      </div>
+    </div>
+
+    <div class="slot past">
+      <div class="st fig">08:00</div>
+      <div>
+        <div class="top"><span class="nm">Kelvin Chan</span><span class="ty" data-t="s.oneone">1-on-1</span></div>
+        <div class="meta"><span class="ok" data-t="s.complete">Complete</span><span class="dot"></span><span class="gold"><span class="pre" data-t="s.leftpre"></span><b>2</b> <span data-t="s.left">left</span></span></div>
+      </div>
+    </div>
+
+    <div class="now" aria-hidden="true"><div class="now-l">09:41</div><div class="now-r"></div></div>
+
+    <div class="slot">
+      <div class="st fig">10:30</div>
+      <div>
+        <div class="top"><span class="nm">Priya Nair</span><span class="ty" data-t="s.assessment">Assessment</span></div>
+        <div class="meta"><span><span class="pre" data-t="s.leftpre"></span><b>5</b> <span data-t="s.left">left</span></span><span class="dot"></span><span class="risk" data-t="s.overdue">Invoice 9 days overdue</span></div>
+        <div class="acts">
+          <button type="button" class="btn btn-gold" data-t="s.markdone">Mark complete</button>
+          <button type="button" class="btn" data-t="s.message">Message</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="st fig">12:00</div>
+      <div>
+        <div class="top"><span class="nm">Marco Ferretti</span><span class="ty" data-t="s.oneone">1-on-1</span></div>
+        <div class="meta"><span class="risk"><span data-t="s.overdrawn">Overdrawn</span> <b>−1</b></span><span class="dot"></span><span data-t="s.cap">Booking cap reached</span></div>
+        <div class="acts"><button type="button" class="btn btn-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><use href="#i-plus"/></svg><span data-t="s.topup">Top up</span></button></div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="st fig">18:30</div>
+      <div>
+        <div class="top"><span class="nm strike">Chloe Wong</span><span class="ty" data-t="s.cancelled">Cancelled</span></div>
+        <div class="hold" id="hold">
+          <span><span data-t="s.hold1">Cancelled 07:52, more than 24h ahead.</span> <span data-t="s.hold2">1 credit refunded — 2nd free cancellation this month.</span></span>
+          <button type="button" id="dismiss" data-t="s.gotit">Got it</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sh"><h2 data-t="a.title">Needs attention</h2><span class="m fig">4</span></div>
+    <div class="sh-rule"></div>
+    <div class="q">
+      <div class="qr" id="r1">
+        <button type="button" class="qh" aria-expanded="false" aria-controls="p1">
+          <span><span class="qn">Marco Ferretti</span><span class="qw"><span data-t="a.balance">Balance</span> <b class="risk">−1</b> · <span data-t="a.bookedtoday">booked 12:00 today</span></span></span>
+          <span class="qt"><span class="tag risk" data-t="a.owes">Owes 1</span><svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></span>
+        </button>
+        <div class="qp" id="p1"><div class="qbox">
+          <div class="frow"><span class="flab" data-t="a.last6">Last 6 booked</span><span class="marks" role="img" aria-label="Four attended, one missed, one upcoming"><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk miss">✕</i><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk"></i></span></div>
+          <dl>
+            <div class="kv"><dt data-t="a.purchased">Purchased</dt><dd class="fig">10</dd></div>
+            <div class="kv"><dt data-t="a.used">Used</dt><dd class="fig">11</dd></div>
+            <div class="kv"><dt data-t="a.balance">Balance</dt><dd class="fig risk">−1</dd></div>
+            <div class="kv"><dt data-t="a.lasttopup">Last top-up</dt><dd class="fig">12 Jul · 10 × 480</dd></div>
+          </dl>
+          <div class="acts" style="margin-top:0"><button type="button" class="btn btn-gold" data-t="s.topup">Top up</button><button type="button" class="btn" data-t="a.paydetails">Payment details</button></div>
+        </div></div>
+      </div>
+
+      <div class="qr" id="r2">
+        <button type="button" class="qh" aria-expanded="false" aria-controls="p2">
+          <span><span class="qn">Kelvin Chan</span><span class="qw"><b class="gold">2</b> <span data-t="a.leftweekly">left · books twice a week</span></span></span>
+          <span class="qt"><span class="tag gold" data-t="a.oneweek">1 week</span><svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></span>
+        </button>
+        <div class="qp" id="p2"><div class="qbox">
+          <div class="frow"><span class="flab" data-t="a.last6">Last 6 booked</span><span class="marks" role="img" aria-label="Six attended"><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk hit">✓</i></span></div>
+          <dl>
+            <div class="kv"><dt data-t="a.purchased">Purchased</dt><dd class="fig">20</dd></div>
+            <div class="kv"><dt data-t="a.used">Used</dt><dd class="fig">18</dd></div>
+            <div class="kv"><dt data-t="a.balance">Balance</dt><dd class="fig gold">2</dd></div>
+            <div class="kv"><dt data-t="a.rate">Renewal rate</dt><dd class="fig">480 HKD</dd></div>
+          </dl>
+          <div class="acts" style="margin-top:0"><button type="button" class="btn btn-gold" data-t="s.topup">Top up</button><button type="button" class="btn" data-t="s.message">Message</button></div>
+        </div></div>
+      </div>
+
+      <div class="qr" id="r3">
+        <button type="button" class="qh" aria-expanded="false" aria-controls="p3">
+          <span><span class="qn">Sam Tsang</span><span class="qw"><span data-t="a.nosession">No session in</span> <b>24</b> <span data-t="a.days">days</span> · <span data-t="a.wasweekly">was weekly</span></span></span>
+          <span class="qt"><span class="tag" data-t="a.drifting">Drifting</span><svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></span>
+        </button>
+        <div class="qp" id="p3"><div class="qbox">
+          <div class="frow"><span class="flab" data-t="a.last6">Last 6 booked</span><span class="marks" role="img" aria-label="Three attended, three missed"><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk hit">✓</i><i class="mk miss">✕</i><i class="mk miss">✕</i><i class="mk miss">✕</i></span></div>
+          <dl>
+            <div class="kv"><dt data-t="a.balance">Balance</dt><dd class="fig">6</dd></div>
+            <div class="kv"><dt data-t="a.lastsession">Last session</dt><dd class="fig">11 Aug</dd></div>
+            <div class="kv"><dt data-t="a.lastmsg">Last message</dt><dd class="fig">14 Aug</dd></div>
+          </dl>
+          <div class="acts" style="margin-top:0"><button type="button" class="btn btn-gold" data-t="s.message">Message</button><button type="button" class="btn" data-t="a.book">Book</button></div>
+        </div></div>
+      </div>
+
+      <div class="qr" id="r4">
+        <button type="button" class="qh" aria-expanded="false" aria-controls="p4">
+          <span><span class="qn">Priya Nair</span><span class="qw"><b>#1043</b> · <b class="risk">9</b> <span data-t="a.daysoverdue">days overdue</span> · <b class="risk">2,400</b> HKD</span></span>
+          <span class="qt"><span class="tag risk" data-t="a.unpaid">Unpaid</span><svg class="chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></span>
+        </button>
+        <div class="qp" id="p4"><div class="qbox">
+          <dl style="padding-top:0">
+            <div class="kv"><dt data-t="a.issued">Issued</dt><dd class="fig">17 Aug</dd></div>
+            <div class="kv"><dt data-t="a.due">Due</dt><dd class="fig">26 Aug</dd></div>
+            <div class="kv"><dt data-t="a.amount">Amount</dt><dd class="fig risk">2,400 HKD</dd></div>
+            <div class="kv"><dt data-t="a.reminders">Reminders sent</dt><dd class="fig">0</dd></div>
+          </dl>
+          <div class="acts" style="margin-top:0"><button type="button" class="btn btn-gold" data-t="a.remind">Send reminder</button><button type="button" class="btn" data-t="a.openinv">Open invoice</button></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</main>
+
+<nav class="tabs">
+  <button type="button" class="tab" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cal"/></svg><span data-t="n.today">Today</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg><span data-t="n.clients">Clients</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bar"/></svg><span data-t="n.plans">Plans</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-msg"/></svg><span data-t="n.messages">Messages</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg><span data-t="n.profile">Profile</span></button>
+</nav>
+</div>
+
+<script>
+(function(){
+"use strict";
+var ZH={
+"d.mark":"ElitePro · A 版 · 示範數據","d.short":"A 版",
+"n.today":"今日","n.clients":"學生","n.plans":"計劃","n.messages":"訊息","n.profile":"個人","n.business":"業務","n.invoices":"發票",
+"m.today":"今日","m.date":"9月4日 星期四","m.coach":"Ani 教練","m.synced":"09:14 已同步",
+"l.delivered":"本月已完成","l.credits":"學生未用堂數","l.unpaid":"未收款","l.asof":"計至 09:14 · 未計今日課堂",
+"s.sessions":"課堂","s.booked":"已預約","s.changed":"有更改","s.oneone":"單對單","s.assessment":"體能評估","s.cancelled":"已取消",
+"s.complete":"已完成","s.left":"堂","s.leftpre":"剩餘","s.overdue":"發票逾期 9 日","s.overdrawn":"已透支","s.cap":"已達透支上限",
+"s.markdone":"標記完成","s.message":"發訊息","s.topup":"加堂",
+"s.hold1":"07:52 取消，距離課堂超過 24 小時。","s.hold2":"已退回 1 堂 —— 本月第 2 次免費取消。","s.gotit":"知道了",
+"a.title":"需要跟進","a.balance":"餘額","a.bookedtoday":"今日 12:00 已預約","a.owes":"欠 1 堂",
+"a.last6":"最近 6 次預約","a.purchased":"已購買","a.used":"已使用","a.lasttopup":"最近加堂","a.paydetails":"付款資料",
+"a.leftweekly":"堂 · 每週兩堂","a.oneweek":"1 週","a.rate":"續約價",
+"a.nosession":"已有","a.days":"日未上堂","a.wasweekly":"之前每週一堂","a.drifting":"疏遠中",
+"a.lastsession":"最近上堂","a.lastmsg":"最近訊息","a.book":"安排課堂",
+"a.daysoverdue":"日逾期","a.unpaid":"未付款","a.issued":"發出日期","a.due":"到期日","a.amount":"金額","a.reminders":"已發提醒",
+"a.remind":"發送提醒","a.openinv":"開啟發票"};
+var EN={},root=document.documentElement;
+document.querySelectorAll("[data-t]").forEach(function(e){EN[e.getAttribute("data-t")]=e.textContent;});
+function id(x){return document.getElementById(x);}
+function lang(v){
+  var d=v==="zh"?ZH:EN;
+  root.setAttribute("lang",v==="zh"?"zh-HK":"en");
+  document.querySelectorAll("[data-t]").forEach(function(e){
+    var k=e.getAttribute("data-t"),t=d[k];if(t===undefined)t=EN[k];if(t!==undefined)e.textContent=t;});
+  id("len").setAttribute("aria-pressed",String(v==="en"));
+  id("lzh").setAttribute("aria-pressed",String(v==="zh"));
+}
+id("len").addEventListener("click",function(){lang("en");});
+id("lzh").addEventListener("click",function(){lang("zh");});
+function dark(){return root.getAttribute("data-theme")!=="light";}
+function icon(){id("ticon").setAttribute("href",dark()?"#i-sun":"#i-moon");
+  id("tbtn").setAttribute("aria-label",dark()?"Switch to light theme":"Switch to dark theme");}
+id("tbtn").addEventListener("click",function(){root.setAttribute("data-theme",dark()?"light":"dark");icon();});
+icon();
+document.querySelectorAll(".qh").forEach(function(b){
+  b.addEventListener("click",function(){
+    var r=b.closest(".qr"),o=r.classList.toggle("open");
+    b.setAttribute("aria-expanded",String(o));});});
+id("dismiss").addEventListener("click",function(){id("hold").remove();});
+lang("en");
+})();
+</script>
+</body>
+</html>

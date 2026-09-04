@@ -131,9 +131,8 @@ svg{display:block;flex:none}
 }
 .demobar-long{display:none}
 @media (max-width:379px){
-  .demobar{gap:6px;padding-left:9px;padding-right:9px}
-  .demobar-short{display:none}
-  .seg button{padding:4px 7px}
+  .demobar{gap:6px;padding-left:8px;padding-right:8px}
+  .seg button{padding:4px 6px;letter-spacing:0}
 }
 @media (min-width:620px){
   .demobar-long{display:inline}
@@ -247,8 +246,9 @@ svg{display:block;flex:none}
 
 .entry{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  padding:11px 12px 12px;box-shadow:var(--shadow);
+  padding:11px 12px 12px;transition:border-color .12s ease;
 }
+.entry:hover{border-color:var(--line-strong)}
 .entry.is-quiet{background:transparent;box-shadow:none;border-color:var(--line);border-style:dashed}
 .entry-top{display:flex;align-items:center;gap:8px;min-width:0}
 .entry-name{font-size:15px;font-weight:500;letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -264,6 +264,7 @@ svg{display:block;flex:none}
   white-space:nowrap;
 }
 .chip .num{font-size:11.5px}
+.chip-pre:empty{display:none}
 .chip svg{width:12px;height:12px}
 .chip.is-ok{color:var(--ok);background:var(--ok-tint);border-color:color-mix(in srgb,var(--ok) 26%,transparent)}
 .chip.is-warn{color:var(--warn);background:var(--warn-tint);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
@@ -367,7 +368,7 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
 .credit-line{
   margin:14px 16px 0;padding:11px 13px;
   border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
-  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:12px;
 }
 .credit-prefix{font-size:15px;color:var(--ink-2);align-self:center}
 .credit-prefix:empty{display:none}
@@ -512,12 +513,14 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
   .entry{max-width:520px}
   .nowline-rule{max-width:520px}
   .cols .section{padding:0}
+  .plan-head,.credit-line,.ex,.finish{margin-left:auto;margin-right:auto}
   .plan-head,.credit-line{max-width:720px}
   .plan-head{padding:24px 28px 0}
   .credit-line{margin:16px 28px 0}
   .ex{padding:18px 28px 6px;max-width:720px}
   .setrow{grid-template-columns:26px 140px 140px 44px}
   .finish{padding:26px 28px 40px;max-width:720px}
+  .finish .btn-lg{width:auto !important;min-width:280px}
   .timer{bottom:22px;left:var(--rail);padding-left:28px;padding-right:28px}
   .timer-inner{max-width:720px;margin-left:0}
 }
@@ -561,8 +564,8 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
     <button type="button" id="sw-student" aria-pressed="false" data-t="demo.student">Student</button>
   </div>
   <div class="seg" role="group" aria-label="Language">
-    <button type="button" id="lang-en" aria-pressed="true">EN</button>
-    <button type="button" id="lang-zh" aria-pressed="false"><span class="demobar-long">繁體中文</span><span class="demobar-short">中文</span></button>
+    <button type="button" id="lang-en" aria-pressed="true" aria-label="English">EN</button>
+    <button type="button" id="lang-zh" aria-pressed="false" aria-label="繁體中文"><span class="demobar-long">繁體中文</span><span class="demobar-short">中文</span></button>
   </div>
   <button type="button" class="iconbtn-dark" id="themebtn" aria-label="Toggle theme">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-moon" id="themeicon"/></svg>
@@ -636,7 +639,7 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
               </div>
               <div class="entry-meta">
                 <span class="chip is-flat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg><span data-t="t.complete">Complete</span></span>
-                <span class="chip"><span class="num">8</span> <span data-t="t.left">left</span></span>
+                <span class="chip"><span class="chip-pre" data-t="t.left_pre"></span><span class="num">8</span> <span data-t="t.left">left</span></span>
               </div>
             </div>
           </div>
@@ -652,7 +655,7 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
               </div>
               <div class="entry-meta">
                 <span class="chip is-flat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg><span data-t="t.complete">Complete</span></span>
-                <span class="chip is-warn"><span class="num">2</span> <span data-t="t.left">left</span></span>
+                <span class="chip is-warn"><span class="chip-pre" data-t="t.left_pre"></span><span class="num">2</span> <span data-t="t.left">left</span></span>
               </div>
             </div>
           </div>
@@ -672,7 +675,7 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
                 <span class="entry-type" data-t="t.assessment">Assessment</span>
               </div>
               <div class="entry-meta">
-                <span class="chip"><span class="num">5</span> <span data-t="t.left">left</span></span>
+                <span class="chip"><span class="chip-pre" data-t="t.left_pre"></span><span class="num">5</span> <span data-t="t.left">left</span></span>
                 <span class="chip is-risk" data-t="t.invoice_overdue">Invoice 9 days overdue</span>
               </div>
               <div class="entry-actions">
@@ -899,9 +902,9 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
       <p class="ex-note" data-t="s.cue_bench">Pause one count on the chest. Stop two reps short of failure.</p>
 
       <div class="setrow setrow-head" aria-hidden="true">
-        <span data-t="s.set">Set</span><span data-t="s.weight">Weight</span><span data-t="s.reps">Reps</span><span></span>
+        <span>Set</span><span>Weight</span><span>Reps</span><span></span>
       </div>
-      <div class="prev">last: 60 × 10, 60 × 9, 57.5 × 10</div>
+      <div class="prev"><span data-t="s.last">last</span>: 60 × 10, 60 × 9, 57.5 × 10</div>
 
       <div class="setrow" data-set>
         <span class="set-no">1</span>
@@ -937,9 +940,9 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
       </div>
       <p class="ex-note" data-t="s.cue_incline">Same weight as last week. Add reps before adding load.</p>
       <div class="setrow setrow-head" aria-hidden="true">
-        <span data-t="s.set">Set</span><span data-t="s.weight">Weight</span><span data-t="s.reps">Reps</span><span></span>
+        <span>Set</span><span>Weight</span><span>Reps</span><span></span>
       </div>
-      <div class="prev">last: 22.5 × 10, 22.5 × 10, 22.5 × 8</div>
+      <div class="prev"><span data-t="s.last">last</span>: 22.5 × 10, 22.5 × 10, 22.5 × 8</div>
       <div class="setrow" data-set>
         <span class="set-no">1</span>
         <label class="field"><span class="sr">Incline set 1 weight</span><input inputmode="decimal" placeholder="22.5"><span class="suffix">kg</span></label>
@@ -978,10 +981,11 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
   </nav>
 </div>
 
-<div class="timer" id="timer" role="status" aria-live="polite">
+<div class="timer" id="timer" inert>
   <div class="timer-inner">
     <div class="timer-row">
       <span class="timer-label" data-t="s.rest">Rest</span>
+      <span class="sr" id="timer-say" role="status" aria-live="polite"></span>
       <button type="button" class="timer-btn" id="timer-add">+30s</button>
       <button type="button" class="timer-btn" id="timer-skip" data-t="s.skip">Skip</button>
       <span class="timer-count num" id="timer-count">1:30</span>
@@ -1006,7 +1010,7 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
     "t.asof":"計至 09:14 · 未計今日課堂",
     "t.sessions":"課堂","t.booked":"已預約","t.changed":"有更改",
     "t.oneone":"單對單","t.assessment":"體能評估","t.cancelled":"已取消",
-    "t.complete":"已完成","t.left":"堂",
+    "t.complete":"已完成","t.left":"堂","t.left_pre":"剩餘",
     "t.invoice_overdue":"發票逾期 9 日",
     "t.overdrawn":"已透支","t.cap_reached":"已達透支上限",
     "t.mark_complete":"標記完成","t.message":"發訊息","t.topup":"加堂",
@@ -1026,9 +1030,7 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
     "s.today":"今日","s.name":"Kelvin Chan","s.offline":"離線 —— 已儲存在此手機，稍後同步",
     "s.credit_prefix":"剩餘","s.credit_label":"堂 · Ani 教練","s.renew":"續堂",
     "s.from_coach":"由 Ani 教練編排","s.exercises":"個動作","s.est":"約 55 分鐘",
-    "s.cue_bench":"胸口停一拍。保留兩下，不要練到力竭。",
-    "s.cue_incline":"與上星期相同重量。先增加次數，再增加重量。",
-    "s.set":"組","s.weight":"重量","s.reps":"次數","s.add_set":"加一組",
+    "s.last":"上次","s.add_set":"加一組",
     "s.rest":"休息","s.skip":"跳過",
     "s.finish":"完成訓練",
     "s.finish_note":"記錄訓練不會扣堂數。"
@@ -1119,11 +1121,15 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
   function stopTimer(){
     if (tick) { clearInterval(tick); tick = null; }
     timerEl.classList.remove("is-up", "is-done");
+    timerEl.setAttribute("inert", "");
+    byId("timer-say").textContent = "";
   }
   function startTimer(seconds){
     TOTAL = seconds; remain = seconds;
     timerEl.classList.remove("is-done");
     timerEl.classList.add("is-up");
+    timerEl.removeAttribute("inert");
+    byId("timer-say").textContent = "Rest " + fmt(seconds);
     paint();
     if (tick) clearInterval(tick);
     tick = setInterval(function(){
@@ -1132,7 +1138,8 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
       if (remain <= 0){
         clearInterval(tick); tick = null;
         timerEl.classList.add("is-done");
-        setTimeout(function(){ timerEl.classList.remove("is-up", "is-done"); }, 2200);
+        byId("timer-say").textContent = "Rest over";
+        setTimeout(stopTimer, 2200);
       }
     }, 1000);
   }
@@ -1145,14 +1152,23 @@ dl{margin:0;border-top:1px solid var(--line);padding-top:8px}
   document.querySelectorAll(".tick").forEach(function(btn){
     btn.addEventListener("click", function(){
       var row = btn.closest(".setrow");
+      var inputs = row.querySelectorAll("input");
+      if (!row.classList.contains("is-done")){
+        // a committed set keeps its numbers: fall back to the figures the plan suggested
+        inputs.forEach(function(inp){
+          if (!inp.value && inp.placeholder && inp.placeholder !== "—") inp.value = inp.placeholder;
+        });
+        var filled = Array.prototype.every.call(inputs, function(inp){ return inp.value.trim() !== ""; });
+        if (!filled){
+          // nothing to record: send the person to the first empty field instead of starting a rest
+          for (var i = 0; i < inputs.length; i++){ if (!inputs[i].value.trim()){ inputs[i].focus(); break; } }
+          return;
+        }
+      }
       var done = row.classList.toggle("is-done");
       btn.setAttribute("aria-pressed", String(done));
-      if (!done) return;
-      var inputs = row.querySelectorAll("input");
-      // a committed set keeps its numbers: fall back to the placeholder the plan suggested
-      inputs.forEach(function(inp){
-        if (!inp.value && inp.placeholder && inp.placeholder !== "—") inp.value = inp.placeholder;
-      });
+      inputs.forEach(function(inp){ inp.readOnly = done; });
+      if (!done){ stopTimer(); return; }
       var target = row.closest(".ex").querySelector(".ex-target");
       var rest = 90;
       if (target){

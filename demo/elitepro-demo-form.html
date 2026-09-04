@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ElitePro Form Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ElitePro — variant B: the Hong Kong form book. Two inks, ruled columns, form lines.
+   Borrowed: the typographic system of a racing form (density, tabular columns, form
+   strings, silks as identity, black + one red). Not borrowed: odds, stakes, tips. */
+:root{
+  color-scheme: light;
+  --paper:#EFE9DB; --paper-2:#F6F1E5; --band:#171410;
+  --ink:#171410; --ink-2:#4E4739; --ink-3:#736A57;
+  --rule:#C8BFA8; --rule-2:#A2977C;
+  --red:#B8221C; --red-tint:#F0DED9;
+  --on-band:#F2ECDD;
+  --nar:"Archivo Narrow",ui-sans-serif,system-ui,"PingFang HK","Noto Sans CJK TC",sans-serif;
+  --sans:"Archivo",ui-sans-serif,system-ui,-apple-system,"PingFang HK","Noto Sans CJK TC",sans-serif;
+  --rail:212px;
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#141210; --paper-2:#1B1815; --band:#000;
+  --ink:#EDE7D8; --ink-2:#B3AA97; --ink-3:#8B8271;
+  --rule:#2E2A23; --rule-2:#453F34;
+  --red:#E8635A; --red-tint:#2A1512;
+  --on-band:#EDE7D8;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+::selection{background:var(--red);color:var(--paper-2)}
+:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+*{scrollbar-width:thin;scrollbar-color:var(--rule-2) transparent}
+*::-webkit-scrollbar{width:10px}
+*::-webkit-scrollbar-thumb{background:var(--rule-2);border:3px solid var(--paper)}
+h1,h2{margin:0}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+svg{display:block;flex:none}
+.fig{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* demo chrome */
+.demobar{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:9px;padding:6px 11px;background:#000;color:#B9B0A0;border-bottom:2px solid var(--red)}
+.dm{display:flex;align-items:center;gap:6px;font-family:var(--nar);font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap}
+.dm i{width:6px;height:6px;background:var(--red);display:block}
+.sp{flex:1}
+.seg{display:flex;border:1px solid #2A2620}
+.seg button{padding:4px 9px;font-family:var(--nar);font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#9A9285;white-space:nowrap;transition:.1s}
+.seg button:hover{color:#EFE7D8}
+.seg button[aria-pressed="true"]{background:var(--on-band);color:#000}
+.ib{width:26px;height:26px;display:grid;place-items:center;color:#9A9285;border:1px solid #2A2620;transition:.1s}
+.ib:hover{color:#EFE7D8;border-color:#4A443A}
+.dm .short{display:none}
+@media (max-width:520px){.demobar{gap:6px;padding:6px 8px}.seg button{padding:4px 6px;letter-spacing:.03em}.dm .long{display:none}.dm .short{display:inline}}
+
+/* shell */
+.app{display:grid;grid-template-columns:1fr;min-height:100dvh}
+.rail{display:none}
+.main{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+
+/* masthead */
+.mast{background:var(--band);color:var(--on-band);padding:11px 14px 10px}
+.mast-top{display:flex;align-items:baseline;gap:10px}
+.mast h1{font-family:var(--nar);font-size:26px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+html[lang="zh-HK"] .mast h1{font-family:var(--sans);font-weight:700;letter-spacing:.06em;font-size:24px}
+.mast-ed{margin-left:auto;font-family:var(--nar);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#9A9285;text-align:right}
+.mast-line{margin-top:7px;padding-top:7px;border-top:1px solid #332E26;display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#B9B0A0}
+.mast-line b{color:var(--on-band);font-weight:600}
+
+/* summary band */
+.band{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--ink)}
+.bc{padding:9px 12px 11px;border-right:1px solid var(--rule)}
+.bc:last-child{border-right:0}
+.bl{display:block;font-family:var(--nar);font-size:10px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px;min-height:24px;line-height:1.2}
+.bv{font-family:var(--nar);font-size:27px;font-weight:700;line-height:1;letter-spacing:-.01em;display:flex;align-items:baseline;gap:4px}
+.bv .u{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--ink-3)}
+.bv.red{color:var(--red)}
+.asof{padding:6px 12px 7px;font-size:11px;color:var(--ink-3);border-bottom:1px solid var(--rule);background:var(--paper-2)}
+
+/* table */
+.sec{padding:16px 12px 0}
+.caption{display:flex;align-items:baseline;gap:9px;padding-bottom:5px}
+.caption h2{font-family:var(--nar);font-size:13px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+html[lang="zh-HK"] .caption h2{font-family:var(--sans);letter-spacing:.1em}
+.caption .n{font-family:var(--nar);font-size:11px;font-weight:600;letter-spacing:.07em;color:var(--ink-3);text-transform:uppercase}
+.tbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.tbl th{
+  background:var(--band);color:var(--on-band);
+  font-family:var(--nar);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  padding:5px 6px;text-align:left;white-space:nowrap;
+}
+html[lang="zh-HK"] .tbl th{font-family:var(--sans);letter-spacing:.06em;font-size:10px}
+.tbl th.r,.tbl td.r{text-align:right}
+.tbl td{border-bottom:1px solid var(--rule);padding:9px 6px;vertical-align:top}
+.tbl tr.past td{color:var(--ink-3)}
+.c-time{width:52px}
+.c-form{width:82px}
+.c-left{width:52px}
+.c-last{display:none}
+.tm{font-family:var(--nar);font-size:13px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.who{display:flex;gap:7px;min-width:0}
+.silk{width:11px;height:16px;flex:none;margin-top:2px;border:1px solid var(--ink)}
+.nm{font-size:14.5px;font-weight:600;letter-spacing:-.005em;line-height:1.25;overflow-wrap:anywhere}
+.ty{display:block;font-family:var(--nar);font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+html[lang="zh-HK"] .ty{font-family:var(--sans);letter-spacing:.04em}
+.strike .nm{text-decoration:line-through;color:var(--ink-3)}
+
+/* the form line */
+.form{display:flex;gap:2px}
+.f{width:12px;height:16px;border:1px solid var(--rule-2);display:grid;place-items:center;font-family:var(--nar);font-size:10px;font-weight:700;line-height:1;color:var(--ink-3)}
+.f.hit{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.f.miss{color:var(--red);border-color:var(--red)}
+.f.due{border-style:dashed}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:7px 2px 0;font-size:10.5px;color:var(--ink-3)}
+.legend span{display:flex;align-items:center;gap:5px}
+
+.left-n{font-family:var(--nar);font-size:17px;font-weight:700;line-height:1}
+.left-n.red{color:var(--red)}
+.left-u{display:block;font-family:var(--nar);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+html[lang="zh-HK"] .left-u{font-family:var(--sans);letter-spacing:.03em}
+
+.note{margin-top:7px;padding-left:9px;border-left:2px solid var(--red);font-size:12px;color:var(--ink-2);line-height:1.45}
+.note b{color:var(--red);font-weight:600}
+.note button{font-family:var(--nar);font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--red);margin-left:8px;white-space:nowrap}
+html[lang="zh-HK"] .note button{font-family:var(--sans);letter-spacing:.04em}
+.acts{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+
+/* now rule */
+.nowrow td{padding:0;border-bottom:0}
+.nowbar{display:flex;align-items:center;gap:8px;padding:3px 0}
+.nowbar .t{font-family:var(--nar);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--red);white-space:nowrap}
+.nowbar .r{flex:1;height:2px;background:var(--red)}
+
+/* chase table */
+.chase td{border-bottom:1px solid var(--rule);padding:10px 6px}
+.chase .why{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.4}
+.chase .why b{font-weight:700;color:var(--ink)}
+.chase .why b.red{color:var(--red)}
+.rank{font-family:var(--nar);font-size:15px;font-weight:700;color:var(--ink-3);width:26px}
+.pill{display:inline-block;font-family:var(--nar);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:2px 5px;border:1px solid var(--ink);white-space:nowrap}
+html[lang="zh-HK"] .pill{font-family:var(--sans);letter-spacing:.04em}
+.pill.red{color:var(--red);border-color:var(--red)}
+.chase tr{cursor:pointer}
+.chase tr:hover td{background:var(--paper-2)}
+.detail td{background:var(--paper-2);border-bottom:2px solid var(--ink)}
+.dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:2px 14px;font-size:12.5px}
+.dl dt{color:var(--ink-3)}
+.dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.dl dd.red{color:var(--red)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border:1px solid var(--ink);font-family:var(--nar);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:.1s}
+html[lang="zh-HK"] .btn{font-family:var(--sans);letter-spacing:.05em;font-size:12px}
+.btn:hover{background:var(--paper-2)}
+.btn-solid{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn-solid:hover{background:var(--red);border-color:var(--red);color:#fff}
+
+/* bottom nav */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(5,1fr);background:var(--band);border-top:2px solid var(--red);padding-bottom:env(safe-area-inset-bottom)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;font-family:var(--nar);font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#8B8271;transition:.1s}
+html[lang="zh-HK"] .tab{font-family:var(--sans);letter-spacing:.03em;font-size:10px}
+.tab svg{width:18px;height:18px}
+.tab:hover{color:var(--on-band)}
+.tab[aria-current="page"]{color:var(--red)}
+
+@media (min-width:760px){ .c-last{display:table-cell} .c-form{width:88px} }
+@media (min-width:1000px){
+  .app{grid-template-columns:var(--rail) 1fr}
+  .rail{display:block;background:var(--band);color:var(--on-band);padding:14px 10px;position:sticky;top:34px;height:calc(100dvh - 34px)}
+  .brand{font-family:var(--nar);font-size:19px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:0 8px 14px;border-bottom:1px solid #332E26;margin-bottom:10px}
+  .ri{display:flex;align-items:center;gap:10px;width:100%;padding:7px 8px;font-family:var(--nar);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#9A9285;transition:.1s}
+  html[lang="zh-HK"] .ri{font-family:var(--sans);letter-spacing:.05em;font-size:12.5px}
+  .ri:hover{color:var(--on-band)}
+  .ri[aria-current="page"]{color:var(--red)}
+  .ri svg{width:15px;height:15px}
+  .rg{margin-top:14px;padding:0 8px 6px;font-family:var(--nar);font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:#6E6558}
+  .tabs{display:none}
+  .main{padding-bottom:40px}
+  .mast{padding:14px 26px 12px}
+  .mast h1{font-size:32px}
+  .band{grid-template-columns:repeat(3,minmax(0,200px)) 1fr}
+  .band::after{content:"";border-left:1px solid var(--rule)}
+  .bc{padding:10px 26px 12px;border-right:1px solid var(--rule)}
+  .bc:first-child{padding-left:26px}
+  .asof{padding:6px 26px 7px}
+  .cols{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:34px;padding:20px 26px 0;max-width:1280px;align-items:start}
+  .sec{padding:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-cal"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18"/></g>
+<g id="i-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></g>
+<g id="i-bar"><path d="M6.5 6.5v11M3.5 8.5v7M17.5 6.5v11M20.5 8.5v7M6.5 12h11"/></g>
+<g id="i-msg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></g>
+<g id="i-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>
+<g id="i-doc"><path d="M14 2v6h6M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></g>
+<g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 4V2M12 22v-2M6.34 6.34 4.93 4.93M19.07 19.07l-1.41-1.41M4 12H2M22 12h-2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></g>
+<g id="i-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></g>
+</defs></svg>
+
+<div class="demobar">
+  <span class="dm"><i></i><span class="long" data-t="d.mark">ElitePro · Variant B · synthetic data</span><span class="short" data-t="d.short">Variant B · demo</span></span>
+  <span class="sp"></span>
+  <div class="seg" role="group" aria-label="Language">
+    <button type="button" id="len" aria-pressed="true" aria-label="English">EN</button>
+    <button type="button" id="lzh" aria-pressed="false" aria-label="繁體中文">中文</button>
+  </div>
+  <button type="button" class="ib" id="tbtn" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-moon" id="ticon"/></svg></button>
+</div>
+
+<div class="app">
+<aside class="rail">
+  <div class="brand">ElitePro</div>
+  <button type="button" class="ri" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cal"/></svg><span data-t="n.today">Today</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg><span data-t="n.clients">Clients</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bar"/></svg><span data-t="n.plans">Plans</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-msg"/></svg><span data-t="n.messages">Messages</span></button>
+  <div class="rg" data-t="n.business">Business</div>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-doc"/></svg><span data-t="n.invoices">Invoices</span></button>
+  <button type="button" class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg><span data-t="n.profile">Profile</span></button>
+</aside>
+
+<main class="main">
+  <div class="mast">
+    <div class="mast-top">
+      <h1 data-t="m.title">Today's card</h1>
+      <span class="mast-ed"><span data-t="m.date">Thu 4 Sep</span><br><span data-t="m.edition">09:41 edition</span></span>
+    </div>
+    <div class="mast-line">
+      <span><b data-t="m.coach">Coach Ani</b></span>
+      <span data-t="m.synced">Synced 09:14</span>
+    </div>
+  </div>
+
+  <div class="band">
+    <div class="bc"><span class="bl" data-t="b.delivered">Delivered · Sep</span><span class="bv fig">34</span></div>
+    <div class="bc"><span class="bl" data-t="b.credits">Credits held</span><span class="bv fig">112</span></div>
+    <div class="bc"><span class="bl" data-t="b.unpaid">Unpaid</span><span class="bv fig red">8,400<span class="u">HKD</span></span></div>
+  </div>
+  <div class="asof" data-t="b.asof">Counted to 09:14 · today's sessions not included</div>
+
+  <div class="cols">
+  <div class="sec">
+    <div class="caption"><h2 data-t="t.card">The card</h2><span class="n"><span class="fig">5</span> <span data-t="t.booked">booked</span> · <span class="fig">1</span> <span data-t="t.changed">changed</span></span></div>
+    <table class="tbl">
+      <thead><tr>
+        <th class="c-time" data-t="t.h_time">Time</th>
+        <th data-t="t.h_client">Client</th>
+        <th class="c-form" data-t="t.h_form">Form</th>
+        <th class="c-left r" data-t="t.h_left">Left</th>
+      </tr></thead>
+      <tbody>
+        <tr class="past">
+          <td class="c-time"><span class="tm fig">07:00</span></td>
+          <td><div class="who"><span class="silk" style="background:linear-gradient(180deg,#B8221C 50%,#F0E9D8 50%)" aria-hidden="true"></span><span><span class="nm">Wing Lau</span><span class="ty" data-t="t.oneone">1-on-1</span></span></div></td>
+          <td class="c-form"><span class="form" role="img" aria-label="Five attended, one attended"><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i></span></td>
+          <td class="c-left r"><span class="left-n fig">8</span><span class="left-u" data-t="t.u_left">left</span></td>
+        </tr>
+        <tr class="past">
+          <td class="c-time"><span class="tm fig">08:00</span></td>
+          <td><div class="who"><span class="silk" style="background:linear-gradient(180deg,#123C7A 50%,#E8C33A 50%)" aria-hidden="true"></span><span><span class="nm">Kelvin Chan</span><span class="ty" data-t="t.oneone">1-on-1</span></span></div></td>
+          <td class="c-form"><span class="form" role="img" aria-label="Six attended"><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i></span></td>
+          <td class="c-left r"><span class="left-n fig">2</span><span class="left-u" data-t="t.u_left">left</span></td>
+        </tr>
+        <tr class="nowrow"><td colspan="4"><div class="nowbar" aria-hidden="true"><span class="t fig">09:41</span><span class="r"></span></div></td></tr>
+        <tr>
+          <td class="c-time"><span class="tm fig">10:30</span></td>
+          <td>
+            <div class="who"><span class="silk" style="background:linear-gradient(180deg,#1E6B3A 50%,#F0E9D8 50%)" aria-hidden="true"></span><span><span class="nm">Priya Nair</span><span class="ty" data-t="t.assessment">Assessment</span></span></div>
+            <div class="note"><span data-t="t.note_priya">Invoice #1043 is</span> <b data-t="t.note_priya2">9 days overdue.</b></div>
+            <div class="acts"><button type="button" class="btn btn-solid" data-t="t.markdone">Mark complete</button><button type="button" class="btn" data-t="t.message">Message</button></div>
+          </td>
+          <td class="c-form"><span class="form" role="img" aria-label="Four attended, two upcoming"><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f due">·</i><i class="f due">·</i></span></td>
+          <td class="c-left r"><span class="left-n fig">5</span><span class="left-u" data-t="t.u_left">left</span></td>
+        </tr>
+        <tr>
+          <td class="c-time"><span class="tm fig">12:00</span></td>
+          <td>
+            <div class="who"><span class="silk" style="background:linear-gradient(180deg,#171410 50%,#E8C33A 50%)" aria-hidden="true"></span><span><span class="nm">Marco Ferretti</span><span class="ty" data-t="t.oneone">1-on-1</span></span></div>
+            <div class="note"><b data-t="t.note_marco">Booked on credit.</b> <span data-t="t.note_marco2">Overdraft cap reached — no further booking until topped up.</span></div>
+            <div class="acts"><button type="button" class="btn btn-solid" data-t="t.topup">Top up</button></div>
+          </td>
+          <td class="c-form"><span class="form" role="img" aria-label="Four attended, one missed, one upcoming"><i class="f hit"></i><i class="f hit"></i><i class="f miss">✕</i><i class="f hit"></i><i class="f hit"></i><i class="f due">·</i></span></td>
+          <td class="c-left r"><span class="left-n fig red">−1</span><span class="left-u" data-t="t.u_left">left</span></td>
+        </tr>
+        <tr class="strike">
+          <td class="c-time"><span class="tm fig">18:30</span></td>
+          <td>
+            <div class="who"><span class="silk" style="background:linear-gradient(180deg,#6B2E8A 50%,#F0E9D8 50%)" aria-hidden="true"></span><span><span class="nm">Chloe Wong</span><span class="ty" data-t="t.cancelled">Scratched</span></span></div>
+            <div class="note" id="hold"><span data-t="t.hold1">Cancelled 07:52, more than 24h ahead. 1 credit refunded — 2nd free cancellation this month.</span><button type="button" id="dismiss" data-t="t.gotit">Got it</button></div>
+          </td>
+          <td class="c-form"><span class="form" role="img" aria-label="Three attended, one cancelled, two attended"><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f">–</i><i class="f hit"></i><i class="f hit"></i></span></td>
+          <td class="c-left r"><span class="left-n fig">7</span><span class="left-u" data-t="t.u_left">left</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="legend">
+      <span><i class="f hit"></i> <span data-t="lg.hit">attended</span></span>
+      <span><i class="f miss">✕</i> <span data-t="lg.miss">missed</span></span>
+      <span><i class="f">–</i> <span data-t="lg.cancel">cancelled</span></span>
+      <span><i class="f due">·</i> <span data-t="lg.due">to come</span></span>
+    </div>
+  </div>
+
+  <div class="sec" style="padding-top:22px">
+    <div class="caption"><h2 data-t="c.title">Chase list</h2><span class="n fig">4</span></div>
+    <table class="tbl chase">
+      <thead><tr>
+        <th style="width:26px">#</th>
+        <th data-t="c.h_client">Client</th>
+        <th class="r" style="width:96px" data-t="c.h_state">State</th>
+      </tr></thead>
+      <tbody id="chase">
+        <tr data-row="d1">
+          <td class="rank fig">1</td>
+          <td><span class="nm">Marco Ferretti</span><div class="why"><span data-t="c.balance">Balance</span> <b class="red">−1</b> · <span data-t="c.booked">booked 12:00 today</span></div></td>
+          <td class="r"><span class="pill red" data-t="c.owes">Owes 1</span></td>
+        </tr>
+        <tr class="detail" id="d1" hidden><td colspan="3">
+          <dl class="dl">
+            <dt data-t="c.purchased">Purchased</dt><dd class="fig">10</dd>
+            <dt data-t="c.used">Used</dt><dd class="fig">11</dd>
+            <dt data-t="c.balance">Balance</dt><dd class="fig red">−1</dd>
+            <dt data-t="c.lasttopup">Last top-up</dt><dd class="fig">12 Jul · 10 × 480</dd>
+          </dl>
+          <div class="acts"><button type="button" class="btn btn-solid" data-t="t.topup">Top up</button><button type="button" class="btn" data-t="c.paydetails">Payment details</button></div>
+        </td></tr>
+
+        <tr data-row="d2">
+          <td class="rank fig">2</td>
+          <td><span class="nm">Kelvin Chan</span><div class="why"><b>2</b> <span data-t="c.leftweekly">left · books twice a week</span></div></td>
+          <td class="r"><span class="pill" data-t="c.oneweek">1 week</span></td>
+        </tr>
+        <tr class="detail" id="d2" hidden><td colspan="3">
+          <dl class="dl">
+            <dt data-t="c.purchased">Purchased</dt><dd class="fig">20</dd>
+            <dt data-t="c.used">Used</dt><dd class="fig">18</dd>
+            <dt data-t="c.balance">Balance</dt><dd class="fig">2</dd>
+            <dt data-t="c.rate">Renewal rate</dt><dd class="fig">480 HKD</dd>
+          </dl>
+          <div class="acts"><button type="button" class="btn btn-solid" data-t="t.topup">Top up</button><button type="button" class="btn" data-t="t.message">Message</button></div>
+        </td></tr>
+
+        <tr data-row="d3">
+          <td class="rank fig">3</td>
+          <td><span class="nm">Sam Tsang</span><div class="why"><span data-t="c.nosession">No session in</span> <b>24</b> <span data-t="c.days">days</span> · <span data-t="c.wasweekly">was weekly</span></div></td>
+          <td class="r"><span class="pill" data-t="c.drifting">Drifting</span></td>
+        </tr>
+        <tr class="detail" id="d3" hidden><td colspan="3">
+          <div style="margin-bottom:9px"><span class="form" role="img" aria-label="Three attended, three missed"><i class="f hit"></i><i class="f hit"></i><i class="f hit"></i><i class="f miss">✕</i><i class="f miss">✕</i><i class="f miss">✕</i></span></div>
+          <dl class="dl">
+            <dt data-t="c.balance">Balance</dt><dd class="fig">6</dd>
+            <dt data-t="c.lastsession">Last session</dt><dd class="fig">11 Aug</dd>
+            <dt data-t="c.lastmsg">Last message</dt><dd class="fig">14 Aug</dd>
+          </dl>
+          <div class="acts"><button type="button" class="btn btn-solid" data-t="t.message">Message</button><button type="button" class="btn" data-t="c.book">Book</button></div>
+        </td></tr>
+
+        <tr data-row="d4">
+          <td class="rank fig">4</td>
+          <td><span class="nm">Priya Nair</span><div class="why"><b>#1043</b> · <b class="red">9</b> <span data-t="c.daysoverdue">days overdue</span> · <b class="red">2,400</b> HKD</div></td>
+          <td class="r"><span class="pill red" data-t="c.unpaid">Unpaid</span></td>
+        </tr>
+        <tr class="detail" id="d4" hidden><td colspan="3">
+          <dl class="dl">
+            <dt data-t="c.issued">Issued</dt><dd class="fig">17 Aug</dd>
+            <dt data-t="c.due">Due</dt><dd class="fig">26 Aug</dd>
+            <dt data-t="c.amount">Amount</dt><dd class="fig red">2,400 HKD</dd>
+            <dt data-t="c.reminders">Reminders sent</dt><dd class="fig">0</dd>
+          </dl>
+          <div class="acts"><button type="button" class="btn btn-solid" data-t="c.remind">Send reminder</button><button type="button" class="btn" data-t="c.openinv">Open invoice</button></div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+</main>
+
+<nav class="tabs">
+  <button type="button" class="tab" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cal"/></svg><span data-t="n.today">Today</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg><span data-t="n.clients">Clients</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bar"/></svg><span data-t="n.plans">Plans</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-msg"/></svg><span data-t="n.messages">Messages</span></button>
+  <button type="button" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg><span data-t="n.profile">Profile</span></button>
+</nav>
+</div>
+
+<script>
+(function(){
+"use strict";
+var ZH={
+"d.mark":"ElitePro · B 版 · 示範數據","d.short":"B 版 · 示範",
+"n.today":"今日","n.clients":"學生","n.plans":"計劃","n.messages":"訊息","n.profile":"個人","n.business":"業務","n.invoices":"發票",
+"m.title":"今日課堂表","m.date":"9月4日 星期四","m.edition":"09:41 版","m.coach":"Ani 教練","m.synced":"09:14 已同步",
+"b.delivered":"本月已完成","b.credits":"學生未用堂數","b.unpaid":"未收款","b.asof":"計至 09:14 · 未計今日課堂",
+"t.card":"課堂表","t.booked":"已預約","t.changed":"有更改",
+"t.h_time":"時間","t.h_client":"學生","t.h_form":"近況","t.h_left":"剩餘",
+"t.oneone":"單對單","t.assessment":"體能評估","t.cancelled":"已取消","t.u_left":"堂",
+"t.note_priya":"發票 #1043","t.note_priya2":"已逾期 9 日。",
+"t.note_marco":"透支預約。","t.note_marco2":"已達透支上限 —— 加堂前不能再預約。",
+"t.markdone":"標記完成","t.message":"發訊息","t.topup":"加堂",
+"t.hold1":"07:52 取消，距離課堂超過 24 小時。已退回 1 堂 —— 本月第 2 次免費取消。","t.gotit":"知道了",
+"lg.hit":"已上","lg.miss":"缺席","lg.cancel":"取消","lg.due":"未到",
+"c.title":"跟進榜","c.h_client":"學生","c.h_state":"狀態",
+"c.balance":"餘額","c.booked":"今日 12:00 已預約","c.owes":"欠 1 堂",
+"c.purchased":"已購買","c.used":"已使用","c.lasttopup":"最近加堂","c.paydetails":"付款資料",
+"c.leftweekly":"堂 · 每週兩堂","c.oneweek":"1 週","c.rate":"續約價",
+"c.nosession":"已有","c.days":"日未上堂","c.wasweekly":"之前每週一堂","c.drifting":"疏遠中",
+"c.lastsession":"最近上堂","c.lastmsg":"最近訊息","c.book":"安排課堂",
+"c.daysoverdue":"日逾期","c.unpaid":"未付款","c.issued":"發出日期","c.due":"到期日","c.amount":"金額","c.reminders":"已發提醒",
+"c.remind":"發送提醒","c.openinv":"開啟發票"};
+var EN={},root=document.documentElement;
+document.querySelectorAll("[data-t]").forEach(function(e){EN[e.getAttribute("data-t")]=e.textContent;});
+function id(x){return document.getElementById(x);}
+function lang(v){
+  var d=v==="zh"?ZH:EN;
+  root.setAttribute("lang",v==="zh"?"zh-HK":"en");
+  document.querySelectorAll("[data-t]").forEach(function(e){
+    var k=e.getAttribute("data-t"),t=d[k];if(t===undefined)t=EN[k];if(t!==undefined)e.textContent=t;});
+  id("len").setAttribute("aria-pressed",String(v==="en"));
+  id("lzh").setAttribute("aria-pressed",String(v==="zh"));
+}
+id("len").addEventListener("click",function(){lang("en");});
+id("lzh").addEventListener("click",function(){lang("zh");});
+function dark(){return root.getAttribute("data-theme")==="dark";}
+function icon(){id("ticon").setAttribute("href",dark()?"#i-sun":"#i-moon");
+  id("tbtn").setAttribute("aria-label",dark()?"Switch to light theme":"Switch to dark theme");}
+id("tbtn").addEventListener("click",function(){root.setAttribute("data-theme",dark()?"light":"dark");icon();});
+icon();
+document.querySelectorAll("#chase tr[data-row]").forEach(function(tr){
+  var panel=id(tr.getAttribute("data-row"));
+  tr.setAttribute("tabindex","0");
+  tr.setAttribute("role","button");
+  tr.setAttribute("aria-expanded","false");
+  tr.setAttribute("aria-controls",tr.getAttribute("data-row"));
+  function toggle(){
+    var open=panel.hidden;
+    panel.hidden=!open;
+    tr.setAttribute("aria-expanded",String(open));
+  }
+  tr.addEventListener("click",toggle);
+  tr.addEventListener("keydown",function(e){
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}
+  });
+});
+id("dismiss").addEventListener("click",function(){id("hold").remove();});
+lang("en");
+})();
+</script>
+</body>
+</html>
