@@ -164,3 +164,97 @@
 
 ---
 _內部工作文件，Cantonese working doc — 見 CLAUDE.md「Working Rules」_
+
+---
+---
+
+# 附錄 A —— ProfilePage 四條「藏喺運算式」嘅字串（一併待批）
+
+Ani 2026-09-06 指示：第三層盲點暫時唔用 regex 捉，但 **ProfilePage 已知嗰批照修**。
+
+呢四條嘅特別之處：**`ProfilePage.jsx` 已經喺 `TRANSLATED_FILES` 入面、eslint 綠燈、掃描器報 0 條** —— 但佢仍然會向教練彈英文。因為佢哋唔係 JSX 文字，係 JS 運算式，三個機制全部睇唔到。
+
+| # | 位置 | English | 建議中文 |
+|---:|---|---|---|
+| A1 | `:215` toast | GoCardless isn't set up yet — check back soon. | GoCardless 尚未設定完成，請稍後再試。 |
+| A2 | `:216` toast | Could not start GoCardless connection | 無法開始連接 GoCardless |
+| A3 | `:295` 分享標題 | Join me on ElitePro | 邀請你使用 ElitePro |
+| A4 | `:296` 分享內文 | Your coach has invited you to ElitePro! Use invite code: {code} or tap the link. | 你的教練邀請你使用 ElitePro！邀請碼：{code}，或直接點擊連結。 |
+
+### ⚠️ A3／A4 有個設計問題要你決定
+
+呢兩句係**教練喺自己部機按「分享」時產生**，但**讀嘅人係未註冊嘅學生**。
+
+所以佢會跟**教練嘅語言設定**，唔係讀者嘅。即係話：一個英文介面嘅教練分享出去，收到嘅香港學生見到英文；一個中文介面嘅教練分享出去，收到嘅英國學生見到中文。
+
+三個做法：
+
+| | 做法 | 代價 |
+|---|---|---|
+| **(a)** | 照跟教練語言（最簡單，就係上面個建議） | 收件人可能睇唔明 |
+| **(b)** | 永遠英文（當佢係對外文案，唔入字典） | 中文教練分享出去係英文，感覺唔一致 |
+| **(c)** | 中英雙語一次過寫晒 | 訊息長一倍，但兩邊都讀得明 |
+
+**我建議 (c)**，因為呢條訊息嘅唯一用途就係俾一個你未知佢用咩語言嘅人睇 —— 呢個係少數「雙語」真係比「揀一種」好嘅情況。但呢個係你嘅品牌決定，唔係技術決定。
+
+### 一個排序限制要講清楚
+
+`CLIENT_ONLY_UNTIL_TRAINER_TRANSLATED` 而家係 `false`（語言掣已對教練開放），所以 `dictionary.test.js` 個 gate 要求 **`en.js` 每一條 key 都必須有中文**。
+
+即係話：**新增 en key 同寫入中文必須喺同一個 commit**，唔可以「先改 code、中文遲啲補」—— 中間嗰個狀態會直接 build fail。
+
+所以呢四條同 TrainerDashboard 嗰 64 條一樣，**要你批咗我先郁 code**。冇批之前我唔會改 `ProfilePage.jsx`。
+
+---
+---
+
+# 附錄 B —— 教練端全部工作量（Ani 要求，用嚟排次序）
+
+用同一個掃描器計。「唯一」= 去重之後嘅條數（實際要諗嘅翻譯數）；長度分佈用嚟估難度 —— **短標籤快而且大量可以沿用，長句先係真正花時間嗰啲**。
+
+## 教練專用（339 條）
+
+| 頁面 | 總數 | 唯一 | 短(≤2字) | 中(3-6) | 長(>6) | 註 |
+|---|---:|---:|---:|---:|---:|---|
+| **TrainerDashboard** | **59** | — | — | — | — | 🔵 對照表已出，等你批 |
+| ClientDetailPage | 114 | 97 | 82 | 28 | 4 | 數字最大，但 82 條係一兩個字嘅標籤 |
+| PlatformStatsCard | 56 | 52 | 35 | 10 | **11** | 每條最重 —— 11 條長句 |
+| InvoicePage | 42 | 37 | 36 | 5 | 1 | 幾乎全部短標籤，最易做 |
+| BusinessAnalyticsPage | 18 | 18 | 8 | 9 | 1 | |
+| ClientProgressOverviewPage | 18 | 18 | 17 | 1 | 0 | 全部短標籤 |
+| ClientsPage | 11 | 11 | 7 | 3 | 1 | |
+| MonthlyReportModal | 10 | 10 | 4 | 5 | 1 | |
+| MovementPatternScanner | 8 | 8 | 2 | 4 | 2 | |
+| NotesSection | 3 | 3 | 0 | 3 | 0 | |
+
+## 共用（179 條）—— 譯咗兩邊都受惠
+
+| 頁面 | 總數 | 唯一 | 短 | 中 | 長 |
+|---|---:|---:|---:|---:|---:|
+| WorkoutPlansPage | 59 | 52 | 43 | 13 | 3 |
+| ExerciseLibraryPage | 56 | 48 | 29 | 21 | 6 |
+| ProgressView | 22 | 18 | 21 | 1 | 0 |
+| ExerciseProgress | 11 | 11 | 9 | 2 | 0 |
+| SessionDateList | 10 | 10 | 8 | 2 | 0 |
+| ExerciseDetailModal | 8 | 8 | 7 | 1 | 0 |
+| NotificationCenter | 4 | 3 | 3 | 1 | 0 |
+| GlobalSearch / MuscleSelector / MessagesPage | 各 3 | 各 3 | | | |
+
+## 睇數字之後我改咗睇法
+
+**「條數大」唔等於「工夫大」。** `ClientDetailPage` 114 條睇落最嚇人，但入面 82 條係一至兩個字嘅標籤（Age、Goals、Notes、Plans…），大部分同 `nav.*` 或者已有 key 重複，實際要諗嘅新翻譯遠少過 97。
+
+反而 `PlatformStatsCard` 得 56 條但有 **11 條長句**，每條都要斟酌語氣 —— 佢係「每條最貴」嗰版。
+
+### 建議次序（你拍板）
+
+| 順序 | 內容 | 條數 | 理由 |
+|---|---|---:|---|
+| 1 | **TrainerDashboard** + 附錄 A 四條 | 63 | 你日日開，對照表已出 |
+| 2 | InvoicePage + ClientProgressOverview + ClientsPage | 71 | **三頁 71 條入面 60 條係短標籤** —— 投入產出比最高，一批清三版 |
+| 3 | ClientDetailPage | 114 | 你第二常用；短標籤為主，做得快 |
+| 4 | 共用兩大頁（WorkoutPlans + ExerciseLibrary） | 115 | 順手修好學生端一半 |
+| 5 | PlatformStatsCard | 56 | 長句最多，留返最後慢慢斟 |
+| 6 | 其餘散件 | 66 | |
+
+**我建議第 2 項排喺 ClientDetailPage 之前** —— 一次過清三版，你落任何一版都唔會再見到半中半英，心理上比「一版大嘅做到一半」好好多。
