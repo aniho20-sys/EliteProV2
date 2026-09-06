@@ -367,24 +367,30 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── GoCardless Connections (Phase 3) ──
-    // Per-trainer OAuth connection metadata (organisation id, environment,
-    // status) — NOT the access token itself, which lives in Secret Manager,
-    // never Firestore. Owning trainer can read own; write is server-side only
-    // (the OAuth callback Cloud Function).
-    match /gcConnections/{trainerId} {
+    // ── Payment Provider Connections (Phase 3) ──
+    // Per-trainer OAuth connection metadata (provider, provider account id,
+    // environment, status) — NOT the access token itself, which lives in
+    // Secret Manager, never Firestore. Owning trainer can read own; write is
+    // server-side only (the OAuth callback Cloud Function).
+    //
+    // Provider-neutral by design: `provider` says which processor this
+    // connection is for. GoCardless cannot serve Hong Kong at all (it has no
+    // HKD and no FPS scheme — see reports/payment-provider-research-2026-09-06.md),
+    // so a second processor is a certainty, not a maybe.
+    match /paymentConnections/{trainerId} {
       allow read: if isOwner(trainerId);
       allow write: if false;
     }
 
-    // ── GoCardless OAuth CSRF Nonces (Phase 3) ──
-    // Short-lived (10min), single-use tokens binding a gcOAuthCallback
-    // request back to the trainer who actually initiated it via gcOAuthStart.
+    // ── OAuth CSRF Nonces (Phase 3) ──
+    // Short-lived (10min), single-use tokens binding an OAuth callback
+    // request back to the trainer who actually initiated it. Not tied to one
+    // processor — a second provider's connect flow reuses this same mechanism.
     // Never client-readable or writable — created and consumed entirely by
     // Cloud Functions (see functions/gcOAuthNonce.js). A client being able to
     // even read this collection would leak nonce values it has no business
     // seeing; being able to write it would defeat the whole point.
-    match /gcOAuthNonces/{nonce} {
+    match /oauthNonces/{nonce} {
       allow read, write: if false;
     }
   }

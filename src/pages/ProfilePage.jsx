@@ -72,7 +72,7 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getGcConnection, startGcConnect, disconnectGc } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -175,7 +175,7 @@ export default function ProfilePage() {
   // Load GoCardless connection status
   useEffect(() => {
     if (!isTrainer) { setGcLoading(false); return; }
-    getGcConnection(currentUser.id).then(conn => {
+    getPaymentConnection(currentUser.id).then(conn => {
       setGcConnection(conn);
       setGcLoading(false);
     });
@@ -192,7 +192,7 @@ export default function ProfilePage() {
 
     if (gcStatus === 'connected') {
       toast(t('profile.toast_gc_connected'));
-      getGcConnection(currentUser.id).then(setGcConnection);
+      getPaymentConnection(currentUser.id).then(setGcConnection);
     } else if (gcStatus === 'cancelled') {
       toast(t('profile.toast_gc_cancelled'), 'info');
     } else if (gcStatus === 'not-configured') {

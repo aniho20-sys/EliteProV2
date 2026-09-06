@@ -511,7 +511,7 @@ exports.gcOAuthStart = functions.https.onCall(async (data, context) => {
 // TOKEN. It writes to Secret Manager (via gcSecrets.writeGcAccessToken) —
 // never to Firestore, never anywhere a client SDK read could reach it.
 // Non-sensitive connection metadata (org id, status) goes to
-// gcConnections/{trainerId} via the Admin SDK, which is the "server-side
+// paymentConnections/{trainerId} via the Admin SDK, which is the "server-side
 // only" write path firestore.rules' `allow write: if false` is designed to
 // require.
 const PROFILE_URL = 'https://elitepro-16718.web.app/#/profile';
@@ -599,9 +599,10 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
   }
 
   // Non-sensitive metadata -> Firestore, Admin SDK (bypasses client rules).
-  await db.doc(`gcConnections/${trainerId}`).set({
+  await db.doc(`paymentConnections/${trainerId}`).set({
     trainerId,
-    gcOrganisationId: tokenJson.organisation_id || null,
+    provider: 'gocardless',
+    providerAccountId: tokenJson.organisation_id || null,
     environment: 'sandbox',
     status: 'connected',
     connectedAt: new Date().toISOString(),
@@ -631,8 +632,9 @@ exports.gcDisconnect = functions.https.onCall(async (data, context) => {
   }
 
   await deleteGcAccessToken(trainerId);
-  await db.doc(`gcConnections/${trainerId}`).set({
+  await db.doc(`paymentConnections/${trainerId}`).set({
     trainerId,
+    provider: 'gocardless',
     status: 'disconnected',
     disconnectedAt: new Date().toISOString(),
   }, { merge: true });
@@ -651,7 +653,7 @@ exports.cleanupExpiredGcNonces = functions.pubsub
   .schedule('every 24 hours')
   .onRun(async () => {
     const now = new Date().toISOString();
-    const expiredSnap = await db.collection('gcOAuthNonces')
+    const expiredSnap = await db.collection('oauthNonces')
       .where('expiresAt', '<', now)
       .get();
     if (expiredSnap.empty) return null;

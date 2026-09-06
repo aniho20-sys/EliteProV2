@@ -40,16 +40,16 @@ beforeEach(async () => {
     await setDoc(doc(db, 'subscriptions', SUB_A_ID), {
       id: SUB_A_ID, clientId: STUDENT_OF_A, trainerId: TRAINER_A,
       tier: 8, ratePerSession: 65, monthlyAmount: 563.33, status: 'active',
-      startDate: '2026-07-20', gcMandateId: 'MD001', gcSubscriptionId: 'SB001',
+      startDate: '2026-07-20', provider: 'gocardless', providerAuthorisationId: 'MD001', providerSubscriptionId: 'SB001',
       currentPeriodStart: '2026-07-20', currentPeriodEnd: '2026-08-19',
       rolloverBanked: 0, pausedAt: null, pauseResumeDate: null, pauseHistory: [],
       cancelRequestedAt: null, cancelEffectiveDate: null,
       paymentFailedAt: null, lastPaymentStatus: null,
     });
-    await setDoc(doc(db, 'gcConnections', TRAINER_A), {
-      trainerId: TRAINER_A, gcOrganisationId: 'OR001', environment: 'sandbox', status: 'connected',
+    await setDoc(doc(db, 'paymentConnections', TRAINER_A), {
+      trainerId: TRAINER_A, provider: 'gocardless', providerAccountId: 'OR001', environment: 'sandbox', status: 'connected',
     });
-    await setDoc(doc(db, 'gcOAuthNonces', 'nonce-abc'), {
+    await setDoc(doc(db, 'oauthNonces', 'nonce-abc'), {
       trainerId: TRAINER_A, createdAt: '2026-07-20T00:00:00.000Z',
       expiresAt: '2026-07-20T00:10:00.000Z', used: false,
     });
@@ -109,51 +109,51 @@ describe('subscriptions — no client-side writes at all, not even by the owner'
   });
 });
 
-describe('gcConnections — only the owning trainer can read, never their clients', () => {
-  test('trainer A can read their own GC connection', async () => {
+describe('paymentConnections — only the owning trainer can read, never their clients', () => {
+  test('trainer A can read their own payment connection', async () => {
     const db = dbAs(TRAINER_A);
-    await assertSucceeds(getDoc(doc(db, 'gcConnections', TRAINER_A)));
+    await assertSucceeds(getDoc(doc(db, 'paymentConnections', TRAINER_A)));
   });
 
-  test('trainer B cannot read trainer A\'s GC connection', async () => {
+  test('trainer B cannot read trainer A\'s payment connection', async () => {
     const db = dbAs(TRAINER_B);
-    await assertFails(getDoc(doc(db, 'gcConnections', TRAINER_A)));
+    await assertFails(getDoc(doc(db, 'paymentConnections', TRAINER_A)));
   });
 
-  test('student of A cannot read trainer A\'s GC connection', async () => {
+  test('student of A cannot read trainer A\'s payment connection', async () => {
     const db = dbAs(STUDENT_OF_A);
-    await assertFails(getDoc(doc(db, 'gcConnections', TRAINER_A)));
+    await assertFails(getDoc(doc(db, 'paymentConnections', TRAINER_A)));
   });
 });
 
-describe('gcConnections — no client-side writes, not even by the owning trainer', () => {
-  test('trainer A cannot create their own GC connection doc directly', async () => {
+describe('paymentConnections — no client-side writes, not even by the owning trainer', () => {
+  test('trainer A cannot create their own payment connection doc directly', async () => {
     const db = dbAs(TRAINER_A);
-    await assertFails(setDoc(doc(db, 'gcConnections', TRAINER_B), {
-      trainerId: TRAINER_B, gcOrganisationId: 'OR-fake', environment: 'sandbox', status: 'connected',
+    await assertFails(setDoc(doc(db, 'paymentConnections', TRAINER_B), {
+      trainerId: TRAINER_B, provider: 'gocardless', providerAccountId: 'OR-fake', environment: 'sandbox', status: 'connected',
     }));
   });
 
-  test('trainer A cannot update their own GC connection doc directly', async () => {
+  test('trainer A cannot update their own payment connection doc directly', async () => {
     const db = dbAs(TRAINER_A);
-    await assertFails(updateDoc(doc(db, 'gcConnections', TRAINER_A), { status: 'disconnected' }));
+    await assertFails(updateDoc(doc(db, 'paymentConnections', TRAINER_A), { status: 'disconnected' }));
   });
 });
 
-describe('gcOAuthNonces — completely locked out of client access, no exceptions', () => {
+describe('oauthNonces — completely locked out of client access, no exceptions', () => {
   test('the owning trainer cannot even read their own nonce', async () => {
     const db = dbAs(TRAINER_A);
-    await assertFails(getDoc(doc(db, 'gcOAuthNonces', 'nonce-abc')));
+    await assertFails(getDoc(doc(db, 'oauthNonces', 'nonce-abc')));
   });
 
   test('a different trainer cannot read the nonce', async () => {
     const db = dbAs(TRAINER_B);
-    await assertFails(getDoc(doc(db, 'gcOAuthNonces', 'nonce-abc')));
+    await assertFails(getDoc(doc(db, 'oauthNonces', 'nonce-abc')));
   });
 
   test('no one can create a nonce doc directly', async () => {
     const db = dbAs(TRAINER_A);
-    await assertFails(setDoc(doc(db, 'gcOAuthNonces', 'nonce-forged'), {
+    await assertFails(setDoc(doc(db, 'oauthNonces', 'nonce-forged'), {
       trainerId: TRAINER_A, createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 600000).toISOString(), used: false,
     }));
@@ -161,11 +161,11 @@ describe('gcOAuthNonces — completely locked out of client access, no exception
 
   test('no one can mark a nonce as used directly (bypassing consumption logic)', async () => {
     const db = dbAs(TRAINER_A);
-    await assertFails(updateDoc(doc(db, 'gcOAuthNonces', 'nonce-abc'), { used: true }));
+    await assertFails(updateDoc(doc(db, 'oauthNonces', 'nonce-abc'), { used: true }));
   });
 
   test('no one can delete a nonce directly', async () => {
     const db = dbAs(TRAINER_A);
-    await assertFails(deleteDoc(doc(db, 'gcOAuthNonces', 'nonce-abc')));
+    await assertFails(deleteDoc(doc(db, 'oauthNonces', 'nonce-abc')));
   });
 });

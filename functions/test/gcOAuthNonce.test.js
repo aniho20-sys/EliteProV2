@@ -26,7 +26,7 @@ const db = admin.firestore();
 const TRAINER_ID = 'test-trainer-nonce-1';
 
 async function clearNonces() {
-  const snap = await db.collection('gcOAuthNonces').get();
+  const snap = await db.collection('oauthNonces').get();
   if (snap.empty) return;
   const batch = db.batch();
   snap.docs.forEach(d => batch.delete(d.ref));
@@ -52,7 +52,7 @@ describe('createNonce', () => {
   test('records the trainerId and a 10-minute expiry', async () => {
     const before = Date.now();
     const nonce = await createNonce(TRAINER_ID);
-    const snap = await db.doc(`gcOAuthNonces/${nonce}`).get();
+    const snap = await db.doc(`oauthNonces/${nonce}`).get();
     const data = snap.data();
     expect(data.trainerId).toBe(TRAINER_ID);
     expect(data.used).toBe(false);
@@ -92,7 +92,7 @@ describe('consumeNonce — the three required attack scenarios', () => {
   test('expired state is rejected even though the nonce doc still exists', async () => {
     const nonce = await createNonce(TRAINER_ID);
     // Simulate the 10-minute window having passed.
-    await db.doc(`gcOAuthNonces/${nonce}`).update({
+    await db.doc(`oauthNonces/${nonce}`).update({
       expiresAt: new Date(Date.now() - 1000).toISOString(),
     });
     const result = await consumeNonce(nonce);
@@ -108,7 +108,7 @@ describe('consumeNonce — happy path', () => {
     expect(result.ok).toBe(true);
     expect(result.trainerId).toBe(TRAINER_ID);
 
-    const snap = await db.doc(`gcOAuthNonces/${nonce}`).get();
+    const snap = await db.doc(`oauthNonces/${nonce}`).get();
     expect(snap.exists).toBe(true);
     expect(snap.data().used).toBe(true);
   });
@@ -143,7 +143,7 @@ describe('finalizeNonce — permanent removal once the full flow actually succee
 
     await finalizeNonce(nonce);
 
-    const snap = await db.doc(`gcOAuthNonces/${nonce}`).get();
+    const snap = await db.doc(`oauthNonces/${nonce}`).get();
     expect(snap.exists).toBe(false);
 
     const after = await consumeNonce(nonce);

@@ -396,8 +396,9 @@ Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-sub
   monthlyAmount: number,        // derived at creation, stored for display/audit
   status: 'active' | 'paused' | 'past_due' | 'cancelled',
   startDate: string,            // 'YYYY-MM-DD'
-  gcMandateId: string,
-  gcSubscriptionId: string,
+  provider: 'gocardless' | 'stripe',   // which processor holds this subscription
+  providerAuthorisationId: string,     // GoCardless: mandate id · Stripe: payment_method id
+  providerSubscriptionId: string,
   currentPeriodStart: string,
   currentPeriodEnd: string,
   rolloverBanked: number,
@@ -407,12 +408,13 @@ Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-sub
 }
 ```
 
-#### `gcConnections/{trainerId}` (Phase 3 — live)
+#### `paymentConnections/{trainerId}` (Phase 3 — live)
 Non-sensitive GoCardless connection metadata, written server-side only by `gcOAuthCallback`/`gcDisconnect` via the Admin SDK (bypasses `allow write: if false`). The actual OAuth access token never touches Firestore — see `functions/gcSecrets.js`.
 ```js
 {
   trainerId: string,
-  gcOrganisationId: string | null,
+  provider: 'gocardless' | 'stripe',
+  providerAccountId: string | null,   // GoCardless: organisation id · Stripe: stripe_user_id
   environment: 'sandbox' | 'live',
   status: 'connected' | 'disconnected',
   connectedAt: string,      // ISO datetime
@@ -420,7 +422,7 @@ Non-sensitive GoCardless connection metadata, written server-side only by `gcOAu
 }
 ```
 
-#### `gcOAuthNonces/{nonce}` (Phase 3 — live)
+#### `oauthNonces/{nonce}` (Phase 3 — live)
 CSRF protection for the OAuth flow — never client-readable or writable (`allow read, write: if false`), created/consumed entirely server-side via `functions/gcOAuthNonce.js`'s claim → release-on-failure → finalize-on-success lifecycle. Doc id is the 256-bit random nonce itself.
 ```js
 {
@@ -464,7 +466,7 @@ getCreditLedger(clientId)    // async — fetches append-only top-up history, ne
 addCreditLedgerEntry(clientId, { qty, rate })  // logs a top-up, adds sessions, resets renewal prompt flags
 
 // GoCardless Connection (Phase 3, trainer-only)
-getGcConnection(trainerId)   // async — one-off fetch of gcConnections/{trainerId}, not a live listener
+getPaymentConnection(trainerId)  // async — one-off fetch of paymentConnections/{trainerId}, not a live listener
 startGcConnect()             // calls gcOAuthStart, returns the GoCardless authorize URL to redirect to
 disconnectGc()                // calls gcDisconnect
 
@@ -586,8 +588,8 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **templates**: Trainer-only access to own templates. `trainerId` is immutable after creation
 - **invoices**: Trainer reads/writes own; client reads invoices addressed to them. `trainerId` is immutable after creation
 - **subscriptions**: Trainer or client owner can read; Cloud-Function-only writes (`allow write: if false`)
-- **gcConnections**: Owner trainer only can read; Cloud-Function-only writes (Admin SDK bypasses the rule)
-- **gcOAuthNonces**: No client read or write at all — created/consumed entirely server-side
+- **paymentConnections**: Owner trainer only can read; Cloud-Function-only writes (Admin SDK bypasses the rule)
+- **oauthNonces**: No client read or write at all — created/consumed entirely server-side
 
 ## Styling Conventions
 - All styles live in `src/styles/index.css`

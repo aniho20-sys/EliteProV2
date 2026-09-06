@@ -21,7 +21,7 @@ function db() {
 async function createNonce(trainerId) {
   const nonce = crypto.randomBytes(32).toString('hex'); // 256 bits, crypto-secure
   const now = Date.now();
-  await db().doc(`gcOAuthNonces/${nonce}`).set({
+  await db().doc(`oauthNonces/${nonce}`).set({
     trainerId,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + NONCE_TTL_MS).toISOString(),
@@ -53,14 +53,14 @@ async function consumeNonce(nonce) {
   // Reject anything that isn't exactly the 64-char hex format we generate
   // BEFORE it ever reaches a Firestore path — cheap, fails fast, and rules
   // out any weirdness from a crafted value containing '/' being interpreted
-  // as extra path segments (defense in depth; the fixed 'gcOAuthNonces/'
+  // as extra path segments (defense in depth; the fixed 'oauthNonces/'
   // prefix already means such a value can only ever address something
   // nested under this collection, never a sibling top-level collection, but
   // there's no reason to let a malformed value reach db.doc() at all).
   if (typeof nonce !== 'string' || !NONCE_FORMAT.test(nonce)) {
     return { ok: false, reason: 'not_found' };
   }
-  const ref = db().doc(`gcOAuthNonces/${nonce}`);
+  const ref = db().doc(`oauthNonces/${nonce}`);
   return db().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return { ok: false, reason: 'not_found' };
@@ -80,7 +80,7 @@ async function consumeNonce(nonce) {
 // cleanup, not something a caller should have to handle failing.
 async function releaseNonce(nonce) {
   if (typeof nonce !== 'string' || !NONCE_FORMAT.test(nonce)) return;
-  await db().doc(`gcOAuthNonces/${nonce}`)
+  await db().doc(`oauthNonces/${nonce}`)
     .update({ used: false, claimedAt: null })
     .catch(() => {});
 }
@@ -89,7 +89,7 @@ async function releaseNonce(nonce) {
 // actually succeeded — true one-time use, now that it's been fully acted on.
 async function finalizeNonce(nonce) {
   if (typeof nonce !== 'string' || !NONCE_FORMAT.test(nonce)) return;
-  await db().doc(`gcOAuthNonces/${nonce}`).delete().catch(() => {});
+  await db().doc(`oauthNonces/${nonce}`).delete().catch(() => {});
 }
 
 exports.createNonce = createNonce;

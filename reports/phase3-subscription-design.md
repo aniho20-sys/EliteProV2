@@ -1,5 +1,22 @@
 # Phase 3 — Subscription Billing Design (GoCardless)
 
+> **⚠️ 命名已更新（2026-09-06）** —— 呢份係 2026-07-29 嘅設計記錄，內容決定仍然有效，
+> 但入面嘅 collection／欄位名已經改成 provider-neutral，因為 GoCardless 唔支援香港
+> （見 `reports/payment-provider-research-2026-09-06.md`），第二個 provider 係必然而唔係可能。
+> 本文不作改寫（保留當日記錄）；**現行名以 `CLAUDE.md` 為準**：
+>
+> | 本文舊名 | 現行名 |
+> |---|---|
+> | `gcConnections` | `paymentConnections`（新增 `provider` 欄位） |
+> | `gcOAuthNonces` | `oauthNonces` |
+> | `gcOrganisationId` | `providerAccountId` |
+> | `gcMandateId` | `providerAuthorisationId` |
+> | `gcSubscriptionId` | `providerSubscriptionId` |
+>
+> Cloud Function 名（`gcOAuthStart` / `gcOAuthCallback` / `gcDisconnect`）同 Secret Manager
+> key 刻意**冇**改 —— 見同日 commit 說明。
+
+
 Status: **DRAFT — awaiting Ani's approval before any implementation work begins.**
 Author: 員工A (SA), per business terms confirmed by Ani on 2026-07-20.
 

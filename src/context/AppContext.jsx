@@ -729,13 +729,13 @@ export function AppProvider({ children }) {
     return { success: true, trainer };
   };
 
-  // ========== GoCardless Connection (Phase 3) ==========
-  // gcConnections is trainer-owned, low-frequency-change data (only changes
+  // ========== Payment Provider Connection (Phase 3) ==========
+  // paymentConnections is trainer-owned, low-frequency-change data (only changes
   // when the trainer explicitly connects/disconnects) — a one-off fetch on
   // demand fits better here than a permanent onSnapshot listener, so this
   // doesn't need to touch markLoaded's fixed collection count.
-  const getGcConnection = async (trainerId) => {
-    const snap = await getDoc(doc(db, 'gcConnections', trainerId));
+  const getPaymentConnection = async (trainerId) => {
+    const snap = await getDoc(doc(db, 'paymentConnections', trainerId));
     return snap.exists() ? snap.data() : null;
   };
 
@@ -1044,7 +1044,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getGcConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
