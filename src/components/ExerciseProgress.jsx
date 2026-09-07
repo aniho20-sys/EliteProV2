@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { Dumbbell, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import EmptyState from './EmptyState';
-import { canonicalExercise } from '../utils/exerciseUtils';
+import { canonicalExercise, resolveExerciseName, exerciseNamesFromLogs } from '../utils/exerciseUtils';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -57,13 +57,16 @@ export default function ExerciseProgress({ clientId }) {
   }, [exerciseLibrary]);
 
   const exerciseOptions = useMemo(() => {
+    // A custom exercise has no library document, so its name only exists on the log entry
+    // that created it. Without this the dropdown listed raw `custom-<epoch>` ids.
+    const loggedNames = exerciseNamesFromLogs(logs);
     const idsByLog = logs.map(log => new Set((log.entries || []).map(e => canonicalId(e.exerciseId))));
     const ids = new Set();
     idsByLog.forEach(set => set.forEach(id => ids.add(id)));
     return [...ids]
       .map(id => {
         const count = idsByLog.filter(set => set.has(id)).length;
-        return { id, name: exerciseLibrary.find(e => e.id === id)?.name || id, count };
+        return { id, name: resolveExerciseName(exerciseLibrary, id, loggedNames.get(id) || 'Exercise'), count };
       })
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [logs, exerciseLibrary, canonicalId]);

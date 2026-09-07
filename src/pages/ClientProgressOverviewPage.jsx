@@ -5,6 +5,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users, Trophy } from 'lucide-react';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import { getSessionColor } from '../utils/sessionUtils';
+import { resolveExerciseName, exerciseNamesFromLogs } from '../utils/exerciseUtils';
 import { getLastActivity } from '../utils/activityUtils';
 import EmptyState from '../components/EmptyState';
 
@@ -55,7 +56,8 @@ function fmtVolume(v) {
   return `${Math.round(v)}kg`;
 }
 
-function calcPRProgress(logs, startDate, exerciseLibrary) {
+function calcPRProgress(logs, startDate, exerciseLibrary, unknownLabel) {
+  const loggedNames = exerciseNamesFromLogs(logs);
   const prsBefore = {};
   const prsInPeriod = {};
   const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
@@ -83,7 +85,9 @@ function calcPRProgress(logs, startDate, exerciseLibrary) {
       prCount++;
       const gain = w - baseline;
       if (!bestGain || gain > bestGain.gain) {
-        const name = exerciseLibrary.find(e => e.id === exId)?.name || exId;
+        // resolveExerciseName follows a mergedInto pointer (#27) and falls back to the
+        // name the log recorded; unknownLabel is the last resort, never the raw id.
+        const name = resolveExerciseName(exerciseLibrary, exId, loggedNames.get(exId) || unknownLabel);
         bestGain = { name, gain, isNew: baseline === 0 };
       }
     }
@@ -293,7 +297,7 @@ export default function ClientProgressOverviewPage() {
     const volumeChange = volumePrev30d > 0 ? ((volume30d - volumePrev30d) / volumePrev30d) * 100 : null;
     const sessions30d = logs.filter(l => l.date >= start30d && l.date <= today).length;
     const volSparkline = weeklyVolumeSparkline(logs);
-    const { prCount, bestGain } = calcPRProgress(logs, start30d, exerciseLibrary);
+    const { prCount, bestGain } = calcPRProgress(logs, start30d, exerciseLibrary, t('common.exercise'));
     return { client, bodyStats, logs, nextSession, sessionStats, latest, weightChange, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain };
   });
 

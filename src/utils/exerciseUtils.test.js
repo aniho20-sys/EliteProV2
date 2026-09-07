@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { canonicalExercise, resolveExerciseName } from './exerciseUtils';
+import { canonicalExercise, resolveExerciseName, exerciseNamesFromLogs } from './exerciseUtils';
 import { exerciseLibrary as seedExercises } from '../data/exercises';
 
 // Soft-merge resolution (CLAUDE.md #27). A merged exercise keeps its document and gains a
@@ -84,5 +84,48 @@ describe('canonicalExercise — general soft-merge behaviour', () => {
     // ExerciseSwapModal's Custom tab creates custom-<timestamp> ids that never enter the
     // library — the stored name is the only source of truth for those.
     expect(resolveExerciseName(mergedLibrary(), 'custom-1699999999', 'Sled Push')).toBe('Sled Push');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GUARDIAN: a database id must never reach the screen as an exercise name.
+// ---------------------------------------------------------------------------
+// Found on Ani's phone 2026-09-07: Progress Overview printed
+// "custom-1787583622905 (first)" where an exercise name belonged. The cause was three
+// separate hand-rolled copies of `library.find(e => e.id === id)?.name || id`, each
+// falling back to the raw id. A custom exercise has no library document at all, so the
+// library can never name it — the name lives on the log entry that created it.
+describe('GUARDIAN: exercise names never fall back to a raw id', () => {
+  const logs = [
+    { date: '2026-09-01', entries: [
+      { exerciseId: 'custom-1787583622905', name: 'Cable Kickback', sets: [] },
+      { exerciseId: 'bench-press', sets: [] },
+    ] },
+    { date: '2026-09-02', entries: [{ exerciseId: 'custom-1787583622905', name: 'Cable Kickback', sets: [] }] },
+  ];
+
+  test('a custom exercise resolves to the name recorded on its log entry', () => {
+    const names = exerciseNamesFromLogs(logs);
+    expect(names.get('custom-1787583622905')).toBe('Cable Kickback');
+    expect(resolveExerciseName([], 'custom-1787583622905', names.get('custom-1787583622905')))
+      .toBe('Cable Kickback');
+  });
+
+  test('nothing resolved from the logs ever looks like a database id', () => {
+    const names = exerciseNamesFromLogs(logs);
+    for (const name of names.values()) {
+      expect(name).not.toMatch(/^custom-\d+$/);
+    }
+  });
+
+  test('an entry with no recorded name contributes nothing rather than its id', () => {
+    // bench-press has no `name` on the entry: it is a real library exercise and the
+    // library names it. What must not happen is the map handing back "bench-press".
+    expect(exerciseNamesFromLogs(logs).has('bench-press')).toBe(false);
+  });
+
+  test('malformed logs do not throw', () => {
+    expect(exerciseNamesFromLogs(null).size).toBe(0);
+    expect(exerciseNamesFromLogs([{}, { entries: null }, { entries: [null] }]).size).toBe(0);
   });
 });

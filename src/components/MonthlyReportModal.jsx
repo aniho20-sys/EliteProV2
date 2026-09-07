@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, FileText, Printer } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { calcVolume } from '../utils/workoutUtils';
+import { resolveExerciseName, exerciseNamesFromLogs } from '../utils/exerciseUtils';
 
 function monthOptions() {
   const opts = [];
@@ -38,10 +39,12 @@ export default function MonthlyReportModal({ client, onClose }) {
   const prs         = getPersonalRecords(client.id);
   const exercises   = getExercises();
 
-  const exName = (id, fallback) => {
-    if (fallback) return fallback;
-    return exercises.find(e => e.id === id)?.name || id || '—';
-  };
+  // The PR table calls this with no fallback, so before this used to print a raw
+  // `custom-<epoch>` id straight into a report Ani sends to a client. resolveExerciseName
+  // also follows a mergedInto pointer (#27), which the old lookup ignored.
+  const loggedNames = exerciseNamesFromLogs(logs);
+  const exName = (id, fallback) =>
+    fallback || resolveExerciseName(exercises, id, loggedNames.get(id) || 'Exercise');
 
   const monthLogs      = logs.filter(l => l.date?.startsWith(month));
   const monthCompleted = allSchedule.filter(s => s.date?.startsWith(month) && s.status === 'completed' && !s.isBlocked);

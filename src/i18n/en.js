@@ -698,6 +698,7 @@ const en = {
   'inv.toast_delete_failed': 'Failed to delete invoice',
   'prog.no_clients_desc': 'Share your invite code to get your first client onboard.',
   'prog.go_to_clients': 'Go to Clients',
+  'common.exercise': 'Exercise',
 };
 
 export default en;

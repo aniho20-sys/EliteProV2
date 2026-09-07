@@ -16,6 +16,28 @@ export const canonicalExercise = (library, id) => {
 export const resolveExerciseName = (library, id, fallback) =>
   canonicalExercise(library, id)?.name || fallback || id;
 
+// A custom exercise created inside a workout log (ExerciseSwapModal's `custom-<epoch>` ids)
+// never becomes a document in `exercises`, so the library cannot name it — but the log
+// entry that created it recorded the name the person typed. This lifts those names out of
+// the logs so they can be handed to resolveExerciseName as the fallback.
+//
+// Without it the fallback is the id itself, and a raw `custom-1787583622905` is what the
+// user sees. That shipped in three separate places, each having hand-rolled its own
+// `library.find(e => e.id === id)?.name || id` instead of calling resolveExerciseName —
+// which is exactly the duplication convention #3 warns about, producing the same defect
+// three times.
+export const exerciseNamesFromLogs = (logs) => {
+  const names = new Map();
+  for (const log of logs || []) {
+    for (const entry of log?.entries || []) {
+      if (entry?.exerciseId && entry.name && !names.has(entry.exerciseId)) {
+        names.set(entry.exerciseId, entry.name);
+      }
+    }
+  }
+  return names;
+};
+
 // Title-cases a name while preserving words that are already all-caps acronyms (e.g. "RDL", "HIIT")
 export const titleCaseExerciseName = (name) =>
   name.trim().replace(/\s+/g, ' ').split(' ').map(w =>

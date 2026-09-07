@@ -716,6 +716,7 @@ const zhHK = {
   'inv.toast_delete_failed': '刪除發票失敗',
   'prog.no_clients_desc': '分享你的邀請碼，招收你的第一位學生。',
   'prog.go_to_clients': '前往學生列表',
+  'common.exercise': '動作',
 };
 
 export default zhHK;
