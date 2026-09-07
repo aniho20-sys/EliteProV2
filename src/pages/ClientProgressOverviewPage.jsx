@@ -320,7 +320,7 @@ export default function ClientProgressOverviewPage() {
         />
       ) : (
         <>
-          <div className="filter-bar" style={{ marginBottom: 16 }}>
+          <div className="sort-bar" style={{ marginBottom: 16 }}>
             <span className="text-sm text-muted" style={{ alignSelf: 'center' }}>Sort by:</span>
             {SORT_OPTIONS.map(opt => (
               <button

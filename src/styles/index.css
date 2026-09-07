@@ -2723,6 +2723,14 @@ tr:hover { background: var(--bg-card-hover); }
 
 /* ===== FILTER BAR ===== */
 .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+/* A row of chip buttons, not form controls. .filter-bar goes flex-direction: column on
+   mobile so a <select> or search box can take the full width — correct there, wrong here:
+   in a column flex container the default align-items: stretch makes every button full
+   width, so five sort chips became five full rows and pushed the first client card off
+   the screen entirely (found on Ani's phone 2026-09-07, invisible on desktop where the
+   column rule never applies). Chips wrap instead of stacking, at every width. */
+.sort-bar { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filter-bar .form-select,
 .filter-bar .form-input { width: auto; min-width: 160px; }
 
