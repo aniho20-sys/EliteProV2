@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { Plus, Printer, Trash2, CheckCircle, FileText, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
@@ -21,14 +22,15 @@ function statusLabel(inv, today) {
 }
 
 function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }) {
+  const { t } = useLanguage();
   const total = getInvoiceTotal(invoice.items);
   return (
     <div className="invoice-print-overlay">
       <div className="invoice-print-actions no-print">
         <button className="btn btn-primary" onClick={onExport} disabled={exporting}>
-          <Printer size={16} /> {exporting ? 'Generating...' : 'Print / Save as PDF'}
+          <Printer size={16} /> {exporting ? t('inv.generating') : t('inv.print_pdf')}
         </button>
-        <button className="btn btn-outline" onClick={onClose}>Close</button>
+        <button className="btn btn-outline" onClick={onClose}>{t('common.close')}</button>
       </div>
       <div className="invoice-print-doc">
         <div className="invoice-print-header">
@@ -39,14 +41,14 @@ function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }
           <div className="invoice-print-meta">
             <div className="invoice-print-number">{invoice.invoiceNumber}</div>
             <div className="invoice-print-dates">
-              <div><span>Issue date</span><strong>{invoice.issueDate}</strong></div>
-              <div><span>Due date</span><strong>{invoice.dueDate}</strong></div>
+              <div><span>{t('inv.issue_date')}</span><strong>{invoice.issueDate}</strong></div>
+              <div><span>{t('inv.due_date')}</span><strong>{invoice.dueDate}</strong></div>
             </div>
           </div>
         </div>
 
         <div className="invoice-print-to">
-          <div className="invoice-print-to-label">Bill to</div>
+          <div className="invoice-print-to-label">{t('inv.bill_to')}</div>
           <div className="invoice-print-to-name">{client?.name}</div>
           <div className="invoice-print-to-email">{client?.email}</div>
         </div>
@@ -54,10 +56,10 @@ function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }
         <table className="invoice-print-table">
           <thead>
             <tr>
-              <th>Description</th>
-              <th className="text-right">Qty</th>
-              <th className="text-right">Unit Price</th>
-              <th className="text-right">Amount</th>
+              <th>{t('inv.description')}</th>
+              <th className="text-right">{t('inv.qty')}</th>
+              <th className="text-right">{t('inv.unit_price')}</th>
+              <th className="text-right">{t('inv.amount')}</th>
             </tr>
           </thead>
           <tbody>
@@ -72,7 +74,7 @@ function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} className="text-right invoice-total-label">Total</td>
+              <td colSpan={3} className="text-right invoice-total-label">{t('inv.total')}</td>
               <td className="text-right invoice-total-amount">{formatCurrency(total, invoice.currency)}</td>
             </tr>
           </tfoot>
@@ -80,22 +82,22 @@ function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }
 
         {invoice.notes && (
           <div className="invoice-print-notes">
-            <div className="invoice-print-notes-label">Notes</div>
+            <div className="invoice-print-notes-label">{t('inv.notes')}</div>
             <div>{invoice.notes}</div>
           </div>
         )}
 
         {invoice.paymentUrl && isSafeUrl(invoice.paymentUrl) && (
           <div className="invoice-print-payment">
-            <div className="invoice-print-notes-label">Payment</div>
+            <div className="invoice-print-notes-label">{t('inv.payment')}</div>
             <a href={invoice.paymentUrl} target="_blank" rel="noopener noreferrer" className="invoice-print-pay-link">
-              Pay Now →
+              {t('inv.pay_now_arrow')}
             </a>
           </div>
         )}
 
         <div className="invoice-print-status">
-          Status: <strong style={{ textTransform: 'uppercase' }}>{invoice.status === 'paid' ? `PAID ${invoice.paidDate ? `on ${invoice.paidDate}` : ''}` : 'UNPAID'}</strong>
+          {t('inv.status_colon')} <strong style={{ textTransform: 'uppercase' }}>{invoice.status === 'paid' ? (invoice.paidDate ? t('inv.status_paid_on', { date: invoice.paidDate }) : t('inv.status_paid')) : t('inv.status_unpaid')}</strong>
         </div>
       </div>
     </div>
@@ -103,6 +105,7 @@ function InvoicePrint({ invoice, trainer, client, onClose, onExport, exporting }
 }
 
 export default function InvoicePage() {
+  const { t } = useLanguage();
   const { currentUser, getClients, getInvoices, addInvoice, updateInvoice, deleteInvoice } = useApp();
   const toast = useToast();
   const today = localToday();
@@ -150,7 +153,7 @@ export default function InvoicePage() {
         URL.revokeObjectURL(url);
       }
     } catch {
-      toast('Failed to generate PDF — please try again', 'error');
+      toast(t('inv.toast_pdf_failed'), 'error');
     } finally {
       setExportingId(null);
     }
@@ -186,10 +189,10 @@ export default function InvoicePage() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.clientId) { toast('Please select a client', 'error'); return; }
-    if (!form.dueDate) { toast('Please set a due date', 'error'); return; }
-    if (form.items.some(i => !i.description.trim())) { toast('All items need a description', 'error'); return; }
-    if (formTotal <= 0) { toast('Invoice total must be greater than zero', 'error'); return; }
+    if (!form.clientId) { toast(t('inv.toast_need_client'), 'error'); return; }
+    if (!form.dueDate) { toast(t('inv.toast_need_due_date'), 'error'); return; }
+    if (form.items.some(i => !i.description.trim())) { toast(t('inv.toast_need_description'), 'error'); return; }
+    if (formTotal <= 0) { toast(t('inv.toast_total_zero'), 'error'); return; }
     setSaving(true);
     try {
       await addInvoice({
@@ -205,11 +208,11 @@ export default function InvoicePage() {
         paymentUrl: form.paymentUrl.trim() || null,
         paidDate: null,
       });
-      toast('Invoice created');
+      toast(t('inv.toast_created'));
       setShowCreate(false);
       resetForm();
     } catch {
-      toast('Failed to create invoice', 'error');
+      toast(t('inv.toast_create_failed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -220,9 +223,9 @@ export default function InvoicePage() {
     setMarkingPaid(inv.id);
     try {
       await updateInvoice(inv.id, { status: 'paid', paidDate: today });
-      toast('Marked as paid');
+      toast(t('inv.toast_marked_paid'));
     } catch {
-      toast('Failed to update invoice', 'error');
+      toast(t('inv.toast_update_failed'), 'error');
     } finally {
       setMarkingPaid(null);
     }
@@ -233,9 +236,9 @@ export default function InvoicePage() {
     setMarkingPaid(inv.id);
     try {
       await updateInvoice(inv.id, { status: 'unpaid', paidDate: null });
-      toast('Marked as unpaid');
+      toast(t('inv.toast_marked_unpaid'));
     } catch {
-      toast('Failed to update invoice', 'error');
+      toast(t('inv.toast_update_failed'), 'error');
     } finally {
       setMarkingPaid(null);
     }
@@ -245,9 +248,9 @@ export default function InvoicePage() {
     setDeleting(inv.id);
     try {
       await deleteInvoice(inv.id);
-      toast('Invoice deleted', 'info');
+      toast(t('inv.toast_deleted'), 'info');
     } catch {
-      toast('Failed to delete invoice', 'error');
+      toast(t('inv.toast_delete_failed'), 'error');
     } finally {
       setDeleting(null);
     }
@@ -270,10 +273,10 @@ export default function InvoicePage() {
   const getClient = (id) => clients.find(c => c.id === id);
 
   const tabs = [
-    { key: 'all', label: `All (${invoices.length})` },
-    { key: 'unpaid', label: `Unpaid (${invoices.filter(i => statusLabel(i, today) === 'unpaid').length})` },
-    { key: 'overdue', label: `Overdue (${overdueCount})` },
-    { key: 'paid', label: `Paid (${invoices.filter(i => i.status === 'paid').length})` },
+    { key: 'all', label: t('inv.tab_all', { count: invoices.length }) },
+    { key: 'unpaid', label: t('inv.tab_unpaid', { count: invoices.filter(i => statusLabel(i, today) === 'unpaid').length }) },
+    { key: 'overdue', label: t('inv.tab_overdue', { count: overdueCount }) },
+    { key: 'paid', label: t('inv.tab_paid', { count: invoices.filter(i => i.status === 'paid').length }) },
   ];
 
   if (printInvoice) {
@@ -294,11 +297,11 @@ export default function InvoicePage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Invoices</h1>
-          <p className="page-subtitle">Track payments from your clients</p>
+          <h1 className="page-title">{t('nav.invoices')}</h1>
+          <p className="page-subtitle">{t('inv.subtitle')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-          <Plus size={18} /> New Invoice
+          <Plus size={18} /> {t('inv.new_invoice')}
         </button>
       </div>
 
@@ -309,27 +312,27 @@ export default function InvoicePage() {
           <div className="stat-pill-value">
             {invoices[0]?.currency || 'HKD'} {unpaidTotal.toFixed(0)}
           </div>
-          <div className="stat-pill-label">Unpaid</div>
+          <div className="stat-pill-label">{t('inv.unpaid')}</div>
         </div>
         <div className="stat-pill">
           <AlertCircle size={15} style={{ color: 'var(--danger)' }} />
           <div className="stat-pill-value">{overdueCount}</div>
-          <div className="stat-pill-label">Overdue</div>
+          <div className="stat-pill-label">{t('inv.overdue')}</div>
         </div>
         <div className="stat-pill">
           <CheckCircle size={15} style={{ color: 'var(--success)' }} />
           <div className="stat-pill-value">
             {invoices[0]?.currency || 'HKD'} {paidThisMonth.toFixed(0)}
           </div>
-          <div className="stat-pill-label">Paid This Month</div>
+          <div className="stat-pill-label">{t('inv.paid_this_month')}</div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="tabs mb-16">
-        {tabs.map(t => (
-          <button key={t.key} className={`tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
-            {t.label}
+        {tabs.map(tb => (
+          <button key={tb.key} className={`tab ${tab === tb.key ? 'active' : ''}`} onClick={() => setTab(tb.key)}>
+            {tb.label}
           </button>
         ))}
       </div>
@@ -338,9 +341,9 @@ export default function InvoicePage() {
       {filtered.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title={tab === 'all' ? 'No invoices yet' : `No ${tab} invoices`}
-          description={tab === 'all' ? 'Create your first invoice to start tracking payments.' : `No invoices with status "${tab}".`}
-          action={tab === 'all' ? { label: 'Create Invoice', onClick: () => setShowCreate(true) } : undefined}
+          title={tab === 'all' ? t('inv.no_invoices_yet') : t('inv.no_filtered')}
+          description={tab === 'all' ? t('inv.no_invoices_desc') : t('inv.no_filtered_desc')}
+          action={tab === 'all' ? { label: t('inv.create_invoice'), onClick: () => setShowCreate(true) } : undefined}
         />
       ) : (
         <div className="invoice-list">
@@ -353,34 +356,34 @@ export default function InvoicePage() {
                 <div className="invoice-card-top">
                   <div className="invoice-card-left">
                     <div className="invoice-card-number">{inv.invoiceNumber}</div>
-                    <div className="invoice-card-client">{client?.name || 'Unknown client'}</div>
-                    <div className="invoice-card-date">Issued {inv.issueDate} · Due {inv.dueDate}</div>
+                    <div className="invoice-card-client">{client?.name || t('inv.unknown_client')}</div>
+                    <div className="invoice-card-date">{t('inv.issued')} {inv.issueDate} · {t('inv.due')} {inv.dueDate}</div>
                   </div>
                   <div className="invoice-card-right">
                     <div className="invoice-card-amount">{formatCurrency(total, inv.currency)}</div>
                     <span className={`tag ${sl === 'paid' ? 'tag-accent' : sl === 'overdue' ? 'tag-danger' : 'tag-warning'}`}>
-                      {sl}
+                      {sl === 'paid' ? t('inv.paid') : sl === 'overdue' ? t('inv.overdue') : t('inv.unpaid')}
                     </span>
                   </div>
                 </div>
                 {inv.notes && <div className="invoice-card-notes">{inv.notes}</div>}
                 <div className="invoice-card-actions">
                   <button className="btn btn-sm btn-outline" onClick={() => setPrintInvoice(inv)}>
-                    <Printer size={14} /> Print / Save as PDF
+                    <Printer size={14} /> {t('inv.print_pdf')}
                   </button>
                   {inv.paymentUrl && isSafeUrl(inv.paymentUrl) && inv.status !== 'paid' && (
                     <a href={inv.paymentUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-accent">
-                      <ExternalLink size={14} /> Pay Now
+                      <ExternalLink size={14} /> {t('inv.pay_now')}
                     </a>
                   )}
                   {inv.status === 'unpaid' && (
                     <button className="btn btn-sm btn-primary" onClick={() => handleMarkPaid(inv)} disabled={markingPaid === inv.id}>
-                      <CheckCircle size={14} /> {markingPaid === inv.id ? 'Saving…' : 'Mark Paid'}
+                      <CheckCircle size={14} /> {markingPaid === inv.id ? t('common.saving') : t('inv.mark_paid')}
                     </button>
                   )}
                   {inv.status === 'paid' && (
                     <button className="btn btn-sm btn-outline" onClick={() => handleMarkUnpaid(inv)} disabled={markingPaid === inv.id}>
-                      {markingPaid === inv.id ? 'Saving…' : 'Mark Unpaid'}
+                      {markingPaid === inv.id ? t('common.saving') : t('inv.mark_unpaid')}
                     </button>
                   )}
                   <button
@@ -389,7 +392,7 @@ export default function InvoicePage() {
                     onClick={() => handleDelete(inv)}
                     disabled={deleting === inv.id}
                   >
-                    <Trash2 size={14} /> {deleting === inv.id ? 'Deleting…' : 'Delete'}
+                    <Trash2 size={14} /> {deleting === inv.id ? t('inv.deleting') : t('inv.delete')}
                   </button>
                 </div>
               </div>
@@ -402,18 +405,18 @@ export default function InvoicePage() {
       {showCreate && (
         <div className="modal-overlay" onClick={() => { setShowCreate(false); resetForm(); }}>
           <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">New Invoice</h3>
+            <h3 className="modal-title">{t('inv.new_invoice')}</h3>
             <form onSubmit={handleCreate}>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 2 }}>
-                  <label className="form-label">Client</label>
+                  <label className="form-label">{t('common.client')}</label>
                   <select className="form-select" required value={form.clientId} onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))}>
-                    <option value="">Select client</option>
+                    <option value="">{t('inv.select_client')}</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Currency</label>
+                  <label className="form-label">{t('inv.currency')}</label>
                   <select className="form-select" value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value }))}>
                     {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -422,40 +425,40 @@ export default function InvoicePage() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Issue Date</label>
+                  <label className="form-label">{t('inv.issue_date')}</label>
                   <input className="form-input" type="date" required value={form.issueDate} onChange={e => setForm(p => ({ ...p, issueDate: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Due Date</label>
+                  <label className="form-label">{t('inv.due_date')}</label>
                   <input className="form-input" type="date" required value={form.dueDate} onChange={e => setForm(p => ({ ...p, dueDate: e.target.value }))} />
                 </div>
               </div>
 
               {/* Line items */}
               <div className="form-group">
-                <label className="form-label">Items</label>
+                <label className="form-label">{t('inv.items')}</label>
                 {form.items.map((item, idx) => (
                   <div key={idx} className="invoice-item-row">
                     <input
                       className="form-input invoice-item-desc"
-                      placeholder="Description"
+                      placeholder={t('inv.description')}
                       value={item.description}
                       onChange={e => setItem(idx, 'description', e.target.value)}
                     />
                     <input
                       className="form-input invoice-item-qty"
-                      type="number" min="1" placeholder="Qty"
+                      type="number" min="1" placeholder={t('inv.qty')}
                       value={item.qty}
                       onChange={e => setItem(idx, 'qty', e.target.value)}
                     />
                     <input
                       className="form-input invoice-item-price"
-                      type="number" min="0" step="0.01" placeholder="Price"
+                      type="number" min="0" step="0.01" placeholder={t('inv.price')}
                       value={item.unitPrice}
                       onChange={e => setItem(idx, 'unitPrice', e.target.value)}
                     />
                     {form.items.length > 1 && (
-                      <button type="button" className="btn-icon" aria-label="Remove item" style={{ color: 'var(--danger)' }}
+                      <button type="button" className="btn-icon" aria-label={t('inv.remove_item')} style={{ color: 'var(--danger)' }}
                         onClick={() => setForm(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }))}>
                         <Trash2 size={14} />
                       </button>
@@ -464,24 +467,24 @@ export default function InvoicePage() {
                 ))}
                 <button type="button" className="btn btn-sm btn-outline mt-8"
                   onClick={() => setForm(p => ({ ...p, items: [...p.items, { ...EMPTY_ITEM }] }))}>
-                  <Plus size={14} /> Add Item
+                  <Plus size={14} /> {t('inv.add_item')}
                 </button>
-                <div className="invoice-form-total">Total: {formatCurrency(formTotal, form.currency)}</div>
+                <div className="invoice-form-total">{t('inv.total_colon')} {formatCurrency(formTotal, form.currency)}</div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Notes (optional)</label>
-                <textarea className="form-textarea" rows={2} placeholder="Payment instructions, bank details…" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+                <label className="form-label">{t('inv.notes_optional')}</label>
+                <textarea className="form-textarea" rows={2} placeholder={t('inv.ph_payment_instructions')} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Payment Link <span className="text-muted">(optional — PayMe / FPS / bank URL)</span></label>
-                <input className="form-input" type="url" placeholder="https://payme.hsbc.com.hk/…" value={form.paymentUrl} onChange={e => setForm(p => ({ ...p, paymentUrl: e.target.value }))} />
+                <label className="form-label">{t('inv.payment_link')} <span className="text-muted">{t('inv.payment_link_hint')}</span></label>
+                <input className="form-input" type="url" placeholder={t('inv.ph_payment_url')} value={form.paymentUrl} onChange={e => setForm(p => ({ ...p, paymentUrl: e.target.value }))} />
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => { setShowCreate(false); resetForm(); }} disabled={saving}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Creating…' : 'Create Invoice'}</button>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowCreate(false); resetForm(); }} disabled={saving}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('inv.creating') : t('inv.create_invoice')}</button>
               </div>
             </form>
           </div>

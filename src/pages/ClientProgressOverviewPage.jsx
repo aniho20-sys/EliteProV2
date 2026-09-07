@@ -1,20 +1,32 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { TrendingUp, TrendingDown, Minus, Activity, Dumbbell, Calendar, Users, Trophy } from 'lucide-react';
 import { localToday, localDateAdd } from '../utils/dateUtils';
 import { getSessionColor } from '../utils/sessionUtils';
 import { getLastActivity } from '../utils/activityUtils';
 import EmptyState from '../components/EmptyState';
 
+// Labels are keys, resolved at render — t() only ever takes a literal (#39), so the
+// label cannot be built from the value.
 const SORT_OPTIONS = [
-  { value: 'name', label: 'Name' },
-  { value: 'lastActive', label: 'Last Active' },
-  { value: 'weightChange', label: 'Weight Change' },
-  { value: 'volume', label: 'Volume' },
-  { value: 'prs', label: 'New PRs' },
-  { value: 'sessionsLeft', label: 'Sessions Left' },
+  { value: 'name' },
+  { value: 'lastActive' },
+  { value: 'weightChange' },
+  { value: 'volume' },
+  { value: 'prs' },
+  { value: 'sessionsLeft' },
 ];
+
+const SORT_LABEL = {
+  name: (t) => t('prog.sort_name'),
+  lastActive: (t) => t('prog.sort_last_active'),
+  weightChange: (t) => t('prog.sort_weight_change'),
+  volume: (t) => t('prog.sort_volume'),
+  prs: (t) => t('prog.sort_prs'),
+  sessionsLeft: (t) => t('prog.sort_sessions_left'),
+};
 
 function calcVolumeInRange(logs, startDate, endDate) {
   return logs
@@ -108,23 +120,24 @@ function TrendIcon({ change, goodDirection = 'down' }) {
     : <TrendingUp size={14} style={{ color: isGood ? 'var(--success)' : 'var(--danger)' }} />;
 }
 
-function formatDaysAgo(days) {
+function formatDaysAgo(t, days) {
   if (days === null) return '—';
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
+  if (days === 0) return t('common.today');
+  if (days === 1) return t('common.yesterday');
+  return t('common.days_ago', { count: days });
 }
 
 function SessionsBar({ used, total }) {
-  if (total === null) return <span className="text-sm text-muted">Unlimited</span>;
+  const { t } = useLanguage();
+  if (total === null) return <span className="text-sm text-muted">{t('prog.unlimited')}</span>;
   const pct = Math.min((used / total) * 100, 100);
   const remaining = total - used;
   const color = getSessionColor(remaining);
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span className="text-sm text-muted">{used}/{total} sessions</span>
-        <span className="text-sm" style={{ color, fontWeight: 600 }}>{remaining} left</span>
+        <span className="text-sm text-muted">{t('prog.sessions_used', { used, total })}</span>
+        <span className="text-sm" style={{ color, fontWeight: 600 }}>{t('prog.sessions_left', { count: remaining })}</span>
       </div>
       <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.3s' }} />
@@ -134,6 +147,7 @@ function SessionsBar({ used, total }) {
 }
 
 function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog, volume30d, volumeChange, sessions30d, volSparkline, prCount, bestGain, onClick }) {
+  const { t } = useLanguage();
   const latest = bodyStats[bodyStats.length - 1];
   const prev = bodyStats.length > 1 ? bodyStats[bodyStats.length - 2] : null;
   const weightChange = latest && prev ? latest.weight - prev.weight : null;
@@ -164,21 +178,21 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
       {/* Stats row */}
       <div className="client-progress-stats">
         <div className="client-progress-stat">
-          <span className="client-progress-stat-label">Weight</span>
+          <span className="client-progress-stat-label">{t('common.weight')}</span>
           <span className="client-progress-stat-value">
             {latest?.weight ? `${latest.weight}kg` : '—'}
           </span>
           <TrendIcon change={weightChange} goodDirection="down" />
         </div>
         <div className="client-progress-stat">
-          <span className="client-progress-stat-label">Body Fat</span>
+          <span className="client-progress-stat-label">{t('prog.body_fat')}</span>
           <span className="client-progress-stat-value">
             {latest?.bodyFat ? `${latest.bodyFat}%` : '—'}
           </span>
           <TrendIcon change={bfChange} goodDirection="down" />
         </div>
         <div className="client-progress-stat" style={{ alignItems: 'flex-start' }}>
-          <span className="client-progress-stat-label">Weight Trend</span>
+          <span className="client-progress-stat-label">{t('prog.weight_trend')}</span>
           <MiniSparkline data={weightSparkline} color="var(--primary)" />
         </div>
       </div>
@@ -186,7 +200,7 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
       {/* Exercise progress row */}
       <div className="client-progress-stats">
         <div className="client-progress-stat">
-          <span className="client-progress-stat-label">Volume (30d)</span>
+          <span className="client-progress-stat-label">{t('prog.volume_30d')}</span>
           <span className="client-progress-stat-value">{fmtVolume(volume30d)}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <TrendIcon change={volumeChange} goodDirection="up" />
@@ -198,12 +212,12 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
           </div>
         </div>
         <div className="client-progress-stat">
-          <span className="client-progress-stat-label">Sessions (30d)</span>
+          <span className="client-progress-stat-label">{t('prog.sessions_30d')}</span>
           <span className="client-progress-stat-value">{sessions30d}</span>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>workouts</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t('prog.workouts')}</span>
         </div>
         <div className="client-progress-stat" style={{ alignItems: 'flex-start' }}>
-          <span className="client-progress-stat-label">Vol Trend</span>
+          <span className="client-progress-stat-label">{t('prog.vol_trend')}</span>
           <MiniSparkline data={volSparkline} color="var(--accent)" />
         </div>
       </div>
@@ -212,32 +226,32 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
       <div className="client-progress-activity">
         <div className="client-progress-activity-item">
           <Dumbbell size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <span className="text-sm text-muted">Last workout:</span>
+          <span className="text-sm text-muted">{t('prog.last_workout')}</span>
           <span className="text-sm" style={{
             fontWeight: 600,
             color: daysSinceLog === null ? 'var(--text-muted)' :
               daysSinceLog <= 3 ? 'var(--success)' :
               daysSinceLog <= 7 ? 'var(--warning)' : 'var(--danger)'
           }}>
-            {formatDaysAgo(daysSinceLog)}
+            {formatDaysAgo(t, daysSinceLog)}
           </span>
         </div>
         <div className="client-progress-activity-item">
           <Calendar size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <span className="text-sm text-muted">Next session:</span>
+          <span className="text-sm text-muted">{t('prog.next_session')}</span>
           <span className="text-sm" style={{ fontWeight: 600 }}>
-            {nextSession ? `${nextSession.date} ${nextSession.time}` : 'None'}
+            {nextSession ? `${nextSession.date} ${nextSession.time}` : t('prog.none')}
           </span>
         </div>
         {prCount > 0 && (
           <div className="client-progress-activity-item">
             <Trophy size={13} style={{ color: 'var(--warning)', flexShrink: 0 }} />
             <span className="text-sm" style={{ fontWeight: 600, color: 'var(--warning)' }}>
-              {prCount} new PR{prCount !== 1 ? 's' : ''} (30d)
+              {t('prog.new_prs', { count: prCount })}
             </span>
             {bestGain && (
               <span className="text-sm text-muted" style={{ marginLeft: 2 }}>
-                · {bestGain.name} {bestGain.isNew ? '(first)' : `+${bestGain.gain}kg`}
+                · {bestGain.name} {bestGain.isNew ? t('prog.first_pr') : `+${bestGain.gain}kg`}
               </span>
             )}
           </div>
@@ -252,6 +266,7 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
 
 export default function ClientProgressOverviewPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { currentUser, getClients, getBodyStats, getWorkoutLogs, getSchedule, getSessionStats, getExercises } = useApp();
   const exerciseLibrary = getExercises();
   const [sort, setSort] = useState('lastActive');
@@ -307,28 +322,28 @@ export default function ClientProgressOverviewPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Progress Overview</h1>
-        <p className="page-subtitle">{clients.length} client{clients.length !== 1 ? 's' : ''}</p>
+        <h1 className="page-title">{t('nav.progress_overview')}</h1>
+        <p className="page-subtitle">{t('prog.clients_count', { count: clients.length })}</p>
       </div>
 
       {clients.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No clients yet"
-          description="Share your invite code to get your first client onboard."
-          action={{ label: 'Go to Clients', to: '/clients' }}
+          title={t('tdash.no_clients_yet')}
+          description={t('prog.no_clients_desc')}
+          action={{ label: t('prog.go_to_clients'), to: '/clients' }}
         />
       ) : (
         <>
           <div className="sort-bar" style={{ marginBottom: 16 }}>
-            <span className="text-sm text-muted" style={{ alignSelf: 'center' }}>Sort by:</span>
+            <span className="text-sm text-muted">{t('prog.sort_by')}</span>
             {SORT_OPTIONS.map(opt => (
               <button
                 key={opt.value}
                 className={`btn btn-sm ${sort === opt.value ? 'btn-primary' : 'btn-outline'}`}
                 onClick={() => setSort(opt.value)}
               >
-                {opt.label}
+                {SORT_LABEL[opt.value](t)}
               </button>
             ))}
           </div>

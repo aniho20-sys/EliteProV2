@@ -49,10 +49,7 @@ const AWAITING = {
   // — trainer-only —
   'src/pages/ClientDetailPage.jsx': 114,
   'src/components/PlatformStatsCard.jsx': 56,
-  'src/pages/InvoicePage.jsx': 42,
   'src/pages/BusinessAnalyticsPage.jsx': 18,
-  'src/pages/ClientProgressOverviewPage.jsx': 18,
-  'src/pages/ClientsPage.jsx': 11,
   'src/components/MonthlyReportModal.jsx': 10,
   'src/components/MovementPatternScanner.jsx': 8,
   'src/components/NotesSection.jsx': 3,

@@ -21,6 +21,9 @@ const TRANSLATED_FILES = [
   'src/pages/ProfilePage.jsx',
   'src/components/LanguagePicker.jsx',
   'src/pages/TrainerDashboard.jsx',
+  'src/pages/InvoicePage.jsx',
+  'src/pages/ClientProgressOverviewPage.jsx',
+  'src/pages/ClientsPage.jsx',
 ]
 
 export default defineConfig([
@@ -51,7 +54,7 @@ export default defineConfig([
         ignoreProps: true,
         allowedStrings: [
           // Punctuation and glyphs that are not words in any language.
-          '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '.', ',', '&nbsp;',
+          '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '.', ',', '|', '&nbsp;',
           // A warning glyph is an icon, not a word.
           '⚠️',
           // Step numerals in an ordered list.

@@ -78,7 +78,7 @@ function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, to
   const formatDaysSince = (days) => {
     if (days === null) return t('tdash.no_activity');
     if (days === 0) return t('common.today');
-    return t('tdash.days_ago', { count: days });
+    return t('common.days_ago', { count: days });
   };
 
   return (
