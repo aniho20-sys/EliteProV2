@@ -60,7 +60,7 @@ const AWAITING = {
   'src/pages/WorkoutPlansPage.jsx': 59,
   'src/pages/ExerciseLibraryPage.jsx': 56,
   'src/components/ProgressView.jsx': 22,
-  'src/components/ExerciseProgress.jsx': 11,
+  'src/components/ExerciseProgress.jsx': 10,
   'src/components/SessionDateList.jsx': 10,
   'src/components/ExerciseDetailModal.jsx': 8,
   'src/components/NotificationCenter.jsx': 4,
@@ -68,7 +68,7 @@ const AWAITING = {
   'src/components/MuscleSelector.jsx': 3,
   'src/pages/MessagesPage.jsx': 3,
   // — client-only: phase 1 was not finished either, which nothing had reported —
-  'src/pages/WorkoutLogPage.jsx': 26,
+  'src/pages/WorkoutLogPage.jsx': 24,
   'src/components/workout/ActiveWorkoutView.jsx': 22,
   'src/pages/IntakeFormPage.jsx': 22,
   'src/pages/TrainingProfilePage.jsx': 19,

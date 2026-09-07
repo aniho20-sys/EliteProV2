@@ -58,6 +58,10 @@ export default defineConfig([
           '1', '2', '3',
           // Training units. Never translated — CLAUDE.md #39.
           'kg', 'cm', 'reps', 'sets', 'RPE',
+          // Personal record. Ani's ruling 2026-09-07: the gym floor says "PR" in both
+          // languages ("破咗 PR"), so it is vocabulary, not UI copy — same treatment as
+          // RPE above, rendered literally and kept out of the dictionaries entirely.
+          'PR', 'PRs',
           // The wordmark, rendered as two spans for the gradient.
           'Elite', 'Pro',
           // The word the user must type to confirm account deletion. It is compared

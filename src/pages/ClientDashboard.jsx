@@ -111,7 +111,7 @@ export default function ClientDashboard() {
         <Link to="/progress" className="stat-pill">
           <Trophy size={15} style={{ color: 'var(--warning)' }} />
           <div className="stat-pill-value">{Object.keys(prs).length}</div>
-          <div className="stat-pill-label">{t('dash.stat_prs')}</div>
+          <div className="stat-pill-label">PR</div>
         </Link>
       </div>
 

@@ -163,7 +163,7 @@ describe('GUARDIAN: training vocabulary never enters the dictionaries', () => {
     ...exerciseLibrary.map(e => e.name),
     ...equipmentTypes,
     ...movementPatterns,
-    'sets', 'reps', 'kg', 'RPE', 'tempo',
+    'sets', 'reps', 'kg', 'RPE', 'tempo', 'PR', 'PRs',
   ].map(s => s.toLowerCase());
 
   const FORBIDDEN_NAMESPACES = ['exercise.', 'exercises.', 'muscle.', 'equipment.', 'pattern.', 'unit.', 'units.'];

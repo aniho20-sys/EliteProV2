@@ -37,7 +37,6 @@ const en = {
   'dash.onboarding_step3': 'Track your body stats',
   'dash.stat_this_week': 'This Week',
   'dash.stat_total': 'Total',
-  'dash.stat_prs': 'PRs',
   'dash.log_another': 'Log another session',
   "dash.start_today": "Start today's training",
   'dash.your_package': 'Your package',

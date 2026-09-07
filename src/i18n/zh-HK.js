@@ -55,7 +55,6 @@ const zhHK = {
   'dash.onboarding_step3': '記錄身體數據',
   'dash.stat_this_week': '本週',
   'dash.stat_total': '總數',
-  'dash.stat_prs': '紀錄',
   'dash.start_today': '開始今日訓練',
   'dash.log_another': '再記錄一節',
   'dash.your_package': '你的堂數',
