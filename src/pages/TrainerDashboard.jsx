@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy, ClipboardList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
@@ -9,7 +10,9 @@ import { getLastActivity, getClientActivityDates } from '../utils/activityUtils'
 import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+// t() only ever takes a literal key (#39), so the weekday labels are looked up by
+// index from a fixed list rather than built from the day name.
+const dayLabel = (t, i) => [t('tdash.day_mon'), t('tdash.day_tue'), t('tdash.day_wed'), t('tdash.day_thu'), t('tdash.day_fri'), t('tdash.day_sat'), t('tdash.day_sun')][i];
 
 function getWeekDays() {
   const today = new Date();
@@ -18,6 +21,7 @@ function getWeekDays() {
 }
 
 function WeeklySessionsChart({ weekDays, schedule, today }) {
+  const { t } = useLanguage();
   const counts = weekDays.map(d => schedule.filter(s => s.date === d).length);
   const max = Math.max(...counts, 1);
   const W = 280, H = 72, BAR_W = 28;
@@ -45,7 +49,7 @@ function WeeklySessionsChart({ weekDays, schedule, today }) {
               fill={isToday ? 'var(--primary)' : 'var(--text-muted)'}
               fontWeight={isToday ? '700' : '400'}
             >
-              {DAY_LABELS[i]}
+              {dayLabel(t, i)}
             </text>
           </g>
         );
@@ -58,6 +62,7 @@ function WeeklySessionsChart({ weekDays, schedule, today }) {
 // summary, not a warning system — recency uses neutral gray text, never red/yellow/green.
 // Needs Attention already owns the "this client needs action" call-out.
 function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, today }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const weekStart = localDateAdd(-7);
 
@@ -71,16 +76,16 @@ function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, to
   ).length;
 
   const formatDaysSince = (days) => {
-    if (days === null) return 'No activity yet';
-    if (days === 0) return 'Today';
-    return `${days}d ago`;
+    if (days === null) return t('tdash.no_activity');
+    if (days === 0) return t('common.today');
+    return t('tdash.days_ago', { count: days });
   };
 
   return (
     <div className="card mb-16">
       <button type="button" className="client-activity-summary-toggle" onClick={() => setExpanded(v => !v)}>
         <Users size={16} />
-        <span>Active this week: <strong>{activeThisWeek}/{clients.length}</strong> clients</span>
+        <span>{t('tdash.active_this_week')} <strong>{activeThisWeek}/{clients.length}</strong> {t('tdash.clients_word')}</span>
         <ChevronDown size={16} className={`client-activity-chevron${expanded ? ' open' : ''}`} />
       </button>
       {expanded && (
@@ -131,6 +136,7 @@ const isSnoozed = (dateStr, today) => !!dateStr && dateStr > today;
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useLanguage();
   const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, updateClient, sendMessage, getClient, getSessionStats } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
@@ -171,11 +177,10 @@ export default function TrainerDashboard() {
         await sendMessage(currentUser.id, clientId, fullMsg);
       }
 
-      const recapMsg = recapSend && recapNote.trim() ? ' — recap sent to client' : '';
-      toast(`Session marked as complete${recapMsg}`);
+      toast(recapSend && recapNote.trim() ? t('tdash.toast_completed_recap') : t('tdash.toast_completed'));
       setRecapSession(null);
     } catch {
-      toast('Failed to update session', 'error');
+      toast(t('tdash.toast_complete_failed'), 'error');
     } finally {
       completingRef.current.delete(recapSession.id);
       setSavingRecap(false);
@@ -191,10 +196,10 @@ export default function TrainerDashboard() {
     setSendingQuick(true);
     try {
       await sendMessage(currentUser.id, quickMsgClient.client.id, quickMsgText.trim());
-      toast('Message sent');
+      toast(t('tdash.toast_msg_sent'));
       setQuickMsgClient(null);
     } catch {
-      toast('Failed to send message', 'error');
+      toast(t('tdash.toast_msg_failed'), 'error');
     } finally {
       setSendingQuick(false);
     }
@@ -210,9 +215,9 @@ export default function TrainerDashboard() {
       const msg = buildRenewalMsg(client, remaining, currentUser);
       await sendMessage(currentUser.id, client.id, msg);
       await updateClient(client.id, { renewalSnoozedUntil: localDateAdd(7) });
-      toast(`Renewal reminder sent to ${client.name}`);
+      toast(t('tdash.toast_reminder_sent', { name: client.name }));
     } catch {
-      toast('Failed to send reminder', 'error');
+      toast(t('tdash.toast_reminder_failed'), 'error');
     } finally {
       setSendingReminderFor(null);
     }
@@ -223,9 +228,9 @@ export default function TrainerDashboard() {
     setSnoozeMenuFor(null);
     try {
       await updateClient(clientId, { [field]: localDateAdd(days) });
-      toast(`Snoozed for ${days} days`);
+      toast(t('tdash.toast_snoozed', { count: days }));
     } catch {
-      toast('Failed to snooze', 'error');
+      toast(t('tdash.toast_snooze_failed'), 'error');
     }
   };
 
@@ -254,9 +259,9 @@ export default function TrainerDashboard() {
     if (diffMin > 0) {
       const hh = Math.floor(diffMin / 60);
       const mm = diffMin % 60;
-      nextCountdown = hh > 0 ? `in ${hh}h ${mm}m` : `in ${mm}m`;
+      nextCountdown = hh > 0 ? t('tdash.in_hm', { h: hh, m: mm }) : t('tdash.in_m', { m: mm });
     } else {
-      nextCountdown = 'Now';
+      nextCountdown = t('tdash.now');
     }
   }
 
@@ -332,18 +337,18 @@ export default function TrainerDashboard() {
 
       {clients.length === 0 && (
         <div className="card onboarding-card mb-16">
-          <h3 className="card-title">Get Started</h3>
-          <p className="text-sm text-secondary mt-8">Your training platform — 3 steps to go live:</p>
+          <h3 className="card-title">{t('tdash.get_started')}</h3>
+          <p className="text-sm text-secondary mt-8">{t('tdash.onboarding_sub')}</p>
           {currentUser.inviteCode && (
             <div className="onboarding-invite-block">
-              <span className="text-sm text-muted">Share your invite code with clients:</span>
+              <span className="text-sm text-muted">{t('tdash.share_invite')}</span>
               <div className="onboarding-invite-row">
                 <span className="invite-code-badge">{currentUser.inviteCode}</span>
                 <button className="btn btn-sm btn-outline" onClick={() => {
                   navigator.clipboard.writeText(currentUser.inviteCode).catch(() => {});
-                  toast('Invite code copied!');
+                  toast(t('tdash.toast_code_copied'));
                 }}>
-                  <Copy size={13} /> Copy
+                  <Copy size={13} /> {t('common.copy')}
                 </button>
               </div>
             </div>
@@ -351,15 +356,15 @@ export default function TrainerDashboard() {
           <div className="onboarding-steps">
             <Link to="/clients" className="onboarding-step">
               <span className="onboarding-num">1</span>
-              <span>Client enters code to connect</span>
+              <span>{t('tdash.step_connect')}</span>
             </Link>
             <Link to="/plans" className="onboarding-step">
               <span className="onboarding-num">2</span>
-              <span>Assign a workout plan</span>
+              <span>{t('tdash.step_plan')}</span>
             </Link>
             <Link to="/schedule" className="onboarding-step">
               <span className="onboarding-num">3</span>
-              <span>Book your first session</span>
+              <span>{t('tdash.step_book')}</span>
             </Link>
           </div>
         </div>
@@ -370,22 +375,22 @@ export default function TrainerDashboard() {
         <Link to="/clients" className="stat-pill">
           <Users size={15} style={{ color: 'var(--primary-light)' }} />
           <div className="stat-pill-value">{clients.length}</div>
-          <div className="stat-pill-label">Clients</div>
+          <div className="stat-pill-label">{t('nav.clients')}</div>
         </Link>
         <Link to="/schedule" className="stat-pill">
           <Calendar size={15} style={{ color: 'var(--accent)' }} />
           <div className="stat-pill-value">{todaySchedule.length}</div>
-          <div className="stat-pill-label">Today</div>
+          <div className="stat-pill-label">{t('common.today')}</div>
         </Link>
         <Link to="/messages" className="stat-pill">
           <TrendingUp size={15} style={{ color: 'var(--warning)' }} />
           <div className="stat-pill-value">{unread}</div>
-          <div className="stat-pill-label">Unread</div>
+          <div className="stat-pill-label">{t('tdash.stat_unread')}</div>
         </Link>
         <Link to="/plans" className="stat-pill">
           <Dumbbell size={15} style={{ color: 'var(--danger)' }} />
           <div className="stat-pill-value">{totalPlans}</div>
-          <div className="stat-pill-label">Plans</div>
+          <div className="stat-pill-label">{t('nav.plans_short')}</div>
         </Link>
       </div>
 
@@ -393,7 +398,7 @@ export default function TrainerDashboard() {
       <div className="hero-card mb-16">
         <div className="hero-card-inner">
           <div className="hero-card-top">
-            <span className="hero-card-label">Up next</span>
+            <span className="hero-card-label">{t('tdash.up_next')}</span>
             {nextSession && (
               <span className="hero-card-time"><Clock size={12} /> {nextCountdown}</span>
             )}
@@ -402,15 +407,15 @@ export default function TrainerDashboard() {
             <div className="hero-card-body">
               <div className="hero-avatar">{nextClient?.name?.[0] || '?'}</div>
               <div className="hero-card-info">
-                <div className="hero-card-title">{nextClient?.name || 'Unknown'} · {nextSession.time}</div>
-                <div className="hero-card-sub">{nextSession.type} · {nextSession.duration || 60}min</div>
+                <div className="hero-card-title">{nextClient?.name || t('common.unknown')} · {nextSession.time}</div>
+                <div className="hero-card-sub">{nextSession.type} · {nextSession.duration || 60}{t('common.min')}</div>
               </div>
               <Link to={`/clients/${nextSession.clientId}`} className="btn-icon"><ChevronRight size={18} /></Link>
             </div>
           ) : (
             <div className="hero-card-empty">
-              <span className="hero-card-empty-text">No sessions scheduled today</span>
-              <Link to="/schedule" className="btn btn-sm btn-primary">Book a session</Link>
+              <span className="hero-card-empty-text">{t('tdash.no_sessions_scheduled')}</span>
+              <Link to="/schedule" className="btn btn-sm btn-primary">{t('dash.book_a_session')}</Link>
             </div>
           )}
         </div>
@@ -419,19 +424,19 @@ export default function TrainerDashboard() {
       {/* Needs attention */}
       {totalAttentionCount === 0 ? (
         <div className="needs-attention needs-attention-allclear mb-16">
-          <span>All clear ✅ — no clients need attention right now.</span>
+          <span>{t('tdash.all_clear')}</span>
         </div>
       ) : (
         <div className="needs-attention mb-16">
           <div className="needs-attention-header">
             <div className="flex gap-8" style={{ alignItems: 'center' }}>
               <AlertTriangle size={15} style={{ color: 'var(--danger)' }} />
-              <span className="needs-attention-title">Needs attention</span>
+              <span className="needs-attention-title">{t('tdash.attention_title')}</span>
               <span className="needs-attention-count">{totalAttentionCount}</span>
             </div>
             {(hiddenAttentionCount > 0 || showAttentionAll) && (
               <button className="needs-attention-viewall" onClick={() => setShowAttentionAll(v => !v)}>
-                {showAttentionAll ? 'Show less' : 'View all'}
+                {showAttentionAll ? t('common.show_less') : t('common.view_all')}
               </button>
             )}
           </div>
@@ -440,7 +445,7 @@ export default function TrainerDashboard() {
             <>
               <div className="needs-attention-category">
                 <span className="needs-attention-category-dot" style={{ background: 'var(--danger)' }} />
-                Session owed <span className="text-muted">({owedClients.length})</span>
+                {t('tdash.session_owed')} <span className="text-muted">({owedClients.length})</span>
               </div>
               {visibleOwed.map(({ client, owed }) => (
                 <div key={`owed-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--danger)' }}>
@@ -450,24 +455,24 @@ export default function TrainerDashboard() {
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
                         <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
-                          Owes {owed} session{owed === 1 ? '' : 's'}
+                          {t('tdash.owes', { count: owed })}
                         </span>
                         {currentUser.renewalRateNext && (
-                          <span className="text-muted"> · {formatCurrency(currentUser.renewalRateNext, currentUser.currency)}/session</span>
+                          <span className="text-muted"> · {formatCurrency(currentUser.renewalRateNext, currentUser.currency)}{t('common.per_session')}</span>
                         )}
                       </div>
                     </Link>
                   </div>
                   <div className="needs-attention-item-actions">
                     <button className="btn btn-primary btn-sm" onClick={() => navigate(`/clients/${client.id}`)}>
-                      Top up
+                      {t('tdash.top_up')}
                     </button>
                     <button
                       className="btn btn-outline btn-sm"
                       disabled={sendingReminderFor === client.id}
                       onClick={() => handleSendRenewalReminder(client, 0)}
                     >
-                      <Send size={14} /> {sendingReminderFor === client.id ? 'Sending…' : 'Send reminder'}
+                      <Send size={14} /> {sendingReminderFor === client.id ? t('tdash.sending') : t('tdash.send_reminder')}
                     </button>
                   </div>
                 </div>
@@ -479,7 +484,7 @@ export default function TrainerDashboard() {
             <>
               <div className="needs-attention-category">
                 <span className="needs-attention-category-dot" style={{ background: 'var(--danger)' }} />
-                Renewal <span className="text-muted">({renewalClients.length})</span>
+                {t('tdash.renewal')} <span className="text-muted">({renewalClients.length})</span>
               </div>
               {visibleRenewal.map(({ client, remaining }) => (
                 <div key={`renewal-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--danger)' }}>
@@ -489,9 +494,9 @@ export default function TrainerDashboard() {
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
                         <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
-                          {remaining === 0 ? 'Sessions used up' : `${remaining} session${remaining === 1 ? '' : 's'} left`}
+                          {remaining === 0 ? t('tdash.sessions_used_up') : t('dash.sessions_left_count', { count: remaining })}
                         </span>
-                        <span className="text-muted"> · Renewal due</span>
+                        <span className="text-muted"> · {t('tdash.renewal_due')}</span>
                       </div>
                     </Link>
                   </div>
@@ -501,19 +506,19 @@ export default function TrainerDashboard() {
                       disabled={sendingReminderFor === client.id}
                       onClick={() => handleSendRenewalReminder(client, remaining)}
                     >
-                      <Send size={14} /> {sendingReminderFor === client.id ? 'Sending…' : 'Send renewal reminder'}
+                      <Send size={14} /> {sendingReminderFor === client.id ? t('tdash.sending') : t('tdash.send_renewal_reminder')}
                     </button>
                     <div className="needs-attention-snooze-wrap">
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => setSnoozeMenuFor(m => m === `renewal-${client.id}` ? null : `renewal-${client.id}`)}
                       >
-                        <Clock size={14} /> Snooze
+                        <Clock size={14} /> {t('common.snooze')}
                       </button>
                       {snoozeMenuFor === `renewal-${client.id}` && (
                         <div className="needs-attention-snooze-menu">
                           {SNOOZE_OPTIONS.map(d => (
-                            <button key={d} onClick={() => handleSnooze(client.id, 'renewal', d)}>{d} days</button>
+                            <button key={d} onClick={() => handleSnooze(client.id, 'renewal', d)}>{d} {t('common.days')}</button>
                           ))}
                         </div>
                       )}
@@ -528,7 +533,7 @@ export default function TrainerDashboard() {
             <>
               <div className="needs-attention-category">
                 <span className="needs-attention-category-dot" style={{ background: 'var(--warning)' }} />
-                At risk of churn <span className="text-muted">({churnClients.length})</span>
+                {t('tdash.at_risk')} <span className="text-muted">({churnClients.length})</span>
               </div>
               {visibleChurn.map(({ client, daysSince, lastActivityLabel }) => (
                 <div key={`churn-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--warning)' }}>
@@ -538,9 +543,9 @@ export default function TrainerDashboard() {
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
                         <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                          {daysSince === null ? 'No activity yet' : `Inactive ${daysSince} day${daysSince === 1 ? '' : 's'}`}
+                          {daysSince === null ? t('tdash.no_activity') : t('tdash.inactive_days', { count: daysSince })}
                         </span>
-                        <span className="text-muted"> · {lastActivityLabel ? `Last: ${lastActivityLabel}` : 'No activity yet'}</span>
+                        <span className="text-muted"> · {lastActivityLabel ? t('tdash.last_prefix', { label: lastActivityLabel }) : t('tdash.no_activity')}</span>
                       </div>
                     </Link>
                   </div>
@@ -549,19 +554,19 @@ export default function TrainerDashboard() {
                       className="btn btn-outline btn-sm"
                       onClick={() => handleOpenQuickMsg(client, { inactive: true, lowSessions: false })}
                     >
-                      <MessageCircle size={14} /> Send a check-in
+                      <MessageCircle size={14} /> {t('tdash.send_checkin')}
                     </button>
                     <div className="needs-attention-snooze-wrap">
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => setSnoozeMenuFor(m => m === `churn-${client.id}` ? null : `churn-${client.id}`)}
                       >
-                        <Clock size={14} /> Snooze
+                        <Clock size={14} /> {t('common.snooze')}
                       </button>
                       {snoozeMenuFor === `churn-${client.id}` && (
                         <div className="needs-attention-snooze-menu">
                           {SNOOZE_OPTIONS.map(d => (
-                            <button key={d} onClick={() => handleSnooze(client.id, 'churn', d)}>{d} days</button>
+                            <button key={d} onClick={() => handleSnooze(client.id, 'churn', d)}>{d} {t('common.days')}</button>
                           ))}
                         </div>
                       )}
@@ -576,7 +581,7 @@ export default function TrainerDashboard() {
             <>
               <div className="needs-attention-category">
                 <span className="needs-attention-category-dot" style={{ background: 'var(--warning)' }} />
-                Training profile incomplete <span className="text-muted">({trainingProfileClients.length})</span>
+                {t('tdash.profile_incomplete')} <span className="text-muted">({trainingProfileClients.length})</span>
               </div>
               {visibleProfile.map(({ client }) => (
                 <div key={`profile-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--warning)' }}>
@@ -586,7 +591,7 @@ export default function TrainerDashboard() {
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
                         <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                          <ClipboardList size={12} style={{ verticalAlign: -1 }} /> Has upcoming session, no profile
+                          <ClipboardList size={12} style={{ verticalAlign: -1 }} /> {t('tdash.profile_upcoming')}
                         </span>
                       </div>
                     </Link>
@@ -596,7 +601,7 @@ export default function TrainerDashboard() {
                       className="btn btn-outline btn-sm"
                       onClick={() => handleOpenQuickMsg(client, { inactive: false, lowSessions: false, missingProfile: true })}
                     >
-                      <MessageCircle size={14} /> Ask to complete profile
+                      <MessageCircle size={14} /> {t('tdash.ask_complete_profile')}
                     </button>
                   </div>
                 </div>
@@ -614,9 +619,9 @@ export default function TrainerDashboard() {
             inCard={false}
             compact
             icon={Users}
-            title="No clients yet"
-            description="Invite your first client to see their activity here."
-            action={{ label: 'Get Invite Code', to: '/clients' }}
+            title={t('tdash.no_clients_yet')}
+            description={t('tdash.no_clients_desc')}
+            action={{ label: t('tdash.get_invite_code'), to: '/clients' }}
           />
         </div>
       ) : (
@@ -627,17 +632,17 @@ export default function TrainerDashboard() {
       <div className="grid-2 mb-16">
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Today&apos;s Schedule</h3>
-            <Link to="/schedule" className="btn btn-outline btn-sm">View All</Link>
+            <h3 className="card-title">{t('dash.todays_schedule')}</h3>
+            <Link to="/schedule" className="btn btn-outline btn-sm">{t('common.view_all')}</Link>
           </div>
           {todaySchedule.length === 0 ? (
             <EmptyState
               inCard={false}
               compact
               icon={CalendarOff}
-              title="No sessions today"
-              description="Enjoy the rest day, or book a new session from the Schedule page."
-              action={{ label: 'Open Schedule', to: '/schedule' }}
+              title={t('dash.no_sessions_today')}
+              description={t('tdash.rest_day_desc')}
+              action={{ label: t('tdash.open_schedule'), to: '/schedule' }}
             />
           ) : (
             todaySchedule.sort((a, b) => a.time.localeCompare(b.time)).map(s => {
@@ -646,8 +651,8 @@ export default function TrainerDashboard() {
                 <Link key={s.id} to={`/clients/${s.clientId}`} className="schedule-item schedule-item-link">
                   <div className="schedule-time">{s.time}</div>
                   <div className="schedule-info">
-                    <div className="schedule-client">{client?.name || 'Unknown'}</div>
-                    <div className="schedule-type">{s.type} - {s.duration || 60}min</div>
+                    <div className="schedule-client">{client?.name || t('common.unknown')}</div>
+                    <div className="schedule-type">{s.type} - {s.duration || 60}{t('common.min')}</div>
                   </div>
                   <div className="flex gap-8" style={{ alignItems: 'center' }}>
                     <span className={`tag ${s.status === 'completed' ? 'tag-accent' : s.status === 'confirmed' ? 'tag-primary' : 'tag-warning'}`}>{s.status}</span>
@@ -655,7 +660,7 @@ export default function TrainerDashboard() {
                       <button
                         className="btn-icon"
                         onClick={(e) => openRecap(e, s)}
-                        title="Mark as complete"
+                        title={t('tdash.mark_complete')}
                       >
                         <CheckCircle size={16} style={{ color: 'var(--accent)' }} />
                       </button>
@@ -669,15 +674,15 @@ export default function TrainerDashboard() {
 
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Unread Messages</h3>
+            <h3 className="card-title">{t('tdash.unread_messages')}</h3>
           </div>
           {recentMessages.length === 0 ? (
             <EmptyState
               inCard={false}
               compact
               icon={MailCheck}
-              title="All caught up!"
-              description="No unread messages from your clients right now."
+              title={t('tdash.all_caught_up')}
+              description={t('tdash.no_unread_desc')}
             />
           ) : (
             recentMessages.map(m => {
@@ -686,7 +691,7 @@ export default function TrainerDashboard() {
                 <div key={m.id} className="contact-item" onClick={() => navigate('/messages')}>
                   <div className="contact-avatar">{sender?.name?.[0] || '?'}</div>
                   <div className="contact-info">
-                    <div className="contact-name">{sender?.name || 'Unknown'}</div>
+                    <div className="contact-name">{sender?.name || t('common.unknown')}</div>
                     <div className="contact-preview">{m.text}</div>
                   </div>
                 </div>
@@ -699,24 +704,24 @@ export default function TrainerDashboard() {
       {/* Charts */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">This Week&apos;s Sessions</h3>
-          <Link to="/schedule" className="btn btn-outline btn-sm">Schedule</Link>
+          <h3 className="card-title">{t('tdash.week_sessions')}</h3>
+          <Link to="/schedule" className="btn btn-outline btn-sm">{t('nav.schedule')}</Link>
         </div>
         <div style={{ padding: '8px 4px 0' }}>
           <WeeklySessionsChart weekDays={weekDays} schedule={weekSchedule} today={today} />
         </div>
         <div className="week-chart-footer">
-          <span>{weekSchedule.length} session{weekSchedule.length !== 1 ? 's' : ''} this week</span>
-          <span style={{ color: 'var(--success)' }}>{confirmedCount} confirmed</span>
+          <span>{t('tdash.sessions_this_week', { count: weekSchedule.length })}</span>
+          <span style={{ color: 'var(--success)' }}>{confirmedCount} {t('tdash.confirmed')}</span>
         </div>
       </div>
 
       {quickMsgClient && (
         <div className="modal-overlay" onClick={() => !sendingQuick && setQuickMsgClient(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Follow-up Message</h3>
+            <h3 className="modal-title">{t('tdash.followup_msg')}</h3>
             <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>
-              To: <strong>{quickMsgClient.client.name}</strong>
+              {t('tdash.to_label')} <strong>{quickMsgClient.client.name}</strong>
             </p>
             <div className="form-group">
               <textarea
@@ -728,9 +733,9 @@ export default function TrainerDashboard() {
               />
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setQuickMsgClient(null)} disabled={sendingQuick}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => setQuickMsgClient(null)} disabled={sendingQuick}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={handleSendQuickMsg} disabled={sendingQuick || !quickMsgText.trim()}>
-                {sendingQuick ? 'Sending…' : 'Send'}
+                {sendingQuick ? t('tdash.sending') : t('common.send')}
               </button>
             </div>
           </div>
@@ -740,24 +745,24 @@ export default function TrainerDashboard() {
       {recapSession && (
         <div className="modal-overlay" onClick={() => !savingRecap && setRecapSession(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Complete Session</h3>
+            <h3 className="modal-title">{t('tdash.complete_session')}</h3>
             <div className="recap-session-info">
-              <div className="recap-row"><span className="form-label">Client</span><span>{getClient(recapSession.clientId)?.name || '—'}</span></div>
-              <div className="recap-row"><span className="form-label">Date</span><span>{recapSession.date} · {recapSession.time}</span></div>
-              <div className="recap-row"><span className="form-label">Type</span><span>{recapSession.type}</span></div>
+              <div className="recap-row"><span className="form-label">{t('common.client')}</span><span>{getClient(recapSession.clientId)?.name || '—'}</span></div>
+              <div className="recap-row"><span className="form-label">{t('common.date')}</span><span>{recapSession.date} · {recapSession.time}</span></div>
+              <div className="recap-row"><span className="form-label">{t('common.type')}</span><span>{recapSession.type}</span></div>
             </div>
             <div className="form-group">
-              <label className="form-label">Message to client (optional)</label>
-              <textarea className="form-textarea" rows={3} value={recapNote} onChange={e => setRecapNote(e.target.value)} placeholder="Add a note for the client…" disabled={savingRecap} />
+              <label className="form-label">{t('tdash.msg_to_client')}</label>
+              <textarea className="form-textarea" rows={3} value={recapNote} onChange={e => setRecapNote(e.target.value)} placeholder={t('tdash.recap_placeholder')} disabled={savingRecap} />
             </div>
             <label className="recap-send-toggle">
               <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
               <Send size={14} />
-              Send recap message to client
+              {t('tdash.send_recap')}
             </label>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setRecapSession(null)} disabled={savingRecap}>Cancel</button>
-              <button className="btn btn-accent" onClick={handleConfirmComplete} disabled={savingRecap}>{savingRecap ? 'Saving…' : 'Mark Complete'}</button>
+              <button className="btn btn-outline" onClick={() => setRecapSession(null)} disabled={savingRecap}>{t('common.cancel')}</button>
+              <button className="btn btn-accent" onClick={handleConfirmComplete} disabled={savingRecap}>{savingRecap ? t('common.saving') : t('tdash.mark_complete_btn')}</button>
             </div>
           </div>
         </div>

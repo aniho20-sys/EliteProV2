@@ -212,8 +212,8 @@ export default function ProfilePage() {
     } catch (err) {
       toast(
         err?.code === 'functions/failed-precondition'
-          ? 'GoCardless isn\'t set up yet — check back soon.'
-          : 'Could not start GoCardless connection',
+          ? t('profile.gc_not_configured')
+          : t('profile.gc_connect_failed'),
         err?.code === 'functions/failed-precondition' ? 'info' : 'error'
       );
       setGcConnecting(false);
@@ -292,8 +292,8 @@ export default function ProfilePage() {
   const handleShareCode = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Join me on ElitePro',
-        text: `Your coach has invited you to ElitePro! Use invite code: ${inviteCode} or tap the link.`,
+        title: t('profile.share_title'),
+        text: t('profile.share_text', { code: inviteCode }),
         url: INVITE_URL,
       }).catch(() => {});
     } else {

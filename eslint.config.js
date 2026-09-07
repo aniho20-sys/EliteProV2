@@ -20,6 +20,7 @@ const TRANSLATED_FILES = [
   'src/pages/SchedulePage.jsx',
   'src/pages/ProfilePage.jsx',
   'src/components/LanguagePicker.jsx',
+  'src/pages/TrainerDashboard.jsx',
 ]
 
 export default defineConfig([

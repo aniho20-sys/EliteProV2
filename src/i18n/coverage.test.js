@@ -48,7 +48,6 @@ const EXEMPT = {
 const AWAITING = {
   // — trainer-only —
   'src/pages/ClientDetailPage.jsx': 114,
-  'src/pages/TrainerDashboard.jsx': 59,
   'src/components/PlatformStatsCard.jsx': 56,
   'src/pages/InvoicePage.jsx': 42,
   'src/pages/BusinessAnalyticsPage.jsx': 18,
@@ -186,5 +185,50 @@ describe('GUARDIAN: the translation debt can only shrink', () => {
         : `${rel} is down to ${actual} from ${recorded}. Lower the number in coverage.test.js, ` +
           'or delete the entry and add the file to TRANSLATED_FILES if it is now 0.',
     ).toBe(recorded);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GUARDIAN: the English hiding inside JS expressions, listed by hand.
+// ---------------------------------------------------------------------------
+// react/jsx-no-literals sees JSX text, and the prop scan above sees visible props. Neither
+// can see a string inside a ternary, a template literal, or an object property — which is
+// how ProfilePage sat on TRANSLATED_FILES, lint-clean, while still showing a trainer two
+// English toasts. A regex over expressions was considered and rejected: it cannot tell
+// `type: 'Blocked'` (a Firestore value, correctly untranslated) from a sentence, and a test
+// that cries wolf gets switched off. So the debt is written down by hand instead.
+//
+// Every entry below is English a user can still read. The test fails if one disappears
+// without the entry being removed, so the list cannot quietly go stale, and a file on
+// TRANSLATED_FILES can never again imply "no English left" when some remains.
+const EXPRESSION_DEBT = {
+  // Messages composed by the trainer and delivered to a STUDENT. These are not a
+  // translation question but a whose-language question: the student's own `language` is
+  // in Firestore and is the one that should decide, not the trainer's. Awaiting Ani's
+  // ruling — the same question she settled as "bilingual" for the invite share text,
+  // where the reader is unknown; here the reader is known, so the answer may differ.
+  'src/pages/TrainerDashboard.jsx': [
+    "just a heads-up — you've got",       // buildDefaultMsg, low sessions
+    'could you fill out your training profile',  // buildDefaultMsg, missing profile
+    "Haven't seen a workout log in a while",     // buildDefaultMsg, inactive
+    'renew now to keep your current rate',       // buildRenewalMsg
+    'Great session today',                        // openRecap default note
+    'Session Recap',                              // recap message body
+  ],
+};
+
+describe('GUARDIAN: English inside JS expressions stays visible', () => {
+  test.each(Object.entries(EXPRESSION_DEBT))('%s', (rel, fragments) => {
+    const src = readFileSync(join(ROOT, rel), 'utf8');
+    const gone = fragments.filter(f => !src.includes(f));
+    expect(
+      gone,
+      `${rel} no longer contains: ${gone.join(' | ')}. If this text was translated, delete ` +
+      'the entry from EXPRESSION_DEBT; if it was deleted, delete the entry too.',
+    ).toEqual([]);
+  });
+
+  test('the list is not empty while any entry is claimed', () => {
+    expect(Object.keys(EXPRESSION_DEBT).length).toBeGreaterThan(0);
   });
 });
