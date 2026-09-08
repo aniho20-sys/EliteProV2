@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import en from './en';
-import { translate, resolveLanguage } from './t';
+import { translate, resolveLanguage, resolveRecipientLanguage } from './t';
 import { buildAuthMessages } from './authMessages';
 
 // Which language the signed-in person sees, and the t() bound to it.
@@ -17,6 +17,16 @@ import { buildAuthMessages } from './authMessages';
 // eslint-disable-next-line react-refresh/only-export-components
 export const LanguageContext = createContext(null);
 
+// Dictionaries already fetched, shared by the provider and by translatorFor below so a
+// second language is downloaded at most once per session.
+const loaded = { 'zh-HK': null };
+
+async function dictionaryFor(lang) {
+  if (lang !== 'zh-HK') return null;
+  if (!loaded['zh-HK']) loaded['zh-HK'] = (await import('./zh-HK')).default;
+  return loaded['zh-HK'];
+}
+
 export function LanguageProvider({ children }) {
   const { currentUser, setLanguage } = useApp();
   const lang = resolveLanguage(currentUser, typeof navigator !== 'undefined' ? navigator.language : '');
@@ -25,7 +35,7 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     if (lang !== 'zh-HK' || zh) return;
     let cancelled = false;
-    import('./zh-HK').then(m => { if (!cancelled) setZh(m.default); });
+    dictionaryFor('zh-HK').then(d => { if (!cancelled) setZh(d); });
     return () => { cancelled = true; };
   }, [lang, zh]);
 
@@ -36,9 +46,28 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = lang;
   }, [lang]);
 
+  // A t() bound to somebody ELSE's language — for text this person writes but another
+  // person reads (a message to a student, an invoice they file as an expense). Async
+  // because that language's dictionary may not be downloaded yet: an English-speaking
+  // trainer never loads zh-HK for themselves, and awaiting here is what stops the message
+  // going out in English while the chunk is still in flight.
+  //
+  // Callers pass the reader and themselves, and resolveRecipientLanguage decides — never
+  // read `recipient.language` directly, or the "fall back to the sender, not to English"
+  // rule ends up reimplemented per call site.
+  const translatorFor = useMemo(() => async (recipient, sender) => {
+    const target = resolveRecipientLanguage(recipient, sender);
+    const dict = await dictionaryFor(target);
+    return {
+      lang: target,
+      t: (key, vars) => translate({ en, zh: dict }, target, key, vars, { dev: import.meta.env.DEV }),
+    };
+  }, []);
+
   const value = useMemo(() => ({
     lang,
     setLanguage,
+    translatorFor,
     t: (key, vars) => translate(
       { en, zh: lang === 'zh-HK' ? zh : null },
       lang,
@@ -46,7 +75,7 @@ export function LanguageProvider({ children }) {
       vars,
       { dev: import.meta.env.DEV },
     ),
-  }), [lang, zh, setLanguage]);
+  }), [lang, zh, setLanguage, translatorFor]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

@@ -18,6 +18,25 @@
 export const SUPPORTED_LANGUAGES = ['en', 'zh-HK'];
 export const DEFAULT_LANGUAGE = 'en';
 
+// Which language a message should be WRITTEN IN, as opposed to read in.
+//
+// Ani's ruling 2026-09-07: anything one person sends another follows the reader, not the
+// writer — a renewal reminder, a session recap, an invoice a student files as an expense.
+// The reader's own `language` decides.
+//
+// When the reader has never chosen one, the fallback is the SENDER's language, not English.
+// English would be the tempting default and it is wrong here: with the UK and Hong Kong
+// markets running at once, a silent default to English sends English to a Hong Kong student
+// who simply never opened the Profile card. The sender's language is at least a language
+// the sender can read back and correct, which no third choice offers.
+export function resolveRecipientLanguage(recipient, sender) {
+  const wanted = recipient?.language;
+  if (SUPPORTED_LANGUAGES.includes(wanted)) return wanted;
+  const sendersOwn = sender?.language;
+  if (SUPPORTED_LANGUAGES.includes(sendersOwn)) return sendersOwn;
+  return DEFAULT_LANGUAGE;
+}
+
 const pluralForm = (count) => (count === 1 ? 'one' : 'other');
 
 function lookup(dict, key, vars) {

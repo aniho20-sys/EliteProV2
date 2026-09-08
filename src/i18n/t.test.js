@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { translate, resolveLanguage, browserDefault } from './t';
+import { translate, resolveLanguage, resolveRecipientLanguage, browserDefault } from './t';
 
 const en = {
   'dash.title': 'Today',
@@ -124,5 +124,41 @@ describe('browserDefault', () => {
     ['en-GB', 'en'], ['en', 'en'], ['ja', 'en'], ['', 'en'], [undefined, 'en'], [null, 'en'],
   ])('%p → %p', (input, expected) => {
     expect(browserDefault(input)).toBe(expected);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GUARDIAN: outbound text follows the reader, and never silently defaults to English.
+// ---------------------------------------------------------------------------
+// Ani's ruling 2026-09-07. A renewal reminder, a session recap and an invoice a student
+// files as an expense are all read by the student, so the student's language decides.
+// The part worth guarding is the fallback: when the student has never chosen a language
+// the answer is the SENDER's language, not English. With the UK and Hong Kong markets
+// running together, defaulting to English quietly sends English to a Hong Kong student
+// who simply never opened the Profile card.
+describe('GUARDIAN: a message is written in the reader\'s language', () => {
+  const zhTrainer = { language: 'zh-HK' };
+  const enTrainer = { language: 'en' };
+
+  test('the reader\'s own choice wins, even against the sender', () => {
+    expect(resolveRecipientLanguage({ language: 'zh-HK' }, enTrainer)).toBe('zh-HK');
+    expect(resolveRecipientLanguage({ language: 'en' }, zhTrainer)).toBe('en');
+  });
+
+  test('a reader with no language falls back to the SENDER, not to English', () => {
+    expect(resolveRecipientLanguage({}, zhTrainer)).toBe('zh-HK');
+    expect(resolveRecipientLanguage({ language: null }, zhTrainer)).toBe('zh-HK');
+    expect(resolveRecipientLanguage(undefined, zhTrainer)).toBe('zh-HK');
+  });
+
+  test('an unsupported value is ignored rather than passed through', () => {
+    // A stray 'zh-CN' or 'zh' must not reach translate() as a language it cannot serve.
+    expect(resolveRecipientLanguage({ language: 'zh-CN' }, zhTrainer)).toBe('zh-HK');
+    expect(resolveRecipientLanguage({ language: 'fr' }, enTrainer)).toBe('en');
+  });
+
+  test('English is the answer only when nobody has a usable language', () => {
+    expect(resolveRecipientLanguage({}, {})).toBe('en');
+    expect(resolveRecipientLanguage(null, null)).toBe('en');
   });
 });
