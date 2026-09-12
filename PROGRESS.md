@@ -1,8 +1,43 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：**2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
+> 最後更新：**2026-09-12**（remote branch 盤點）· 之前 **2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
 >
 > ⚠️ **所有 agent 開工前必讀。** 過時嘅 PROGRESS.md 曾經令 audit 判斷出錯，見「Phase 狀態速查」。
+
+---
+
+## 🌿 Remote branch 狀態（2026-09-12 盤點）
+
+**先用 `git ls-remote --heads origin` 查，唔好用 `git branch -r`**（見常規 #41 —— 後者只列本地已 fetch 嘅 ref，喺呢個 repo 度會少報十幾條）。
+
+遠端共 **15 條 branch**。主線係 `claude/fitness-app-features-LbxtG`（CI 部署分支）。
+
+### 13 條孤兒 branch — 內容已收割，暫時唔刪
+
+Routine 每次 fire 都被指派一條新 branch，寫完冇 merge 就留低。**2026-09-12 已逐條查過，全部內容已經入咗主線或者確認冇嘢要收**，所以呢啲 ref 而家係純垃圾，唔影響任何嘢。
+
+刪唔到：試過 4 次 `git push origin --delete`（2s / 4s / 8s backoff），每次 `remote end hung up` —— session 嘅 git proxy 唔容許刪 remote ref。要刪就要喺 GitHub 網頁版逐條撳。**Ani 2026-09-12 決定：暫時唔理。**
+
+| Branch | 內容 | 狀態 |
+|---|---|---|
+| `claude/affectionate-cerf-qlhyuu` | marketing 08-07 | 已入主線 |
+| `claude/affectionate-cerf-pjh169` | marketing 08-14 | 已入主線 |
+| `claude/affectionate-cerf-ap1i7r` | marketing 08-21 | **09-12 收割** |
+| `claude/affectionate-cerf-nxtl0z` | marketing 08-28 | 已入主線 |
+| `claude/affectionate-cerf-l56ut9` | marketing 09-04 | **09-12 收割** |
+| `claude/affectionate-cerf-y51970` | marketing 09-11 | **09-12 收割** |
+| `claude/magical-wright-qm1o33` | SA 08-24 | 已入主線 |
+| `claude/magical-wright-lc4rff` | SA 08-31 | 已入主線 |
+| `claude/magical-wright-7eqzyk` | SA 09-07 | **09-12 收割** |
+| `claude/graft-cli-setup-2ijz5e` | graft 設定 | 已入主線 |
+| `claude/import-agent-files-6qv25g` | ext-* agents + credit 到期日設計 | 已 squash merge（PR #3） |
+| `claude/impeccable-init-fvdx7i` | PRODUCT.md + 3 個 demo HTML，2208 行 | **未入主線，去留待定** |
+| `archive/parallel-credit-system-2026-07` | 2026-07-07 credit 重構 | 刻意 archive |
+| `gh-pages` | 2026-03-30 GitHub Pages | 唔關 CI 事 |
+
+### 根因未修
+
+Routine 嘅 outcome branch 係環境層面指派，**改 prompt 冇用**（改過，冇效）。要喺 claude.ai/code Routines 設定改。Agent 亦改唔到：`update_trigger` 對 `created_via: http_api` 嘅 Routine 全部欄位拒絕（唔止 prompt）。**未修之前，每逢星期一同星期五各會多一條。**
 
 ---
 

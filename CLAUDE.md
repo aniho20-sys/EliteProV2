@@ -747,9 +747,9 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 ### 運作模式
 
 自動崗位（有 trigger 自己開工）：
-- 員工A：逢星期一 10:00 週會 Routine，出週報
+- 員工A：逢星期一 上午 10:00（香港時間）週會 Routine，出週報
 - 員工C + 員工F：每個 PR 自動 review（GitHub Actions）
-- 員工X：逢星期五 Marketing 週報 Routine
+- 員工X：逢星期五 上午 10:00（香港時間）Marketing 週報 Routine
 
 候命崗位（Ani 指派先開工）：
 - 員工B：由 GitHub issue 或 Ani 指示觸發
@@ -785,7 +785,7 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 
 例會結束後由主管總結，確認行動清單。
 
-## 員工A 週會（每逢星期一 10:00 自動觸發）
+## 員工A 週會（每逢星期一 上午 10:00 香港時間自動觸發）
 
 當收到「🗓️ 員工A週會」觸發信號時，員工A（SA）必須即時主持週會、出週報，格式如下：
 
@@ -808,7 +808,7 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 
 同 CEO 週例會（策略／增長角度，星期四）分開運作——呢個係系統/工程角度嘅週報（星期一）。
 
-## 員工X Marketing 週報（每逢星期五自動觸發）
+## 員工X Marketing 週報（每逢星期五 上午 10:00 香港時間自動觸發）
 
 當收到「🗓️ 員工X週報」觸發信號時，員工X（Marketing）必須即時出週報，格式如下：
 
@@ -850,3 +850,11 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
     同樣道理適用於任何「證明呢個機制捉得到」嘅動作：暫時改壞 `firestore.rules` 一個 collection 名、暫時 revert 一個修正、暫時整壞一個 config。**每一次都要先證明「壞」真係壞咗。**
 
     呢個係第二次靠注入驗證揪到真問題（第一次係 Analytics guardian，實測過注入 bug 會 fail 先至收貨），所以注入驗證本身要保留；要修嘅係佢缺少嘅嗰一步確認，唔係取消佢。
+
+41. **Routine session 只見到自己嗰條 branch —— 所以「某份報告冇出過」呢類結論，查完其他 branch 先可以落筆。** 每次 Routine fire 都會開一個新 session，而個 session 嘅 outcome branch 係環境層面指派嘅（`session_request.config.outcomes[].git_repository.git_info.branches`，Marketing 係 `claude/affectionate-cerf`、員工A 係 `claude/magical-wright`，每次再加一個隨機 suffix）。個 session 只 checkout 得到自己嗰條，睇唔到上一次 fire 留低嘅 branch，所以上一份報告喺佢眼中**根本唔存在**。
+
+    後果唔止係「漏咗一份報告」，係**之後每一份都對錯數**：`marketing-report-2026-08-28` 寫「08-21 嗰份完全冇出過」、`marketing-report-2026-09-11` 寫「09-04 嗰份完全冇出過」—— 兩份都真係出咗，分別困喺 `claude/affectionate-cerf-ap1i7r` 同 `claude/affectionate-cerf-l56ut9`。第 1 節「上週行動交數」係對住一份唔存在嘅報告交數，於是連續兩次將「已經做咗」判做「冇做過」。同一個病亦令 `SA-report-2026-09-07` 寫低咗一句錯嘅結論（話 `qlhyuu` 條 branch 有 invite code / overdraft 修復未入主線；實際 diff 顯示嗰條 branch 由 merge-base 起計只有一個週報 commit，而且主線已經有）。
+
+    所以任何形式嘅「查唔到記錄 → 所以冇發生過」都唔成立，**除非查咗全部 remote branch**。實際做法：`git branch -r` **唔夠**（佢只列本地已 fetch 嘅 remote-tracking ref，一個單 branch clone 度會得一兩條，睇落好似冇其他 branch），要用 **`git ls-remote --heads origin`** 直接問遠端。呢個分別喺 2026-09-11 真係害過一次：用 `git branch -r` 得出「遠端得 2 條 branch、冇隱藏分支」嘅結論交咗俾 Ani，`git ls-remote` 一問實際有 15 條。
+
+    寫「未做」「冇出過」「冇記錄」之前，先答到「我查咗邊啲 branch」。查唔到就寫「**無法確認**」，唔好寫「冇做過」——`marketing-report-2026-09-11` 第 1 節就係咁寫嘅，係啱嘅做法。
