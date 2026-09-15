@@ -747,9 +747,9 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 ### 運作模式
 
 自動崗位（有 trigger 自己開工）：
-- 員工A：逢星期一 上午 10:00（香港時間）週會 Routine，出週報
+- 員工A：逢星期一 10:00 週會 Routine，出週報
 - 員工C + 員工F：每個 PR 自動 review（GitHub Actions）
-- 員工X：逢星期五 上午 10:00（香港時間）Marketing 週報 Routine
+- 員工X：逢星期五 Marketing 週報 Routine
 
 候命崗位（Ani 指派先開工）：
 - 員工B：由 GitHub issue 或 Ani 指示觸發
@@ -785,7 +785,7 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 
 例會結束後由主管總結，確認行動清單。
 
-## 員工A 週會（每逢星期一 上午 10:00 香港時間自動觸發）
+## 員工A 週會（每逢星期一 10:00 自動觸發）
 
 當收到「🗓️ 員工A週會」觸發信號時，員工A（SA）必須即時主持週會、出週報，格式如下：
 
@@ -808,7 +808,7 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 
 同 CEO 週例會（策略／增長角度，星期四）分開運作——呢個係系統/工程角度嘅週報（星期一）。
 
-## 員工X Marketing 週報（每逢星期五 上午 10:00 香港時間自動觸發）
+## 員工X Marketing 週報（每逢星期五自動觸發）
 
 當收到「🗓️ 員工X週報」觸發信號時，員工X（Marketing）必須即時出週報，格式如下：
 
@@ -858,3 +858,21 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
     所以任何形式嘅「查唔到記錄 → 所以冇發生過」都唔成立，**除非查咗全部 remote branch**。實際做法：`git branch -r` **唔夠**（佢只列本地已 fetch 嘅 remote-tracking ref，一個單 branch clone 度會得一兩條，睇落好似冇其他 branch），要用 **`git ls-remote --heads origin`** 直接問遠端。呢個分別喺 2026-09-11 真係害過一次：用 `git branch -r` 得出「遠端得 2 條 branch、冇隱藏分支」嘅結論交咗俾 Ani，`git ls-remote` 一問實際有 15 條。
 
     寫「未做」「冇出過」「冇記錄」之前，先答到「我查咗邊啲 branch」。查唔到就寫「**無法確認**」，唔好寫「冇做過」——`marketing-report-2026-09-11` 第 1 節就係咁寫嘅，係啱嘅做法。
+
+42. **每個 session 開工第一件事：收割孤兒 branch。** 呢個係常規 #41 嘅配套動作 —— #41 講「唔好亂下結論」，呢條講「實際要做咩」。唔係靠人記得，係開工程序。
+
+    **步驟**（唔好慳，唔好用 `git branch -r`）：
+
+    ```
+    git ls-remote --heads origin              # 問遠端拎真實 branch 清單
+    # 見到未見過嘅 claude/affectionate-cerf-* 或 claude/magical-wright-*：
+    git fetch --depth=1 origin <branch>
+    git ls-tree -r --name-only FETCH_HEAD reports/   # 睇有冇主線冇嘅檔案
+    git checkout FETCH_HEAD -- reports/<檔名>        # 有就收返落主線
+    ```
+
+    收完 commit 落主線，commit message 寫明來源 branch。**唔使刪條 branch** —— 刪唔到（session 嘅 git proxy 拒絕 delete ref，2026-09-12 試過 4 次 backoff 全部 `remote end hung up`），而且收割完之後嗰條 ref 係純垃圾，唔影響任何嘢。
+
+    **點解要收割而唔係修根因**：Routine 嘅 outcome branch 係環境層面指派，三條路全部行唔通 —— 改 prompt 冇用（Ani 改過，branch 照開）；`update_trigger` API 對 `created_via: http_api` 嘅 Routine **全部欄位**拒絕（唔止 prompt，單獨改 cron 都唔得）；Routines UI 根本冇呢個欄位（Ani 2026-09-15 入到 routine 檢視頁撳晒所有位，包括 Runs with 嗰行同標題旁邊個箭嘴，冇任何編輯入口）。刪咗重建有機會白費，仲會失去 run history，所以唔做。收割係已知可行嘅做法：2026-09-12 一次過攞返四份（marketing 08-21 / 09-04 / 09-11、SA 09-07）。
+
+    **⚠️ Routine 嘅觸發時間係啱嘅，唔好「修」佢。** `0 9 * * 1` / `0 9 * * 5` 係 UTC，Ani 本地係 GMT+1，UI 顯示 "Every Monday at 10:00 AM GMT+1" —— 同上面「逢星期一 10:00」完全一致。2026-09-12 有 agent 假設咗 Ani 用香港時間，得出「實際係下午 5 點」呢個結論，改壞咗 CLAUDE.md 四處，仲累 Ani 去 UI 查證。**cron 讀出嚟嘅 UTC 值要換成邊個時區，係一個要問嘅問題，唔係可以推斷嘅嘢**；而 Ani 覆述你自己講過嘅數字，唔算佐證。

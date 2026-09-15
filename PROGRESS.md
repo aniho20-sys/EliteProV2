@@ -35,9 +35,23 @@ Routine 每次 fire 都被指派一條新 branch，寫完冇 merge 就留低。*
 | `archive/parallel-credit-system-2026-07` | 2026-07-07 credit 重構 | 刻意 archive |
 | `gh-pages` | 2026-03-30 GitHub Pages | 唔關 CI 事 |
 
-### 根因未修
+### 根因修唔到 —— 改用收割（2026-09-15 定案）
 
-Routine 嘅 outcome branch 係環境層面指派，**改 prompt 冇用**（改過，冇效）。要喺 claude.ai/code Routines 設定改。Agent 亦改唔到：`update_trigger` 對 `created_via: http_api` 嘅 Routine 全部欄位拒絕（唔止 prompt）。**未修之前，每逢星期一同星期五各會多一條。**
+三條路全部行唔通：
+
+| 做法 | 結果 |
+|---|---|
+| 改 prompt 加「commit 去主線，唔好開新 branch」 | ❌ 改過，branch 照開。outcome branch 係環境層面指派，prompt 管唔到 |
+| `update_trigger` API | ❌ 對 `created_via: http_api` 嘅 Routine **全部欄位**拒絕（唔止 prompt —— 單獨改 cron 都唔得） |
+| Routines UI 改 branch 欄位 | ❌ Ani 2026-09-15 入到 routine 檢視頁撳晒所有位（包括 Runs with 嗰行、標題旁邊個箭嘴），**冇編輯入口，亦冇 branch 欄位** |
+
+刪咗重建：**唔做** —— 有機會白費，仲會失去 run history。
+
+**定案：每個 session 開工先收割（常規 #42）。** 每逢星期一同星期五仍然會各多一條孤兒 branch，但報告會喺下次開工時收返落主線。2026-09-12 驗證過一次過攞得返四份。
+
+### ⚠️ Routine 觸發時間係啱嘅，唔好「修」
+
+`0 9 * * 1` / `0 9 * * 5` 係 UTC；Ani 本地 GMT+1，UI 顯示 "Every Monday at 10:00 AM GMT+1"，同 `CLAUDE.md`「逢星期一 10:00」一致。2026-09-12 有 agent 假設咗香港時區，得出「實際係下午 5 點」，改壞咗 `CLAUDE.md` 四處（已 revert）。見常規 #42 尾段。
 
 ---
 
