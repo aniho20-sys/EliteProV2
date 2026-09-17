@@ -1,8 +1,24 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：**2026-09-12**（remote branch 盤點）· 之前 **2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
+> 最後更新：**2026-09-17**（實際用戶數）· **2026-09-12**（remote branch 盤點）· 之前 **2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
 >
 > ⚠️ **所有 agent 開工前必讀。** 過時嘅 PROGRESS.md 曾經令 audit 判斷出錯，見「Phase 狀態速查」。
+
+---
+
+## 📊 實際用戶數（2026-09-17 Ani 直接提供）
+
+| | 數目 |
+|---|---|
+| 教練 | **1**（Ani 本人） |
+| 學生 | **9** |
+| 外部教練 | **0** |
+
+**員工X 唔好再喺週報第 2 節寫「攞唔到」。** 呢個數由 2026-08-14 到 09-11 連續五份週報寫「攞唔到（冇 production 存取權）」—— 但個數一直存在，只係冇人問過 Ani。佢 2026-09-17 一句就答咗。見常規 #44。
+
+⚠️ **呢個數係 Ani 口述，唔係由 document count 數出嚟** —— 常規 #38 明文禁止用 raw document count 當客戶數，因為 `users` collection 有 91 個測試假帳號。
+
+**仲未有實數嘅**（要問 Ani，唔好再寫「攞唔到」）：新註冊數、邀請碼使用次數。
 
 ---
 
