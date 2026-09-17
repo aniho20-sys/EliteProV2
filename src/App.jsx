@@ -48,6 +48,7 @@ function LoadingScreen() {
 }
 
 function AppRoutes() {
+  const { t } = useLanguage();
   const { currentUser, loading, authReady, needsProfile, dataError, firebaseUser, signingIn } = useApp();
   const location = useLocation();
 
@@ -76,7 +77,6 @@ function AppRoutes() {
   const GYMLA_ENABLED = false;
   const isOperator = GYMLA_ENABLED && currentUser?.role === 'operator';
   const isTrainer = currentUser?.role === 'trainer';
-  const { t } = useLanguage();
 
   return (
     <Suspense fallback={<LoadingScreen />}>

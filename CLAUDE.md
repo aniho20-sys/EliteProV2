@@ -924,3 +924,19 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
     同樣適用於**狀態**,唔止數字：「FB 帖出咗未」「invite code 試過未」「landing page 撳過未」—— `marketing-report-2026-09-11` 三項全部寫「無法確認,呢個 session 冇任何管道知道做咗未」。三項都係 Ani 一句答得到。
 
     **例外**：一個數字如果係**要準確到唔可以靠記憶**（例如對數、審計、要寫入 code 嘅值）,就唔可以淨係問 —— 要佢喺 app 度讀。但呢種情況要講明點解唔可以靠記憶,唔係預設。
+
+45. **`npm run build` 捉唔到 undefined variable —— 驗證 i18n／import／hook 改動要用 `npx eslint <檔案>`。** 2026-09-18 實測，唔係推論：
+
+    | 驗證方法 | 漏咗 `useLanguage` import 嘅 `App.jsx` |
+    |---|---|
+    | `npm run build` | **✓ built in 512ms** —— 零 error，完全捉唔到 |
+    | `npx vitest run src/i18n/` | **134 條全綠** —— 兩個 suite 都係靜態掃檔案，永遠唔會 render component |
+    | `npx eslint src/App.jsx` | 🔴 **`'useLanguage' is not defined  no-undef`** |
+
+    Vite 唔做 undefined-variable 分析,所以一個 import 漏咗會照樣 build 成功、照樣 deploy、照樣喺用戶部電話變成白畫面。2026-09-18 就係咁 ship 咗一次：Ani 開 app 見到 ErrorBoundary「Can't find variable: useLanguage」。
+
+    **eslint 仲會捉到 build 同 test 都睇唔到嘅第二類 bug**：同一次 run 報咗 `React Hook "useLanguage" is called conditionally` —— 個 hook 被加咗喺 early return **之後**,即使 import 修好咗都仍然係壞嘅。**加 `const { t } = useLanguage()` 一律放喺 component 第一行**,唔好跟住其他 `const` 排落去,因為 `AppRoutes` 呢類 component 中間有 early return。
+
+    ⚠️ `npm run lint` 有 226 個 pre-existing error（2026-08-04 凍結）,所以跑全套睇唔出新錯 —— **跑 `npx eslint <你改過嘅檔案>` 逐個檔案,睇 exit code**。
+
+    **連帶嘅教訓（同 #40 同一個形狀,但今次係自己犯）**：當時嘅「驗證」係 `print("App.jsx:", "useLanguage" in t)`。但嗰個 script 已經喺同一個檔案加咗 `const { t } = useLanguage()`,所以個字串一定喺度,個 check 永遠 True。**驗證咗一件同要驗證嘅事無關嘅嘢,然後見到 True 就當成功。** 驗證 import 就要 grep `^import.*<名>`,唔係 grep 個名。
