@@ -1,6 +1,6 @@
 # ElitePro BACKLOG — 單一待辦清單
 
-> **最後更新**：2026-09-16（A1 作廢重寫 — 前提錯誤）
+> **最後更新**：2026-09-17（A1 重寫完 · A6 解鎖 · B4/B5/B6 完成 · ⚫ 區已剷）
 > **規則**：任何新決定／新批准**即刻**寫入呢度，唔好等下次週報。
 > 週報第【上週講過但未做】節對返呢份文件。
 
@@ -21,27 +21,75 @@
 
 ---
 
-## A1. ⛔ 作廢重寫中 — 原方案前提錯誤
+## A1. 加入 2-3 個英國 PT 嘅 FB group ⏱️ 今晚 10 分鐘
 
-**原方案**：「WhatsApp 貼文案俾 3 個教練朋友」（2026-09-16 出）
+| | |
+|---|---|
+| **幾時提出** | 2026-07-31（原 FB 方案）· 2026-09-16 重寫 |
+| **拖咗** | **1.5 個月** |
+| **前提**（2026-09-16 Ani 確認） | 人喺**英國**、自己 studio 教、**唔識其他教練**、9 個學生全部英國 |
+| **做完會多咗乜** | 由 0 個外部教練 → 進入一個有目標客戶嘅場。你而家所有產品判斷都係你一個人嘅直覺 |
 
-**點解作廢**：整個方案建喺「Ani 有同行網絡可以直接搵」呢個假設上面。
-Ani 2026-09-16 講明：**人喺英國，真係唔識其他教練。**
+### 點解係 FB 而唔係之前否決咗
 
-員工A 當時由 `PRODUCT.md`「herself a trainer」推斷佢有同行網絡 ——
-呢個推斷唔成立。做咗教練唔等於有同行網絡，尤其係換咗地方之後。
+你 2026-09-08 否決 FB 嘅理由係**「香港教練唔用 FB」** —— 對香港成立。
+但你目標市場係**英國**,而英國 PT 圈嘅 FB group 就係獨立教練搵同行、
+問保險、問報價、賣二手器材嘅地方。原否決同呢個市場冇關係,已重開。
 
-**同一個根因嘅第二次**：2026-09-12 假設 Ani 用香港時間（實際 GMT+1），
-今次假設佢有香港同行網絡。兩次都係由「佢寫廣東話 / app 做香港市場」
-推斷佢人喺邊。線索一直喺 repo 度冇人連埋睇：`users.currency` 預設
-`'GBP'`、Phase 5 寫 gym rent £600-1000/mo、`PRODUCT.md` 講「兩個市場」。
+### 第一步（今晚做,唔係發帖 —— 係排隊)
 
-**⚠️ 連帶影響：下面 ⚫ 區「FB 教練群已過時」嗰個判斷要重開。**
-Ani 否決 FB 嘅理由係「香港冇乜人用」—— 對香港成立,但英國 PT 圈嘅
-FB group 非常活躍。原否決唔應該自動套落英國市場。
+Group 審批通常要 1-2 日,所以今晚做嘅係申請。
 
-**重寫方向**：由「需要人脈」改成「唔需要人脈」嘅渠道。等 Ani 答一條
-問題（喺邊度教學生）之後定稿。
+1. FB 搜尋列打：`personal trainer UK` / `personal trainers United Kingdom` / `self employed personal trainer`
+2. 撳 **Groups** tab
+3. 揀 **2-3 個**,準則：成員 **3,000–30,000**、「Last post」係今日或尋日、About 入面睇下有冇明文禁 self-promotion
+4. 撳 Join,答埋入會問題（照答你係 self-employed PT）
+
+⚠️ **員工A 唔會列 group 名** —— 搜唔到實時 FB 內容,列出嚟就係編。
+（`marketing-report-2026-08-28` 列過四個 group 名,冇人驗證過存唔存在。）
+
+### 📋 加入之後發嘅帖（英文成品,copy 就用得）
+
+**先睇兩三日**,睇下嗰個 group 接受咩 tone,然後發：
+
+```
+Question for the self-employed PTs here — how do you track
+session packages?
+
+I've been running my own studio and kept losing track of who
+had how many sessions left. Spreadsheets fell apart the moment
+someone cancelled last minute or wanted to reschedule. Had a
+client insist she had 4 left when my sheet said 2, and I had
+no way to prove either number.
+
+Ended up building something to handle it — client books, the
+session comes off automatically, cancel more than 24h ahead
+and it goes back. Been running my own 9 clients on it for a
+few months.
+
+Not trying to sell anything here, genuinely curious: is this
+just me being disorganised, or does everyone have some version
+of this problem? And if you've got a system that works, I'd
+rather hear about that.
+```
+
+**點解咁寫**：開頭係問題唔係產品、中間係具體故事、結尾主動畀人講返佢自己嘅方法。硬銷會被 admin 刪。
+
+### 🚧 障礙同應對
+
+| 情況 | 點做 |
+|---|---|
+| 有人 comment 問 "what's it called?" | ⚠️ **唔好喺 comment 貼 link**（多數 group 當 self-promo 刪帖）。覆：`Happy to DM you — don't want to spam the group with links.` 然後私訊 |
+| 私訊問幾錢 | `Free while I'm still finding people to test it. I'm planning a monthly fee later, but no cut of what you charge your clients — that part I'm not doing.` |
+| 問 how many people use it | ⚠️ **唔好吹。** `Just me and my 9 clients right now. You'd be the first coach outside my own studio — which is exactly why I'm asking.` |
+| Admin 刪咗個帖 | 唔好爭拗,唔好重發。試下一個 group。三個都刪 = tone 有問題,返嚟改 |
+| 零 comment | 正常。**兩星期內三個 group 各發一次**先算試過 |
+| 等審批期間 | 去做 A2 / A4（各 2 分鐘） |
+
+### ✅ 完成標準
+
+**今晚**：撳咗 Join 2-3 個 group（唔係「搵到」）
+**兩星期內**：最少一個 group 發咗帖
 
 ## A2. 讀 Platform Stats 實數 ⏱️ 2 分鐘
 
@@ -117,22 +165,30 @@ Profile → **Movement Pattern Auto-Classify** → **Scan My Library**
 
 ---
 
-## A6. GoCardless Connect sandbox 實測 ⏱️ 15 分鐘
+## A6. GoCardless Connect sandbox 實測 ⏱️ 15 分鐘 —— 🔓 **已解鎖**
 
 | | |
 |---|---|
 | **幾時提出** | 2026-08-06 |
-| **出處** | `CEO-meeting-2026-08-06` 待拍板 #1；`PROGRESS.md:66` |
 | **拖咗** | **1.5 個月** |
-| **做完會多咗乜** | Phase 3 Step 1-2 已經 deploy 咗 live,但**個 Connect 掣從來未有真人撳過**。Step 3（訂閱 UI）建喺呢個地基上面 —— 未驗證就開工等於喺未試過嘅地基上再起一層 |
+| **做完會多咗乜** | Phase 3 Step 1-2 已 deploy live,但個 Connect 掣**從來未有真人撳過**。Step 3（訂閱 UI）建喺呢個地基上 |
 
-### ⚠️ 但呢項可能已經唔使做
+### 🔓 之前寫「可能唔使做」係錯嘅,而家撤回
 
-`SA-report-2026-09-14` 講緊 **Phase 3 由 GoCardless 轉評估 Airwallex**。如果真係轉,呢個 sandbox 測試就白做。
+原本標咗「等 GoCardless vs Airwallex 決定先」。
+**`payment-provider-research-2026-09-06.md` 早就答咗呢條**：
 
-**所以呢項嘅第一步其實係一個決定,唔係一個動作** → 見 🔵 B5。
+- GoCardless **34 個商戶國家冇香港**,8 隻貨幣冇 HKD —— 香港永遠用唔到
+- **但英國側 GoCardless 係啱嘅**：Bacs 1% + 20p 封頂 £4,實際約 **1.07%**,報告明寫「唔使改」
+- Airwallex / Stripe 係**香港嘅方案**,唔係取代英國嗰個
 
----
+你 9 個學生全部英國。**英國 GoCardless 唔使等任何決定,而家就應該試。**
+
+⚠️ 但有一件事要知：`functions/index.js:605` 個 `environment: 'sandbox'` 係**寫死**嘅,冇 live 分支。即係 Phase 3 由頭到尾未曾有能力處理一蚊真錢。所以呢次實測只驗證到 sandbox flow 通唔通。
+
+### 第一步
+
+app → Profile → 拉到 GoCardless 一段 → 撳 **Connect** → 跟住個 GoCardless sandbox 頁做 → 睇下有冇成功彈返 app 顯示「已連接」
 
 ## A7. Android Chrome 測一次 ⏱️ 10 分鐘
 
@@ -173,31 +229,40 @@ Profile → **Movement Pattern Auto-Classify** → **Scan My Library**
 
 | # | 項目 | 幾時批 | 出處 | 做完你會多咗乜 |
 |---|---|---|---|---|
-| **B1** | **i18n 剩低 557 條**（29 個檔案）| 2026-09-15 | 你今次指示 | 教練端唔再一半中文一半英文。而家 `ClientDetailPage` 一版就 114 條未譯 |
-| **B2** | **invoice PDF CJK 字型** | 2026-09-14 | `SA-report-2026-09-14` | ⚠️ **已實測會 crash**（`WinAnsi cannot encode "私"`）。教練用中文寫 invoice 就爆。UI 轉中文之後會變成好常見 |
-| **B3** | **堂數到期日** 方案 B + 凍結 | 2026-09-11 | `credit-expiry-design-2026-09-09.md`（已批准）| 你可以幫每批堂數設有效期。45 堂同 10 堂可以填唔同期限 |
-| **B4** | **PRODUCT.md 收落主線** | 待你一句 | `impeccable-init` branch | 兩個市場、零抽成呢啲你確認過嘅嘢入返主線,agent 開工會讀到 |
-| **B5** | **GoCardless vs Airwallex 決定** | 2026-09-14 提出 | `SA-report-2026-09-14` | 呢個一日未定,A6 同 Phase 3 Step 3 都郁唔到。**員工A 應該出一份對比俾你揀,而唔係等你問** |
-| **B6** | **impeccable demo 手機 preview** | 待你一句 | A8 | 你可以喺手機睇到三個 demo 先決定去留 |
-| **B7** | `/analytics` 加獲客指標 | 2026-08-15 | `CEO-meeting-2026-08-15` 待拍板 #6 | 而家 `/analytics` 只服務已有客戶。答唔到「有幾多人嚟過」 |
-| **B8** | `users` read rule 收窄 | 2026-08-06 | `CEO-meeting-2026-08-06` 待拍板 #2 | Phase 5 前置。而家任何登入用戶讀得晒全部 user doc |
-| **B9** | 91 個測試假帳號清理方案 | 2026-06 發現 | 常規 #38 | `users` collection 有 91 行垃圾。**要出方案等你批先做**（涉及刪資料）|
+| **B1** | **i18n 剩低 557 條**（29 個檔案）| 2026-09-15 | 你指示 | 教練端唔再一半中英夾雜。**排 B2 之後**（你 09-17 指示）|
+| **B2** | 🔴 **invoice PDF CJK crash** | 2026-09-14 | `SA-report-2026-09-14` | **已實測**：`WinAnsi cannot encode "私"`。教練用中文寫 invoice 即刻爆。**你 09-17 指示排 B1 前面** |
+| ~~B3~~ | ~~堂數到期日~~ | — | — | **暫緩**（你 09-17 指示）|
+| ✅ **B4** | **PRODUCT.md 收落主線** | 2026-09-17 批 | — | **已完成 2026-09-17** |
+| ✅ **B5** | **GoCardless vs Airwallex** | — | — | **已完成** —— `payment-provider-research-2026-09-06.md` 早就答咗。結論唔係二揀一：英國照用 GoCardless（1.07%,報告明寫唔使改）,香港要另一個 provider（GoCardless 唔支援 HK）。schema 09-12 已轉 provider-neutral。**真正剩低嘅只有一條要問 Airwallex 真人嘅問題**,見下面 B5a |
+| **B5a** | 問 Airwallex：FPS recurring 係真 pull 定要客戶每月撳 | 2026-09-06 | 同上 | 決定香港市場有冇「自動月費」。(a) 真 mandate = 香港做得成 / (b) 每月推通知要客戶確認 = 只係「自動提醒」,價值差好遠 |
+| ✅ **B6** | **impeccable demo 手機 preview** | 2026-09-17 批 | — | **已完成** —— 三條 link 喺下面 |
+| ~~B7~~ | ~~`/analytics` 獲客指標~~ | — | — | **暫緩** |
+| ~~B8~~ | ~~`users` read rule 收窄~~ | — | — | **暫緩** |
+| ~~B9~~ | ~~91 個假帳號清理~~ | — | — | **暫緩** |
 
----
----
+### B6 完成 — 三個 demo preview link（手機開得）
 
-# ⚫ 已過時 — 可以剷
-
-> 呢啲唔好再出現喺任何週報。
-
-| 項目 | 幾時提出 | 點解過時 |
+| Demo | Link | 方向 |
 |---|---|---|
-| **FB 教練群第一篇分享帖**（🔁 **2026-09-16 重開,唔再算過時**）| 2026-07-31，連續排 5 次 | 原否決理由係「香港教練唔用 FB」—— 對香港成立。但 Ani 人喺**英國**,而英國 PT 圈嘅 FB group 非常活躍。**否決理由唔適用於英國市場**,要重新評估 |
-| **Routine branch 設定改 UI** | 2026-08-15 | **2026-09-15 證實 UI 冇呢個欄位**（你撳晒所有位）。API 亦拒絕。已被常規 #42「開工收割」取代 |
-| **「Marketing 連續三次開新 branch」待拍板** | 2026-08-15 | 同上,已定案 |
-| **轉介機制（介紹同行雙方各送一個月）** | 2026-08-06 | **前提未成立** —— 呢個機制要有教練先有得轉介。而家 0 個外部教練,設計咗都冇人用。A1 成功之後先重開 |
-| **Coach Matching (coachmatching.hk) 合作** | 2026-07-24 | 提咗一次之後四份報告冇再出現。**唔係唔好,係未到時候** —— 同樣要有幾個教練用緊先有嘢傾。A1 之後重開 |
-| **08-21 / 09-04「嗰份週報冇出過」** | 2026-08-28 / 09-11 | **兩份都出咗**,困喺孤兒 branch,已收割。呢個結論本身係常規 #41 講嘅誤判 |
+| **Design Demo**（1186 行,最完整）| https://claude.ai/artifact/Sust3Bz8y5XTxpChvNwnfR | 近單色石墨灰,**唯一彩色只用嚟表示錢同風險** |
+| **Gold**（441 行）| https://claude.ai/artifact/97u7bu9Nf7pr6r4fgDgib1 | 金色 accent,同 `STYLE.md` 嘅 dark luxury 最接近 |
+| **Form Book**（461 行）| https://claude.ai/artifact/1mrFQCjfWWfnfcMQ3KB6UU | 訓練紀錄簿質感 |
+
+⚠️ 呢三個係 **2026-09-04 嘅設計探索**,唔係現有 app。睇完決定：收邊個落主線、定全部剷。
+
+---
+---
+
+# ⚫ 已過時 — **2026-09-17 全部剷咗**
+
+Ani 2026-09-17 指示全剷。原本六項嘅處置：
+
+- **FB 教練群** —— 唔係剷,係**重開咗做 A1**（否決理由只適用香港,目標市場係英國）
+- Routine branch 設定改 UI · 「連續三次開新 branch」待拍板 —— 已被常規 #42 取代,剷
+- 轉介機制 · Coach Matching 合作 —— 前提未成立（要有教練先有得轉介）,剷。A1 成功之後重開
+- 「08-21 / 09-04 嗰份週報冇出過」—— 誤判,已由常規 #41 記低,剷
+
+**呢一區之後應該長期保持空白。** 有嘢過時就喺度標,剷完就走。
 
 ---
 
