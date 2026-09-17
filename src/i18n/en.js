@@ -699,6 +699,12 @@ const en = {
   'prog.no_clients_desc': 'Share your invite code to get your first client onboard.',
   'prog.go_to_clients': 'Go to Clients',
   'common.exercise': 'Exercise',
+  'common.dismiss': 'Dismiss',
+  'chrome.refresh': 'Refresh',
+  'chrome.offline': 'You\'re offline — viewing cached data. Changes will sync when reconnected.',
+  'chrome.notif_title': 'Enable Notifications',
+  'chrome.notif_enable': 'Enable',
+  'chrome.notif_enabling': 'Enabling…',
 };
 
 export default en;

@@ -24,6 +24,9 @@ const TRANSLATED_FILES = [
   'src/pages/InvoicePage.jsx',
   'src/pages/ClientProgressOverviewPage.jsx',
   'src/pages/ClientsPage.jsx',
+  'src/App.jsx',
+  'src/components/OfflineBanner.jsx',
+  'src/components/NotifPrompt.jsx',
 ]
 
 export default defineConfig([

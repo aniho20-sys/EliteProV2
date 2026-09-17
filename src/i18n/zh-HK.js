@@ -717,6 +717,12 @@ const zhHK = {
   'prog.no_clients_desc': '分享你的邀請碼，招收你的第一位學生。',
   'prog.go_to_clients': '前往學生列表',
   'common.exercise': '動作',
+  'common.dismiss': '關閉',
+  'chrome.refresh': '重新整理',
+  'chrome.offline': '目前離線 —— 顯示快取資料，重新連線後自動同步。',
+  'chrome.notif_title': '開啟通知',
+  'chrome.notif_enable': '開啟',
+  'chrome.notif_enabling': '開啟中…',
 };
 
 export default zhHK;

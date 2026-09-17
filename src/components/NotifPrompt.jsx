@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useApp } from '../context/AppContext';
 
@@ -14,6 +15,7 @@ function isDismissed() {
 export default function NotifPrompt() {
   const { permission, supported, requestPermission } = useNotifications();
   const { currentUser } = useApp();
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const [requesting, setRequesting] = useState(false);
 
@@ -48,7 +50,7 @@ export default function NotifPrompt() {
         <Bell size={20} color="var(--primary)" />
       </div>
       <div className="install-banner-text">
-        <strong>Enable Notifications</strong>
+        <strong>{t('chrome.notif_title')}</strong>
         <span>{subtitle}</span>
       </div>
       <button
@@ -56,9 +58,9 @@ export default function NotifPrompt() {
         onClick={handleEnable}
         disabled={requesting}
       >
-        <Bell size={14} />{requesting ? 'Enabling…' : 'Enable'}
+        <Bell size={14} />{requesting ? t('chrome.notif_enabling') : t('chrome.notif_enable')}
       </button>
-      <button className="btn-icon install-banner-close" onClick={handleDismiss} aria-label="Dismiss">
+      <button className="btn-icon install-banner-close" onClick={handleDismiss} aria-label={t('common.dismiss')}>
         <X size={16} />
       </button>
     </div>

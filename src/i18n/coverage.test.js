@@ -37,6 +37,7 @@ const EXEMPT = {
   'src/pages/PrivacyPolicyPage.jsx': 'legal text — a translation changes what was agreed to; needs a lawyer, not a translator',
   'src/pages/TermsPage.jsx': 'legal text — same reason',
   'src/pages/LandingPage.jsx': 'no-auth marketing page; the reader has no profile yet, so no language setting to read',
+  'src/components/ErrorBoundary.jsx': 'class component — cannot use the useLanguage() hook, and an error boundary must not depend on any context to render (it is what renders when context itself fails)',
   'src/pages/OperatorDashboard.jsx': 'gym啦, behind GYMLA_ENABLED=false (#25) — unreachable',
   'src/pages/StudioManagementPage.jsx': 'gym啦, behind GYMLA_ENABLED=false (#25)',
   'src/pages/StudioBookingPage.jsx': 'gym啦, behind GYMLA_ENABLED=false (#25)',
@@ -75,10 +76,6 @@ const AWAITING = {
   'src/components/workout/WorkoutCompleteScreen.jsx': 9,
   // — app-wide chrome —
   'src/components/InstallPrompt.jsx': 17,
-  'src/components/ErrorBoundary.jsx': 8,
-  'src/components/NotifPrompt.jsx': 2,
-  'src/App.jsx': 1,
-  'src/components/OfflineBanner.jsx': 1,
 };
 
 function jsxFiles(dir, out = []) {

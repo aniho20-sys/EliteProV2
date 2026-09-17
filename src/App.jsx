@@ -76,12 +76,13 @@ function AppRoutes() {
   const GYMLA_ENABLED = false;
   const isOperator = GYMLA_ENABLED && currentUser?.role === 'operator';
   const isTrainer = currentUser?.role === 'trainer';
+  const { t } = useLanguage();
 
   return (
     <Suspense fallback={<LoadingScreen />}>
       {dataError && (
         <div role="alert" style={{ background: 'var(--danger)', color: '#fff', padding: '10px 16px', textAlign: 'center', fontSize: '0.875rem' }}>
-          {dataError} <button onClick={() => window.location.reload()} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', padding: '2px 10px', borderRadius: 4, cursor: 'pointer' }}>Refresh</button>
+          {dataError} <button onClick={() => window.location.reload()} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', padding: '2px 10px', borderRadius: 4, cursor: 'pointer' }}>{t('chrome.refresh')}</button>
         </div>
       )}
       {needsProfile ? (
