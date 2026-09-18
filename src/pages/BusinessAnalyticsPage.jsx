@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { localToday } from '../utils/dateUtils';
@@ -36,6 +37,7 @@ function last6Months() {
 }
 
 export default function BusinessAnalyticsPage() {
+  const { t } = useLanguage();
   const { currentUser, getClients, getInvoices, getSchedule, getWorkoutLogs, getTrainerCreditLedger } = useApp();
   const today = localToday();
   const clients = getClients(currentUser.id);
@@ -116,9 +118,9 @@ export default function BusinessAnalyticsPage() {
     return (
       <EmptyState
         icon={TrendingUp}
-        title="No data yet"
-        description="Add clients and book sessions to start seeing your business analytics."
-        action={{ label: 'Add Client', to: '/clients' }}
+        title={t('analytics.empty_title')}
+        description={t('analytics.empty_desc')}
+        action={{ label: t('analytics.empty_action'), to: '/clients' }}
       />
     );
   }
@@ -126,8 +128,8 @@ export default function BusinessAnalyticsPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Business Analytics</h1>
-        <p className="page-subtitle">Revenue, sessions &amp; client retention overview</p>
+        <h1 className="page-title">{t('analytics.title')}</h1>
+        <p className="page-subtitle">{t('analytics.subtitle')}</p>
       </div>
 
       {/* Summary Stats */}
@@ -137,24 +139,24 @@ export default function BusinessAnalyticsPage() {
           <div className="stat-pill-value">
             {revenueReady ? formatCurrency(paidThisMonth, currency) : <SkeletonLine width="70%" />}
           </div>
-          <div className="stat-pill-label">Earned This Month</div>
+          <div className="stat-pill-label">{t('analytics.earned_month')}</div>
         </div>
         <div className="stat-pill">
           <TrendingUp size={15} style={{ color: 'var(--primary-light)' }} />
           <div className="stat-pill-value">
             {revenueReady ? formatCurrency(totalPaidYTD, currency) : <SkeletonLine width="70%" />}
           </div>
-          <div className="stat-pill-label">Revenue YTD</div>
+          <div className="stat-pill-label">{t('analytics.revenue_ytd')}</div>
         </div>
         <div className="stat-pill">
           <Users size={15} style={{ color: 'var(--accent)' }} />
           <div className="stat-pill-value">{retentionRate}%</div>
-          <div className="stat-pill-label">30-Day Retention</div>
+          <div className="stat-pill-label">{t('analytics.retention_30')}</div>
         </div>
         <div className="stat-pill">
           <Calendar size={15} style={{ color: 'var(--warning)' }} />
           <div className="stat-pill-value">{schedule.filter(s => s.status === 'completed').length}</div>
-          <div className="stat-pill-label">Sessions Completed</div>
+          <div className="stat-pill-label">{t('analytics.sessions_done')}</div>
         </div>
       </div>
 
@@ -162,12 +164,12 @@ export default function BusinessAnalyticsPage() {
         {/* Revenue Chart */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Monthly Revenue ({currency})</h3>
+            <h3 className="card-title">{t('analytics.monthly_revenue', { currency })}</h3>
           </div>
           {!revenueReady ? (
             <div style={{ padding: '16px 0' }}><SkeletonLine /><SkeletonLine width="80%" /><SkeletonLine width="60%" /></div>
           ) : revenueByMonth.every(m => m.invoices === 0 && m.renewals === 0) ? (
-            <p className="text-sm text-muted" style={{ padding: '16px 0' }}>No revenue yet. Paid invoices and session top-ups will appear here.</p>
+            <p className="text-sm text-muted" style={{ padding: '16px 0' }}>{t('analytics.no_revenue')}</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={revenueByMonth} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -178,7 +180,7 @@ export default function BusinessAnalyticsPage() {
                   contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   formatter={(v, key) => [formatCurrency(v, currency), key === 'renewals' ? 'Top-ups' : 'Invoices']}
                 />
-                <Legend wrapperStyle={{ fontSize: 11 }} formatter={k => (k === 'renewals' ? 'Top-ups' : 'Invoices')} />
+                <Legend wrapperStyle={{ fontSize: 11 }} formatter={k => (k === 'renewals' ? t('analytics.legend_topups') : t('analytics.legend_invoices'))} />
                 <Bar dataKey="invoices" stackId="rev" fill="var(--primary)" />
                 <Bar dataKey="renewals" stackId="rev" fill="var(--accent)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -189,7 +191,7 @@ export default function BusinessAnalyticsPage() {
         {/* Sessions Chart */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Monthly Sessions Completed</h3>
+            <h3 className="card-title">{t('analytics.monthly_sessions')}</h3>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={sessionsByMonth} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -209,12 +211,12 @@ export default function BusinessAnalyticsPage() {
       <div className="grid-2">
         {/* Retention */}
         <div className="card">
-          <h3 className="card-title mb-16">Client Retention (30 days)</h3>
+          <h3 className="card-title mb-16">{t('analytics.retention_card')}</h3>
           <div className="analytics-retention-bar mb-8">
             <div className="analytics-retention-fill" style={{ width: `${retentionRate}%` }} />
           </div>
           <div className="flex-between mb-16">
-            <span className="text-sm text-muted">{activeCount} of {clients.length} clients trained</span>
+            <span className="text-sm text-muted">{t('analytics.clients_trained', { active: activeCount, total: clients.length })}</span>
             <span className="fw-bold" style={{ color: retentionRate >= 70 ? 'var(--success)' : retentionRate >= 40 ? 'var(--warning)' : 'var(--danger)' }}>{retentionRate}%</span>
           </div>
           <div>
@@ -230,9 +232,9 @@ export default function BusinessAnalyticsPage() {
 
         {/* Top Clients by Sessions */}
         <div className="card">
-          <h3 className="card-title mb-16">Top Clients by Sessions</h3>
+          <h3 className="card-title mb-16">{t('analytics.top_clients')}</h3>
           {clientSessionCounts.length === 0 ? (
-            <p className="text-sm text-muted">No completed sessions yet.</p>
+            <p className="text-sm text-muted">{t('analytics.no_sessions')}</p>
           ) : (
             clientSessionCounts.map((c, i) => {
               const max = clientSessionCounts[0].sessions || 1;
@@ -242,7 +244,7 @@ export default function BusinessAnalyticsPage() {
                   <div style={{ flex: 1 }}>
                     <div className="flex-between mb-4">
                       <span className="text-sm fw-bold">{c.name}</span>
-                      <span className="text-sm">{c.sessions} sessions</span>
+                      <span className="text-sm">{t('analytics.n_sessions', { count: c.sessions })}</span>
                     </div>
                     <div className="analytics-bar-bg">
                       <div className="analytics-bar-fill" style={{ width: `${(c.sessions / max) * 100}%` }} />
@@ -254,7 +256,7 @@ export default function BusinessAnalyticsPage() {
           )}
           {totalUnpaid > 0 && (
             <div className="analytics-unpaid-banner">
-              <span className="text-sm" style={{ color: 'var(--warning)' }}>⚠ {formatCurrency(totalUnpaid, currency)} in unpaid invoices</span>
+              <span className="text-sm" style={{ color: 'var(--warning)' }}>{t('analytics.unpaid', { amount: formatCurrency(totalUnpaid, currency) })}</span>
             </div>
           )}
         </div>

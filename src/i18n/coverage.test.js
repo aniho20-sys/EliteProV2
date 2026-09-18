@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ESLint } from 'eslint';
 import eslintConfig from '../../eslint.config.js';
+import { visiblePropText } from './vocabulary';
 
 // ---------------------------------------------------------------------------
 // GUARDIAN: every user-facing file is accounted for.
@@ -48,23 +49,21 @@ const EXEMPT = {
 // entry and add the file to TRANSLATED_FILES when it reaches zero.
 const AWAITING = {
   // — trainer-only —
-  'src/pages/ClientDetailPage.jsx': 114,
+  'src/pages/ClientDetailPage.jsx': 109,
   'src/components/PlatformStatsCard.jsx': 56,
-  'src/pages/BusinessAnalyticsPage.jsx': 18,
   'src/components/MonthlyReportModal.jsx': 10,
   'src/components/MovementPatternScanner.jsx': 8,
   // — shared between trainer and client —
-  'src/pages/WorkoutPlansPage.jsx': 59,
   'src/pages/ExerciseLibraryPage.jsx': 56,
   'src/components/ProgressView.jsx': 22,
   'src/components/ExerciseProgress.jsx': 10,
   'src/components/SessionDateList.jsx': 10,
   // — client-only: phase 1 was not finished either, which nothing had reported —
   'src/pages/WorkoutLogPage.jsx': 24,
-  'src/components/workout/ActiveWorkoutView.jsx': 22,
+  'src/components/workout/ActiveWorkoutView.jsx': 21,
   'src/pages/IntakeFormPage.jsx': 22,
   'src/pages/TrainingProfilePage.jsx': 19,
-  'src/components/workout/SetInputs.jsx': 18,
+  'src/components/workout/SetInputs.jsx': 11,
   'src/pages/ProgressPage.jsx': 15,
   'src/components/workout/ExerciseSwapModal.jsx': 12,
   'src/components/workout/WorkoutCompleteScreen.jsx': 9,
@@ -87,10 +86,9 @@ const ALL = jsxFiles(SRC).sort();
 // drift in this direction under-reports silently — the failure mode we are fixing.
 const literalRule = eslintConfig.find(c => c?.rules?.['react/jsx-no-literals']);
 
-// Props the rule cannot see: it runs with ignoreProps, so a hardcoded placeholder is
-// invisible to it. Block comments are stripped first, or a JSDoc usage example counts as
-// real UI text (EmptyState.jsx documents itself with title="No clients yet").
-const VISIBLE_PROPS = ['placeholder', 'aria-label', 'title', 'alt'];
+// Props the rule cannot see (it runs with ignoreProps) are counted by the shared scanner
+// in ./vocabulary, the same one dictionary.test.js checks translated files with — so the
+// count here and the pass/fail there can never disagree about what a hardcoded string is.
 
 let counts;
 beforeAll(async () => {
@@ -108,13 +106,7 @@ beforeAll(async () => {
   for (const rel of ALL) {
     const r = results.find(x => x.filePath === join(ROOT, rel));
     const jsxText = r ? r.messages.filter(m => m.ruleId === 'react/jsx-no-literals').length : 0;
-    const src = readFileSync(join(ROOT, rel), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-    let props = 0;
-    for (const prop of VISIBLE_PROPS) {
-      for (const m of src.matchAll(new RegExp(`${prop}=(["'])([^"']{2,})\\1`, 'g'))) {
-        if (/\p{L}/u.test(m[2])) props++;
-      }
-    }
+    const props = visiblePropText(readFileSync(join(ROOT, rel), 'utf8')).length;
     counts.set(rel, jsxText + props);
   }
 }, 120000);

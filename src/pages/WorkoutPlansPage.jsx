@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useApp } from '../context/AppContext';
 import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -12,6 +13,7 @@ import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 const EMPTY_CUSTOM = { name: '', muscles: [], equipment: '', saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
+  const { t } = useLanguage();
   const { currentUser, getWorkoutPlans, getClients, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, getExercises, addExercise, updateExercise, equipmentTypes } = useApp();
   const exerciseLibrary = getExercises();
   const toast = useToast();
@@ -371,21 +373,19 @@ export default function WorkoutPlansPage() {
     <div>
       <div className="page-header plan-header">
         <div>
-          <h1 className="page-title">Workout Plans</h1>
-          <p className="page-subtitle">{plans.length} plans</p>
+          <h1 className="page-title">{t('plans.title')}</h1>
+          <p className="page-subtitle">{t('plans.count', { count: plans.length })}</p>
         </div>
-        {isTrainer && <button className="btn btn-primary" onClick={() => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }}><Plus size={18} /> Create Plan</button>}
+        {isTrainer && <button className="btn btn-primary" onClick={() => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }}><Plus size={18} /> {t('plans.create')}</button>}
       </div>
 
       {plans.length === 0 ? (
         <EmptyState
           icon={Dumbbell}
-          title="No workout plans yet"
-          description={isTrainer
-            ? 'Create a plan to start assigning workouts to your clients.'
-            : 'Your coach will create plans for you soon.'}
+          title={t('plans.empty_title')}
+          description={isTrainer ? t('plans.empty_desc_trainer') : t('plans.empty_desc_client')}
           action={isTrainer ? {
-            label: 'Create Plan',
+            label: t('plans.create'),
             onClick: () => { setEditPlanId(null); setForm({ name: '', clientId: '', day: '', exercises: [] }); setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); setShowCreate(true); }
           } : undefined}
         />
@@ -399,7 +399,7 @@ export default function WorkoutPlansPage() {
                 <button className="plan-card-header plan-card-toggle" onClick={() => togglePlan(p.id)}>
                   <div className="plan-card-info">
                     <h3 className="card-title">{p.name}</h3>
-                    <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
+                    <span className="text-sm text-muted">{t('plans.n_exercises', { count: p.exercises.length })}</span>
                   </div>
                   <div className="plan-card-actions">
                     {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -416,8 +416,8 @@ export default function WorkoutPlansPage() {
                       <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
                       {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                       {url && (isYouTube(url)
-                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
-                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
+                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
+                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
                       )}
                     </div>
                   );
@@ -441,12 +441,12 @@ export default function WorkoutPlansPage() {
               <button className="plan-card-header plan-card-toggle" onClick={() => togglePlan(p.id)}>
                 <div className="plan-card-info">
                   <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{p.name}</h3>
-                  <span className="text-sm text-muted">{p.exercises.length} exercise{p.exercises.length !== 1 ? 's' : ''}</span>
+                  <span className="text-sm text-muted">{t('plans.n_exercises', { count: p.exercises.length })}</span>
                 </div>
                 <div className="plan-card-actions">
-                  <button className="btn-icon" title="Edit" onClick={e => { e.stopPropagation(); openEdit(p); }}><Pencil size={15} /></button>
-                  <button className="btn-icon" title="Duplicate" onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
-                  <button className="btn-icon" title="Delete" style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
+                  <button className="btn-icon" title={t('common.edit')} onClick={e => { e.stopPropagation(); openEdit(p); }}><Pencil size={15} /></button>
+                  <button className="btn-icon" title={t('plans.duplicate')} onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
+                  <button className="btn-icon" title={t('common.delete')} style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
                   {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
               </button>
@@ -462,10 +462,10 @@ export default function WorkoutPlansPage() {
                     {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                     {url
                       ? isYouTube(url)
-                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
-                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
+                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
+                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
                       : exData
-                        ? <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}><Link2 size={13} /> Add Link</button>
+                        ? <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}><Link2 size={13} /> {t('plans.add_link')}</button>
                         : null
                     }
                   </div>
@@ -481,7 +481,7 @@ export default function WorkoutPlansPage() {
               <div key={client.id} className="mb-24">
                 <div className="plan-client-section-header">
                   <span className="plan-client-name">{client.name}</span>
-                  <span className="tag">{cPlans.length} plan{cPlans.length !== 1 ? 's' : ''}</span>
+                  <span className="tag">{t('plans.count', { count: cPlans.length })}</span>
                 </div>
                 {cPlans.map(renderPlanCard)}
               </div>
@@ -494,10 +494,10 @@ export default function WorkoutPlansPage() {
       {deletePlanModal && (
         <div className="modal-overlay" onClick={() => setDeletePlanModal(null)}>
           <div className="modal" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Delete Plan</h3>
-            <p className="text-sm text-muted mb-16">This will permanently delete this workout plan. This cannot be undone.</p>
+            <h3 className="modal-title">{t('plans.delete')}</h3>
+            <p className="text-sm text-muted mb-16">{t('plans.delete_warn')}</p>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setDeletePlanModal(null)} disabled={deleting}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => setDeletePlanModal(null)} disabled={deleting}>{t('common.cancel')}</button>
               <button className="btn btn-danger" onClick={handleDeletePlan} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete'}</button>
             </div>
           </div>
@@ -507,17 +507,17 @@ export default function WorkoutPlansPage() {
       {addLinkModal && (
         <div className="modal-overlay" onClick={() => setAddLinkModal(null)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Add Demo Link</h3>
+            <h3 className="modal-title">{t('plans.add_demo_link')}</h3>
             <p className="text-sm text-muted mb-16">{addLinkModal.name}</p>
             <form onSubmit={handleSaveLink}>
               <div className="form-group">
-                <label className="form-label">Video / Demo URL</label>
+                <label className="form-label">{t('plans.video_url')}</label>
                 <input
                   className="form-input"
                   autoFocus
                   value={addLinkUrl}
                   onChange={e => setAddLinkUrl(e.target.value)}
-                  placeholder="YouTube, Instagram, article link…"
+                  placeholder={t('plans.ph_video_url')}
                 />
                 {addLinkUrl && isSafeUrl(addLinkUrl) && (
                   <a href={addLinkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
@@ -527,7 +527,7 @@ export default function WorkoutPlansPage() {
                 )}
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setAddLinkModal(null)}>Cancel</button>
+                <button type="button" className="btn btn-outline" onClick={() => setAddLinkModal(null)}>{t('common.cancel')}</button>
                 <button type="submit" className="btn btn-primary" disabled={!addLinkUrl.trim() || savingLink}>
                   {savingLink ? 'Saving…' : 'Save Link'}
                 </button>
@@ -543,14 +543,14 @@ export default function WorkoutPlansPage() {
             <h3 className="modal-title">{editPlanId ? 'Edit Workout Plan' : 'Create Workout Plan'}</h3>
             <form onSubmit={editPlanId ? handleUpdate : handleCreate}>
               <div className="form-group">
-                <label className="form-label">Plan Name</label>
-                <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Upper Body A" />
+                <label className="form-label">{t('plans.name')}</label>
+                <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('plans.ph_plan_name')} />
               </div>
               {!editPlanId && (
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Client
+                    {t('common.client')}
                     {clients.length > 1 && (
                       <button type="button" className="btn btn-sm btn-outline" style={{ fontSize: '0.7rem', padding: '2px 8px' }}
                         onClick={() => { setBulkAssign(v => !v); setBulkClientIds([]); setForm(f => ({ ...f, clientId: '' })); }}>
@@ -567,11 +567,11 @@ export default function WorkoutPlansPage() {
                           {c.name}
                         </label>
                       ))}
-                      {bulkClientIds.length > 0 && <span className="text-sm text-muted">{bulkClientIds.length} selected</span>}
+                      {bulkClientIds.length > 0 && <span className="text-sm text-muted">{t('plans.n_selected', { n: bulkClientIds.length })}</span>}
                     </div>
                   ) : (
                     <select className="form-select" value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}>
-                      <option value="">Select client</option>
+                      <option value="">{t('plans.select_client')}</option>
                       {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
@@ -581,7 +581,7 @@ export default function WorkoutPlansPage() {
 
               {form.exercises.length > 0 && (
                 <div className="mb-16">
-                  <label className="form-label">Exercises ({form.exercises.length})</label>
+                  <label className="form-label">{t('plans.exercises_n', { n: form.exercises.length })}</label>
                   {form.exercises.map((ex, i) => (
                     <div
                       key={i}
@@ -594,8 +594,8 @@ export default function WorkoutPlansPage() {
                       <div className="plan-exercise plan-exercise-drag">
                         <GripVertical size={14} className="drag-handle desktop-only" />
                         <div className="reorder-btns">
-                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i - 1)} disabled={i === 0} title="Move up"><ArrowUp size={13} /></button>
-                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i + 1)} disabled={i === form.exercises.length - 1} title="Move down"><ArrowDown size={13} /></button>
+                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i - 1)} disabled={i === 0} title={t('plans.move_up')}><ArrowUp size={13} /></button>
+                          <button type="button" className="btn-icon reorder-btn" onClick={() => reorderExercise(i, i + 1)} disabled={i === form.exercises.length - 1} title={t('plans.move_down')}><ArrowDown size={13} /></button>
                         </div>
                         <span className="plan-exercise-name">{getExerciseName(ex.exerciseId, ex.name)}</span>
                         {ex.customMuscle && (
@@ -627,25 +627,25 @@ export default function WorkoutPlansPage() {
                               <span className="text-xs text-muted">reps</span>
                             </>)}
                             {ex.unit === 'time' && (<>
-                              <input className="form-input log-set-input" type="number" value={s.seconds || ''} onChange={e => updateSet(i, si, 'seconds', Number(e.target.value) || 0)} placeholder="30" title="Seconds" />
+                              <input className="form-input log-set-input" type="number" value={s.seconds || ''} onChange={e => updateSet(i, si, 'seconds', Number(e.target.value) || 0)} placeholder="30" title={t('common.seconds')} />
                               <span className="text-xs text-muted">sec</span>
                             </>)}
                             {ex.unit === 'distance' && (<>
-                              <input className="form-input log-set-input" type="number" value={s.metres || ''} onChange={e => updateSet(i, si, 'metres', Number(e.target.value) || 0)} placeholder="100" title="Metres" />
+                              <input className="form-input log-set-input" type="number" value={s.metres || ''} onChange={e => updateSet(i, si, 'metres', Number(e.target.value) || 0)} placeholder="100" title={t('common.metres')} />
                               <span className="text-xs text-muted">m</span>
                             </>)}
                             {ex.sets.length > 1 && (
-                              <button type="button" className="btn-icon" onClick={() => removeSet(i, si)} title="Remove set"><Trash2 size={12} /></button>
+                              <button type="button" className="btn-icon" onClick={() => removeSet(i, si)} title={t('plans.remove_set')}><Trash2 size={12} /></button>
                             )}
                           </div>
                         ))}
                         <button type="button" className="btn btn-sm btn-outline plan-add-set-btn" onClick={() => addSet(i)}>
-                          <Plus size={14} /> New Set
+                          <Plus size={14} /> {t('plans.new_set')}
                         </button>
                       </div>
                       <input
                         className="form-input plan-ex-notes-input"
-                        placeholder="Notes for this exercise (optional)"
+                        placeholder={t('plans.ph_ex_notes')}
                         value={ex.notes || ''}
                         onChange={e => setExNotes(i, e.target.value)}
                       />
@@ -653,12 +653,12 @@ export default function WorkoutPlansPage() {
                         <Link2 size={12} style={{ color: ex.videoUrl ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0 }} />
                         <input
                           className="form-input"
-                          placeholder="Custom video URL (overrides library default)"
+                          placeholder={t('plans.ph_custom_video')}
                           value={ex.videoUrl || ''}
                           onChange={e => updateExVideoUrl(i, e.target.value)}
                         />
                         {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
-                          <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Preview link">
+                          <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.preview_link')}>
                             {isYouTube(ex.videoUrl) ? <Play size={12} style={{ color: 'var(--danger)' }} /> : <ExternalLink size={12} style={{ color: 'var(--primary)' }} />}
                           </a>
                         )}
@@ -670,14 +670,14 @@ export default function WorkoutPlansPage() {
 
               {/* Exercise search */}
               <div className="form-group">
-                <label className="form-label">Add Exercises</label>
+                <label className="form-label">{t('plans.add_exercises')}</label>
                 <div className="plan-equip-filters">
-                  <button type="button" className={`plan-equip-chip${!exEquipFilter ? ' active' : ''}`} onClick={() => setExEquipFilter('')}>All</button>
+                  <button type="button" className={`plan-equip-chip${!exEquipFilter ? ' active' : ''}`} onClick={() => setExEquipFilter('')}>{t('common.all')}</button>
                   {equipmentTypes.map(eq => (
                     <button key={eq} type="button" className={`plan-equip-chip${exEquipFilter === eq ? ' active' : ''}`} onClick={() => setExEquipFilter(p => p === eq ? '' : eq)}>{eq}</button>
                   ))}
                 </div>
-                <input className="form-input" placeholder="Search exercises..." value={exFilter} onChange={e => updateExFilter(e.target.value)} />
+                <input className="form-input" placeholder={t('plans.ph_search_ex')} value={exFilter} onChange={e => updateExFilter(e.target.value)} />
                 {(exFilter || exEquipFilter) && (
                   <div className="ex-search-results">
                     {filteredExercises.slice(0, 12).map(ex => (
@@ -690,7 +690,7 @@ export default function WorkoutPlansPage() {
                       </div>
                     ))}
                     {filteredExercises.length === 0 && (
-                      <div className="plan-ex-no-results">No matches in library</div>
+                      <div className="plan-ex-no-results">{t('plans.no_matches')}</div>
                     )}
                     <div
                       className="plan-ex-custom-add"
@@ -698,7 +698,7 @@ export default function WorkoutPlansPage() {
                       onClick={handleCreateCustomExercise}
                     >
                       <Plus size={14} />
-                      <span>{`Add "${exFilter}" as new exercise…`}</span>
+                      <span>{t('plans.add_as_new', { name: exFilter })}</span>
                     </div>
                   </div>
                 )}
@@ -710,7 +710,7 @@ export default function WorkoutPlansPage() {
                   style={{ marginTop: 8, width: '100%', justifyContent: 'space-between' }}
                   onClick={() => { setShowCustomForm(p => !p); setCustomForm(EMPTY_CUSTOM); }}
                 >
-                  <span><Plus size={14} style={{ marginRight: 4 }} />Custom Exercise (with muscle groups)</span>
+                  <span><Plus size={14} style={{ marginRight: 4 }} />{t('plans.custom_exercise')}</span>
                   {showCustomForm ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
 
@@ -718,10 +718,10 @@ export default function WorkoutPlansPage() {
                 {showCustomForm && (
                   <div style={{ marginTop: 8, padding: 16, background: 'var(--bg-input)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Exercise Name *</label>
+                      <label className="form-label">{t('plans.exercise_name')}</label>
                       <input
                         className="form-input"
-                        placeholder="e.g. Cable Lateral Raise"
+                        placeholder={t('plans.ph_custom_name')}
                         value={customForm.name}
                         onChange={e => setCustomForm(p => ({ ...p, name: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustom(); } }}
@@ -730,9 +730,9 @@ export default function WorkoutPlansPage() {
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ marginBottom: 8 }}>
-                        Muscle Groups {customForm.saveToLibrary
-                          ? <span className="text-muted" style={{ fontWeight: 400 }}>(at least 1 required to save to library)</span>
-                          : <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span>}
+                        {t('plans.muscle_groups')} {customForm.saveToLibrary
+                          ? <span className="text-muted" style={{ fontWeight: 400 }}>{t('plans.req_one_for_library')}</span>
+                          : <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional_paren')}</span>}
                       </label>
                       <MuscleSelector
                         selected={customForm.muscles}
@@ -746,14 +746,14 @@ export default function WorkoutPlansPage() {
                         checked={customForm.saveToLibrary}
                         onChange={e => setCustomForm(p => ({ ...p, saveToLibrary: e.target.checked }))}
                       />
-                      Save to Exercise Library for future use
+                      {t('plans.save_to_library')}
                     </label>
 
                     {customForm.saveToLibrary && (
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Equipment <span className="text-muted" style={{ fontWeight: 400 }}>(required to save to library)</span></label>
+                        <label className="form-label">{t('plans.equipment')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('plans.req_for_library')}</span></label>
                         <select className="form-select" value={customForm.equipment} onChange={e => setCustomForm(p => ({ ...p, equipment: e.target.value }))}>
-                          <option value="" disabled>Select equipment</option>
+                          <option value="" disabled>{t('plans.select_equipment')}</option>
                           {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
                         </select>
                       </div>
@@ -774,7 +774,7 @@ export default function WorkoutPlansPage() {
                         className="btn btn-outline"
                         onClick={() => { setShowCustomForm(false); setCustomForm(EMPTY_CUSTOM); }}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -782,7 +782,7 @@ export default function WorkoutPlansPage() {
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => { setShowCreate(false); setEditPlanId(null); }}>Cancel</button>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowCreate(false); setEditPlanId(null); }}>{t('common.cancel')}</button>
                 <button type="submit" className="btn btn-primary">{editPlanId ? 'Save Changes' : 'Create Plan'}</button>
               </div>
             </form>

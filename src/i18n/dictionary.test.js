@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import en from './en';
 import zh from './zh-HK';
-import { exerciseLibrary, equipmentTypes, movementPatterns } from '../data/exercises';
+import { TRAINING_VOCAB, visiblePropText } from './vocabulary';
 
 
 // The dictionaries are checked mechanically, because the failures they can produce are
@@ -125,19 +125,9 @@ describe('GUARDIAN: no untranslated prop text in a translated file', () => {
     .match(/const TRANSLATED_FILES = \[([\s\S]*?)\]/)[1]
     .match(/'([^']+)'/g)?.map(s => s.slice(1, -1)) || [];
 
-  const VISIBLE_PROPS = ['placeholder', 'aria-label', 'title', 'alt'];
-
   test.each(TRANSLATED)('%s', (rel) => {
     const src = readFileSync(new URL(`../../${rel}`, import.meta.url).pathname, 'utf8');
-    const offenders = [];
-    for (const prop of VISIBLE_PROPS) {
-      for (const m of src.matchAll(new RegExp(`${prop}=(["'])([^"']{2,})\\1`, 'g'))) {
-        // A value with no letters in it is a number or punctuation — a sample rate like
-        // "65", not a sentence. Those read the same in every language.
-        if (!/\p{L}/u.test(m[2])) continue;
-        offenders.push(`${prop}="${m[2]}"`);
-      }
-    }
+    const offenders = visiblePropText(src);
     expect(offenders, `hardcoded in ${rel}: ${offenders.join(', ')}`).toEqual([]);
   });
 
@@ -159,12 +149,7 @@ describe('GUARDIAN: training vocabulary never enters the dictionaries', () => {
   // equipment, movement patterns, and the measurement words themselves. The muscle.* and
   // unit.* namespace bans above are what protect the excluded two, and nothing can render
   // either through t() anyway, because t() refuses a variable key.
-  const vocabulary = [
-    ...exerciseLibrary.map(e => e.name),
-    ...equipmentTypes,
-    ...movementPatterns,
-    'sets', 'reps', 'kg', 'RPE', 'tempo', 'PR', 'PRs',
-  ].map(s => s.toLowerCase());
+  const vocabulary = TRAINING_VOCAB;
 
   const FORBIDDEN_NAMESPACES = ['exercise.', 'exercises.', 'muscle.', 'equipment.', 'pattern.', 'unit.', 'units.'];
 

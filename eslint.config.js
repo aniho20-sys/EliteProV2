@@ -33,6 +33,8 @@ const TRANSLATED_FILES = [
   'src/pages/MessagesPage.jsx',
   'src/components/NotificationCenter.jsx',
   'src/components/ExerciseDetailModal.jsx',
+  'src/pages/WorkoutPlansPage.jsx',
+  'src/pages/BusinessAnalyticsPage.jsx',
 ]
 
 export default defineConfig([
@@ -65,11 +67,16 @@ export default defineConfig([
           // Punctuation and glyphs that are not words in any language.
           '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '.', ',', '|', '&nbsp;',
           // A warning glyph is an icon, not a word.
-          '⚠️',
+          '⚠️', '⚠',
           // Step numerals in an ordered list.
           '1', '2', '3',
           // Training units. Never translated — CLAUDE.md #39.
           'kg', 'cm', 'reps', 'sets', 'RPE',
+          // Added 2026-09-18: 'm' is metres (distance sets) and 'sec' is seconds —
+          // same category as kg/cm. 'Set' labels a row inside a set list that already
+          // reads "8 reps" beside it; translating only half of that pair is worse
+          // than leaving both.
+          'm', 'sec', 'Set',
           // Personal record. Ani's ruling 2026-09-07: the gym floor says "PR" in both
           // languages ("破咗 PR"), so it is vocabulary, not UI copy — same treatment as
           // RPE above, rendered literally and kept out of the dictionaries entirely.
