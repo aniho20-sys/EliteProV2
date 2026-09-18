@@ -41,6 +41,9 @@ const TRANSLATED_FILES = [
   'src/components/workout/WorkoutCompleteScreen.jsx',
   'src/components/workout/ExerciseSwapModal.jsx',
   'src/components/InstallPrompt.jsx',
+  'src/components/ProgressView.jsx',
+  'src/pages/ProgressPage.jsx',
+  'src/components/MonthlyReportModal.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
 ]
 

@@ -51,16 +51,13 @@ const AWAITING = {
   // — trainer-only —
   'src/pages/ClientDetailPage.jsx': 103,
   'src/components/PlatformStatsCard.jsx': 56,
-  'src/components/MonthlyReportModal.jsx': 10,
   // — shared between trainer and client —
   'src/pages/ExerciseLibraryPage.jsx': 56,
-  'src/components/ProgressView.jsx': 22,
   // — client-only: phase 1 was not finished either, which nothing had reported —
   'src/pages/WorkoutLogPage.jsx': 20,
   'src/components/workout/ActiveWorkoutView.jsx': 19,
   'src/pages/IntakeFormPage.jsx': 22,
   'src/pages/TrainingProfilePage.jsx': 19,
-  'src/pages/ProgressPage.jsx': 15,
   // — app-wide chrome —
 };
 

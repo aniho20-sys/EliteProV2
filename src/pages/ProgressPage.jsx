@@ -8,8 +8,10 @@ import ExerciseProgress from '../components/ExerciseProgress';
 import SessionDateList from '../components/SessionDateList';
 import { EMPTY_STAT_FORM } from '../data/metrics';
 import { localToday } from '../utils/dateUtils';
+import { useLanguage } from '../i18n/LanguageContext';
 
 function VolumeChart({ logs }) {
+  const { t } = useLanguage();
   const weeks = Array.from({ length: 8 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (7 - i) * 7);
@@ -31,10 +33,10 @@ function VolumeChart({ logs }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">Weekly Training Volume (kg)</h3>
+        <h3 className="card-title">{t('progress.weekly_volume')}</h3>
       </div>
       {!hasData ? (
-        <p className="text-sm text-muted" style={{ padding: '16px 0' }}>No weight-based logs yet. Volume will appear once workouts are logged.</p>
+        <p className="text-sm text-muted" style={{ padding: '16px 0' }}>{t('progress.no_volume')}</p>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={weeks} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -54,6 +56,7 @@ function VolumeChart({ logs }) {
 }
 
 export default function ProgressPage() {
+  const { t } = useLanguage();
   const { currentUser, getBodyStats, addBodyStat, updateBodyStat, getWorkoutLogs, getSchedule, getExercises, getWorkoutPlans } = useApp();
   const logs = getWorkoutLogs(currentUser.id);
   const exerciseLibrary = getExercises();
@@ -113,18 +116,23 @@ export default function ProgressPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">My Progress</h1>
-          <p className="page-subtitle">{stats.length} measurement{stats.length !== 1 ? 's' : ''} recorded</p>
+          <h1 className="page-title">{t('progress.title')}</h1>
+          <p className="page-subtitle">{t('progress.n_recorded', { count: stats.length })}</p>
         </div>
         {activeTab === 'body' && (
           <button className="btn btn-primary" onClick={openAdd}>
-            <Plus size={16} /> Add Measurement
+            <Plus size={16} /> {t('progress.add_measurement')}
           </button>
         )}
       </div>
 
       <div className="tabs mb-16">
-        {[['body', 'Body Composition'], ['exercise', 'Exercise Progress'], ['volume', 'Volume'], ['history', 'Session History']].map(([key, label]) => (
+        {[
+          ['body', t('progress.tab_body')],
+          ['exercise', t('progress.tab_exercise')],
+          ['volume', t('progress.tab_volume')],
+          ['history', t('progress.tab_history')],
+        ].map(([key, label]) => (
           <button key={key} className={`tab ${activeTab === key ? 'active' : ''}`} onClick={() => setActiveTab(key)}>
             {label}
           </button>
@@ -142,7 +150,7 @@ export default function ProgressPage() {
       )}
       {activeTab === 'history' && (
         <div className="card">
-          <h2 className="card-title mb-16">Session History</h2>
+          <h2 className="card-title mb-16">{t('progress.tab_history')}</h2>
           <SessionDateList sessions={completedSessions} logs={logs} exerciseLibrary={exerciseLibrary} plans={plans} />
         </div>
       )}
@@ -150,26 +158,26 @@ export default function ProgressPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">{editStat ? 'Edit Measurement' : 'Add Measurement'}</h3>
+            <h3 className="modal-title">{editStat ? t('progress.edit_measurement') : t('progress.add_measurement')}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Weight (kg)</label><input className="form-input" type="number" step="0.1" min="20" max="300" required value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={form.bodyFat} onChange={e => setForm({ ...form, bodyFat: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_weight')}</label><input className="form-input" type="number" step="0.1" min="20" max="300" required value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_body_fat')}</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={form.bodyFat} onChange={e => setForm({ ...form, bodyFat: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" value={form.chest} onChange={e => setForm({ ...form, chest: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_chest')}</label><input className="form-input" type="number" step="0.1" value={form.chest} onChange={e => setForm({ ...form, chest: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_waist')}</label><input className="form-input" type="number" step="0.1" value={form.waist} onChange={e => setForm({ ...form, waist: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" value={form.hips} onChange={e => setForm({ ...form, hips: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_hips')}</label><input className="form-input" type="number" step="0.1" value={form.hips} onChange={e => setForm({ ...form, hips: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_arms')}</label><input className="form-input" type="number" step="0.1" value={form.arms} onChange={e => setForm({ ...form, arms: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_legs')}</label><input className="form-input" type="number" step="0.1" value={form.legs} onChange={e => setForm({ ...form, legs: e.target.value })} /></div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editStat ? 'Save Changes' : 'Save'}</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('common.saving') : editStat ? t('progress.save_changes') : t('common.save')}</button>
               </div>
             </form>
           </div>

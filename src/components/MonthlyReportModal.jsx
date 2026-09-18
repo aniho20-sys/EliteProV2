@@ -3,6 +3,7 @@ import { X, FileText, Printer } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { calcVolume } from '../utils/workoutUtils';
 import { resolveExerciseName, exerciseNamesFromLogs } from '../utils/exerciseUtils';
+import { useLanguage } from '../i18n/LanguageContext';
 
 function monthOptions() {
   const opts = [];
@@ -22,6 +23,7 @@ function monthLabel(m) {
 }
 
 export default function MonthlyReportModal({ client, onClose }) {
+  const { t } = useLanguage();
   const { currentUser, getBodyStats, getWorkoutLogs, getSchedule, getPersonalRecords, getExercises } = useApp();
 
   const opts = monthOptions();
@@ -87,13 +89,13 @@ export default function MonthlyReportModal({ client, onClose }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileText size={18} style={{ color: 'var(--primary)' }} />
-            <h3 className="modal-title" style={{ margin: 0 }}>Monthly Training Report</h3>
+            <h3 className="modal-title" style={{ margin: 0 }}>{t('report.title')}</h3>
           </div>
           <button className="btn btn-outline btn-sm btn-icon" onClick={onClose}><X size={14} /></button>
         </div>
 
         <div className="form-group">
-          <label className="form-label">Report Month</label>
+          <label className="form-label">{t('report.month')}</label>
           <select className="form-input" value={month} onChange={e => setMonth(e.target.value)}>
             {opts.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
           </select>
@@ -102,11 +104,11 @@ export default function MonthlyReportModal({ client, onClose }) {
         {/* Preview stats */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
           {[
-            { label: 'Sessions', value: `${monthCompleted.length}` },
-            { label: 'Workout Logs', value: `${monthLogs.length}` },
-            { label: 'Total Volume', value: totalVolume > 0 ? `${(totalVolume / 1000).toFixed(1)}t` : '—' },
+            { key: 'sessions', label: t('report.stat_sessions'), value: `${monthCompleted.length}` },
+            { key: 'logs', label: t('report.stat_logs'), value: `${monthLogs.length}` },
+            { key: 'volume', label: t('report.stat_volume'), value: totalVolume > 0 ? `${(totalVolume / 1000).toFixed(1)}t` : '—' },
           ].map(s => (
-            <div key={s.label} style={{ background: 'var(--surface)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+            <div key={s.key} style={{ background: 'var(--surface)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{s.value}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.label}</div>
             </div>
@@ -116,18 +118,18 @@ export default function MonthlyReportModal({ client, onClose }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
           <label className="recap-send-toggle">
             <input type="checkbox" checked={includeWorkoutSummary} onChange={e => setIncludeWorkoutSummary(e.target.checked)} />
-            Include workout summary
+            {t('report.include_workouts')}
           </label>
           <label className="recap-send-toggle">
             <input type="checkbox" checked={includeInvoice} onChange={e => setIncludeInvoice(e.target.checked)} />
-            Include fee summary
+            {t('report.include_fees')}
           </label>
         </div>
 
         {includeInvoice && (
           <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', marginBottom: 16 }}>
             <div className="form-group">
-              <label className="form-label">Amount</label>
+              <label className="form-label">{t('report.amount')}</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <select className="form-input" style={{ width: 90, flexShrink: 0 }} value={invoiceCurrency} onChange={e => setInvoiceCurrency(e.target.value)}>
                   {['HKD','USD','GBP','EUR','AUD','CAD','SGD','JPY','CNY','TWD','MYR','THB'].map(c => (
@@ -139,13 +141,13 @@ export default function MonthlyReportModal({ client, onClose }) {
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Due Date</label>
+              <label className="form-label">{t('report.due_date')}</label>
               <input className="form-input" type="date" value={invoiceDueDate}
                 onChange={e => setInvoiceDueDate(e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">Payment Method</label>
-              <input className="form-input" placeholder="FPS / PayMe: 9XXX-XXXX"
+              <label className="form-label">{t('report.payment_method')}</label>
+              <input className="form-input" placeholder={t('report.ph_payment')}
                 value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} />
             </div>
           </div>
@@ -153,10 +155,10 @@ export default function MonthlyReportModal({ client, onClose }) {
 
         <button className="btn btn-accent" style={{ width: '100%', gap: 8 }} onClick={handlePrint}>
           <Printer size={16} />
-          Print / Save as PDF
+          {t('report.print')}
         </button>
         <p className="text-sm text-muted" style={{ textAlign: 'center', marginTop: 8 }}>
-          Browser print dialog → "Save as PDF"
+          {t('report.print_hint')}
         </p>
       </div>
     </div>

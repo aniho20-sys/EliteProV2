@@ -18,6 +18,7 @@ import ExerciseProgress from '../components/ExerciseProgress';
 import EmptyState from '../components/EmptyState';
 import SessionDateList from '../components/SessionDateList';
 import { useToast } from '../context/ToastContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 
 
@@ -107,6 +108,7 @@ function VolumeChart({ logs }) {
 }
 
 export default function ClientDetailPage() {
+  const { t } = useLanguage();
   const { clientId } = useParams();
   const navigate = useNavigate();
   const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, addCreditLedgerEntry } = useApp();
@@ -434,7 +436,7 @@ export default function ClientDetailPage() {
                   return (
                     <div key={key} className="text-center">
                       <div className="fw-bold">{missing ? '--' : `${val}${unit}`}</div>
-                      <div className="text-sm text-muted">{label}</div>
+                      <div className="text-sm text-muted">{label(t)}</div>
                     </div>
                   );
                 })}

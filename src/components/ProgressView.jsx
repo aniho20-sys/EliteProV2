@@ -7,6 +7,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { METRICS } from '../data/metrics';
+import { useLanguage } from '../i18n/LanguageContext';
 
 function ChartTooltip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
@@ -19,14 +20,15 @@ function ChartTooltip({ active, payload, unit }) {
 }
 
 export default function ProgressView({ clientId, canDelete = false, onAdd, onEdit }) {
+  const { t } = useLanguage();
   const { getBodyStats, deleteBodyStat } = useApp();
   const stats = getBodyStats(clientId);
   const toast = useToast();
 
   const handleDelete = (s) => {
-    if (!window.confirm(`Delete measurement from ${s.date}?`)) return;
+    if (!window.confirm(t('progress.confirm_delete', { date: s.date }))) return;
     deleteBodyStat(clientId, s.id);
-    toast('Measurement deleted', 'info');
+    toast(t('progress.deleted'), 'info');
   };
   const [activeMetric, setActiveMetric] = useState('weight');
 
@@ -34,9 +36,9 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
     return (
       <EmptyState
         icon={LineChart}
-        title="No measurements yet"
-        description="Track measurements to start seeing progress trends over time."
-        action={onAdd ? { label: 'Add Measurement', onClick: onAdd } : undefined}
+        title={t('progress.empty_title')}
+        description={t('progress.empty_desc')}
+        action={onAdd ? { label: t('progress.add_measurement'), onClick: onAdd } : undefined}
       />
     );
   }
@@ -61,7 +63,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
     <>
       {/* Current Stats */}
       <div className="card mb-16">
-        <h3 className="card-title mb-16">Current Stats</h3>
+        <h3 className="card-title mb-16">{t('progress.current_stats')}</h3>
         <div className="progress-stats-grid">
           {METRICS.map(m => {
             const val = latestStat[m.key];
@@ -75,7 +77,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                 style={{ '--tile-color': m.color }}
                 onClick={() => setActiveMetric(m.key)}
               >
-                <div className="progress-stat-label">{m.label}</div>
+                <div className="progress-stat-label">{m.label(t)}</div>
                 <div className="progress-stat-val">{val ?? '—'}<span className="progress-stat-unit">{m.unit}</span></div>
                 {diff !== null && (
                   <div className={`progress-stat-diff ${diff < 0 ? 'down' : diff > 0 ? 'up' : 'flat'}`}>
@@ -94,11 +96,11 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
         <div className="card mb-16">
           <div className="progress-chart-header">
             <div>
-              <div className="progress-chart-title">{metric.label} Trend</div>
+              <div className="progress-chart-title">{t('progress.trend_of', { metric: metric.label(t) })}</div>
               {change !== null && (
                 <div className={`progress-chart-change ${change < 0 ? 'down' : change > 0 ? 'up' : 'flat'}`}>
                   {change > 0 ? '↑' : change < 0 ? '↓' : '→'}
-                  {' '}{Math.abs(change).toFixed(1)}{metric.unit} since start
+                  {' '}{Math.abs(change).toFixed(1)}{metric.unit} {t('progress.since_start')}
                 </div>
               )}
             </div>
@@ -110,7 +112,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                   style={activeMetric === m.key ? { background: m.color, borderColor: m.color } : {}}
                   onClick={() => setActiveMetric(m.key)}
                 >
-                  {m.label}
+                  {m.label(t)}
                 </button>
               ))}
             </div>
@@ -137,13 +139,13 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
 
       {/* History */}
       <div className="card">
-        <h3 className="card-title mb-16">Measurement History</h3>
+        <h3 className="card-title mb-16">{t('progress.history')}</h3>
         {/* Desktop table */}
         <div className="table-wrapper history-table-desktop">
           <table>
             <thead>
               <tr>
-                <th>Date</th><th>Weight</th><th>BF%</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Arms</th><th>Legs</th><th>Source</th>
+                <th>{t('progress.col_date')}</th><th>{t('metric.weight')}</th><th>{t('progress.col_bf')}</th><th>{t('metric.chest')}</th><th>{t('metric.waist')}</th><th>{t('metric.hips')}</th><th>{t('metric.arms')}</th><th>{t('metric.legs')}</th><th>{t('progress.col_source')}</th>
                 {canDelete && <th></th>}
                 {onEdit && <th></th>}
               </tr>
@@ -155,21 +157,21 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                   <td>{s.chest}cm</td><td>{s.waist}cm</td><td>{s.hips || '—'}cm</td><td>{s.arms}cm</td><td>{s.legs}cm</td>
                   <td>
                     {s.addedBy === 'coach'
-                      ? <span className="tag tag-accent" style={{ fontSize: '0.65rem' }}>Coach</span>
+                      ? <span className="tag tag-accent" style={{ fontSize: '0.65rem' }}>{t('progress.by_coach')}</span>
                       : s.addedBy === 'self'
-                        ? <span className="tag" style={{ fontSize: '0.65rem' }}>Self</span>
+                        ? <span className="tag" style={{ fontSize: '0.65rem' }}>{t('progress.by_self')}</span>
                         : '—'}
                   </td>
                   {onEdit && (
                     <td>
-                      <button className="btn-icon" title="Edit" onClick={() => onEdit(s)}>
+                      <button className="btn-icon" title={t('common.edit')} onClick={() => onEdit(s)}>
                         <Pencil size={14} />
                       </button>
                     </td>
                   )}
                   {canDelete && (
                     <td>
-                      <button className="btn-icon" title="Delete"
+                      <button className="btn-icon" title={t('common.delete')}
                         onClick={() => handleDelete(s)}>
                         <Trash2 size={14} style={{ color: 'var(--danger)' }} />
                       </button>
@@ -187,16 +189,16 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
               <div className="flex-between">
                 <div className="history-card-date">
                   {s.date}
-                  {s.addedBy === 'coach' && <span className="tag tag-accent" style={{ fontSize: '0.6rem', marginLeft: 6 }}>Coach</span>}
+                  {s.addedBy === 'coach' && <span className="tag tag-accent" style={{ fontSize: '0.6rem', marginLeft: 6 }}>{t('progress.by_coach')}</span>}
                 </div>
                 <div className="flex gap-8">
                   {onEdit && (
-                    <button className="btn-icon" title="Edit" onClick={() => onEdit(s)}>
+                    <button className="btn-icon" title={t('common.edit')} onClick={() => onEdit(s)}>
                       <Pencil size={14} />
                     </button>
                   )}
                   {canDelete && (
-                    <button className="btn-icon" title="Delete"
+                    <button className="btn-icon" title={t('common.delete')}
                       onClick={() => handleDelete(s)}>
                       <Trash2 size={14} style={{ color: 'var(--danger)' }} />
                     </button>
@@ -206,12 +208,12 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
               <div className="body-stats-grid">
                 {METRICS.map(m => (
                   <div key={m.key} className="body-stat-item">
-                    <span className="body-stat-label">{m.label}</span>
+                    <span className="body-stat-label">{m.label(t)}</span>
                     <span className="body-stat-value">{s[m.key] ? `${s[m.key]}${m.unit}` : '—'}</span>
                   </div>
                 ))}
                 <div className="body-stat-item">
-                  <span className="body-stat-label">Hips</span>
+                  <span className="body-stat-label">{t('metric.hips')}</span>
                   <span className="body-stat-value">{s.hips ? `${s.hips}cm` : '—'}</span>
                 </div>
               </div>
