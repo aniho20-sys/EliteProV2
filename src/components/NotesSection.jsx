@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { Send } from 'lucide-react';
 
 export default function NotesSection({ clientId }) {
+  const { t } = useLanguage();
   const { currentUser, getMessages, sendMessage, markMessagesRead, getClient } = useApp();
   const toast = useToast();
   const [text, setText] = useState('');
@@ -45,10 +47,10 @@ export default function NotesSection({ clientId }) {
 
   return (
     <div className="notes-section">
-      <h4 className="card-title mb-16" style={{ fontSize: '0.95rem' }}>Notes & Messages</h4>
+      <h4 className="card-title mb-16" style={{ fontSize: '0.95rem' }}>{t('notes.title')}</h4>
       <div className="notes-list" ref={listRef}>
         {messages.length === 0 ? (
-          <div className="text-center text-muted text-sm" style={{ padding: '16px 0' }}>No messages yet</div>
+          <div className="text-center text-muted text-sm" style={{ padding: '16px 0' }}>{t('notes.empty')}</div>
         ) : (
           messages.map(m => (
             <div key={m.id} className={`note-item ${m.from === currentUser.id ? 'sent' : ''}`}>
@@ -65,7 +67,7 @@ export default function NotesSection({ clientId }) {
         )}
       </div>
       <form onSubmit={handleSend} className="note-input-row">
-        <input className="form-input" value={text} onChange={e => setText(e.target.value)} placeholder="Write a note..." disabled={sending} />
+        <input className="form-input" value={text} onChange={e => setText(e.target.value)} placeholder={t('notes.placeholder')} disabled={sending} />
         <button type="submit" className="btn btn-primary btn-sm" disabled={sending || !text.trim()}><Send size={14} /></button>
       </form>
     </div>

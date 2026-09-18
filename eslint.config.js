@@ -27,6 +27,12 @@ const TRANSLATED_FILES = [
   'src/App.jsx',
   'src/components/OfflineBanner.jsx',
   'src/components/NotifPrompt.jsx',
+  'src/components/NotesSection.jsx',
+  'src/components/GlobalSearch.jsx',
+  'src/components/MuscleSelector.jsx',
+  'src/pages/MessagesPage.jsx',
+  'src/components/NotificationCenter.jsx',
+  'src/components/ExerciseDetailModal.jsx',
 ]
 
 export default defineConfig([

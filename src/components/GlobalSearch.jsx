@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { liveExercises } from '../utils/exerciseUtils';
 import { Search, X } from 'lucide-react';
 
 export default function GlobalSearch({ onSelect }) {
+  const { t } = useLanguage();
   const { currentUser, getClients, getExercises, getWorkoutPlans } = useApp();
   const navigate = useNavigate();
   const isTrainer = currentUser?.role === 'trainer';
@@ -58,7 +60,7 @@ export default function GlobalSearch({ onSelect }) {
         <input
           ref={inputRef}
           className="global-search-input"
-          placeholder="Search..."
+          placeholder={t('search.placeholder')}
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
@@ -82,7 +84,7 @@ export default function GlobalSearch({ onSelect }) {
 
       {open && q && results.length === 0 && (
         <div className="global-search-results">
-          <div className="global-search-empty">No results for &quot;{query}&quot;</div>
+          <div className="global-search-empty">{t('search.no_results', { query })}</div>
         </div>
       )}
 

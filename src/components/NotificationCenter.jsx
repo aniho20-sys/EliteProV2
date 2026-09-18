@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, MessageSquare, Calendar, Dumbbell, ClipboardList, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -134,6 +135,7 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
 }
 
 export default function NotificationCenter() {
+  const { t } = useLanguage();
   const { currentUser, data } = useApp();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -173,7 +175,7 @@ export default function NotificationCenter() {
 
   return (
     <>
-      <button className="notif-bell-btn" onClick={open ? () => setOpen(false) : handleOpen} aria-label="Notifications">
+      <button className="notif-bell-btn" onClick={open ? () => setOpen(false) : handleOpen} aria-label={t('notif.title')}>
         <Bell size={20} strokeWidth={2} />
         {unreadCount > 0 && (
           <span className="notif-bell-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
@@ -183,12 +185,12 @@ export default function NotificationCenter() {
       {open && (
         <div className="notif-panel" ref={panelRef}>
           <div className="notif-panel-header">
-            <span className="notif-panel-title">Notifications</span>
-            <button className="btn-icon" onClick={() => setOpen(false)} aria-label="Close"><X size={18} /></button>
+            <span className="notif-panel-title">{t('notif.title')}</span>
+            <button className="btn-icon" onClick={() => setOpen(false)} aria-label={t('common.close')}><X size={18} /></button>
           </div>
 
           {notifs.length === 0 ? (
-            <div className="notif-empty">You&apos;re all caught up 🎉</div>
+            <div className="notif-empty">{t('notif.empty')}</div>
           ) : (
             <ul className="notif-list">
               {notifs.map(n => {

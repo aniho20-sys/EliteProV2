@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { X, Play, ExternalLink, Dumbbell, Pencil, Trash2, GitMerge } from 'lucide-react';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { useApp } from '../context/AppContext';
 
 export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelete, onMerge }) {
+  const { t } = useLanguage();
   const { currentUser } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const [showEmbed, setShowEmbed] = useState(false);
@@ -17,7 +19,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal ex-detail-modal" onClick={e => e.stopPropagation()}>
-        <button className="ex-detail-close btn-icon" onClick={onClose} aria-label="Close">
+        <button className="ex-detail-close btn-icon" onClick={onClose} aria-label={t('common.close')}>
           <X size={20} />
         </button>
 
@@ -25,9 +27,9 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
 
         {isTrainer && (onEdit || onDelete || onMerge) && (
           <div className="ex-detail-trainer-actions">
-            {onEdit && <button className="btn btn-sm btn-outline" onClick={() => onEdit(exercise)}><Pencil size={13} /> Edit</button>}
-            {onMerge && <button className="btn btn-sm btn-outline" onClick={() => onMerge(exercise)}><GitMerge size={13} /> Merge into…</button>}
-            {onDelete && <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)' }} onClick={() => onDelete(exercise)}><Trash2 size={13} /> Delete</button>}
+            {onEdit && <button className="btn btn-sm btn-outline" onClick={() => onEdit(exercise)}><Pencil size={13} /> {t('exdetail.edit')}</button>}
+            {onMerge && <button className="btn btn-sm btn-outline" onClick={() => onMerge(exercise)}><GitMerge size={13} /> {t('exdetail.merge_into')}</button>}
+            {onDelete && <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)' }} onClick={() => onDelete(exercise)}><Trash2 size={13} /> {t('exdetail.delete')}</button>}
           </div>
         )}
 
@@ -52,7 +54,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
             onClick={() => setShowEmbed(true)}
           >
             <Play size={16} />
-            {videoId ? 'Watch Demo' : 'Open Link'}
+            {videoId ? t('exdetail.watch_demo') : t('exdetail.open_link')}
           </button>
         )}
         {hasVideo && showEmbed && videoId && (
@@ -71,7 +73,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
             rel="noopener noreferrer"
             className="btn btn-outline ex-detail-video-btn"
           >
-            <ExternalLink size={16} /> Open Link
+            <ExternalLink size={16} /> {t('exdetail.open_link')}
           </a>
         )}
         {!hasVideo && isTrainer && onEdit && (
@@ -79,7 +81,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
             className="btn btn-outline ex-detail-video-btn"
             onClick={() => onEdit(exercise)}
           >
-            <Play size={15} /> Add Demo Video
+            <Play size={15} /> {t('exdetail.add_video')}
           </button>
         )}
 
@@ -103,14 +105,14 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
 
         {exercise.instructions && (
           <div className="ex-detail-instructions">
-            <h4 className="ex-detail-instructions-title">Coaching Cues</h4>
+            <h4 className="ex-detail-instructions-title">{t('exdetail.cues')}</h4>
             <p className="ex-detail-desc">{exercise.instructions}</p>
           </div>
         )}
 
         {exercise.commonMistakes && (
           <div className="ex-detail-instructions">
-            <h4 className="ex-detail-instructions-title">Common Mistakes</h4>
+            <h4 className="ex-detail-instructions-title">{t('exdetail.mistakes')}</h4>
             <p className="ex-detail-desc">{exercise.commonMistakes}</p>
           </div>
         )}

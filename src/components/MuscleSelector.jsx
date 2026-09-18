@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { muscleGroups } from '../data/exercises';
 
 export default function MuscleSelector({ selected = [], onChange }) {
+  const { t } = useLanguage();
   const [customInput, setCustomInput] = useState('');
 
   const toggle = (name) => {
@@ -38,7 +40,7 @@ export default function MuscleSelector({ selected = [], onChange }) {
             type="button"
             className="muscle-chip active"
             onClick={() => toggle(m)}
-            title="Click to remove"
+            title={t('msel.remove_hint')}
           >
             {m} ×
           </button>
@@ -49,7 +51,7 @@ export default function MuscleSelector({ selected = [], onChange }) {
           className="form-input"
           style={{ flex: 1, padding: '5px 10px', fontSize: '0.875rem' }}
           type="text"
-          placeholder="Custom muscle group…"
+          placeholder={t('msel.custom_placeholder')}
           value={customInput}
           onChange={e => setCustomInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
@@ -60,7 +62,7 @@ export default function MuscleSelector({ selected = [], onChange }) {
           onClick={addCustom}
           disabled={!customInput.trim()}
         >
-          + Add
+          {t('msel.add')}
         </button>
       </div>
     </div>

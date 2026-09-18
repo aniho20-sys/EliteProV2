@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useApp } from '../context/AppContext';
 import { Send, ArrowLeft, MessageCircle, Users } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
 
 export default function MessagesPage() {
+  const { t } = useLanguage();
   const { currentUser, getMessages, sendMessage, getClients, getClient, markMessagesRead } = useApp();
   const toast = useToast();
   const isTrainer = currentUser.role === 'trainer';
@@ -75,7 +77,7 @@ export default function MessagesPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Messages</h1>
+        <h1 className="page-title">{t('msg.title')}</h1>
       </div>
 
       <div className="msg-container card">
@@ -145,7 +147,7 @@ export default function MessagesPage() {
                   className="form-input"
                   value={text}
                   onChange={e => setText(e.target.value)}
-                  placeholder="Type a message..."
+                  placeholder={t('msg.placeholder')}
                   maxLength={2000}
                   disabled={sending}
                 />
@@ -159,7 +161,7 @@ export default function MessagesPage() {
               <EmptyState
                 inCard={false}
                 icon={MessageCircle}
-                title="Select a conversation"
+                title={t('msg.select_hint')}
                 description={contacts.length > 0
                   ? 'Choose a contact from the list to start chatting.'
                   : 'Once you have contacts, they will appear here.'}
