@@ -52,7 +52,6 @@ const AWAITING = {
   'src/pages/ClientDetailPage.jsx': 103,
   'src/components/PlatformStatsCard.jsx': 56,
   // — shared between trainer and client —
-  'src/pages/ExerciseLibraryPage.jsx': 56,
   // — client-only: phase 1 was not finished either, which nothing had reported —
   // — app-wide chrome —
 };

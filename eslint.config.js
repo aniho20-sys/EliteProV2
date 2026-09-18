@@ -48,6 +48,7 @@ const TRANSLATED_FILES = [
   'src/components/workout/ActiveWorkoutView.jsx',
   'src/pages/IntakeFormPage.jsx',
   'src/pages/TrainingProfilePage.jsx',
+  'src/pages/ExerciseLibraryPage.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
 ]
 

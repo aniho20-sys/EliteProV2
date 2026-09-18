@@ -9,12 +9,19 @@ import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises, inferMovementPattern } from '../utils/exerciseUtils';
 import { findDuplicateExercise, findFamilyVariants } from '../utils/exerciseDuplicates';
 import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exercises';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const EMPTY_FORM = { name: '', muscles: [], equipment: '', movementPattern: '', aliases: [], description: '', instructions: '', commonMistakes: '', videoUrl: '', unit: 'weight_reps' };
 const EMPTY_CUSTOMIZE = { videoMode: 'default', videoUrl: '', instructionsMode: 'default', instructions: '' };
-const MODE_LABELS = { default: 'Default', custom: 'Custom', hidden: 'Hidden' };
+// Functions of t, because t() only accepts a literal key (#39) and this is module-level.
+const MODE_LABELS = {
+  default: (t) => t('exlib.mode_default'),
+  custom: (t) => t('exlib.mode_custom'),
+  hidden: (t) => t('exlib.mode_hidden'),
+};
 
 export default function ExerciseLibraryPage() {
+  const { t } = useLanguage();
   const {
     currentUser, getExercises, addExercise, updateExercise, deleteExercise, muscleGroups, equipmentTypes,
     getExerciseOverride, upsertExerciseOverride, deleteExerciseOverride,
@@ -106,12 +113,12 @@ export default function ExerciseLibraryPage() {
   };
 
   const handleDelete = async (ex) => {
-    if (!window.confirm(`Delete "${ex.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t('exlib.confirm_delete', { name: ex.name }))) return;
     try {
       await deleteExercise(ex.id);
-      toast('Exercise deleted', 'info');
+      toast(t('exlib.toast_deleted'), 'info');
       setDetailExercise(null);
-    } catch { toast('Failed to delete', 'error'); }
+    } catch { toast(t('exlib.toast_delete_failed'), 'error'); }
   };
 
   // Seed exercises (no trainerId — see CLAUDE.md) have no doc of their own to edit, so
@@ -139,18 +146,18 @@ export default function ExerciseLibraryPage() {
       } else {
         await upsertExerciseOverride(customizingEx.id, customizeForm);
       }
-      toast('Customization saved');
+      toast(t('exlib.toast_custom_saved'));
       setShowCustomize(false);
-    } catch { toast('Failed to save customization', 'error'); } finally { setCustomizeSaving(false); }
+    } catch { toast(t('exlib.toast_custom_failed'), 'error'); } finally { setCustomizeSaving(false); }
   };
 
   const handleResetCustomize = async () => {
     setCustomizeSaving(true);
     try {
       await deleteExerciseOverride(customizingEx.id);
-      toast('Reset to default');
+      toast(t('exlib.toast_reset'));
       setShowCustomize(false);
-    } catch { toast('Failed to reset', 'error'); } finally { setCustomizeSaving(false); }
+    } catch { toast(t('exlib.toast_reset_failed'), 'error'); } finally { setCustomizeSaving(false); }
   };
 
   // Soft-merge (CLAUDE.md #27): the losing exercise keeps its document and gains a
@@ -176,13 +183,13 @@ export default function ExerciseLibraryPage() {
   }, [exercises, mergingEx, mergeSearch]);
 
   const handleMerge = async (survivor) => {
-    if (!window.confirm(`Merge "${mergingEx.name}" into "${survivor.name}"?\n\nPast plans and logs keep working — they will show "${survivor.name}" from now on.`)) return;
+    if (!window.confirm(t('exlib.confirm_merge', { from: mergingEx.name, to: survivor.name }))) return;
     setMergeSaving(true);
     try {
       await updateExercise(mergingEx.id, { mergedInto: survivor.id });
-      toast(`"${mergingEx.name}" merged into "${survivor.name}"`);
+      toast(t('exlib.toast_merged', { from: mergingEx.name, to: survivor.name }));
       setMergingEx(null);
-    } catch { toast('Failed to merge', 'error'); } finally { setMergeSaving(false); }
+    } catch { toast(t('exlib.toast_merge_failed'), 'error'); } finally { setMergeSaving(false); }
   };
 
   const addAlias = () => {
@@ -199,7 +206,7 @@ export default function ExerciseLibraryPage() {
     const { muscles, ...rest } = form;
     const exData = { ...rest, name: titleCaseExerciseName(form.name), muscle: muscles.join(', ') };
     if (!exerciseFieldsValid(exData)) {
-      toast('Pick at least one muscle group and an equipment type', 'error');
+      toast(t('exlib.toast_need_muscle_equip'), 'error');
       return;
     }
 
@@ -210,7 +217,7 @@ export default function ExerciseLibraryPage() {
     if (clash) {
       setShowModal(false);
       setDetailExercise(clash);
-      toast(`"${clash.name}" (${clash.equipment}) already exists`, 'error');
+      toast(t('exlib.toast_clash', { name: clash.name, equipment: clash.equipment }), 'error');
       return;
     }
 
@@ -218,13 +225,13 @@ export default function ExerciseLibraryPage() {
     try {
       if (editingEx) {
         await updateExercise(editingEx.id, exData);
-        toast('Exercise updated');
+        toast(t('exlib.toast_updated'));
       } else {
         await addExercise(exData);
-        toast('Exercise added');
+        toast(t('exlib.toast_added'));
       }
       setShowModal(false);
-    } catch { toast('Failed to save exercise', 'error'); } finally { setSaving(false); }
+    } catch { toast(t('exlib.toast_save_failed'), 'error'); } finally { setSaving(false); }
   };
 
   // Same movement on other equipment — shown inline as a hint while typing, not a block.
@@ -243,27 +250,27 @@ export default function ExerciseLibraryPage() {
   );
 
   const filterGroups = [
-    { key: 'muscle', label: 'Muscle', options: muscleGroups, value: muscleFilter, setValue: setMuscleFilter },
-    { key: 'equipment', label: 'Equipment', options: equipmentTypes, value: equipFilter, setValue: setEquipFilter },
-    { key: 'pattern', label: 'Movement', options: movementPatterns, value: patternFilter, setValue: setPatternFilter },
+    { key: 'muscle', label: t('exlib.filter_muscle'), options: muscleGroups, value: muscleFilter, setValue: setMuscleFilter },
+    { key: 'equipment', label: t('exlib.equipment'), options: equipmentTypes, value: equipFilter, setValue: setEquipFilter },
+    { key: 'pattern', label: t('exlib.filter_movement'), options: movementPatterns, value: patternFilter, setValue: setPatternFilter },
   ];
 
   return (
     <div>
       <div className="page-header flex-between">
         <div>
-          <h1 className="page-title">Exercise Library</h1>
-          <p className="page-subtitle">{exercises.length} exercises available</p>
+          <h1 className="page-title">{t('exlib.title')}</h1>
+          <p className="page-subtitle">{t('exlib.n_available', { count: exercises.length })}</p>
         </div>
         {isTrainer && (
-          <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Add Exercise</button>
+          <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {t('exlib.add_exercise')}</button>
         )}
       </div>
 
       <div className="filter-bar">
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Search exercises..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="form-input" style={{ paddingLeft: 36 }} placeholder={t('plans.ph_search_ex')} value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
 
@@ -282,7 +289,7 @@ export default function ExerciseLibraryPage() {
                   className="ex-filter-pill-clear"
                   role="button"
                   tabIndex={-1}
-                  aria-label={`Clear ${g.label} filter`}
+                  aria-label={t('exlib.clear_filter', { label: g.label })}
                   onClick={e => { e.stopPropagation(); g.setValue(''); setOpenFilter(null); }}
                 >
                   <X size={12} />
@@ -325,7 +332,7 @@ export default function ExerciseLibraryPage() {
                 <span className="exercise-row-name">{ex.name}</span>
                 {metaParts.length > 0 && <span className="exercise-row-meta">{metaParts.join(' · ')}</span>}
               </div>
-              {hasVideo && <Play size={14} className="exercise-row-video-icon" fill="currentColor" aria-label="Has demo video" />}
+              {hasVideo && <Play size={14} className="exercise-row-video-icon" fill="currentColor" aria-label={t('exlib.has_video')} />}
             </div>
           );
         })}
@@ -335,10 +342,10 @@ export default function ExerciseLibraryPage() {
         <div className="mt-16">
           <EmptyState
             icon={SearchX}
-            title="No exercises found"
-            description="Try clearing filters or use a different search term."
+            title={t('exlib.none_found')}
+            description={t('exlib.none_found_desc')}
             action={{
-              label: 'Clear Filters',
+              label: t('exlib.clear_filters'),
               onClick: () => { setSearch(''); setMuscleFilter(''); setEquipFilter(''); setPatternFilter(''); },
             }}
           />
@@ -349,12 +356,12 @@ export default function ExerciseLibraryPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="flex-between mb-16">
-              <h3 className="modal-title" style={{ marginBottom: 0 }}>{editingEx ? 'Edit Exercise' : 'Add Exercise'}</h3>
+              <h3 className="modal-title" style={{ marginBottom: 0 }}>{editingEx ? t('exlib.edit_exercise') : t('exlib.add_exercise')}</h3>
               <button className="btn-icon" onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">Exercise Name</label>
+                <label className="form-label">{t('exlib.name')}</label>
                 <input
                   ref={nameInputRef}
                   className="form-input"
@@ -370,56 +377,58 @@ export default function ExerciseLibraryPage() {
                       movementPattern: patternTouched ? f.movementPattern : inferMovementPattern(name),
                     }));
                   }}
-                  placeholder="e.g. Bulgarian Split Squat"
+                  placeholder={t('exlib.ph_name')}
                 />
                 {liveDuplicate && (
                   <div className="ex-dupe-warn">
-                    <span>This exercise already exists ({liveDuplicate.equipment}).</span>
+                    <span>{t('exlib.dupe_exists', { equipment: liveDuplicate.equipment })}</span>
                     <button type="button" className="ex-dupe-link" onClick={() => { setShowModal(false); setDetailExercise(liveDuplicate); }}>
-                      Go to it
+                      {t('exlib.go_to_it')}
                     </button>
                   </div>
                 )}
                 {!liveDuplicate && familyVariants.length > 0 && (
                   <p className="ex-dupe-hint">
-                    You already have this movement on {familyVariants.map(v => v.equipment).join(', ')}.
-                    Adding a {form.equipment} version is fine — it is a separate variant.
+                    {t('exlib.variant_hint', {
+                      existing: familyVariants.map(v => v.equipment).join(', '),
+                      equipment: form.equipment,
+                    })}
                   </p>
                 )}
               </div>
               <div className="form-group">
-                <label className="form-label">Muscle Groups <span className="text-muted" style={{ fontWeight: 400 }}>(at least 1 required)</span></label>
+                <label className="form-label">{t('exlib.muscle_groups')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('exlib.at_least')}</span></label>
                 <MuscleSelector
                   selected={form.muscles}
                   onChange={muscles => setForm({ ...form, muscles })}
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Equipment</label>
+                <label className="form-label">{t('exlib.equipment')}</label>
                 <select className="form-select" required value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
-                  <option value="" disabled>Select equipment</option>
+                  <option value="" disabled>{t('exlib.select_equipment')}</option>
                   {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Movement Pattern <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                <label className="form-label">{t('exlib.movement_pattern')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional')}</span></label>
                 <select
                   className="form-select"
                   value={form.movementPattern}
                   onChange={e => { setPatternTouched(true); setForm({ ...form, movementPattern: e.target.value }); }}
                 >
-                  <option value="">Unclassified</option>
+                  <option value="">{t('exlib.unclassified')}</option>
                   {movementPatterns.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
                 {!patternTouched && form.movementPattern && (
-                  <p className="ex-dupe-hint">Suggested from the name — change it if it&apos;s wrong.</p>
+                  <p className="ex-dupe-hint">{t('exlib.pattern_suggested')}</p>
                 )}
               </div>
               <div className="form-group">
-                <label className="form-label">Aliases <span className="text-muted" style={{ fontWeight: 400 }}>(alt. names / Chinese name, optional)</span></label>
+                <label className="form-label">{t('exlib.aliases')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('exlib.aliases_hint')}</span></label>
                 <div className="muscle-chips mb-8">
                   {form.aliases.map(a => (
-                    <button key={a} type="button" className="muscle-chip active" onClick={() => removeAlias(a)} title="Click to remove">{a} ×</button>
+                    <button key={a} type="button" className="muscle-chip active" onClick={() => removeAlias(a)} title={t('exlib.click_remove')}>{a} ×</button>
                   ))}
                 </div>
                 <div className="muscle-chip-add">
@@ -429,13 +438,13 @@ export default function ExerciseLibraryPage() {
                     value={aliasInput}
                     onChange={e => setAliasInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }}
-                    placeholder="e.g. RDL, Bulgarian Split Squat…"
+                    placeholder={t('exlib.ph_alias')}
                   />
-                  <button type="button" className="btn btn-outline btn-sm" onClick={addAlias} disabled={!aliasInput.trim()}>+ Add</button>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={addAlias} disabled={!aliasInput.trim()}>{t('exlib.add_alias')}</button>
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Unit Type</label>
+                <label className="form-label">{t('exlib.unit_type')}</label>
                 <div className="log-unit-picker">
                   {[
                     { value: 'weight_reps', label: 'Weight + Reps' },
@@ -451,41 +460,41 @@ export default function ExerciseLibraryPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Video / Demo URL</label>
+                <label className="form-label">{t('exlib.video_url')}</label>
                 <input
                   className="form-input"
                   value={form.videoUrl}
                   onChange={e => setForm({ ...form, videoUrl: e.target.value })}
-                  placeholder="Paste a YouTube link…"
+                  placeholder={t('exlib.ph_video')}
                 />
                 {form.videoUrl && isYouTube(form.videoUrl) && getYouTubeId(form.videoUrl) ? (
                   <div className="ex-form-video-preview">
                     <iframe
                       src={`https://www.youtube.com/embed/${getYouTubeId(form.videoUrl)}`}
-                      title="Video preview"
+                      title={t('exlib.video_preview')}
                       allow="encrypted-media"
                     />
-                    <span className="text-sm text-muted">Will play in-app for students — no YouTube redirect</span>
+                    <span className="text-sm text-muted">{t('exlib.video_inapp')}</span>
                   </div>
                 ) : form.videoUrl && isSafeUrl(form.videoUrl) ? (
-                  <p className="text-sm text-muted mt-8">Not a YouTube link — will open in a new tab for students instead of playing in-app.</p>
+                  <p className="text-sm text-muted mt-8">{t('exlib.video_external')}</p>
                 ) : null}
               </div>
               <div className="form-group">
-                <label className="form-label">Description</label>
-                <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="General description..." />
+                <label className="form-label">{t('exlib.description')}</label>
+                <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={t('exlib.ph_description')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Coaching Cues <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <textarea className="form-textarea" value={form.instructions} onChange={e => setForm({ ...form, instructions: e.target.value })} placeholder="Key coaching points for this exercise..." />
+                <label className="form-label">{t('exlib.cues')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional')}</span></label>
+                <textarea className="form-textarea" value={form.instructions} onChange={e => setForm({ ...form, instructions: e.target.value })} placeholder={t('exlib.ph_cues')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Common Mistakes <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <textarea className="form-textarea" value={form.commonMistakes} onChange={e => setForm({ ...form, commonMistakes: e.target.value })} placeholder="Common mistakes to watch for..." />
+                <label className="form-label">{t('exlib.mistakes')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional')}</span></label>
+                <textarea className="form-textarea" value={form.commonMistakes} onChange={e => setForm({ ...form, commonMistakes: e.target.value })} placeholder={t('exlib.ph_mistakes')} />
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editingEx ? 'Save Changes' : 'Add Exercise'}</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('common.saving') : editingEx ? t('progress.save_changes') : t('exlib.add_exercise')}</button>
               </div>
             </form>
           </div>
@@ -496,23 +505,22 @@ export default function ExerciseLibraryPage() {
         <div className="modal-overlay" onClick={() => setMergingEx(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="flex-between mb-16">
-              <h3 className="modal-title" style={{ marginBottom: 0 }}>Merge "{mergingEx.name}" into…</h3>
+              <h3 className="modal-title" style={{ marginBottom: 0 }}>{t('exlib.merge_title', { name: mergingEx.name })}</h3>
               <button className="btn-icon" onClick={() => setMergingEx(null)}><X size={18} /></button>
             </div>
             <p className="text-sm text-muted mb-16">
-              Pick the exercise to keep. "{mergingEx.name}" stops appearing in lists, and past
-              plans and logs that used it will show the kept exercise instead. Nothing is deleted.
+              {t('exlib.merge_desc', { name: mergingEx.name })}
             </p>
             <input
               className="form-input mb-16"
-              placeholder="Search exercises…"
+              placeholder={t('swap.ph_search')}
               value={mergeSearch}
               onChange={e => setMergeSearch(e.target.value)}
               autoFocus
             />
             <div className="merge-candidate-list">
               {mergeCandidates.length === 0 ? (
-                <p className="text-sm text-muted" style={{ textAlign: 'center', padding: 16 }}>No exercises found</p>
+                <p className="text-sm text-muted" style={{ textAlign: 'center', padding: 16 }}>{t('exlib.none_found')}</p>
               ) : mergeCandidates.map(ex => (
                 <button
                   key={ex.id}
@@ -521,7 +529,7 @@ export default function ExerciseLibraryPage() {
                   disabled={mergeSaving}
                 >
                   <span className="merge-candidate-name">{ex.name}</span>
-                  <span className="merge-candidate-meta">{ex.equipment}{ex.trainerId ? '' : ' · Default'}</span>
+                  <span className="merge-candidate-meta">{ex.equipment}{ex.trainerId ? '' : t('exlib.default_suffix')}</span>
                 </button>
               ))}
             </div>
@@ -545,19 +553,19 @@ export default function ExerciseLibraryPage() {
           <div className="modal-overlay" onClick={() => setShowCustomize(false)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
               <div className="flex-between mb-8">
-                <h3 className="modal-title" style={{ marginBottom: 0 }}>Customize: {customizingEx.name}</h3>
+                <h3 className="modal-title" style={{ marginBottom: 0 }}>{t('exlib.customize')} {customizingEx.name}</h3>
                 <button className="btn-icon" onClick={() => setShowCustomize(false)}><X size={18} /></button>
               </div>
-              <p className="ex-customize-notice">Your custom content — only visible to you and your clients</p>
+              <p className="ex-customize-notice">{t('exlib.customize_notice')}</p>
               <form onSubmit={handleCustomizeSubmit}>
                 <div className="form-group">
-                  <label className="form-label">Video / Demo URL</label>
+                  <label className="form-label">{t('exlib.video_url')}</label>
                   <div className="ex-mode-toggle">
                     {['default', 'custom', 'hidden'].map(m => (
                       <button key={m} type="button"
                         className={`ex-mode-pill${customizeForm.videoMode === m ? ' active' : ''}`}
                         onClick={() => setCustomizeForm(f => ({ ...f, videoMode: m }))}
-                      >{MODE_LABELS[m]}</button>
+                      >{MODE_LABELS[m](t)}</button>
                     ))}
                   </div>
                   {customizeForm.videoMode === 'custom' && (
@@ -565,21 +573,21 @@ export default function ExerciseLibraryPage() {
                       className="form-input mt-8"
                       value={customizeForm.videoUrl}
                       onChange={e => setCustomizeForm(f => ({ ...f, videoUrl: e.target.value }))}
-                      placeholder="Paste a YouTube link…"
+                      placeholder={t('exlib.ph_video')}
                     />
                   )}
                   {customizeForm.videoMode === 'default' && (
-                    <p className="text-sm text-muted mt-8">{seedVideoUrl ? 'Shows the default demo video' : 'The default has no demo video'}</p>
+                    <p className="text-sm text-muted mt-8">{seedVideoUrl ? t('exlib.default_has_video') : t('exlib.default_no_video')}</p>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Coaching Cues</label>
+                  <label className="form-label">{t('exlib.cues')}</label>
                   <div className="ex-mode-toggle">
                     {['default', 'custom', 'hidden'].map(m => (
                       <button key={m} type="button"
                         className={`ex-mode-pill${customizeForm.instructionsMode === m ? ' active' : ''}`}
                         onClick={() => setCustomizeForm(f => ({ ...f, instructionsMode: m }))}
-                      >{MODE_LABELS[m]}</button>
+                      >{MODE_LABELS[m](t)}</button>
                     ))}
                   </div>
                   {customizeForm.instructionsMode === 'custom' && (
@@ -587,15 +595,15 @@ export default function ExerciseLibraryPage() {
                       className="form-textarea mt-8"
                       value={customizeForm.instructions}
                       onChange={e => setCustomizeForm(f => ({ ...f, instructions: e.target.value }))}
-                      placeholder="Key coaching points for this exercise..."
+                      placeholder={t('exlib.ph_cues')}
                     />
                   )}
                 </div>
                 <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
-                  <button type="button" className="btn btn-outline" onClick={handleResetCustomize} disabled={customizeSaving}>Reset to Default</button>
+                  <button type="button" className="btn btn-outline" onClick={handleResetCustomize} disabled={customizeSaving}>{t('exlib.reset_default')}</button>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" className="btn btn-outline" onClick={() => setShowCustomize(false)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary" disabled={customizeSaving}>{customizeSaving ? 'Saving…' : 'Save'}</button>
+                    <button type="button" className="btn btn-outline" onClick={() => setShowCustomize(false)}>{t('common.cancel')}</button>
+                    <button type="submit" className="btn btn-primary" disabled={customizeSaving}>{customizeSaving ? t('common.saving') : t('common.save')}</button>
                   </div>
                 </div>
               </form>
