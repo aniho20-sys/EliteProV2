@@ -5,16 +5,18 @@ import { normalizeSets, UNIT_OPTIONS, emptySet, formatSet, getProgressionSuggest
 import { localToday } from '../../utils/dateUtils';
 import SetInputs from './SetInputs';
 import ExerciseSwapModal from './ExerciseSwapModal';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const REST_OPTIONS = [30, 45, 60, 90, 120, 180, 300];
 const formatRest = s => s < 60 ? `${s}s` : `${s / 60}m`;
 
 function RestTimerBar({ timer }) {
+  const { t } = useLanguage();
   const { timerDisplay, timerActive, timerDone, timerStarted, timerEditing, timerMins, timerSecs,
     setTimerEditing, setTimerMins, setTimerSecs, toggleTimer, resetTimer, startEditTimer, applyTimerInput } = timer;
   return (
     <div className="rest-timer-bar mb-16">
-      <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />Rest Timer</span>
+      <span className="rest-timer-label"><Timer size={12} style={{ marginRight: 4 }} />{t('awork.rest_timer')}</span>
       <div className="rest-timer-right">
         {timerEditing ? (
           <div
@@ -33,17 +35,17 @@ function RestTimerBar({ timer }) {
           <span
             className={`rest-timer-display${timerActive ? ' rest-timer-active' : ''}${timerDone ? ' rest-timer-done' : ''}`}
             onClick={startEditTimer}
-            title={!timerActive ? 'Tap to set time' : undefined}
+            title={!timerActive ? t('awork.tap_to_set') : undefined}
             style={!timerActive ? { cursor: 'pointer' } : {}}
           >
             {timerDisplay}
           </span>
         )}
         <button className={`btn ${timerActive ? 'btn-outline' : 'btn-accent'}`} onClick={toggleTimer}>
-          {timerActive ? 'Pause' : timerDone ? 'Restart' : timerStarted ? 'Resume' : 'Start'}
+          {timerActive ? t('awork.pause') : timerDone ? t('awork.restart') : timerStarted ? t('awork.resume') : t('awork.start')}
         </button>
         {timerStarted && !timerActive && !timerDone && (
-          <button className="btn btn-outline btn-sm" onClick={resetTimer} title="Reset">↺</button>
+          <button className="btn btn-outline btn-sm" onClick={resetTimer} title={t('awork.reset')}>↺</button>
         )}
       </div>
     </div>
@@ -64,6 +66,7 @@ export default function ActiveWorkoutView({
   onCancel, onSave,
   logDraftKey,
 }) {
+  const { t } = useLanguage();
   const { startTimer } = timer;
   const [addingEx, setAddingEx] = useState(false);
 
@@ -193,7 +196,7 @@ export default function ActiveWorkoutView({
     <div>
       <div className="log-top-bar mb-16">
         <div className="log-top-title">
-          <h2 className="page-title">{selectedPlan?.name || 'Free Workout'}</h2>
+          <h2 className="page-title">{selectedPlan?.name || t('wlog.free_workout')}</h2>
           <input
             type="date" className="form-input log-date-input"
             value={logDate} max={localToday()}
@@ -203,10 +206,10 @@ export default function ActiveWorkoutView({
         </div>
         <div className="log-top-actions">
           <button className="btn btn-outline" onClick={() => { localStorage.removeItem(logDraftKey); onCancel(); }} disabled={saving}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button className="btn btn-accent" onClick={onSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save Workout'}
+            {saving ? t('common.saving') : t('awork.save_workout')}
           </button>
         </div>
       </div>
@@ -225,19 +228,19 @@ export default function ActiveWorkoutView({
                   {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
                   {getExerciseName(entry.exerciseId, entry.name)}
                   {exercise && (
-                    <button className="ex-info-btn" onClick={() => setSwapExIdx({ type: 'detail', exercise })} title="Exercise details">
+                    <button className="ex-info-btn" onClick={() => setSwapExIdx({ type: 'detail', exercise })} title={t('awork.exercise_details')}>
                       <Info size={14} />
                     </button>
                   )}
-                  <button className="ex-info-btn" onClick={() => setSwapExIdx(exIdx)} title="Swap exercise">
+                  <button className="ex-info-btn" onClick={() => setSwapExIdx(exIdx)} title={t('awork.swap_exercise')}>
                     <ArrowLeftRight size={14} />
                   </button>
-                  <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title="Remove exercise" style={{ color: 'var(--danger)' }}>
+                  <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title={t('wlog.remove_exercise')} style={{ color: 'var(--danger)' }}>
                     <X size={14} />
                   </button>
                 </h3>
                 <div className="log-card-tags">
-                  {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>PR: {currentPR.weight}kg</span>}
+                  {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>{t('awork.pr_prefix')} {currentPR.weight}kg</span>}
                   {planEx && <span className="text-sm text-muted">{(() => {
                     const sets = normalizeSets(planEx);
                     const reps = sets.map(s => s.reps);
@@ -248,7 +251,7 @@ export default function ActiveWorkoutView({
                     if (hasWeight) detail += ` | ${weights.every(w => w === weights[0]) ? weights[0] + 'kg' : weights.join('/') + 'kg'}`;
                     return detail;
                   })()}</span>}
-                  {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>NEW PR!</span>}
+                  {gotNewPR && <span className="tag tag-warning" style={{ fontSize: '0.65rem' }}>{t('awork.new_pr')}</span>}
                 </div>
               </div>
               <div className="log-unit-picker" style={{ marginBottom: 8 }}>
@@ -268,18 +271,18 @@ export default function ActiveWorkoutView({
               {lastEntry && (
                 <button type="button" className="last-session-hint" onClick={() => fillFromLast(exIdx, lastEntry, entry.unit || 'weight_reps')}>
                   <RotateCcw size={13} className="last-session-icon" />
-                  <span className="last-session-label">Last time</span>
+                  <span className="last-session-label">{t('awork.last_time')}</span>
                   <span className="last-session-data">{lastEntry.sets.map(s => formatSet(s, entry.unit || 'weight_reps')).join(' | ')}</span>
-                  <span className="last-session-fill-btn">Use this</span>
+                  <span className="last-session-fill-btn">{t('awork.use_this')}</span>
                 </button>
               )}
               {(() => {
                 const suggestion = getProgressionSuggestion(logs, entry.exerciseId);
                 return suggestion ? (
                   <button className="progression-hint progression-hint-btn" onClick={() => applyProgression(exIdx, suggestion)}>
-                    <span className="progression-hint-label">↑ Try</span>
+                    <span className="progression-hint-label">{t('awork.try_next')}</span>
                     <span className="progression-hint-weight">{suggestion}kg</span>
-                    <span className="progression-hint-apply">Apply</span>
+                    <span className="progression-hint-apply">{t('awork.apply')}</span>
                   </button>
                 ) : null;
               })()}
@@ -289,7 +292,7 @@ export default function ActiveWorkoutView({
               const url = planEx?.videoUrl || exercise?.videoUrl;
               return url && isSafeUrl(url) ? (
                 <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-video mb-16">
-                  <Play size={14} /> Watch Demo
+                  <Play size={14} /> {t('plans.watch_demo')}
                 </a>
               ) : null;
             })()}
@@ -303,26 +306,26 @@ export default function ActiveWorkoutView({
                 onComplete={() => handleCompleteSet(exIdx, setIdx)}
               />
             ))}
-            <button className="btn btn-outline btn-sm mt-8" onClick={() => addSet(exIdx)}>+ Add Set</button>
+            <button className="btn btn-outline btn-sm mt-8" onClick={() => addSet(exIdx)}>{t('awork.add_set')}</button>
           </div>
         );
       })}
 
       <button className="btn btn-outline mb-16" style={{ width: '100%' }} onClick={() => setAddingEx(true)}>
-        + Add Exercise
+        {t('awork.add_exercise')}
       </button>
 
       <div className="card">
         <div className="form-group">
-          <label className="form-label">RPE (Rate of Perceived Exertion) — {rpe}/10</label>
+          <label className="form-label">{t('awork.rpe_label', { value: rpe })}</label>
           <input type="range" min="1" max="10" value={rpe} onChange={e => setRpe(Number(e.target.value))} style={{ width: '100%' }} />
         </div>
         <div className="form-group">
-          <label className="form-label">Session Notes</label>
-          <textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="How did the workout feel?" />
+          <label className="form-label">{t('wlog.session_notes')}</label>
+          <textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('awork.ph_notes')} />
         </div>
         <button className="btn btn-accent" onClick={onSave} style={{ width: '100%' }} disabled={saving}>
-          {saving ? 'Saving…' : 'Save Workout'}
+          {saving ? t('common.saving') : t('awork.save_workout')}
         </button>
       </div>
 

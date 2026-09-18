@@ -17,7 +17,13 @@ export const TRAINING_VOCAB = [
   // The unit abbreviations as they appear inside a set row: placeholder="kg",
   // placeholder="sec", placeholder="m". Same words, same ruling.
   'set', 'sec', 's', 'm', 'cm',
-].map(s => s.toLowerCase());
+].map(s => s.toLowerCase())
+  // 'Other' is an equipment type AND the last chip on every multiple-choice question in
+  // the intake form. Banning it as a dictionary value would ban the legitimate use, which
+  // is the same reason the muscle groups and UNIT_OPTIONS are left out of this list
+  // entirely — a checker that fires on correct text gets switched off, and then it
+  // protects nothing.
+  .filter(w => w !== 'other');
 
 // Props that carry user-visible text. react/jsx-no-literals runs with ignoreProps (or
 // every className would be a finding), so these are counted separately by both guardians.

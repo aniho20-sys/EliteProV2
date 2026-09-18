@@ -87,7 +87,7 @@ export default function WorkoutLogPage() {
       timer.setTimeLeft(draft.restSeconds ?? 90);
       setCompletedSets(new Set(draft.completedSets || []));
       setShowLog(true);
-      toast('Workout session restored', 'info');
+      toast(t('wlog.toast_restored'), 'info');
     } catch {
       localStorage.removeItem(logDraftKey);
     }
@@ -169,7 +169,7 @@ export default function WorkoutLogPage() {
       return next;
     });
     setSwapExIdx(null);
-    toast(`Swapped to ${newEx.name}`);
+    toast(t('wlog.toast_swapped', { name: newEx.name }));
   };
 
   const handleSave = async () => {
@@ -219,7 +219,7 @@ export default function WorkoutLogPage() {
       setCompletedData({ planName: selectedPlan?.name || 'Free Workout', exerciseCount: completedCount, totalVolume, totalSets, newPRs, rpe, newBadges });
     } catch (err) {
       console.error('[WorkoutLog] save failed:', err);
-      toast(`Failed to save workout (${err?.code || err?.message || 'unknown error'})`, 'error');
+      toast(t('wlog.toast_save_failed', { reason: err?.code || err?.message || t('wlog.unknown_error') }), 'error');
     } finally {
       setSaving(false);
     }
@@ -247,9 +247,9 @@ export default function WorkoutLogPage() {
       const completed = updatedEntries.some(e => e.sets.length > 0);
       await updateWorkoutLog(editingLog.id, { entries: updatedEntries, rpe: editRpe, notes: editNotes, completed });
       setEditingLog(null);
-      toast('Workout updated');
+      toast(t('wlog.toast_updated'));
     } catch {
-      toast('Failed to update workout', 'error');
+      toast(t('wlog.toast_update_failed'), 'error');
     } finally {
       setSavingEdit(false);
     }
@@ -357,9 +357,9 @@ export default function WorkoutLogPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Workout Log</h1>
+        <h1 className="page-title">{t('wlog.title')}</h1>
         <p className="page-subtitle">
-          {loggingForClient ? `Logging for ${targetClientName}` : 'Record your training sessions'}
+          {loggingForClient ? t('wlog.logging_for', { name: targetClientName }) : t('wlog.subtitle')}
         </p>
       </div>
 
@@ -367,14 +367,14 @@ export default function WorkoutLogPage() {
         <div className="card mb-16 pr-summary-card">
           <div className="card-header">
             <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
-              <Trophy size={20} style={{ color: 'var(--warning)' }} /> Personal Records
+              <Trophy size={20} style={{ color: 'var(--warning)' }} /> {t('wlog.personal_records')}
             </h3>
             <span className="tag tag-warning">{prCount} PRs</span>
           </div>
           <div className="pr-grid">
             {Object.entries(prs).map(([exId, pr]) => (
               <div key={exId} className="pr-item">
-                <div className="pr-exercise">{getExerciseName(exId, pr.name || 'Custom exercise')}</div>
+                <div className="pr-exercise">{getExerciseName(exId, pr.name || t('wlog.custom_exercise'))}</div>
                 <div className="pr-weight">{pr.weight}kg</div>
                 <div className="pr-date">{pr.date}</div>
               </div>
@@ -384,35 +384,35 @@ export default function WorkoutLogPage() {
       )}
 
       <div className="card mb-16">
-        <h3 className="card-title mb-16">Start a Workout</h3>
+        <h3 className="card-title mb-16">{t('wlog.start_workout')}</h3>
         <div className="grid-3">
           {plans.map(p => (
             <button key={p.id} className="card client-card" onClick={() => startLog(p)} style={{ textAlign: 'left', border: '1px solid var(--border)' }}>
               <div className="fw-bold">{p.name}</div>
-              <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{p.exercises.length} exercises</div>
+              <div className="text-sm text-muted">{p.day ? `${p.day} · ` : ''}{t('wlog.n_exercises', { count: p.exercises.length })}</div>
             </button>
           ))}
           <button className="card client-card free-workout-card" onClick={startFreeWorkout}>
-            <div className="fw-bold">Free Workout</div>
-            <div className="text-sm text-muted">Choose your own exercises</div>
+            <div className="fw-bold">{t('wlog.free_workout')}</div>
+            <div className="text-sm text-muted">{t('wlog.free_workout_desc')}</div>
           </button>
         </div>
       </div>
 
-      <h3 className="mb-16">History</h3>
+      <h3 className="mb-16">{t('wlog.history')}</h3>
       {logs.length === 0 ? (
         <EmptyState
           icon={!isTrainer && plans.length === 0 && !currentUser.trainerId ? UserPlus : NotebookPen}
-          title="No workouts logged yet"
+          title={t('wlog.empty_title')}
           description={
-            isTrainer ? 'Assign a workout plan to your client first, then log it here.'
-            : !currentUser.trainerId ? 'Connect to a coach first — they will assign workout plans for you to follow.'
-            : plans.length > 0 ? 'Select a plan above to start logging your first session.'
-            : "Your coach hasn't assigned any plans yet. You can start a Free Workout above anytime."
+            isTrainer ? t('wlog.empty_trainer')
+            : !currentUser.trainerId ? t('wlog.empty_no_coach')
+            : plans.length > 0 ? t('wlog.empty_has_plans')
+            : t('wlog.empty_no_plans')
           }
           action={
-            !isTrainer && !currentUser.trainerId ? { label: 'Connect to a Coach', to: '/profile' }
-            : !isTrainer && plans.length === 0 ? { label: 'Message Your Coach', to: '/messages' }
+            !isTrainer && !currentUser.trainerId ? { label: t('wlog.connect_coach'), to: '/profile' }
+            : !isTrainer && plans.length === 0 ? { label: t('wlog.message_coach'), to: '/messages' }
             : undefined
           }
         />
@@ -421,7 +421,7 @@ export default function WorkoutLogPage() {
           const plan = plans.find(p => p.id === l.planId);
           const totalVolume = calcVolume(l.entries);
           const totalSets = calcSetCount(l.entries);
-          const planName = plan?.name || l.workoutName || 'Custom Workout';
+          const planName = plan?.name || l.workoutName || t('sessions.custom_workout');
           const newPRs = (l.entries || [])
             .filter(entry => entry.sets?.length > 0 && wasPRAtTime(l, entry))
             .map(entry => ({
@@ -438,14 +438,14 @@ export default function WorkoutLogPage() {
                   <span className="text-sm text-muted">{l.date}</span>
                 </div>
                 <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {!l.planId && <span className="tag">Custom</span>}
-                  {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
+                  {!l.planId && <span className="tag">{t('sessions.tag_custom')}</span>}
+                  {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? t('sessions.tag_pt') : t('sessions.tag_self')}</span>}
                   <span className="tag tag-primary">RPE: {l.rpe}/10</span>
-                  <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
-                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => handleShareLog(l, shareData)} title={copiedLogId === l.id ? 'Copied!' : 'Share workout'}>
+                  <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? t('sessions.tag_completed') : t('sessions.tag_partial')}</span>
+                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => handleShareLog(l, shareData)} title={copiedLogId === l.id ? t('wcomplete.copied') : t('wlog.share_workout')}>
                     {copiedLogId === l.id ? <CheckCircle size={13} /> : <Share2 size={13} />}
                   </button>
-                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEdit(l)} title="Edit workout">
+                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEdit(l)} title={t('wlog.edit_workout')}>
                     <Pencil size={13} />
                   </button>
                 </div>
@@ -454,7 +454,7 @@ export default function WorkoutLogPage() {
                 {totalVolume > 0 && (
                   <div className="log-stat-item">
                     <span className="log-stat-value">{totalVolume.toLocaleString()}<span className="log-stat-unit">kg</span></span>
-                    <span className="log-stat-label">Total Volume</span>
+                    <span className="log-stat-label">{t('sessions.total_volume')}</span>
                   </div>
                 )}
                 <div className="log-stat-item">
@@ -463,7 +463,7 @@ export default function WorkoutLogPage() {
                 </div>
                 <div className="log-stat-item">
                   <span className="log-stat-value">{(l.entries || []).length}</span>
-                  <span className="log-stat-label">Exercises</span>
+                  <span className="log-stat-label">{t('sessions.exercises_label')}</span>
                 </div>
               </div>
               {l.entries.map((entry, i) => {
@@ -485,7 +485,7 @@ export default function WorkoutLogPage() {
               {l.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{l.notes}</p>}
               {l.trainerNotes && (
                 <div className="trainer-note-readonly">
-                  <span className="trainer-note-label">Coach</span>
+                  <span className="trainer-note-label">{t('sessions.coach')}</span>
                   <span className="trainer-note-text">{l.trainerNotes}</span>
                 </div>
               )}
@@ -497,19 +497,19 @@ export default function WorkoutLogPage() {
       {editingLog && (
         <div className="modal-overlay" onClick={() => setEditingLog(null)}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Edit Workout — {editingLog.date}</h3>
+            <h3 className="modal-title">{t('wlog.edit_title', { date: editingLog.date })}</h3>
             {editEntries.map((entry, exIdx) => (
               <div key={exIdx} className="mb-16">
                 <div className="fw-bold mb-8 text-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>{getExerciseName(entry.exerciseId, entry.name)}</span>
                   <button className="btn-icon" style={{ color: 'var(--danger)', flexShrink: 0 }}
                     onClick={() => setEditEntries(prev => prev.filter((_, i) => i !== exIdx))}
-                    title="Remove exercise">
+                    title={t('wlog.remove_exercise')}>
                     <X size={14} />
                   </button>
                 </div>
                 {entry.sets.length === 0
-                  ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
+                  ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>{t('wlog.skipped')}</p>
                   : entry.sets.map((set, setIdx) => (
                     <SetInputs key={setIdx} set={set} setIdx={setIdx}
                       unit={entry.unit || 'weight_reps'}
@@ -521,16 +521,16 @@ export default function WorkoutLogPage() {
               </div>
             ))}
             <div className="form-group">
-              <label className="form-label">RPE — {editRpe}/10</label>
+              <label className="form-label">{t('wlog.rpe_label', { value: editRpe })}</label>
               <input type="range" min="1" max="10" value={editRpe} onChange={e => setEditRpe(Number(e.target.value))} style={{ width: '100%' }} />
             </div>
             <div className="form-group">
-              <label className="form-label">Session Notes</label>
-              <textarea className="form-textarea" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Session notes…" rows={3} />
+              <label className="form-label">{t('wlog.session_notes')}</label>
+              <textarea className="form-textarea" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder={t('wlog.ph_session_notes')} rows={3} />
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setEditingLog(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save Changes'}</button>
+              <button className="btn btn-outline" onClick={() => setEditingLog(null)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? t('common.saving') : t('progress.save_changes')}</button>
             </div>
           </div>
         </div>

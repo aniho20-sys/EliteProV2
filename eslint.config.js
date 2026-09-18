@@ -44,6 +44,10 @@ const TRANSLATED_FILES = [
   'src/components/ProgressView.jsx',
   'src/pages/ProgressPage.jsx',
   'src/components/MonthlyReportModal.jsx',
+  'src/pages/WorkoutLogPage.jsx',
+  'src/components/workout/ActiveWorkoutView.jsx',
+  'src/pages/IntakeFormPage.jsx',
+  'src/pages/TrainingProfilePage.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
 ]
 
@@ -77,6 +81,8 @@ export default defineConfig([
           // Punctuation and glyphs that are not words in any language.
           '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '−', '.', ',', '|', '&nbsp;',
           '&ldquo;', '&rdquo;',
+          // Reset arrow on the rest timer — an icon drawn as a character.
+          '↺',
           // A warning glyph is an icon, not a word.
           '⚠️', '⚠',
           // Step numerals in an ordered list.
