@@ -1,6 +1,6 @@
 # ElitePro BACKLOG — 單一待辦清單
 
-> **最後更新**：2026-09-18（FB 永久剷 · A3/A4 Ani 已做 · outreach 無方案）
+> **最後更新**：2026-09-18（FB 永久剷 · A3/A4/A5 Ani 已做 · B1 i18n 清零 · outreach 無方案）
 > **規則**：任何新決定／新批准**即刻**寫入呢度，唔好等下次週報。
 > 週報第【上週講過但未做】節對返呢份文件。
 
@@ -81,22 +81,14 @@
 
 ---
 
-## A5. 撳 Scan My Library（42 條動作分類）⏱️ 10 分鐘
+## A5. ✅ 撳 Scan My Library —— Ani 2026-09-18 話做咗
 
-| | |
-|---|---|
-| **幾時提出** | 2026-08-13 |
-| **出處** | `CEO-meeting-2026-08-15` 待拍板 #3；`PROGRESS.md:89` |
-| **拖咗** | **1 個月** |
-| **做完會多咗乜** | 你 42 條自建動作而家冇 movement pattern,所以 Exercise Library 個 Movement 篩選對佢哋完全冇用 |
+排咗 1 個月（2026-08-13 提出）。
 
-### 第一步
-
-Profile → **Movement Pattern Auto-Classify** → **Scan My Library**
-
-⚠️ **睇高信心嗰組,唔好淨係睇低信心嗰組。** 常規 #35 就係由呢度嚟嘅 ——「Tricep kickback」曾經被高信心分做 Hinge（實際係 Push）。個 blocker 已經修咗,但**高信心嗰格先係最易被 bulk approve 嘅位**。
-
-剔完先撳 Apply。唔肯定嘅唔剔 —— 留白係合法答案。
+⚠️ 未確認嘅一點（同 A4 一樣,係「功能有冇 work」唔係「做咗未」）：
+- 動作庫個 **Movement 篩選**而家揀「Hinge」「Push」呢啲,有冇真係篩到你嘅自建動作出嚟？
+- 有冇邊條係**高信心**但分錯咗（常規 #35 就係由「Tricep kickback 被高信心分做 Hinge」呢件事嚟嘅）？分錯咗可以喺動作庫逐條改返。
+- 留白嘅唔使理 —— 例如 Calf Raise,八個 pattern 一個都唔啱,空白係合法答案,唔好夾硬塞。
 
 ---
 
