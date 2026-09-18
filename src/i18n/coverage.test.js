@@ -50,7 +50,6 @@ const EXEMPT = {
 const AWAITING = {
   // — trainer-only —
   'src/pages/ClientDetailPage.jsx': 103,
-  'src/components/PlatformStatsCard.jsx': 56,
   // — shared between trainer and client —
   // — client-only: phase 1 was not finished either, which nothing had reported —
   // — app-wide chrome —
