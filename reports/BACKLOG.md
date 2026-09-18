@@ -1,6 +1,6 @@
 # ElitePro BACKLOG — 單一待辦清單
 
-> **最後更新**：2026-09-17（A1 重寫完 · A6 解鎖 · B4/B5/B6 完成 · ⚫ 區已剷）
+> **最後更新**：2026-09-18（FB 永久剷 · A3/A4 Ani 已做 · outreach 無方案）
 > **規則**：任何新決定／新批准**即刻**寫入呢度，唔好等下次週報。
 > 週報第【上週講過但未做】節對返呢份文件。
 
@@ -21,75 +21,33 @@
 
 ---
 
-## A1. 加入 2-3 個英國 PT 嘅 FB group ⏱️ 今晚 10 分鐘
+## A1. ⛔ FB —— 永久剷（Ani 否決兩次）
 
 | | |
 |---|---|
-| **幾時提出** | 2026-07-31（原 FB 方案）· 2026-09-16 重寫 |
-| **拖咗** | **1.5 個月** |
-| **前提**（2026-09-16 Ani 確認） | 人喺**英國**、自己 studio 教、**唔識其他教練**、9 個學生全部英國 |
-| **做完會多咗乜** | 由 0 個外部教練 → 進入一個有目標客戶嘅場。你而家所有產品判斷都係你一個人嘅直覺 |
+| **第一次否決** | 2026-09-08 —— 「因為 Facebook 冇乜人用」 |
+| **第二次否決** | 2026-09-18 —— 「1 果到我咪話左冇乜人用 fb」 |
 
-### 點解係 FB 而唔係之前否決咗
+**兩次都係同一個錯**：第一次我剷咗，理由係「香港教練唔用 FB」。第二次我**自己推論**「Ani 人喺英國，而英國 PT 圈嘅 FB group 好活躍」,就重開咗佢 —— 而 Ani 從來冇講過英國嘅 FB 有用。
 
-你 2026-09-08 否決 FB 嘅理由係**「香港教練唔用 FB」** —— 對香港成立。
-但你目標市場係**英國**,而英國 PT 圈嘅 FB group 就係獨立教練搵同行、
-問保險、問報價、賣二手器材嘅地方。原否決同呢個市場冇關係,已重開。
+我兩次出嘅 outreach 方案（WhatsApp 搵同行朋友、FB group）都係由 repo 推論佢嘅人際處境,兩次都錯。**第三個估我唔會出。**
 
-### 第一步（今晚做,唔係發帖 —— 係排隊)
+⚠️ **呢一項唔准再以任何形式重開** —— 唔可以話「英國唔同」「換個 group 類型」「改成 IG 但同一個邏輯」。要重開只有一個條件：**Ani 自己講**。
 
-Group 審批通常要 1-2 日,所以今晚做嘅係申請。
+---
 
-1. FB 搜尋列打：`personal trainer UK` / `personal trainers United Kingdom` / `self employed personal trainer`
-2. 撳 **Groups** tab
-3. 揀 **2-3 個**,準則：成員 **3,000–30,000**、「Last post」係今日或尋日、About 入面睇下有冇明文禁 self-promotion
-4. 撳 Join,答埋入會問題（照答你係 self-employed PT）
+## ⏸️ Outreach —— 冇方案，等 Ani
 
-⚠️ **員工A 唔會列 group 名** —— 搜唔到實時 FB 內容,列出嚟就係編。
-（`marketing-report-2026-08-28` 列過四個 group 名,冇人驗證過存唔存在。）
+**現況**：0 個外部教練。兩個方案都作廢。
 
-### 📋 加入之後發嘅帖（英文成品,copy 就用得）
+**點解唔即刻出第三個**：連續兩次我都係由 `PRODUCT.md` / 週報 / 時區推論 Ani 嘅處境,兩次都錯到成個方案要剷。再估一次只會浪費佢時間再否決一次。
 
-**先睇兩三日**,睇下嗰個 group 接受咩 tone,然後發：
+**要 Ani 答一條**：你覺得而家有冇邊個地方係你**自己覺得可行**嘅？（唔使有計劃,一個方向就夠）
+答咗之後員工X 出完整成品文案（常規 #43 第 3 條）。
 
-```
-Question for the self-employed PTs here — how do you track
-session packages?
+答唔到都冇問題 —— 咁 outreach 就暫時擱住,唔好扮緊有進度。
 
-I've been running my own studio and kept losing track of who
-had how many sessions left. Spreadsheets fell apart the moment
-someone cancelled last minute or wanted to reschedule. Had a
-client insist she had 4 left when my sheet said 2, and I had
-no way to prove either number.
-
-Ended up building something to handle it — client books, the
-session comes off automatically, cancel more than 24h ahead
-and it goes back. Been running my own 9 clients on it for a
-few months.
-
-Not trying to sell anything here, genuinely curious: is this
-just me being disorganised, or does everyone have some version
-of this problem? And if you've got a system that works, I'd
-rather hear about that.
-```
-
-**點解咁寫**：開頭係問題唔係產品、中間係具體故事、結尾主動畀人講返佢自己嘅方法。硬銷會被 admin 刪。
-
-### 🚧 障礙同應對
-
-| 情況 | 點做 |
-|---|---|
-| 有人 comment 問 "what's it called?" | ⚠️ **唔好喺 comment 貼 link**（多數 group 當 self-promo 刪帖）。覆：`Happy to DM you — don't want to spam the group with links.` 然後私訊 |
-| 私訊問幾錢 | `Free while I'm still finding people to test it. I'm planning a monthly fee later, but no cut of what you charge your clients — that part I'm not doing.` |
-| 問 how many people use it | ⚠️ **唔好吹。** `Just me and my 9 clients right now. You'd be the first coach outside my own studio — which is exactly why I'm asking.` |
-| Admin 刪咗個帖 | 唔好爭拗,唔好重發。試下一個 group。三個都刪 = tone 有問題,返嚟改 |
-| 零 comment | 正常。**兩星期內三個 group 各發一次**先算試過 |
-| 等審批期間 | 去做 A2 / A4（各 2 分鐘） |
-
-### ✅ 完成標準
-
-**今晚**：撳咗 Join 2-3 個 group（唔係「搵到」）
-**兩星期內**：最少一個 group 發咗帖
+---
 
 ## A2. ✅ 已答 — 剷咗（2026-09-17）
 
@@ -109,41 +67,17 @@ rather hear about that.
 
 ⚠️ 呢項**唔屬於 🔴 區**,因為佢唔係 Ani 要做嘅嘢 —— 係 agent 要開口問嘅嘢。放喺呢度只係因為 A2 未問完。問完就剷。
 
-## A3. Landing page iPhone 真機驗收 ⏱️ 5 分鐘
+## A3. ✅ Landing page 真機驗收 —— Ani 2026-09-18 話做咗
 
-| | |
-|---|---|
-| **幾時提出** | 2026-08-15 |
-| **出處** | `CEO-meeting-2026-08-15` 行動一；常規 #36 |
-| **拖咗** | **1 個月** |
-| **做完會多咗乜** | Landing page 08-20 出咗街但冇人喺真機撳過。常規 #36 就係由兩個「screenshot 睇落冇問題但實際撳唔郁」嘅 bug 嚟嘅 |
-
-### 第一步
-
-iPhone 開 `https://elitepro-16718.web.app/#/landing`，然後：
-
-1. 由上碌到落底 — 六個 section 有冇壞版
-2. **撳一次個 CTA** — 有冇真係去到 sign-up（唔係死 link）
-3. 睇「首 5 位 Founding Member + 3 個月免費」嗰句有冇顯示
-
-第 2 項係重點。`b67cf69` 嗰單 filter chips 死咗三個星期，就係因為冇人撳過。
+排咗一個月,實際上 Ani 之前已經做咗。**冇人問過佢。**
 
 ---
 
-## A4. 撳一次已批准嘅動作合併 ⏱️ 2 分鐘
+## A4. ✅ 撳動作合併 —— Ani 2026-09-18 話做咗
 
-| | |
-|---|---|
-| **幾時提出** | 2026-08-13 |
-| **出處** | `CEO-meeting-2026-08-15` 待拍板 #2；`PROGRESS.md:87` |
-| **拖咗** | **1 個月** |
-| **做完會多咗乜** | 軟合併功能 08-13 寫好咗但從來未被真人用過一次。撳完可以確認舊 plan / log 真係跟住 pointer 顯示返 Overhead Press（常規 #27 嘅 read-time resolution） |
+同 A3 一樣：排咗一個月,實際做咗,冇人問。
 
-### 第一步
-
-Exercise Library → 搵 **Military press** → **Merge into…** → 揀 **Overhead Press** → 確認。
-
-撳完去睇一個用過 Military press 嘅舊 plan，應該顯示「Overhead Press」。
+⚠️ 未確認嘅一點：撳完之後舊 plan 有冇正確顯示返「Overhead Press」（soft-merge 嘅 read-time resolution,常規 #27）。呢個係**功能有冇 work**,唔係「做咗未」—— 值得問一句。
 
 ---
 
