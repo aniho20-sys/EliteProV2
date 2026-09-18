@@ -32,6 +32,7 @@ function IntakeRow({ label, value }) {
 }
 
 function VolumeChart({ logs }) {
+  const { t } = useLanguage();
   const sessions = [...logs]
     .filter(l => (l.entries || []).some(e => (e.unit || 'weight_reps') === 'weight_reps'))
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -55,22 +56,22 @@ function VolumeChart({ logs }) {
     <div className="card">
       <div className="card-header" style={{ alignItems: 'flex-start' }}>
         <div>
-          <h3 className="card-title">Session Volume</h3>
-          <p className="text-sm text-muted" style={{ marginTop: 2 }}>Total kg lifted per session</p>
+          <h3 className="card-title">{t('cdetail.session_volume')}</h3>
+          <p className="text-sm text-muted" style={{ marginTop: 2 }}>{t('cdetail.session_volume_sub')}</p>
         </div>
         <div className="flex gap-8" style={{ alignItems: 'center' }}>
           {trendUp !== null && (
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: trendUp ? 'var(--accent)' : 'var(--danger)' }}>
-              {trendUp ? '↑' : '↓'} {trendUp ? 'Trending up' : 'Trending down'}
+              {trendUp ? '↑' : '↓'} {trendUp ? t('cdetail.trending_up') : t('cdetail.trending_down')}
             </span>
           )}
           {sessions.length > 0 && (
-            <span className="tag">{sessions.length} sessions</span>
+            <span className="tag">{t('cdetail.n_sessions', { count: sessions.length })}</span>
           )}
         </div>
       </div>
       {!hasData ? (
-        <p className="text-sm text-muted" style={{ padding: '12px 0' }}>No weight-based sessions yet.</p>
+        <p className="text-sm text-muted" style={{ padding: '12px 0' }}>{t('cdetail.no_weight_sessions')}</p>
       ) : (
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={sessions} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="28%">
@@ -166,9 +167,9 @@ export default function ClientDetailPage() {
     return (
       <EmptyState
         icon={UserX}
-        title="Client not found"
-        description="This client may have been removed or you may not have access."
-        action={{ label: 'Back to Clients', to: '/clients' }}
+        title={t('cdetail.not_found')}
+        description={t('cdetail.not_found_desc')}
+        action={{ label: t('cdetail.back_to_clients'), to: '/clients' }}
       />
     );
   }
@@ -193,13 +194,13 @@ export default function ClientDetailPage() {
       };
       if (editStat) {
         await updateBodyStat(clientId, editStat.id, data);
-        toast('Measurement updated');
+        toast(t('cdetail.toast_stat_updated'));
       } else {
         await addBodyStat(clientId, { ...data, addedBy: 'coach' });
-        toast('Measurement added');
+        toast(t('cdetail.toast_stat_added'));
       }
       setShowStatModal(false);
-    } catch { toast('Failed to save measurement', 'error'); }
+    } catch { toast(t('cdetail.toast_stat_failed'), 'error'); }
     finally { setSavingStat(false); }
   };
 
@@ -207,10 +208,10 @@ export default function ClientDetailPage() {
     setRemoving(true);
     try {
       await removeClient(clientId);
-      toast(`${client.name} removed from your clients`, 'info');
+      toast(t('cdetail.toast_removed', { name: client.name }), 'info');
       navigate('/clients');
     } catch {
-      toast('Failed to remove client', 'error');
+      toast(t('cdetail.toast_remove_failed'), 'error');
       setRemoving(false);
     }
   };
@@ -226,9 +227,9 @@ export default function ClientDetailPage() {
         sessionOffset: Number(offsetInput) || 0,
       });
       setEditingSessions(false);
-      toast('Sessions updated');
+      toast(t('cdetail.toast_sessions_updated'));
     } catch {
-      toast('Failed to update sessions', 'error');
+      toast(t('cdetail.toast_sessions_failed'), 'error');
     } finally {
       setSavingSessions(false);
     }
@@ -243,9 +244,9 @@ export default function ClientDetailPage() {
       setTopUpOpen(false);
       setTopUpAmount('');
       setTopUpRate(null);
-      toast(`Added ${qty} sessions`);
+      toast(t('cdetail.toast_topped_up', { count: qty }));
     } catch (err) {
-      toast(`Failed to update sessions: ${err?.code || err?.message || 'unknown error'}`, 'error');
+      toast(t('cdetail.toast_topup_failed', { reason: err?.code || err?.message || t('wlog.unknown_error') }), 'error');
     } finally {
       setSavingTopUp(false);
     }
@@ -256,19 +257,19 @@ export default function ClientDetailPage() {
     const tag = tagInput.trim();
     if (!tag) return;
     const existing = client.tags || [];
-    if (existing.includes(tag)) { toast('Tag already added', 'info'); setTagInput(''); return; }
+    if (existing.includes(tag)) { toast(t('cdetail.toast_tag_dupe'), 'info'); setTagInput(''); return; }
     setSavingTag(true);
     try {
       await updateClient(clientId, { tags: [...existing, tag] });
       setTagInput('');
-    } catch { toast('Failed to add tag', 'error'); }
+    } catch { toast(t('cdetail.toast_tag_failed'), 'error'); }
     finally { setSavingTag(false); }
   };
 
   const handleRemoveTag = async (tag) => {
     const updated = (client.tags || []).filter(t => t !== tag);
     try { await updateClient(clientId, { tags: updated }); }
-    catch { toast('Failed to remove tag', 'error'); }
+    catch { toast(t('cdetail.toast_tag_remove_failed'), 'error'); }
   };
 
   const openSavePlanModal = (log) => {
@@ -299,9 +300,9 @@ export default function ClientDetailPage() {
         exercises,
       });
       setSavePlanLog(null); setSavePlanName(''); setSavePlanDay('');
-      toast('Plan saved successfully');
+      toast(t('cdetail.toast_plan_saved'));
     } catch {
-      toast('Failed to save plan', 'error');
+      toast(t('cdetail.toast_plan_failed'), 'error');
     } finally {
       setSavingPlan(false);
     }
@@ -313,9 +314,9 @@ export default function ClientDetailPage() {
       await updateWorkoutLog(logId, { trainerNotes: noteText.trim() });
       setEditingNoteLogId(null);
       setNoteText('');
-      toast('Note saved');
+      toast(t('cdetail.toast_note_saved'));
     } catch {
-      toast('Failed to save note', 'error');
+      toast(t('cdetail.toast_note_failed'), 'error');
     } finally {
       setSavingNoteId(null);
     }
@@ -373,15 +374,15 @@ export default function ClientDetailPage() {
 
   const handleSaveEditLog = async () => {
     const entriesToSave = serializeEntries(editLogEntries);
-    if (entriesToSave.every(e => e.sets.length === 0)) { toast('Please enter at least one set', 'error'); return; }
+    if (entriesToSave.every(e => e.sets.length === 0)) { toast(t('cdetail.toast_need_a_set'), 'error'); return; }
     setSavingEditLog(true);
     try {
       const completed = entriesToSave.some(e => e.sets.length > 0);
       await updateWorkoutLog(editingLogId, { entries: entriesToSave, date: editLogDate, rpe: editLogRpe, notes: editLogNotes, completed });
       setEditingLogId(null);
-      toast('Workout updated');
+      toast(t('wlog.toast_updated'));
     } catch {
-      toast('Failed to update workout', 'error');
+      toast(t('wlog.toast_update_failed'), 'error');
     } finally {
       setSavingEditLog(false);
     }
@@ -394,27 +395,34 @@ export default function ClientDetailPage() {
   return (
     <div>
       <div className="flex-between mb-16" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <Link to="/clients" className="btn btn-outline btn-sm"><ArrowLeft size={16} /> Back to Clients</Link>
+        <Link to="/clients" className="btn btn-outline btn-sm"><ArrowLeft size={16} /> {t('cdetail.back_to_clients')}</Link>
         <div className="flex gap-8">
           <button className="btn btn-outline btn-sm" onClick={() => setShowReport(true)}>
-            <FileText size={14} /> Monthly Report
+            <FileText size={14} /> {t('cdetail.monthly_report')}
           </button>
           <button className="btn btn-sm" style={{ color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
-            <Trash2 size={15} /> Remove Client
+            <Trash2 size={15} /> {t('cdetail.remove_client')}
           </button>
         </div>
       </div>
 
       <div className="page-header">
         <h1 className="page-title">{client.name}</h1>
-        <p className="page-subtitle">Age: {client.age} | Height: {client.height}cm | Goals: {client.goals}</p>
-        {client.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>Notes: {client.notes}</p>}
+        <p className="page-subtitle">{t('cdetail.summary_line', { age: client.age, height: client.height, goals: client.goals })}</p>
+        {client.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{t('cdetail.notes_line', { notes: client.notes })}</p>}
       </div>
 
       <div className="tabs">
-        {['overview', 'progress', 'workout plans', 'workout logs', 'notes', 'intake'].map(t => (
-          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+        {[
+          ['overview', t('cdetail.tab_overview')],
+          ['progress', t('cdetail.tab_progress')],
+          ['workout plans', t('cdetail.tab_plans')],
+          ['workout logs', t('cdetail.tab_logs')],
+          ['notes', t('cdetail.tab_notes')],
+          ['intake', t('cdetail.tab_intake')],
+        ].map(([key, label]) => (
+          <button key={key} className={`tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+            {label}
           </button>
         ))}
       </div>
@@ -423,7 +431,7 @@ export default function ClientDetailPage() {
         <>
         <div className="grid-2">
           <div className="card">
-            <h3 className="card-title mb-16">Latest Body Stats</h3>
+            <h3 className="card-title mb-16">{t('cdetail.latest_stats')}</h3>
             {/* Driven off METRICS, not off the entry's own keys. A bodyStat doc also
                 carries id/date/addedBy, and iterating the object rendered those as
                 measurements — a tile reading "b2cm" labelled "Id". Unmeasured metrics
@@ -441,21 +449,21 @@ export default function ClientDetailPage() {
                   );
                 })}
               </div>
-            ) : <p className="text-muted">No stats recorded yet</p>}
+            ) : <p className="text-muted">{t('cdetail.no_stats')}</p>}
           </div>
           <div className="card">
-            <h3 className="card-title mb-16">Summary</h3>
-            <p className="text-sm">Workout Plans: <strong>{plans.length}</strong></p>
+            <h3 className="card-title mb-16">{t('cdetail.summary')}</h3>
+            <p className="text-sm">{t('cdetail.sum_plans')} <strong>{plans.length}</strong></p>
             {/* A workoutLog document has no `completed` field — only the individual sets
                 inside it do. Filtering on it counted 0 for every client ever. A saved log
                 is a completed workout, which is also how ClientDashboard's own total is
                 counted, so the two screens now agree. */}
-            <p className="text-sm mt-8">Completed Workouts: <strong>{logs.length}</strong></p>
-            <p className="text-sm mt-8">Measurements: <strong>{stats.length} records</strong></p>
-            <p className="text-sm mt-8">Member since: <strong>{client.joinDate}</strong></p>
+            <p className="text-sm mt-8">{t('cdetail.sum_workouts')} <strong>{logs.length}</strong></p>
+            <p className="text-sm mt-8">{t('cdetail.sum_measurements')} <strong>{t('cdetail.n_records', { count: stats.length })}</strong></p>
+            <p className="text-sm mt-8">{t('cdetail.sum_member_since')} <strong>{client.joinDate}</strong></p>
             <div className="mt-16">
               <div className="flex-between mb-8" style={{ alignItems: 'center' }}>
-                <span className="text-sm fw-bold">Sessions</span>
+                <span className="text-sm fw-bold">{t('cdetail.sessions')}</span>
                 {!editingSessions && (
                   <div className="flex gap-8">
                     {sessTotal !== null && (
@@ -464,11 +472,11 @@ export default function ClientDetailPage() {
                         setTopUpRate(sessRemaining > 0 ? currentUser.renewalRate ?? null : currentUser.renewalRateNext ?? null);
                         setTopUpOpen(true);
                       }}>
-                        + Top Up
+                        {t('cdetail.top_up')}
                       </button>
                     )}
                     <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setOffsetInput(client?.sessionOffset ?? ''); setEditingSessions(true); }}>
-                      {sessTotal === null ? 'Set Total' : 'Edit'}
+                      {sessTotal === null ? t('cdetail.set_total') : t('common.edit')}
                     </button>
                   </div>
                 )}
@@ -476,44 +484,44 @@ export default function ClientDetailPage() {
               {editingSessions ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>Total sessions:</span>
+                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>{t('cdetail.total_sessions')}</span>
                     <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" inputMode="numeric" value={sessionsInput} onChange={e => setSessionsInput(e.target.value)} />
-                    <span className="text-sm text-muted">sessions</span>
+                    <span className="text-sm text-muted">{t('cdetail.sessions_unit')}</span>
                   </div>
                   <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>Sessions used:</span>
+                    <span className="text-sm text-muted" style={{ minWidth: 130 }}>{t('cdetail.sessions_used')}</span>
                     <input className="form-input" style={{ width: 64, padding: '4px 8px' }} type="number" min="0" inputMode="numeric" value={offsetInput} onChange={e => setOffsetInput(e.target.value)} />
-                    <span className="text-sm text-muted">sessions</span>
+                    <span className="text-sm text-muted">{t('cdetail.sessions_unit')}</span>
                   </div>
                   <div className="flex gap-8">
-                    <button className="btn btn-primary btn-sm" onClick={handleSaveSessions} disabled={savingSessions}>{savingSessions ? 'Saving…' : 'Save'}</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => setEditingSessions(false)} disabled={savingSessions}>Cancel</button>
+                    <button className="btn btn-primary btn-sm" onClick={handleSaveSessions} disabled={savingSessions}>{savingSessions ? t('common.saving') : t('common.save')}</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => setEditingSessions(false)} disabled={savingSessions}>{t('common.cancel')}</button>
                   </div>
                 </div>
               ) : sessTotal !== null ? (
                 <>
                   <div className="flex-between mb-6">
-                    <span className="text-sm text-muted">{sessUsed} used</span>
+                    <span className="text-sm text-muted">{t('cdetail.n_used', { count: sessUsed })}</span>
                     <span style={{ fontSize: '1.1rem', fontWeight: 700, color: sessColor }}>{sessUsed} / {sessTotal}</span>
                   </div>
                   <div className="session-progress-bar">
                     <div className="session-progress-fill" style={{ width: `${sessTotal > 0 ? Math.min(100, Math.round((sessUsed / sessTotal) * 100)) : 0}%`, background: sessColor }} />
                   </div>
-                  <div className="text-sm mt-6" style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</div>
+                  <div className="text-sm mt-6" style={{ color: sessColor, fontWeight: 600 }}>{t('cdetail.n_remaining', { count: sessRemaining })}</div>
                 </>
               ) : (
-                <p className="text-sm text-muted">Not set — click &quot;Set Total&quot; to configure</p>
+                <p className="text-sm text-muted">{t('cdetail.not_set')}</p>
               )}
             </div>
 
             {/* Tags */}
             <div className="mt-16">
-              <div className="text-sm fw-bold mb-8">Labels</div>
+              <div className="text-sm fw-bold mb-8">{t('cdetail.labels')}</div>
               <div className="client-tags-row">
                 {(client.tags || []).map(tag => (
                   <span key={tag} className="client-tag">
                     {tag}
-                    <button className="client-tag-remove" onClick={() => handleRemoveTag(tag)} aria-label={`Remove ${tag}`}>×</button>
+                    <button className="client-tag-remove" onClick={() => handleRemoveTag(tag)} aria-label={t('cdetail.remove_label', { tag })}>×</button>
                   </span>
                 ))}
               </div>
@@ -521,12 +529,12 @@ export default function ClientDetailPage() {
                 <input
                   className="form-input"
                   style={{ flex: 1, padding: '4px 10px', fontSize: '0.85rem' }}
-                  placeholder="Add label…"
+                  placeholder={t('cdetail.ph_label')}
                   value={tagInput}
                   onChange={e => setTagInput(e.target.value)}
                   maxLength={30}
                 />
-                <button className="btn btn-outline btn-sm" type="submit" disabled={savingTag || !tagInput.trim()}>Add</button>
+                <button className="btn btn-outline btn-sm" type="submit" disabled={savingTag || !tagInput.trim()}>{t('cdetail.add_label')}</button>
               </form>
             </div>
           </div>
@@ -535,9 +543,9 @@ export default function ClientDetailPage() {
           <VolumeChart logs={logs} />
         </div>
         <div className="card mt-16">
-          <h3 className="card-title mb-12">Session Dates</h3>
+          <h3 className="card-title mb-12">{t('cdetail.session_dates')}</h3>
           {completedSessions.length === 0 ? (
-            <p className="text-sm text-muted">No completed sessions yet.</p>
+            <p className="text-sm text-muted">{t('sessions.none_completed')}</p>
           ) : (
             <SessionDateList sessions={completedSessions} logs={logs} exerciseLibrary={exerciseLibrary} plans={plans} />
           )}
@@ -549,7 +557,7 @@ export default function ClientDetailPage() {
         <div>
           <div className="flex-between mb-16">
             <div className="tabs" style={{ marginBottom: 0 }}>
-              {[['body', 'Body Composition'], ['exercise', 'Exercise Progress'], ['volume', 'Volume']].map(([key, label]) => (
+              {[['body', t('progress.tab_body')], ['exercise', t('progress.tab_exercise')], ['volume', t('progress.tab_volume')]].map(([key, label]) => (
                 <button key={key} className={`tab ${progressTab === key ? 'active' : ''}`} onClick={() => setProgressTab(key)}>
                   {label}
                 </button>
@@ -557,7 +565,7 @@ export default function ClientDetailPage() {
             </div>
             {progressTab === 'body' && (
               <button className="btn btn-primary btn-sm" onClick={openStatAdd}>
-                <Plus size={16} /> Add Measurement
+                <Plus size={16} /> {t('progress.add_measurement')}
               </button>
             )}
           </div>
@@ -578,9 +586,9 @@ export default function ClientDetailPage() {
           {plans.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
-              title="No plans assigned"
-              description="Create a workout plan to help this client train consistently."
-              action={{ label: 'Go to Workout Plans', to: '/plans' }}
+              title={t('cdetail.no_plans')}
+              description={t('cdetail.no_plans_desc')}
+              action={{ label: t('cdetail.go_to_plans'), to: '/plans' }}
             />
           ) : (
             plans.map(p => (
@@ -613,11 +621,11 @@ export default function ClientDetailPage() {
                       })()}
                       {videoUrl && (
                         isYouTube(videoUrl) ? (
-                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Watch Demo" style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
                             <Play size={14} />
                           </a>
                         ) : (
-                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Open Link" style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
                             <ExternalLink size={14} />
                           </a>
                         )
@@ -637,19 +645,19 @@ export default function ClientDetailPage() {
       {tab === 'workout logs' && (
         <div>
           <div className="flex-between mb-16">
-            <span className="text-sm text-muted">{logs.length} session{logs.length !== 1 ? 's' : ''} logged</span>
+            <span className="text-sm text-muted">{t('cdetail.n_logged', { count: logs.length })}</span>
             <div className="flex gap-8">
               <button className="btn btn-primary btn-sm" onClick={() => navigate('/log', { state: { clientId: client.id, clientName: client.name } })}>
-                Log Session
+                {t('cdetail.log_session')}
               </button>
             </div>
           </div>
           {logs.length === 0 ? (
             <EmptyState
               icon={NotebookPen}
-              title="No workout logs yet"
-              description="This client hasn't logged a workout yet. Logs will appear here once they do."
-              action={{ label: 'Log a Session', onClick: () => navigate('/log', { state: { clientId: client.id, clientName: client.name } }) }}
+              title={t('cdetail.no_logs')}
+              description={t('cdetail.no_logs_desc')}
+              action={{ label: t('cdetail.log_a_session'), onClick: () => navigate('/log', { state: { clientId: client.id, clientName: client.name } }) }}
             />
           ) : (
             [...logs].reverse().map(l => {
@@ -661,18 +669,18 @@ export default function ClientDetailPage() {
                 <div key={l.id} className="card mb-16">
                   <div className="card-header">
                     <div>
-                      <h3 className="card-title">{plan?.name || l.workoutName || 'Custom Workout'} — {l.date}</h3>
+                      <h3 className="card-title">{plan?.name || l.workoutName || t('sessions.custom_workout')} — {l.date}</h3>
                     </div>
                     <div className="flex gap-8" style={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      {!l.planId && <span className="tag">Custom</span>}
-                      {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? 'PT Session' : 'Self'}</span>}
+                      {!l.planId && <span className="tag">{t('sessions.tag_custom')}</span>}
+                      {l.logType && <span className={`tag ${l.logType === 'pt_session' ? 'tag-accent' : ''}`}>{l.logType === 'pt_session' ? t('sessions.tag_pt') : t('sessions.tag_self')}</span>}
                       <span className="tag tag-primary">RPE: {l.rpe}/10</span>
-                      <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? 'Completed' : 'Partial'}</span>
-                      <button className="btn btn-outline btn-sm" onClick={() => openSavePlanModal(l)} title="Save as Plan" style={{ fontSize: '0.72rem' }}>
-                        Save as Plan
+                      <span className={`tag ${l.completed ? 'tag-accent' : 'tag-warning'}`}>{l.completed ? t('sessions.tag_completed') : t('sessions.tag_partial')}</span>
+                      <button className="btn btn-outline btn-sm" onClick={() => openSavePlanModal(l)} title={t('cdetail.save_as_plan')} style={{ fontSize: '0.72rem' }}>
+                        {t('cdetail.save_as_plan')}
                       </button>
                       {l.createdBy === currentUser.id && (
-                        <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEditLog(l)} title="Edit workout">
+                        <button className="btn btn-outline btn-sm btn-icon" onClick={() => startEditLog(l)} title={t('wlog.edit_workout')}>
                           <Pencil size={13} />
                         </button>
                       )}
@@ -682,7 +690,7 @@ export default function ClientDetailPage() {
                     {totalVolume > 0 && (
                       <div className="log-stat-item">
                         <span className="log-stat-value">{totalVolume.toLocaleString()}<span className="log-stat-unit">kg</span></span>
-                        <span className="log-stat-label">Total Volume</span>
+                        <span className="log-stat-label">{t('sessions.total_volume')}</span>
                       </div>
                     )}
                     <div className="log-stat-item">
@@ -691,7 +699,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div className="log-stat-item">
                       <span className="log-stat-value">{l.entries.length}</span>
-                      <span className="log-stat-label">Exercises</span>
+                      <span className="log-stat-label">{t('sessions.exercises_label')}</span>
                     </div>
                   </div>
                   {l.entries.map((entry, i) => (
@@ -710,7 +718,7 @@ export default function ClientDetailPage() {
                           className="form-textarea"
                           rows={3}
                           autoFocus
-                          placeholder="Leave feedback for this session…"
+                          placeholder={t('cdetail.ph_feedback')}
                           value={noteText}
                           onChange={e => setNoteText(e.target.value)}
                         />
@@ -720,13 +728,13 @@ export default function ClientDetailPage() {
                             onClick={() => handleSaveTrainerNote(l.id)}
                             disabled={savingNoteId === l.id}
                           >
-                            {savingNoteId === l.id ? 'Saving…' : 'Save Note'}
+                            {savingNoteId === l.id ? t('common.saving') : t('cdetail.save_note')}
                           </button>
                           <button
                             className="btn btn-sm btn-outline"
                             onClick={() => { setEditingNoteLogId(null); setNoteText(''); }}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </button>
                         </div>
                       </div>
@@ -734,7 +742,7 @@ export default function ClientDetailPage() {
                       <div className="trainer-note-display" onClick={() => { setEditingNoteLogId(l.id); setNoteText(l.trainerNotes || ''); }}>
                         {l.trainerNotes
                           ? <span className="trainer-note-text">{l.trainerNotes}</span>
-                          : <span className="trainer-note-placeholder">+ Add coach feedback…</span>
+                          : <span className="trainer-note-placeholder">{t('cdetail.add_feedback')}</span>
                         }
                       </div>
                     )}
@@ -754,22 +762,22 @@ export default function ClientDetailPage() {
 
       {tab === 'intake' && (
         <div className="card">
-          <h3 className="card-title mb-16">Intake Questionnaire</h3>
-          {intakeForm === undefined && <p className="text-sm text-muted">Loading…</p>}
-          {intakeForm === null && <p className="text-sm text-muted">This client has not completed the intake questionnaire yet.</p>}
+          <h3 className="card-title mb-16">{t('cdetail.intake_title')}</h3>
+          {intakeForm === undefined && <p className="text-sm text-muted">{t('cdetail.loading')}</p>}
+          {intakeForm === null && <p className="text-sm text-muted">{t('cdetail.intake_none')}</p>}
           {intakeForm && !intakeForm.skipped && (
             <div className="intake-view">
-              <IntakeRow label="Goals" value={[...intakeForm.goals || [], ...(intakeForm.goalsOther ? [`Other: ${intakeForm.goalsOther}`] : [])].join(', ') || '—'} />
-              <IntakeRow label="Weekly Frequency" value={intakeForm.frequency || '—'} />
-              <IntakeRow label="Experience" value={intakeForm.experience === 'other' ? `Other: ${intakeForm.experienceOther || ''}` : intakeForm.experience || '—'} />
-              <IntakeRow label="Injuries / Notes" value={intakeForm.injuries || 'None'} />
-              <IntakeRow label="Height" value={intakeForm.height ? `${intakeForm.height} cm` : 'Not provided'} />
-              <IntakeRow label="Weight" value={intakeForm.weight ? `${intakeForm.weight} kg` : 'Not provided'} />
-              <IntakeRow label="Completed On" value={intakeForm.completedAt || '—'} />
+              <IntakeRow label={t('intake.goals')} value={[...intakeForm.goals || [], ...(intakeForm.goalsOther ? [`${t('intake.other')}: ${intakeForm.goalsOther}`] : [])].join(', ') || '—'} />
+              <IntakeRow label={t('cdetail.intake_frequency')} value={intakeForm.frequency || '—'} />
+              <IntakeRow label={t('intake.experience')} value={intakeForm.experience === 'other' ? `${t('intake.other')}: ${intakeForm.experienceOther || ''}` : intakeForm.experience || '—'} />
+              <IntakeRow label={t('cdetail.intake_injuries')} value={intakeForm.injuries || t('cdetail.intake_none_value')} />
+              <IntakeRow label={t('intake.height')} value={intakeForm.height ? `${intakeForm.height} cm` : t('cdetail.not_provided')} />
+              <IntakeRow label={t('metric.weight')} value={intakeForm.weight ? `${intakeForm.weight} kg` : t('cdetail.not_provided')} />
+              <IntakeRow label={t('cdetail.intake_completed_on')} value={intakeForm.completedAt || '—'} />
             </div>
           )}
           {intakeForm && intakeForm.skipped && (
-            <p className="text-sm text-muted">Client skipped the intake questionnaire on {intakeForm.completedAt}.</p>
+            <p className="text-sm text-muted">{t('cdetail.intake_skipped', { date: intakeForm.completedAt })}</p>
           )}
         </div>
       )}
@@ -778,22 +786,22 @@ export default function ClientDetailPage() {
       {savePlanLog && (
         <div className="modal-overlay" onClick={() => setSavePlanLog(null)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Save as Plan</h3>
+            <h3 className="modal-title">{t('cdetail.save_as_plan')}</h3>
             <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-              Creates a reusable plan from this session's {savePlanLog.entries.length} exercises.
+              {t('cdetail.save_plan_desc', { count: savePlanLog.entries.length })}
             </p>
             <div className="form-group">
-              <label className="form-label">Plan Name</label>
-              <input className="form-input" value={savePlanName} onChange={e => setSavePlanName(e.target.value)} placeholder="e.g. Upper Body A" autoFocus />
+              <label className="form-label">{t('cdetail.plan_name')}</label>
+              <input className="form-input" value={savePlanName} onChange={e => setSavePlanName(e.target.value)} placeholder={t('plans.ph_plan_name')} autoFocus />
             </div>
             <div className="form-group">
-              <label className="form-label">Day / Label (optional)</label>
-              <input className="form-input" value={savePlanDay} onChange={e => setSavePlanDay(e.target.value)} placeholder="e.g. Monday, Day 1" />
+              <label className="form-label">{t('cdetail.plan_day')}</label>
+              <input className="form-input" value={savePlanDay} onChange={e => setSavePlanDay(e.target.value)} placeholder={t('cdetail.ph_day')} />
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setSavePlanLog(null)} disabled={savingPlan}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => setSavePlanLog(null)} disabled={savingPlan}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={handleSaveLogAsPlan} disabled={!savePlanName.trim() || savingPlan}>
-                {savingPlan ? 'Saving…' : 'Save Plan'}
+                {savingPlan ? t('common.saving') : t('cdetail.save_plan')}
               </button>
             </div>
           </div>
@@ -803,9 +811,9 @@ export default function ClientDetailPage() {
       {topUpOpen && (
         <div className="modal-overlay" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
-            <h3 className="modal-title">+ Top Up Sessions</h3>
+            <h3 className="modal-title">{t('cdetail.top_up_title')}</h3>
             <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
-              Currently: <strong>{sessUsed} used</strong> / <strong>{sessTotal} total</strong> — <span style={{ color: sessColor, fontWeight: 600 }}>{sessRemaining} remaining</span>
+              {t('cdetail.currently')} <strong>{t('cdetail.n_used', { count: sessUsed })}</strong> / <strong>{t('cdetail.n_total', { count: sessTotal })}</strong> — <span style={{ color: sessColor, fontWeight: 600 }}>{t('cdetail.n_remaining', { count: sessRemaining })}</span>
             </p>
             <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
               {[5, 10, 20].map(n => (
@@ -813,7 +821,7 @@ export default function ClientDetailPage() {
               ))}
             </div>
             <div className="flex gap-8 mb-12" style={{ alignItems: 'center' }}>
-              <span className="text-sm text-muted">Custom:</span>
+              <span className="text-sm text-muted">{t('cdetail.custom_amount')}</span>
               <input
                 className="form-input"
                 style={{ width: 72, padding: '4px 8px' }}
@@ -822,20 +830,20 @@ export default function ClientDetailPage() {
                 value={topUpAmount}
                 onChange={e => setTopUpAmount(e.target.value)}
               />
-              <span className="text-sm text-muted">sessions</span>
+              <span className="text-sm text-muted">{t('cdetail.sessions_unit')}</span>
             </div>
             {(currentUser.renewalRate || currentUser.renewalRateNext) && (
               <div className="mb-12">
-                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 6 }}>Rate charged for this top-up:</span>
+                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 6 }}>{t('cdetail.topup_rate')}</span>
                 <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
                   {currentUser.renewalRate && (
                     <button className={`btn btn-sm ${topUpRate === currentUser.renewalRate ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRate)}>
-                      {formatCurrency(currentUser.renewalRate, currentUser.currency)} (current rate)
+                      {formatCurrency(currentUser.renewalRate, currentUser.currency)} {t('cdetail.rate_current')}
                     </button>
                   )}
                   {currentUser.renewalRateNext && (
                     <button className={`btn btn-sm ${topUpRate === currentUser.renewalRateNext ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRateNext)}>
-                      {formatCurrency(currentUser.renewalRateNext, currentUser.currency)} (renewed after running out)
+                      {formatCurrency(currentUser.renewalRateNext, currentUser.currency)} {t('cdetail.rate_next')}
                     </button>
                   )}
                 </div>
@@ -843,13 +851,13 @@ export default function ClientDetailPage() {
             )}
             {Number(topUpAmount) > 0 && (
               <p className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>
-                After top-up: {(sessRemaining ?? 0) + Number(topUpAmount)} remaining
+                {t('cdetail.after_topup', { count: (sessRemaining ?? 0) + Number(topUpAmount) })}
               </p>
             )}
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }} disabled={savingTopUp}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }} disabled={savingTopUp}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={handleTopUp} disabled={savingTopUp || !Number(topUpAmount) || Number(topUpAmount) <= 0}>
-                {savingTopUp ? 'Saving…' : 'Confirm'}
+                {savingTopUp ? t('common.saving') : t('cdetail.confirm')}
               </button>
             </div>
           </div>
@@ -859,17 +867,17 @@ export default function ClientDetailPage() {
       {showRemoveConfirm && (
         <div className="modal-overlay" onClick={() => setShowRemoveConfirm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <h3 className="modal-title" style={{ color: 'var(--danger)' }}>Remove Client?</h3>
+            <h3 className="modal-title" style={{ color: 'var(--danger)' }}>{t('cdetail.remove_title')}</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-              This will remove <strong>{client.name}</strong> from your client list.
+              {t('cdetail.remove_desc', { name: client.name })}
             </p>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              Their account and training history are kept — they can reconnect with your invite code.
+              {t('cdetail.remove_note')}
             </p>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setShowRemoveConfirm(false)} disabled={removing}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => setShowRemoveConfirm(false)} disabled={removing}>{t('common.cancel')}</button>
               <button className="btn btn-danger" onClick={handleRemove} disabled={removing}>
-                <Trash2 size={15} /> {removing ? 'Removing…' : 'Yes, Remove'}
+                <Trash2 size={15} /> {removing ? t('cdetail.removing') : t('cdetail.yes_remove')}
               </button>
             </div>
           </div>
@@ -879,9 +887,9 @@ export default function ClientDetailPage() {
       {editingLogId && (
         <div className="modal-overlay" onClick={() => { setEditingLogId(null); setEditLogExSearch(''); }}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">Edit PT Session</h3>
+            <h3 className="modal-title">{t('cdetail.edit_pt_session')}</h3>
             <div className="form-group">
-              <label className="form-label">Date</label>
+              <label className="form-label">{t('progress.col_date')}</label>
               <input className="form-input" type="date" value={editLogDate} onChange={e => setEditLogDate(e.target.value)} />
             </div>
             {editLogEntries.map((entry, exIdx) => {
@@ -890,10 +898,10 @@ export default function ClientDetailPage() {
                 <div key={exIdx} className="mb-16" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <span className="fw-bold text-sm">{getExerciseName(entry.exerciseId, entry.name)}</span>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogExercise(exIdx)} title="Remove exercise"><X size={14} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogExercise(exIdx)} title={t('wlog.remove_exercise')}><X size={14} /></button>
                   </div>
                   {entry.sets.length === 0
-                    ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>Skipped</p>
+                    ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>{t('wlog.skipped')}</p>
                     : entry.sets.map((set, setIdx) => (
                       <div key={setIdx} className="log-set-row">
                         <span className="log-set-num">Set {setIdx + 1}</span>
@@ -915,23 +923,23 @@ export default function ClientDetailPage() {
                           <span className="text-sm text-muted">m</span>
                         </>)}
                         {entry.sets.length > 1 && (
-                          <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogSet(exIdx, setIdx)} title="Remove set"><X size={12} /></button>
+                          <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogSet(exIdx, setIdx)} title={t('plans.remove_set')}><X size={12} /></button>
                         )}
                       </div>
                     ))
                   }
                   <button className="btn btn-outline btn-sm" style={{ marginTop: 6 }} onClick={() => addEditLogSet(exIdx)}>
-                    <Plus size={13} /> Add Set
+                    <Plus size={13} /> {t('cdetail.add_set')}
                   </button>
                 </div>
               );
             })}
 
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Add Exercise</label>
+              <label className="form-label">{t('swap.add_title')}</label>
               <input
                 className="form-input"
-                placeholder="Search exercises..."
+                placeholder={t('plans.ph_search_ex')}
                 value={editLogExSearch}
                 onChange={e => setEditLogExSearch(e.target.value)}
               />
@@ -947,23 +955,23 @@ export default function ClientDetailPage() {
                       </div>
                     ))}
                   {exerciseLibrary.filter(e => e.name.toLowerCase().includes(editLogExSearch.toLowerCase())).length === 0 && (
-                    <div className="plan-ex-no-results">No matches found</div>
+                    <div className="plan-ex-no-results">{t('cdetail.no_matches')}</div>
                   )}
                 </div>
               )}
             </div>
 
             <div className="form-group">
-              <label className="form-label">RPE — {editLogRpe}/10</label>
+              <label className="form-label">{t('wlog.rpe_label', { value: editLogRpe })}</label>
               <input type="range" min="1" max="10" value={editLogRpe} onChange={e => setEditLogRpe(Number(e.target.value))} style={{ width: '100%' }} />
             </div>
             <div className="form-group">
-              <label className="form-label">Session Notes</label>
-              <textarea className="form-textarea" value={editLogNotes} onChange={e => setEditLogNotes(e.target.value)} placeholder="Session notes…" rows={3} />
+              <label className="form-label">{t('wlog.session_notes')}</label>
+              <textarea className="form-textarea" value={editLogNotes} onChange={e => setEditLogNotes(e.target.value)} placeholder={t('wlog.ph_session_notes')} rows={3} />
             </div>
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setEditingLogId(null); setEditLogExSearch(''); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveEditLog} disabled={savingEditLog}>{savingEditLog ? 'Saving…' : 'Save Changes'}</button>
+              <button className="btn btn-outline" onClick={() => { setEditingLogId(null); setEditLogExSearch(''); }}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleSaveEditLog} disabled={savingEditLog}>{savingEditLog ? t('common.saving') : t('progress.save_changes')}</button>
             </div>
           </div>
         </div>
@@ -976,26 +984,26 @@ export default function ClientDetailPage() {
       {showStatModal && (
         <div className="modal-overlay" onClick={() => setShowStatModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">{editStat ? 'Edit Measurement' : 'Add Measurement'}</h3>
+            <h3 className="modal-title">{editStat ? t('progress.edit_measurement') : t('progress.add_measurement')}</h3>
             <form onSubmit={handleStatSubmit}>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Weight (kg)</label><input className="form-input" type="number" step="0.1" min="20" max="300" required value={statForm.weight} onChange={e => setStatForm({ ...statForm, weight: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Body Fat (%)</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={statForm.bodyFat} onChange={e => setStatForm({ ...statForm, bodyFat: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_weight')}</label><input className="form-input" type="number" step="0.1" min="20" max="300" required value={statForm.weight} onChange={e => setStatForm({ ...statForm, weight: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_body_fat')}</label><input className="form-input" type="number" step="0.1" min="2" max="60" value={statForm.bodyFat} onChange={e => setStatForm({ ...statForm, bodyFat: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Chest (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.chest} onChange={e => setStatForm({ ...statForm, chest: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Waist (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.waist} onChange={e => setStatForm({ ...statForm, waist: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_chest')}</label><input className="form-input" type="number" step="0.1" value={statForm.chest} onChange={e => setStatForm({ ...statForm, chest: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_waist')}</label><input className="form-input" type="number" step="0.1" value={statForm.waist} onChange={e => setStatForm({ ...statForm, waist: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Hips (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.hips} onChange={e => setStatForm({ ...statForm, hips: e.target.value })} /></div>
-                <div className="form-group"><label className="form-label">Arms (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.arms} onChange={e => setStatForm({ ...statForm, arms: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_hips')}</label><input className="form-input" type="number" step="0.1" value={statForm.hips} onChange={e => setStatForm({ ...statForm, hips: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_arms')}</label><input className="form-input" type="number" step="0.1" value={statForm.arms} onChange={e => setStatForm({ ...statForm, arms: e.target.value })} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Legs (cm)</label><input className="form-input" type="number" step="0.1" value={statForm.legs} onChange={e => setStatForm({ ...statForm, legs: e.target.value })} /></div>
+                <div className="form-group"><label className="form-label">{t('progress.f_legs')}</label><input className="form-input" type="number" step="0.1" value={statForm.legs} onChange={e => setStatForm({ ...statForm, legs: e.target.value })} /></div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowStatModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={savingStat}>{savingStat ? 'Saving…' : editStat ? 'Save Changes' : 'Save'}</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowStatModal(false)}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={savingStat}>{savingStat ? t('common.saving') : editStat ? t('progress.save_changes') : t('common.save')}</button>
               </div>
             </form>
           </div>

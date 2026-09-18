@@ -45,15 +45,16 @@ const EXEMPT = {
   'src/pages/TrainerApplicationPage.jsx': 'gym啦, behind GYMLA_ENABLED=false (#25)',
 };
 
-// The debt, measured 2026-09-06. Lower a number as its page is translated; delete the
-// entry and add the file to TRANSLATED_FILES when it reaches zero.
-const AWAITING = {
-  // — trainer-only —
-  'src/pages/ClientDetailPage.jsx': 103,
-  // — shared between trainer and client —
-  // — client-only: phase 1 was not finished either, which nothing had reported —
-  // — app-wide chrome —
-};
+// The debt. It stood at 557 strings across 20 files when it was first measured on
+// 2026-09-06; it reached zero on 2026-09-18, so every user-facing file is now either on
+// TRANSLATED_FILES or in EXEMPT above with a reason.
+//
+// Empty is the state to keep it in, not a milestone to note and move on from. A new page
+// that ships with hardcoded English fails the first guardian below — it is neither
+// translated, exempt, nor listed here — and the right fix is to translate it, not to add
+// it here. An entry belongs here only for a page too large to convert in the change that
+// touches it, and then it is a number that has to come down.
+const AWAITING = {};
 
 function jsxFiles(dir, out = []) {
   for (const name of readdirSync(dir)) {

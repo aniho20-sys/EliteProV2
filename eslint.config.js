@@ -50,6 +50,7 @@ const TRANSLATED_FILES = [
   'src/pages/TrainingProfilePage.jsx',
   'src/pages/ExerciseLibraryPage.jsx',
   'src/components/PlatformStatsCard.jsx',
+  'src/pages/ClientDetailPage.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
 ]
 
