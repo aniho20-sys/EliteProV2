@@ -47,3 +47,20 @@ export function formatWeekdayShort(date, lang = 'en') {
   const d = date instanceof Date ? date : parseLocalDate(date);
   return d.toLocaleDateString(tags(lang).other, { weekday: 'short' });
 }
+
+// "Wed, Jun 10" / 「6月10日週三」 — the date chips in a session list.
+export function formatShortDate(dateStr, lang = 'en') {
+  const d = dateStr instanceof Date ? dateStr : parseLocalDate(dateStr);
+  return d.toLocaleDateString(tags(lang).dayDate, {
+    weekday: 'short', day: 'numeric', month: 'short',
+  });
+}
+
+// "Wednesday, June 10, 2026" / 「2026年6月10日星期三」 — a session-detail modal heading,
+// where the year matters because the list above it can run back months.
+export function formatFullDate(dateStr, lang = 'en') {
+  const d = dateStr instanceof Date ? dateStr : parseLocalDate(dateStr);
+  return d.toLocaleDateString(tags(lang).dayDate, {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+}

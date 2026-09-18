@@ -2,20 +2,22 @@ import { useState, useMemo } from 'react';
 import { Wand2, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { explainMovementPattern, liveExercises, sortExercisesByName } from '../utils/exerciseUtils';
 
+// Written as functions of t because t() only takes a literal key (#39).
 const CONFIDENCE_COPY = {
   high: {
-    title: 'High confidence',
-    desc: 'One pattern matched the name outright. Pre-selected.',
+    title: (t) => t('mpscan.high_title'),
+    desc: (t) => t('mpscan.high_desc'),
   },
   medium: {
-    title: 'Needs a look',
-    desc: 'Several patterns matched — the dominant hip/knee action broke the tie. Check these before applying.',
+    title: (t) => t('mpscan.medium_title'),
+    desc: (t) => t('mpscan.medium_desc'),
   },
   low: {
-    title: 'No suggestion',
-    desc: 'No rule matched these names. Set them by hand in Exercise Library, or leave them unclassified.',
+    title: (t) => t('mpscan.low_title'),
+    desc: (t) => t('mpscan.low_desc'),
   },
 };
 
@@ -24,6 +26,7 @@ const CONFIDENCE_COPY = {
 // first, which is also the only way this can happen at all, since she works from a phone
 // and has no terminal or admin SDK (CLAUDE.md #26).
 export default function MovementPatternScanner() {
+  const { t } = useLanguage();
   const { getExercises, updateExercise, currentUser } = useApp();
   const toast = useToast();
   const [rows, setRows] = useState(null);
@@ -83,8 +86,8 @@ export default function MovementPatternScanner() {
       } catch { failed.push(row.name); }
     }
     setApplying(false);
-    if (failed.length) toast(`Applied ${done}, failed ${failed.length}: ${failed.join(', ')}`, 'error');
-    else toast(`Classified ${done} ${done === 1 ? 'exercise' : 'exercises'}`);
+    if (failed.length) toast(t('mpscan.toast_partial', { done, failed: failed.length, names: failed.join(', ') }), 'error');
+    else toast(t('mpscan.toast_done', { count: done }));
     scan();
   };
 
@@ -103,25 +106,20 @@ export default function MovementPatternScanner() {
   return (
     <div className="card mb-16">
       <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Wand2 size={18} /> Movement Pattern Auto-Classify
+        <Wand2 size={18} /> {t('mpscan.title')}
       </h3>
-      <p className="invite-desc">
-        Suggests a movement pattern for every exercise of yours that has none, based on its name.
-        Nothing is saved until you tick the rows you agree with and press Apply.
-      </p>
+      <p className="invite-desc">{t('mpscan.desc')}</p>
 
       {rows === null ? (
         <button className="btn btn-outline mt-8" onClick={scan} style={{ width: '100%' }}>
-          Scan My Library
+          {t('mpscan.scan')}
         </button>
       ) : rows.length === 0 ? (
-        <p className="mp-scan-empty">
-          Every exercise of yours already has a movement pattern. Nothing to do.
-        </p>
+        <p className="mp-scan-empty">{t('mpscan.all_done')}</p>
       ) : (
         <>
           {skipped > 0 && (
-            <p className="mp-scan-note">{skipped} already classified — left untouched.</p>
+            <p className="mp-scan-note">{t('mpscan.skipped', { count: skipped })}</p>
           )}
           {groups.map(g => {
             const selectable = g.items.filter(r => r.pattern);
@@ -130,8 +128,8 @@ export default function MovementPatternScanner() {
               <div key={g.key} className="mp-scan-group">
                 <div className="mp-scan-group-head">
                   <div>
-                    <div className={`mp-scan-group-title mp-${g.key}`}>{g.title} ({g.items.length})</div>
-                    <div className="mp-scan-group-desc">{g.desc}</div>
+                    <div className={`mp-scan-group-title mp-${g.key}`}>{g.title(t)} ({g.items.length})</div>
+                    <div className="mp-scan-group-desc">{g.desc(t)}</div>
                   </div>
                   {selectable.length > 0 && (
                     <button
@@ -139,7 +137,7 @@ export default function MovementPatternScanner() {
                       className="btn btn-outline btn-sm"
                       onClick={() => toggleGroup(selectable, !allOn)}
                     >
-                      {allOn ? 'None' : 'All'}
+                      {allOn ? t('mpscan.select_none') : t('mpscan.select_all')}
                     </button>
                   )}
                 </div>
@@ -158,7 +156,7 @@ export default function MovementPatternScanner() {
                     <div key={r.id} className="mp-scan-row mp-scan-row-static">
                       <span className="mp-scan-row-body">
                         <span className="mp-scan-row-name">{r.name}</span>
-                        <span className="mp-scan-row-meta">No keyword matched</span>
+                        <span className="mp-scan-row-meta">{t('mpscan.no_match')}</span>
                       </span>
                     </div>
                   );
@@ -167,9 +165,9 @@ export default function MovementPatternScanner() {
             );
           })}
           <div className="mp-scan-actions">
-            <button className="btn btn-outline" onClick={scan} disabled={applying}>Rescan</button>
+            <button className="btn btn-outline" onClick={scan} disabled={applying}>{t('mpscan.rescan')}</button>
             <button className="btn btn-primary" onClick={apply} disabled={applying || pickedCount === 0}>
-              {applying ? 'Applying…' : <><Check size={16} /> Apply {pickedCount}</>}
+              {applying ? t('mpscan.applying') : <><Check size={16} /> {t('mpscan.apply_n', { count: pickedCount })}</>}
             </button>
           </div>
         </>

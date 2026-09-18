@@ -34,6 +34,9 @@ const TRANSLATED_FILES = [
   'src/components/NotificationCenter.jsx',
   'src/components/ExerciseDetailModal.jsx',
   'src/pages/WorkoutPlansPage.jsx',
+  'src/components/SessionDateList.jsx',
+  'src/components/ExerciseProgress.jsx',
+  'src/components/MovementPatternScanner.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
 ]
 
@@ -77,6 +80,14 @@ export default defineConfig([
           // reads "8 reps" beside it; translating only half of that pair is worse
           // than leaving both.
           'm', 'sec', 'Set',
+          // Same words as 'reps'/'sets' above, capitalised as a column header or a stat
+          // label. t() cannot take them either — dictionary.test.js bans a bare
+          // vocabulary term as a dictionary value, which is the same rule seen from
+          // the other side.
+          'Reps', 'Sets',
+          // The RPE scale as it is written on the gym floor: "RPE: 8/10". The label is
+          // vocabulary and the denominator is a numeral — neither half is a word.
+          'RPE:', '/10',
           // Personal record. Ani's ruling 2026-09-07: the gym floor says "PR" in both
           // languages ("破咗 PR"), so it is vocabulary, not UI copy — same treatment as
           // RPE above, rendered literally and kept out of the dictionaries entirely.

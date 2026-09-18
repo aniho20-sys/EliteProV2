@@ -49,24 +49,21 @@ const EXEMPT = {
 // entry and add the file to TRANSLATED_FILES when it reaches zero.
 const AWAITING = {
   // — trainer-only —
-  'src/pages/ClientDetailPage.jsx': 109,
+  'src/pages/ClientDetailPage.jsx': 105,
   'src/components/PlatformStatsCard.jsx': 56,
   'src/components/MonthlyReportModal.jsx': 10,
-  'src/components/MovementPatternScanner.jsx': 8,
   // — shared between trainer and client —
   'src/pages/ExerciseLibraryPage.jsx': 56,
   'src/components/ProgressView.jsx': 22,
-  'src/components/ExerciseProgress.jsx': 10,
-  'src/components/SessionDateList.jsx': 10,
   // — client-only: phase 1 was not finished either, which nothing had reported —
-  'src/pages/WorkoutLogPage.jsx': 24,
-  'src/components/workout/ActiveWorkoutView.jsx': 21,
+  'src/pages/WorkoutLogPage.jsx': 20,
+  'src/components/workout/ActiveWorkoutView.jsx': 20,
   'src/pages/IntakeFormPage.jsx': 22,
   'src/pages/TrainingProfilePage.jsx': 19,
   'src/components/workout/SetInputs.jsx': 11,
   'src/pages/ProgressPage.jsx': 15,
   'src/components/workout/ExerciseSwapModal.jsx': 12,
-  'src/components/workout/WorkoutCompleteScreen.jsx': 9,
+  'src/components/workout/WorkoutCompleteScreen.jsx': 7,
   // — app-wide chrome —
   'src/components/InstallPrompt.jsx': 17,
 };

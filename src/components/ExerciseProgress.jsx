@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { Dumbbell, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { canonicalExercise, resolveExerciseName, exerciseNamesFromLogs } from '../utils/exerciseUtils';
@@ -7,10 +8,12 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 
+// label is a function of t rather than a string, because t() only accepts a literal key
+// (#39) — the same shape ClientProgressOverviewPage uses for its sort labels.
 const EX_METRICS = [
-  { key: 'maxWeight', label: 'Max Weight', unit: 'kg' },
-  { key: 'totalVolume', label: 'Volume', unit: 'kg' },
-  { key: 'totalReps', label: 'Total Reps', unit: 'reps' },
+  { key: 'maxWeight', label: (t) => t('exprog.metric_max_weight'), unit: 'kg' },
+  { key: 'totalVolume', label: (t) => t('exprog.metric_volume'), unit: 'kg' },
+  { key: 'totalReps', label: (t) => t('exprog.metric_total_reps'), unit: 'reps' },
 ];
 
 // canonicalId groups a soft-merged exercise's history under its surviving exercise
@@ -43,6 +46,7 @@ function ExChartTooltip({ active, payload, unit }) {
 }
 
 export default function ExerciseProgress({ clientId }) {
+  const { t } = useLanguage();
   const { getWorkoutLogs, getExercises } = useApp();
   const logs = getWorkoutLogs(clientId);
   const exerciseLibrary = getExercises();
@@ -95,9 +99,9 @@ export default function ExerciseProgress({ clientId }) {
     return (
       <EmptyState
         icon={Dumbbell}
-        title="No training data yet"
-        description="Complete workout sessions to see exercise progression charts."
-        action={{ label: 'Log a Workout', to: '/log' }}
+        title={t('exprog.empty_title')}
+        description={t('exprog.empty_desc')}
+        action={{ label: t('exprog.empty_action'), to: '/log' }}
       />
     );
   }
@@ -109,7 +113,7 @@ export default function ExerciseProgress({ clientId }) {
       {/* Compact header: exercise selector + metric pills */}
       <div className="ex-progress-header">
         <div className="ex-progress-select-wrap">
-          <label className="ex-progress-select-label">Exercise</label>
+          <label className="ex-progress-select-label">{t('exprog.exercise')}</label>
           <select
             className="form-select ex-progress-select"
             value={activeId || ''}
@@ -117,7 +121,7 @@ export default function ExerciseProgress({ clientId }) {
           >
             {exerciseOptions.map(ex => (
               <option key={ex.id} value={ex.id}>
-                {ex.name} ({ex.count} session{ex.count !== 1 ? 's' : ''})
+                {ex.name} ({t('exprog.n_sessions', { count: ex.count })})
               </option>
             ))}
           </select>
@@ -130,7 +134,7 @@ export default function ExerciseProgress({ clientId }) {
               style={metric === m.key ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
               onClick={() => setMetric(m.key)}
             >
-              {m.label}
+              {m.label(t)}
             </button>
           ))}
         </div>
@@ -149,7 +153,7 @@ export default function ExerciseProgress({ clientId }) {
                     {' '}
                     {change > 0 ? '+' : ''}{metric === 'totalVolume' ? change.toLocaleString(undefined, { maximumFractionDigits: 0 }) : change.toFixed(1)} {selectedMetric.unit}
                     {changePct && ` (${change > 0 ? '+' : ''}${changePct}%)`}
-                    {' '}since first session
+                    {' '}{t('exprog.since_first')}
                   </div>
                 )}
               </div>
@@ -175,7 +179,7 @@ export default function ExerciseProgress({ clientId }) {
               </div>
             ) : (
               <p className="ex-progress-single-note">
-                {chartData.length === 1 ? 'Log at least 2 sessions to see a trend chart.' : 'No completed sets found for this exercise.'}
+                {chartData.length === 1 ? t('exprog.need_two') : t('exprog.no_sets')}
               </p>
             )}
           </div>
@@ -183,14 +187,14 @@ export default function ExerciseProgress({ clientId }) {
           {/* Session History Table */}
           {history.length > 0 && (
             <div className="card">
-              <h3 className="card-title mb-16">Session History</h3>
+              <h3 className="card-title mb-16">{t('exprog.history')}</h3>
               <div className="ex-progress-table-wrap">
                 <table className="ex-progress-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Max Weight</th>
-                      <th>Volume</th>
+                      <th>{t('exprog.col_date')}</th>
+                      <th>{t('exprog.metric_max_weight')}</th>
+                      <th>{t('exprog.metric_volume')}</th>
                       <th>Reps</th>
                       <th>Sets</th>
                     </tr>
