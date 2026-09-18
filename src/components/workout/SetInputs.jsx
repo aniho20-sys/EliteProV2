@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { CheckCircle, X } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const WEIGHT_DELTAS = [1.25, 2.5, 5, 10, 15, 20, 25];
 
 export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate, onRemove, canRemove, done, onComplete }) {
+  const { t } = useLanguage();
   const repsRef = useRef(null);
   const distRef = useRef(null);
   const [weightFocused, setWeightFocused] = useState(false);
@@ -114,12 +116,12 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
           <span className="text-sm text-muted">m</span>
         </>)}
         {onComplete && (
-          <button className={`log-set-done${done ? ' done' : ''}`} onClick={onComplete} title="Mark set done">
+          <button className={`log-set-done${done ? ' done' : ''}`} onClick={onComplete} title={t('setinputs.mark_done')}>
             <CheckCircle size={18} />
           </button>
         )}
         {canRemove && (
-          <button className="btn btn-outline btn-sm btn-icon" onClick={onRemove} title="Remove set"><X size={12} /></button>
+          <button className="btn btn-outline btn-sm btn-icon" onClick={onRemove} title={t('setinputs.remove_set')}><X size={12} /></button>
         )}
       </div>
       {hasWeight && weightFocused && (

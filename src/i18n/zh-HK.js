@@ -861,6 +861,62 @@ const zhHK = {
   'mpscan.apply_n': '套用 {count} 個',
   'mpscan.toast_done_other': '已分類 {count} 個動作',
   'mpscan.toast_partial': '已套用 {done} 個，{failed} 個失敗：{names}',
+
+  // ── 組數輸入 ──
+  'setinputs.mark_done': '標記此組完成',
+  'setinputs.remove_set': '刪除此組',
+
+  // ── 訓練完成 ──
+  'wcomplete.title': '訓練完成',
+  'wcomplete.volume_kg': '訓練量（kg）',
+  'wcomplete.exercises': '動作數',
+  'wcomplete.new_prs': '新個人紀錄',
+  'wcomplete.copied': '已複製！',
+  'wcomplete.share': '分享',
+  'wcomplete.share_volume': '總訓練量',
+  'wcomplete.share_exercises': '個動作',
+  'wcomplete.share_new_prs': '新 PR',
+  'wcomplete.share_footer': '以 ElitePro 記錄',
+  'wcomplete.quote_1': '每一下都在成就更好的自己。',
+  'wcomplete.quote_2': '持之以恆，才會由平凡變成出色。',
+  'wcomplete.quote_3': '你今天來了，這本身就是勝利。',
+  'wcomplete.quote_4': '追求進步，不是完美。',
+  'wcomplete.quote_5': '今天夠強，明天更強。',
+  'wcomplete.quote_6': '唯一失敗的訓練，是沒有開始的那一次。',
+
+  // ── 更換／新增動作 ──
+  'swap.add_title': '新增動作',
+  'swap.swap_title': '更換動作',
+  'swap.replacing': '正在更換：',
+  'swap.tab_library': '動作庫',
+  'swap.tab_custom': '自訂',
+  'swap.custom_hint': '輸入任何動作名稱 —— 適用於動作庫未有的動作。',
+  'swap.ph_custom_name': '例如：Sled Push、Band Pull-Apart…',
+  'swap.dupe_single': '這個動作已經存在 —— 請直接使用，不用另建一個。',
+  'swap.dupe_variants': '這個動作已經有 {count} 個版本 —— 請直接使用，不用另建一個。',
+  'swap.add_named': '新增「{name}」',
+  'swap.ph_search': '搜尋動作…',
+  'swap.all_muscles': '全部肌群',
+  'swap.none_found': '找不到動作',
+
+  // ── 安裝到主畫面 ──
+  'install.banner_title': '加入主畫面，離線亦可使用',
+  'install.banner_sub': '無網絡亦可使用 · 推送通知',
+  'install.how': '教學',
+  'install.install': '安裝',
+  'install.dismiss': '關閉',
+  'install.modal_title': '加入主畫面',
+  'install.modal_why': 'iOS Safari 需要將 App 加入主畫面，才能離線使用及接收推送通知。',
+  'install.step1_before': '點按 Safari 下方的',
+  'install.step1_share': '分享',
+  'install.step1_after': '按鈕',
+  'install.step1_where': null,
+  'install.step2_before': '向下捲動，然後點按',
+  'install.step2_item': '「加入主畫面」',
+  'install.step3_before': '點按右上角的',
+  'install.step3_item': '「加入」',
+  'install.step3_after': null,
+  'install.got_it': '知道了',
 };
 
 export default zhHK;

@@ -14,6 +14,9 @@ export const TRAINING_VOCAB = [
   ...equipmentTypes,
   ...movementPatterns,
   'sets', 'reps', 'kg', 'RPE', 'tempo', 'PR', 'PRs',
+  // The unit abbreviations as they appear inside a set row: placeholder="kg",
+  // placeholder="sec", placeholder="m". Same words, same ruling.
+  'set', 'sec', 's', 'm', 'cm',
 ].map(s => s.toLowerCase());
 
 // Props that carry user-visible text. react/jsx-no-literals runs with ignoreProps (or
@@ -23,6 +26,12 @@ export const VISIBLE_PROPS = ['placeholder', 'aria-label', 'title', 'alt'];
 // Every hardcoded visible-prop string in a source file, as `prop="value"` strings.
 // Block comments are stripped first, or a JSDoc usage example counts as real UI text
 // (EmptyState.jsx documents itself with title="No clients yet").
+// Prop values that are never a translation target. The training vocabulary, plus the
+// product's own name: alt="ElitePro" labels the logo and is the same word everywhere.
+// Kept separate from TRAINING_VOCAB because 'ElitePro' inside a dictionary *sentence* is
+// perfectly fine — it is only a bare prop value that needs the exemption.
+const LITERAL_PROP_VALUES = [...TRAINING_VOCAB, 'elitepro'];
+
 export function visiblePropText(source) {
   const src = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const found = [];
@@ -31,7 +40,7 @@ export function visiblePropText(source) {
       // A value with no letters is a number or punctuation — a sample rate like "65",
       // not a sentence. Those read the same in every language.
       if (!/\p{L}/u.test(m[2])) continue;
-      if (TRAINING_VOCAB.includes(m[2].trim().toLowerCase())) continue;
+      if (LITERAL_PROP_VALUES.includes(m[2].trim().toLowerCase())) continue;
       found.push(`${prop}="${m[2]}"`);
     }
   }

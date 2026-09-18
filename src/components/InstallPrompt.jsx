@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Download, X, Share } from 'lucide-react';
 import { isIOS, isStandalone as isInStandaloneMode } from '../utils/deviceUtils';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const DISMISSED_KEY = 'elitepro_install_dismissed_until';
 const DISMISS_DAYS = 3;
@@ -11,6 +12,7 @@ function isDismissed() {
 }
 
 export default function InstallPrompt() {
+  const { t } = useLanguage();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [show, setShow] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
@@ -62,13 +64,13 @@ export default function InstallPrompt() {
           <img src="/favicon.svg" alt="ElitePro" width={32} height={32} />
         </div>
         <div className="install-banner-text">
-          <strong>Add to Home Screen for offline use</strong>
-          <span>Use without internet · Push notifications</span>
+          <strong>{t('install.banner_title')}</strong>
+          <span>{t('install.banner_sub')}</span>
         </div>
         <button className="btn btn-sm btn-primary install-banner-cta" onClick={handleInstall}>
-          {isIOS() ? 'How?' : <><Download size={14} /> Install</>}
+          {isIOS() ? t('install.how') : <><Download size={14} /> {t('install.install')}</>}
         </button>
-        <button className="btn-icon install-banner-close" onClick={handleDismiss} aria-label="Dismiss">
+        <button className="btn-icon install-banner-close" onClick={handleDismiss} aria-label={t('install.dismiss')}>
           <X size={16} />
         </button>
       </div>
@@ -77,30 +79,30 @@ export default function InstallPrompt() {
         <div className="modal-overlay" onClick={() => setShowIOSModal(false)}>
           <div className="modal ios-install-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add to Home Screen</h3>
+              <h3>{t('install.modal_title')}</h3>
               <button className="btn-icon" onClick={() => setShowIOSModal(false)}><X size={20} /></button>
             </div>
-            <p className="text-sm text-muted mb-16">iOS Safari requires the app to be on your Home Screen to work offline and receive push notifications.</p>
+            <p className="text-sm text-muted mb-16">{t('install.modal_why')}</p>
             <div className="ios-install-steps">
               <div className="ios-install-step">
                 <div className="ios-install-step-num">1</div>
                 <div>
-                  Tap the <strong>Share</strong> button{' '}
+                  {t('install.step1_before')} <strong>{t('install.step1_share')}</strong> {t('install.step1_after')}{' '}
                   <span className="ios-share-icon"><Share size={16} /></span>{' '}
-                  at the bottom of Safari
+                  {t('install.step1_where')}
                 </div>
               </div>
               <div className="ios-install-step">
                 <div className="ios-install-step-num">2</div>
-                <div>Scroll down and tap <strong>"Add to Home Screen"</strong></div>
+                <div>{t('install.step2_before')} <strong>{t('install.step2_item')}</strong></div>
               </div>
               <div className="ios-install-step">
                 <div className="ios-install-step-num">3</div>
-                <div>Tap <strong>"Add"</strong> in the top-right corner</div>
+                <div>{t('install.step3_before')} <strong>{t('install.step3_item')}</strong> {t('install.step3_after')}</div>
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn btn-primary" onClick={handleDismiss}>Got it</button>
+              <button className="btn btn-primary" onClick={handleDismiss}>{t('install.got_it')}</button>
             </div>
           </div>
         </div>

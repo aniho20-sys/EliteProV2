@@ -2,8 +2,10 @@ import { useState, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
 import { sortExercisesByName, liveExercises } from '../../utils/exerciseUtils';
 import { findByExerciseName } from '../../utils/exerciseDuplicates';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, currentId, currentName, onSwap, onClose, mode = 'swap' }) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [muscle, setMuscle] = useState('');
   const [tab, setTab] = useState('library'); // 'library' | 'custom'
@@ -36,25 +38,25 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
       <div className="modal swap-exercise-modal" onClick={e => e.stopPropagation()}>
         <div className="swap-modal-header">
           <div>
-            <h3 className="modal-title" style={{ marginBottom: 2 }}>{mode === 'add' ? 'Add Exercise' : 'Swap Exercise'}</h3>
-            {mode === 'swap' && <p className="text-sm text-muted">Replacing: <strong>{currentName}</strong></p>}
+            <h3 className="modal-title" style={{ marginBottom: 2 }}>{mode === 'add' ? t('swap.add_title') : t('swap.swap_title')}</h3>
+            {mode === 'swap' && <p className="text-sm text-muted">{t('swap.replacing')} <strong>{currentName}</strong></p>}
           </div>
           <button className="btn btn-outline btn-sm btn-icon" onClick={onClose}><X size={14} /></button>
         </div>
 
         {mode === 'add' && (
           <div className="swap-tab-row">
-            <button className={`swap-tab${tab === 'library' ? ' active' : ''}`} onClick={() => setTab('library')}>Library</button>
-            <button className={`swap-tab${tab === 'custom' ? ' active' : ''}`} onClick={() => setTab('custom')}>Custom</button>
+            <button className={`swap-tab${tab === 'library' ? ' active' : ''}`} onClick={() => setTab('library')}>{t('swap.tab_library')}</button>
+            <button className={`swap-tab${tab === 'custom' ? ' active' : ''}`} onClick={() => setTab('custom')}>{t('swap.tab_custom')}</button>
           </div>
         )}
 
         {tab === 'custom' ? (
           <div style={{ padding: '16px' }}>
-            <p className="text-sm text-muted mb-8">Enter any exercise name — useful for movements not in the library.</p>
+            <p className="text-sm text-muted mb-8">{t('swap.custom_hint')}</p>
             <input
               className="form-input"
-              placeholder="e.g. Sled Push, Band Pull-Apart…"
+              placeholder={t('swap.ph_custom_name')}
               value={customName}
               onChange={e => setCustomName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddCustom()}
@@ -64,7 +66,9 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
             {existingMatches.length > 0 && (
               <div className="ex-dupe-warn" style={{ marginBottom: 12 }}>
                 <span>
-                  This exercise already exists{existingMatches.length > 1 ? ` in ${existingMatches.length} variants` : ''} — use it instead of creating a copy:
+                  {existingMatches.length > 1
+                    ? t('swap.dupe_variants', { count: existingMatches.length })
+                    : t('swap.dupe_single')}
                 </span>
                 <div className="ex-dupe-matches">
                   {existingMatches.map(ex => (
@@ -81,7 +85,7 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
               onClick={handleAddCustom}
               disabled={!customName.trim() || existingMatches.length > 0}
             >
-              Add "{customName.trim() || '…'}"
+              {t('swap.add_named', { name: customName.trim() || '…' })}
             </button>
           </div>
         ) : (
@@ -91,20 +95,20 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
                 <Search size={14} className="swap-search-icon" />
                 <input
                   className="form-input swap-search-input"
-                  placeholder="Search exercises…"
+                  placeholder={t('swap.ph_search')}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   autoFocus
                 />
               </div>
               <select className="form-input swap-muscle-select" value={muscle} onChange={e => setMuscle(e.target.value)}>
-                <option value="">All muscles</option>
+                <option value="">{t('swap.all_muscles')}</option>
                 {muscleGroups.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div className="swap-exercise-list">
               {filtered.length === 0 ? (
-                <p className="text-sm text-muted" style={{ padding: '16px', textAlign: 'center' }}>No exercises found</p>
+                <p className="text-sm text-muted" style={{ padding: '16px', textAlign: 'center' }}>{t('swap.none_found')}</p>
               ) : filtered.map(ex => (
                 <button
                   key={ex.id}

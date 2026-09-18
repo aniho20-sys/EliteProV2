@@ -49,7 +49,7 @@ const EXEMPT = {
 // entry and add the file to TRANSLATED_FILES when it reaches zero.
 const AWAITING = {
   // — trainer-only —
-  'src/pages/ClientDetailPage.jsx': 105,
+  'src/pages/ClientDetailPage.jsx': 103,
   'src/components/PlatformStatsCard.jsx': 56,
   'src/components/MonthlyReportModal.jsx': 10,
   // — shared between trainer and client —
@@ -57,15 +57,11 @@ const AWAITING = {
   'src/components/ProgressView.jsx': 22,
   // — client-only: phase 1 was not finished either, which nothing had reported —
   'src/pages/WorkoutLogPage.jsx': 20,
-  'src/components/workout/ActiveWorkoutView.jsx': 20,
+  'src/components/workout/ActiveWorkoutView.jsx': 19,
   'src/pages/IntakeFormPage.jsx': 22,
   'src/pages/TrainingProfilePage.jsx': 19,
-  'src/components/workout/SetInputs.jsx': 11,
   'src/pages/ProgressPage.jsx': 15,
-  'src/components/workout/ExerciseSwapModal.jsx': 12,
-  'src/components/workout/WorkoutCompleteScreen.jsx': 7,
   // — app-wide chrome —
-  'src/components/InstallPrompt.jsx': 17,
 };
 
 function jsxFiles(dir, out = []) {

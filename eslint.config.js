@@ -37,6 +37,10 @@ const TRANSLATED_FILES = [
   'src/components/SessionDateList.jsx',
   'src/components/ExerciseProgress.jsx',
   'src/components/MovementPatternScanner.jsx',
+  'src/components/workout/SetInputs.jsx',
+  'src/components/workout/WorkoutCompleteScreen.jsx',
+  'src/components/workout/ExerciseSwapModal.jsx',
+  'src/components/InstallPrompt.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
 ]
 
@@ -68,7 +72,8 @@ export default defineConfig([
         ignoreProps: true,
         allowedStrings: [
           // Punctuation and glyphs that are not words in any language.
-          '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '.', ',', '|', '&nbsp;',
+          '·', '—', '–', '×', '/', '(', ')', ':', '%', '+', '-', '−', '.', ',', '|', '&nbsp;',
+          '&ldquo;', '&rdquo;',
           // A warning glyph is an icon, not a word.
           '⚠️', '⚠',
           // Step numerals in an ordered list.
@@ -79,7 +84,7 @@ export default defineConfig([
           // same category as kg/cm. 'Set' labels a row inside a set list that already
           // reads "8 reps" beside it; translating only half of that pair is worse
           // than leaving both.
-          'm', 'sec', 'Set',
+          'm', 's', 'sec', 'Set',
           // Same words as 'reps'/'sets' above, capitalised as a column header or a stat
           // label. t() cannot take them either — dictionary.test.js bans a bare
           // vocabulary term as a dictionary value, which is the same rule seen from

@@ -8,13 +8,15 @@ import EmptyState from '../components/EmptyState';
 import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, emptySet, hasValue, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { localToday } from '../utils/dateUtils';
 import { resolveExerciseName } from '../utils/exerciseUtils';
-import { pickClosingMessage, buildWorkoutShareText } from '../utils/workoutShareUtils';
+import { pickClosingKey, closingMessage, buildWorkoutShareText } from '../utils/workoutShareUtils';
 import { useRestTimer } from '../hooks/useRestTimer';
+import { useLanguage } from '../i18n/LanguageContext';
 import WorkoutCompleteScreen from '../components/workout/WorkoutCompleteScreen';
 import SetInputs from '../components/workout/SetInputs';
 import ActiveWorkoutView from '../components/workout/ActiveWorkoutView';
 
 export default function WorkoutLogPage() {
+  const { t } = useLanguage();
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
     getExercises, getPersonalRecords, checkAndAwardBadges, muscleGroups } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
@@ -268,7 +270,7 @@ export default function WorkoutLogPage() {
   const prCount = Object.keys(prs).length;
 
   const handleShareLog = async (log, shareData) => {
-    const text = buildWorkoutShareText(shareData, pickClosingMessage());
+    const text = buildWorkoutShareText(t, shareData, closingMessage(t, pickClosingKey()));
     if (navigator.share) {
       try { await navigator.share({ title: 'Workout Complete', text }); } catch { /* cancelled */ }
     } else {
