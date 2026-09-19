@@ -75,9 +75,20 @@ GoCardless account, instead of everyone sharing one login.
 > `redirect_uri` we send against the list you registered here, as an exact
 > string. A trailing slash, `http` instead of `https`, or a different region in
 > the hostname all fail the same way. The URL above is not a guess — it was
-> requested on 2026-08-18 and answered with a redirect to
-> `/#/profile?gc=not-configured`, which is our own function's "credentials not
-> set up yet" path, so that is confirmed to be where it is deployed.
+> requested on 2026-08-18 and again on 2026-09-19, and both times answered with
+> a redirect back into our own app, so that is confirmed to be where the
+> function is deployed.
+>
+> ⚠️ **Correction (2026-09-19).** The 2026-08-18 version of this note said that
+> request answered `?gc=not-configured` and read that as proof of the
+> credentials path. A plain request with no query string cannot reach that
+> path: `gcOAuthCallback` checks `if (!code || !state)` and redirects to
+> `?gc=error` *before* it ever looks at the credentials
+> (`functions/index.js`). So the old note drew the right conclusion about the
+> URL from the wrong evidence — and, worse, it would have made a real
+> "not configured" state look already-verified. See **How to check whether
+> steps 3–5 are already done** below for a probe that actually distinguishes
+> the two.
 >
 > Why that hostname: `gcOAuthCallback` is a 1st-gen HTTP function
 > (`functions.https.onRequest` in `functions/index.js`) with no `.region()`
@@ -143,6 +154,30 @@ starts working.
 
 If you want a green CI run to confirm anyway, ask and a no-op commit can be
 pushed.
+
+---
+
+## How to check whether steps 3–5 are already done
+
+Before working through this guide, it is worth 10 seconds to find out whether
+the secrets already exist. Open this URL in any browser (phone is fine) — it is
+a deliberately invalid request, so nothing is created, connected or charged:
+
+```
+https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback?code=probe&state=probe
+```
+
+It bounces you to the app's Profile page with one of two markers in the
+address bar:
+
+| Where you land | What it means |
+|---|---|
+| `…/#/profile?gc=not-configured` | The three secrets do **not** exist. Steps 1–5 still to do. |
+| `…/#/profile?gc=error` | The secrets **do** exist. The request was rejected later, at the nonce check, which is the correct response to a made-up `state`. |
+
+**Checked 2026-09-19: `?gc=not-configured`** — so as of that date none of
+steps 1–5 had been done, and the `Connect GoCardless` button in the app could
+only ever have answered "GoCardless isn't set up yet".
 
 ---
 

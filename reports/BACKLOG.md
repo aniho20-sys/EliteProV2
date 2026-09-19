@@ -1,6 +1,6 @@
 # ElitePro BACKLOG — 單一待辦清單
 
-> **最後更新**：2026-09-18（FB 永久剷 · A3/A4/A5 Ani 已做 · B1 i18n 清零 · outreach 無方案）
+> **最後更新**：2026-09-19（A6/A7 重寫——Ani 話「冇方向」，因為之前兩條都冇寫真正嘅第一步 · B1 i18n 清零 · FB 永久剷 · outreach 無方案）
 > **規則**：任何新決定／新批准**即刻**寫入呢度，唔好等下次週報。
 > 週報第【上週講過但未做】節對返呢份文件。
 
@@ -92,45 +92,106 @@
 
 ---
 
-## A6. GoCardless Connect sandbox 實測 ⏱️ 15 分鐘 —— 🔓 **已解鎖**
+## A6. GoCardless sandbox —— ⚠️ **之前寫錯咗第一步，重寫**
 
 | | |
 |---|---|
 | **幾時提出** | 2026-08-06 |
 | **拖咗** | **1.5 個月** |
-| **做完會多咗乜** | Phase 3 Step 1-2 已 deploy live,但個 Connect 掣**從來未有真人撳過**。Step 3（訂閱 UI）建喺呢個地基上 |
+| **實際時間** | **30–40 分鐘**（唔係之前寫嘅 15 分鐘）|
 
-### 🔓 之前寫「可能唔使做」係錯嘅,而家撤回
+### 點解你「冇方向」—— 係呢份清單嘅錯，唔係你
 
-原本標咗「等 GoCardless vs Airwallex 決定先」。
-**`payment-provider-research-2026-09-06.md` 早就答咗呢條**：
+之前寫嘅第一步係「app → Profile → 撳 Connect」。**呢個係第六步。**
 
-- GoCardless **34 個商戶國家冇香港**,8 隻貨幣冇 HKD —— 香港永遠用唔到
-- **但英國側 GoCardless 係啱嘅**：Bacs 1% + 20p 封頂 £4,實際約 **1.07%**,報告明寫「唔使改」
-- Airwallex / Stripe 係**香港嘅方案**,唔係取代英國嗰個
+2026-09-19 實測咗個 endpoint（`?code=probe&state=probe`，故意做錯嘅請求，唔會連接到任何嘢）：
 
-你 9 個學生全部英國。**英國 GoCardless 唔使等任何決定,而家就應該試。**
+```
+→ 彈返 /#/profile?gc=not-configured
+```
 
-⚠️ 但有一件事要知：`functions/index.js:605` 個 `environment: 'sandbox'` 係**寫死**嘅,冇 live 分支。即係 Phase 3 由頭到尾未曾有能力處理一蚊真錢。所以呢次實測只驗證到 sandbox flow 通唔通。
+即係 **GoCardless 嘅三條 secret 由頭到尾未建立過**。你撳嗰個 Connect 掣，唯一可能嘅結果就係彈一句「GoCardless 未設定」。呢一個半月入面，任何時候撳都係咁。
 
-### 第一步
+### 第一步（真正嘅）
 
-app → Profile → 拉到 GoCardless 一段 → 撳 **Connect** → 跟住個 GoCardless sandbox 頁做 → 睇下有冇成功彈返 app 顯示「已連接」
+📄 **`reports/gocardless-sandbox-setup-guide.md`** —— 177 行，2026-08-18 寫，逐個 URL 撳過確認過，全部喺手機瀏覽器做得，唔使 terminal。
 
-## A7. Android Chrome 測一次 ⏱️ 10 分鐘
+順序係：
+
+| 步 | 做乜 | 邊度 |
+|---|---|---|
+| 1 | 開 sandbox 帳戶 | `manage-sandbox.gocardless.com/signup` ⚠️ **唔好由 `gocardless.com` 入**，嗰度係真商戶註冊，會叫你揀付費 plan —— 呢個位卡咗兩個星期 |
+| 2 | 登記 ElitePro 做 partner app | `manage-sandbox.gocardless.com/developers/partners/apps/create` |
+| 3 | 開 Secret Manager API | Google Cloud Console |
+| 4 | 建三條 secret | `GC_CLIENT_ID` / `GC_CLIENT_SECRET` / `GC_REDIRECT_URI` |
+| 5 | 俾 Cloud Functions 權限讀 secret | IAM，加 Secret Manager Admin |
+| 6 | **先至係**撳 Connect | app → Profile |
+
+⚠️ **Client ID / Secret 唔好貼入 chat**，直接入 Secret Manager。
+
+### 完成標準（二元）
+
+Profile 個 GoCardless 卡撳 **Connect** 之後，開到 GoCardless sandbox 真嘅授權頁（唔係 error toast），批准完彈返 Profile 顯示 **Connected · sandbox**。
+
+### 會撞到嘅嘢
+
+| 症狀 | 原因 |
+|---|---|
+| 註冊頁叫你揀 plan | 入錯咗 `gocardless.com`，要用 `manage-sandbox.` |
+| 仍然話「未設定」 | secret 名打錯，或者第 5 步權限未生效（等幾分鐘）|
+| GoCardless 話 redirect URI 唔啱 | 第 2 步同第 4 步兩個字串唔一模一樣 |
+| 彈返 `?gc=error` | 伺服器側出事，叫我睇 Cloud Functions log |
+
+### 做完解鎖乜
+
+Phase 3 Step 1–2 已經 deploy 咗，但**從來未有真人撳過個掣**。Step 3（訂閱 UI）成個建喺呢個地基上。
+
+⚠️ 另外要知：`functions/index.js:605` 個 `environment: 'sandbox'` 係寫死嘅，冇 live 分支 —— Phase 3 由頭到尾未有能力處理一蚊真錢。呢次只驗證 sandbox flow 通唔通。
+
+### 唔想做嘅話
+
+呢個唔急到今個星期。英國 GoCardless 係啱嘅方案（Bacs 約 1.07%），但你 9 個學生而家係點收錢就點收錢，冇人等緊呢個。**講一聲就擱住**，我唔會再排入去。
+
+---
+
+## A7. Android 測試 —— ⚠️ **重寫；我已經做咗一半**
 
 | | |
 |---|---|
 | **幾時提出** | 2026-07 |
-| **出處** | `PROGRESS.md:85` |
 | **拖咗** | **2 個月** |
-| **做完會多咗乜** | 你全部真機測試都喺 iPhone 做。`PRODUCT.md` 自己寫住「Android Chrome has not yet had an equivalent pass」。你第一個外部教練用 Android 嘅機會大約一半 |
 
-### 第一步
+### 我 2026-09-19 已經做咗嘅部分
 
-借一部 Android（學生、朋友都得）→ Chrome 開 `https://elitepro-16718.web.app` → 登入 → 撳一次 book session。
+喺 Pixel 7 模擬器（412×839、Android 14、Chrome 141）行咗 production build 嘅**未登入畫面**：
 
-**唔使測晒全部嘢。** 只要確認：登入得、睇到堂數、撳得到 book。
+| 檢查 | 結果 |
+|---|---|
+| 橫向溢出（Android 最常見嘅爆版） | ✅ 冇 |
+| Service worker 註冊 | ✅ 有 |
+| PWA manifest | ✅ 200 |
+| JS 錯誤 | ✅ 冇 |
+| 撳得到嘅位細過 44px | ⚠️ 5 個，全部喺 landing page：競品連結（TrueCoach 59×14、PT Distinction 74×14）同 Privacy 42×44 / Terms 35×44 |
+
+⚠️ **呢個係模擬，唔係真機。** 常規 #36 講得好清楚：模擬證明到「畫面冇爆」，證明唔到「撳落去有反應」。動作庫篩選 chip 死咗三個星期，就係死喺呢個分別上面。
+
+### 剩低嘅係「登入之後」—— 而呢度卡住咗
+
+模擬器登入唔到，因為 QA 教練帳戶（`test-coach-b@elitepro.test`）個密碼喺 `CLAUDE.md` 寫明**冇記錄低**，當時直接喺 chat 俾咗你。
+
+所以兩條路，**你揀邊條都得，揀唔到就擱住**：
+
+| | 做法 | 你要做乜 |
+|---|---|---|
+| **A** | 你用 QA 帳戶個 email 撳一次「忘記密碼」重設，話我知新密碼 | 2 分鐘。之後我可以喺模擬 Android 行晒整個登入後嘅 app（版面、console 錯誤、tap target），剩返真機嗰下先要人 |
+| **B** | 擱住，等第一個用 Android 嘅真人教練出現先算 | 零。風險：佢係你第一個外部用家，撞到 bug 就係最差嘅時機 |
+
+❓ **一條我唔應該估嘅嘢**：你身邊有冇 Android 機攞到手（自己第二部、學生、屋企人都算）？
+
+- 有 → 就係最好嗰條路，10 分鐘：Chrome 開 `https://elitepro-16718.web.app` → 登入 → 撳一次 book session。確認登入得、睇到堂數、撳得到 book，就夠。
+- 冇 → 揀 A 或 B。**唔好為咗呢件事去搵人借機。**
+
+我唔會再自己估你有冇 —— 呢個月已經估錯咗兩次（WhatsApp 教練朋友、FB group）。
 
 ---
 
