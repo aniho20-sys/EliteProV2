@@ -66,6 +66,16 @@ GoCardless account, instead of everyone sharing one login.
      ```
      https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback
      ```
+   - **Leave blank** (all marked Optional on the form as of 2026-09-23):
+     **Post onboarding URL**, **Payment setup URL**, **Webhook URL**, and leave
+     **Webhook client certificate** unticked. None of them is read by any code
+     in this repo. The Webhook URL matters most: there is **no GoCardless
+     webhook endpoint** in `functions/index.js` yet (checked 2026-09-23), so any
+     URL typed there would have GoCardless delivering events to a 404.
+     Add it when the webhook handler is built, not before.
+   - **"I agree to the terms of the partner agreement"** — required to submit.
+     It is a real agreement between Ani's business and GoCardless, even in
+     sandbox, and nobody on the agent side has read it. Ani's call.
 3. Create the app. You are returned to
    **https://manage-sandbox.gocardless.com/developers/partners**, where the app
    now appears
