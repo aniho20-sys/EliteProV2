@@ -1,6 +1,6 @@
 # ElitePro BACKLOG — 單一待辦清單
 
-> **最後更新**：2026-09-22（B2 invoice 中文 PDF 已修 · 收割咗 3 份困住嘅週報 · B10 等 B11 語言決定 · A6/A7 等你 · outreach 無方案）
+> **最後更新**：2026-09-23（A6 Ani 攞咗 GoCardless API，剩返 Secret Manager 三步 · B2 中文 invoice 已修 · B10 等 B11 語言決定 · outreach 無方案）
 > **規則**：任何新決定／新批准**即刻**寫入呢度，唔好等下次週報。
 > 週報第【上週講過但未做】節對返呢份文件。
 
@@ -92,13 +92,56 @@
 
 ---
 
-## A6. GoCardless sandbox —— ⚠️ **之前寫錯咗第一步，重寫**
+## A6. GoCardless sandbox —— 🟡 **Ani 2026-09-23 話攞咗 API，仲差第 3–5 步**
 
 | | |
 |---|---|
-| **幾時提出** | 2026-08-06 |
-| **拖咗** | **1.5 個月** |
-| **實際時間** | **30–40 分鐘**（唔係之前寫嘅 15 分鐘）|
+| **狀態** | 第 1–2 步（sandbox 帳戶、partner app）Ani 話做咗 · **第 3–5 步未做** |
+| **點知** | 2026-09-23 撳過 probe，仍然彈 `?gc=not-configured` |
+| **剩返幾耐** | 約 10 分鐘，全部喺 Google Cloud Console |
+
+### ⚠️ Client Secret 唔好貼入 chat
+
+直接由 GoCardless 個頁面 copy，貼入 Secret Manager。貼咗入 chat 就等於洩漏咗，要返去 GoCardless 重新 generate。
+
+### 剩低三步
+
+| 步 | 做乜 | 連結 |
+|---|---|---|
+| 3 | 開 Secret Manager API | `console.cloud.google.com/apis/library/secretmanager.googleapis.com?project=elitepro-16718` |
+| 4 | 建三條 secret（名要一模一樣，全大楷）：`GC_CLIENT_ID`、`GC_CLIENT_SECRET`、`GC_REDIRECT_URI` | `console.cloud.google.com/security/secret-manager?project=elitepro-16718` |
+| 5 | IAM 入面搵 `…@appspot.gserviceaccount.com` 嗰行 → 加 **Secret Manager Admin** | `console.cloud.google.com/iam-admin/iam?project=elitepro-16718` |
+
+`GC_REDIRECT_URI` 個值：
+```
+https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback
+```
+同你第 2 步登記嗰個必須**逐個字元一樣**。
+
+⚠️ 建 secret 嗰陣要**順手填埋個值**（Console 會自動建立 version 1）。條 code 讀 `versions/latest`，建咗個空 secret 一樣會當「未設定」。
+
+### 自己驗（唔使問我）
+
+喺瀏覽器開呢條（故意做錯嘅請求，唔會連接到任何嘢）：
+```
+https://us-central1-elitepro-16718.cloudfunctions.net/gcOAuthCallback?code=probe&state=probe
+```
+
+| 彈到邊 | 意思 |
+|---|---|
+| `?gc=not-configured` | 三條 secret 仲未讀到 —— 可能未建，亦可能係第 5 步權限未加 |
+| `?gc=error` | ✅ 讀到喇。可以去 Profile 撳 Connect |
+
+⚠️ 兩種情況（secret 唔存在／讀唔到）喺外面睇落**一模一樣**，因為條 code 兩樣都當「未設定」。所以第 4 步做完仲係 `not-configured`，答案多數係第 5 步。
+
+### 完成標準
+
+Profile → GoCardless 卡 → 撳 **Connect** → 開到 GoCardless sandbox 真嘅授權頁（唔係 error toast）→ 批准 → 彈返 Profile 顯示 **Connected · sandbox**。
+
+---
+
+<details>
+<summary>📄 之前點解寫錯（保留紀錄）</summary>
 
 ### 點解你「冇方向」—— 係呢份清單嘅錯，唔係你
 
@@ -141,6 +184,8 @@ Profile 個 GoCardless 卡撳 **Connect** 之後，開到 GoCardless sandbox 真
 | 仍然話「未設定」 | secret 名打錯，或者第 5 步權限未生效（等幾分鐘）|
 | GoCardless 話 redirect URI 唔啱 | 第 2 步同第 4 步兩個字串唔一模一樣 |
 | 彈返 `?gc=error` | 伺服器側出事，叫我睇 Cloud Functions log |
+
+</details>
 
 ### 做完解鎖乜
 
