@@ -112,10 +112,19 @@ const APP_SECRET_NAMES = {
   redirectUri: 'GC_REDIRECT_URI',
 };
 
+// These three values are pasted into the Cloud console by hand, usually from a
+// phone, where copy-paste routinely drags in a trailing space or newline that
+// nothing on screen shows. None of them can legitimately start or end with
+// whitespace, and untrimmed, "abc123\n" is a different client_id to GoCardless
+// and a redirect_uri that fails its byte-for-byte match — an opaque OAuth error
+// caused by a character nobody can see. A value that is ONLY whitespace is
+// treated as missing, so it lands on the same "not configured" path.
 async function readAppSecret(name) {
   const fullName = `projects/${projectId()}/secrets/${name}/versions/latest`;
   const [version] = await secretClient.accessSecretVersion({ name: fullName });
-  return version.payload.data.toString('utf8');
+  const value = version.payload.data.toString('utf8').trim();
+  if (!value) throw new Error(`${name} is empty`);
+  return value;
 }
 
 // Called by gcOAuthStart/gcOAuthCallback (index.js). Returns null — never
