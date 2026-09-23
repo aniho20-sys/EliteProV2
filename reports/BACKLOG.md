@@ -293,6 +293,7 @@ Phase 3 Step 1–2 已經 deploy 咗，但**從來未有真人撳過個掣**。S
 | ✅ **B5** | **GoCardless vs Airwallex** | — | — | **已完成** —— `payment-provider-research-2026-09-06.md` 早就答咗。結論唔係二揀一：英國照用 GoCardless（1.07%,報告明寫唔使改）,香港要另一個 provider（GoCardless 唔支援 HK）。schema 09-12 已轉 provider-neutral。**真正剩低嘅只有一條要問 Airwallex 真人嘅問題**,見下面 B5a |
 | **B10** | 🔴 **月度報告喺 iPhone 完全用唔到** ⬅️ **下一個做** | 2026-09-18 | i18n 過程中發現 | `MonthlyReportModal` 用 `win.print()` 出 PDF。常規 #30：iOS Safari 唔支援，撳咗零反應。B2 已經起好咗識中文嘅 PDF 底層（`pdfFont.js`），月度報告指過去就得。**但要你先答 B11 個語言問題**，否則寫完可能要返工 |
 | **B11** | ❓ **月度報告嘅 PDF 內文用邊種語言** | 2026-09-18 | 同上 | `buildHTML()` 約 200 行英文，係印出嚟畀**學生**睇嗰份文件（唔係教練介面）。按「跟讀者」原則應該用**學生**嘅語言，但呢個係你拍板嘅嘢，我冇擅自譯。順帶：呢 200 行由頭到尾冇出現喺翻譯債務統計入面（統計只數 JSX literal，呢啲係 template string）—— 即係度量本身有窿，唔止係工作有窿 |
+| **B12** | ❓ **Phase 3 值唔值得起落去 —— 定係直接用 GoCardless 收錢** | 2026-09-23 | Ani 問「學生都係去 GoCardless 俾錢，做咩要連 ElitePro」 | 收錢本身唔需要 ElitePro，GoCardless 自己個 dashboard 做得到訂閱。ElitePro 連接加嘅係：**扣款成功自動加堂**、**扣款失敗自動預警**、roll-over／暫停規則、學生喺同一個 app 睇晒。9 個學生手動對數做得到；對其他教練，呢個係賣點。⚠️ 真錢要 live partner 審批（GoCardless 冇公佈時間），直接開 live 商戶帳戶可能更快收到錢。**等 Ani 決定：繼續起 Step 3，定先直接用 GoCardless。** |
 | **B5a** | 問 Airwallex：FPS recurring 係真 pull 定要客戶每月撳 | 2026-09-06 | 同上 | 決定香港市場有冇「自動月費」。(a) 真 mandate = 香港做得成 / (b) 每月推通知要客戶確認 = 只係「自動提醒」,價值差好遠 |
 | ✅ **B6** | **impeccable demo 手機 preview** | 2026-09-17 批 | — | **已完成** —— 三條 link 喺下面 |
 | ~~B7~~ | ~~`/analytics` 獲客指標~~ | — | — | **暫緩** |
