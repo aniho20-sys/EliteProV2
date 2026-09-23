@@ -58,7 +58,9 @@ GoCardless account, instead of everyone sharing one login.
    **https://manage-sandbox.gocardless.com/developers/partners/apps/create**
 2. Fill in:
    - **App name**: `ElitePro`
-   - **Description**: anything, e.g. `Personal training session billing`
+   - **Description**: `Coaching management platform` — Ani's wording
+     (2026-09-23). It describes what ElitePro *is*, not one feature of it,
+     and a trainer may see it when they connect their own account
    - **Homepage URL**: `https://elitepro-16718.web.app`
    - **Redirect URL** — type/paste it **exactly**, including `https://`:
      ```
