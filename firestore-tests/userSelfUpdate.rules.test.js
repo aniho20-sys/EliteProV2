@@ -102,6 +102,33 @@ describe('users/{userId} self-update allowlist', () => {
     await assertSucceeds(updateDoc(doc(db, 'users', TRAINER_A), { currency: 'HKD' }));
   });
 
+  // 2026-09-23, Phase 3 Step 3: a trainer's per-session rate for monthly plans.
+  test('trainer can set subscriptionRate on their own profile', async () => {
+    const db = testEnv.authenticatedContext(TRAINER_A).firestore();
+    await assertSucceeds(updateDoc(doc(db, 'users', TRAINER_A), { subscriptionRate: 65 }));
+  });
+
+  // subscriptionTester unlocks the sandbox plan picker for one client. It must be the
+  // trainer's decision: a client able to set it on themselves could open a GoCardless
+  // flow the trainer never agreed to.
+  test('GUARDIAN: client cannot mark themselves a subscription tester', async () => {
+    const db = testEnv.authenticatedContext(CLIENT_A).firestore();
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { subscriptionTester: true }));
+  });
+
+  test('trainer can mark their own client a subscription tester', async () => {
+    const db = testEnv.authenticatedContext(TRAINER_A).firestore();
+    await assertSucceeds(updateDoc(doc(db, 'users', CLIENT_A), { subscriptionTester: true }));
+  });
+
+  test('another trainer cannot mark someone else\'s client a tester', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', 'trainerB'), { id: 'trainerB', role: 'trainer', name: 'Trainer B' });
+    });
+    const db = testEnv.authenticatedContext('trainerB').firestore();
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { subscriptionTester: true }));
+  });
+
   test('client still cannot self-grant totalSessions/sessionOffset', async () => {
     const db = testEnv.authenticatedContext(CLIENT_A).firestore();
     await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { totalSessions: 999 }));

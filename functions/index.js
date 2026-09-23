@@ -4,12 +4,13 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
-const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = require('./gcSecrets');
+const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials, readGcAccessToken } = require('./gcSecrets');
 const { errorRedirectUrl, oauthErrorCode } = require('./gcOAuthErrors');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
 const { summariseSignups } = require('./signupQueue');
+const { startSubscription, completeSubscription, SubscriptionError } = require('./gcSubscriptions');
 
 initializeApp();
 const db = getFirestore();
@@ -642,6 +643,88 @@ exports.gcDisconnect = functions.https.onCall(async (data, context) => {
   }, { merge: true });
 
   return { ok: true };
+});
+
+// ─── Phase 3 Step 3: client subscribes to a monthly plan ───
+// See functions/gcSubscriptions.js for the flow and why the return redirect
+// is never trusted on its own.
+const GC_SUBSCRIPTION_RETURN_URL =
+  'https://us-central1-elitepro-16718.cloudfunctions.net/gcSubscriptionReturn';
+
+function subscriptionDeps() {
+  return {
+    db,
+    readToken: readGcAccessToken,
+    fetchImpl: fetch,
+    now: () => new Date(),
+  };
+}
+
+function toHttpsError(err) {
+  if (err instanceof SubscriptionError) {
+    return new functions.https.HttpsError(err.code, err.message);
+  }
+  console.error('[subscriptions] unexpected error', err);
+  return new functions.https.HttpsError('internal', 'Something went wrong');
+}
+
+exports.gcStartSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  }
+  try {
+    return await startSubscription({
+      ...subscriptionDeps(),
+      uid: context.auth.uid,
+      tier: data && data.tier,
+      returnUrl: (id) => `${GC_SUBSCRIPTION_RETURN_URL}?sub=${encodeURIComponent(id)}`,
+      exitUrl: `${PROFILE_URL}?sub=exit`,
+    });
+  } catch (err) {
+    throw toHttpsError(err);
+  }
+});
+
+// Where GoCardless sends the client after the hosted page. Public, like
+// gcOAuthCallback — but it can only ever do one thing, which is ask
+// GoCardless whether this subscription's billing request is fulfilled. The
+// id in the URL decides nothing; GoCardless's answer does.
+exports.gcSubscriptionReturn = functions.https.onRequest(async (req, res) => {
+  let status = 'unknown';
+  try {
+    ({ status } = await completeSubscription({
+      ...subscriptionDeps(),
+      subscriptionId: String(req.query.sub || ''),
+    }));
+  } catch (err) {
+    console.error('[gcSubscriptionReturn] failed', err);
+    status = 'pending';
+  }
+  res.redirect(`${PROFILE_URL}?sub=${encodeURIComponent(status)}`);
+});
+
+// "Check again" for a subscription still pending after the return — Bacs
+// mandate setup can lag the redirect. Only the subscription's own client or
+// trainer may trigger the check.
+exports.gcRefreshSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  }
+  const subscriptionId = String((data && data.subscriptionId) || '');
+  if (!/^[A-Za-z0-9]{10,40}$/.test(subscriptionId)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Bad subscription id');
+  }
+  const snap = await db.doc(`subscriptions/${subscriptionId}`).get();
+  if (!snap.exists) throw new functions.https.HttpsError('not-found', 'No such subscription');
+  const { clientId, trainerId } = snap.data();
+  if (context.auth.uid !== clientId && context.auth.uid !== trainerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Not your subscription');
+  }
+  try {
+    return await completeSubscription({ ...subscriptionDeps(), subscriptionId });
+  } catch (err) {
+    throw toHttpsError(err);
+  }
 });
 
 // ─── Phase 3: daily cleanup of expired GoCardless OAuth nonces ───

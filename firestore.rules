@@ -93,7 +93,13 @@ service cloud.firestore {
                          'renewalPrompt3Shown','renewalPrompt1Shown',
                          'renewalPromptSnoozedUntil',
                          'businessName','intakeCompleted',
-                         'language'])
+                         'language','subscriptionRate'])
+          // subscriptionRate: a trainer's per-session rate for monthly plans (Phase 3).
+          // Harmless on a client doc — the server reads it only from the TRAINER's doc,
+          // and prices every plan itself; the client never sends a price. Deliberately
+          // NOT in this list: subscriptionTester, which lets a client see the sandbox
+          // plan picker. Only the trainer may set it, via the isTrainerOf branch below —
+          // a client granting themselves test access is exactly what it must not allow.
           // language: the UI language chosen on the Profile card. Value-checked here so a
           // bad write cannot park the client on a language the app does not have.
           && (!('language' in request.resource.data)

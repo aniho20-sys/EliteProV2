@@ -143,6 +143,7 @@ export default function ClientDetailPage() {
   const [savingNoteId, setSavingNoteId] = useState(null);
   const [tagInput, setTagInput] = useState('');
   const [savingTag, setSavingTag] = useState(false);
+  const [savingTester, setSavingTester] = useState(false);
   const [savePlanLog, setSavePlanLog] = useState(null);
   const [savePlanName, setSavePlanName] = useState('');
   const [savePlanDay, setSavePlanDay] = useState('');
@@ -264,6 +265,19 @@ export default function ClientDetailPage() {
       setTagInput('');
     } catch { toast(t('cdetail.toast_tag_failed'), 'error'); }
     finally { setSavingTag(false); }
+  };
+
+  // Phase 3 sandbox gate: only clients marked here see the monthly plan picker, and
+  // the server refuses everyone else (functions/gcSubscriptions.js SANDBOX).
+  const handleToggleTester = async () => {
+    setSavingTester(true);
+    try {
+      await updateClient(clientId, { subscriptionTester: !client.subscriptionTester });
+    } catch {
+      toast(t('sub.tester_failed'), 'error');
+    } finally {
+      setSavingTester(false);
+    }
   };
 
   const handleRemoveTag = async (tag) => {
@@ -537,6 +551,23 @@ export default function ClientDetailPage() {
                 <button className="btn btn-outline btn-sm" type="submit" disabled={savingTag || !tagInput.trim()}>{t('cdetail.add_label')}</button>
               </form>
             </div>
+
+            {/* Monthly-plan sandbox tester — shown once the trainer has set a plan rate */}
+            {currentUser.subscriptionRate > 0 && (
+              <div className="mt-16">
+                <div className="text-sm fw-bold">{t('sub.tester_label')}</div>
+                <p className="text-sm text-muted mt-8">{t('sub.tester_desc')}</p>
+                <button
+                  type="button"
+                  className={`btn btn-sm mt-8 ${client.subscriptionTester ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={handleToggleTester}
+                  disabled={savingTester}
+                  aria-pressed={!!client.subscriptionTester}
+                >
+                  {client.subscriptionTester ? t('sub.tester_on') : t('sub.tester_off')}
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-16">

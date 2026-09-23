@@ -802,6 +802,29 @@ export function AppProvider({ children }) {
     await disconnect();
   };
 
+  // ========== Subscriptions (Phase 3 Step 3) ==========
+  // Written only by Cloud Functions (firestore.rules: allow write: if false) — the
+  // client asks, the server prices and records. One-off fetches rather than a
+  // listener for the same reason as getPaymentConnection: it changes only when the
+  // person acts, and a listener would move markLoaded's fixed collection count.
+  // A single-field query (#34), newest first sorted in JS.
+  const getSubscriptions = async ({ clientId }) => {
+    const snap = await getDocs(query(collection(db, 'subscriptions'), where('clientId', '==', clientId)));
+    return snap.docs.map(d => d.data()).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  };
+
+  // Returns GoCardless's hosted page URL; the caller sends the browser there.
+  const startSubscription = async (tier) => {
+    const call = httpsCallable(functions, 'gcStartSubscription');
+    return (await call({ tier })).data;
+  };
+
+  // "Check again" for a subscription GoCardless has not confirmed yet.
+  const refreshSubscription = async (subscriptionId) => {
+    const call = httpsCallable(functions, 'gcRefreshSubscription');
+    return (await call({ subscriptionId })).data;
+  };
+
   // ========== Exercises ==========
   // Merges the current trainer's (or client's own trainer's) exerciseOverrides onto the
   // base list, so every page that lists exercises via getExercises() picks up the
@@ -1044,7 +1067,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getPaymentConnection, startGcConnect, disconnectGc, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, getSubscriptions, startSubscription, refreshSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,

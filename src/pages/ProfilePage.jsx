@@ -7,13 +7,15 @@ import { useNotifications } from '../context/NotificationContext';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
-import { CURRENCIES } from '../utils/currencyUtils';
+import { CURRENCIES, formatCurrency } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
 import MovementPatternScanner from '../components/MovementPatternScanner';
 import PlatformStatsCard from '../components/PlatformStatsCard';
 import LanguagePicker from '../components/LanguagePicker';
 import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 import { gcFailureMessage } from '../utils/gcErrors';
+import SubscriptionCard from '../components/SubscriptionCard';
+import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
 
 function InstallAppCard() {
   const { t } = useLanguage();
@@ -137,6 +139,8 @@ export default function ProfilePage() {
   const [renewalRate, setRenewalRate] = useState(currentUser.renewalRate ?? '');
   const [renewalRateNext, setRenewalRateNext] = useState(currentUser.renewalRateNext ?? '');
   const [renewalCurrency, setRenewalCurrency] = useState(currentUser.currency || 'GBP');
+  const [subscriptionRate, setSubscriptionRate] = useState(currentUser.subscriptionRate ?? '');
+  const [subRateSaving, setSubRateSaving] = useState(false);
   const [renewalSaving, setRenewalSaving] = useState(false);
 
   // Trainer: bank details (shown to clients in the renewal payment sheet)
@@ -219,6 +223,25 @@ export default function ProfilePage() {
         err?.code === 'functions/failed-precondition' ? 'info' : 'error'
       );
       setGcConnecting(false);
+    }
+  };
+
+  // Phase 3: the per-session rate monthly plans are priced from. The server re-reads it
+  // from this document and computes every plan itself — this only stores the number.
+  const handleSaveSubscriptionRate = async () => {
+    const rate = Number(subscriptionRate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      toast(t('sub.rate_invalid'), 'error');
+      return;
+    }
+    setSubRateSaving(true);
+    try {
+      await updateClient(currentUser.id, { subscriptionRate: rate });
+      toast(t('sub.rate_saved'));
+    } catch {
+      toast(t('sub.rate_save_failed'), 'error');
+    } finally {
+      setSubRateSaving(false);
     }
   };
 
@@ -688,6 +711,27 @@ export default function ProfilePage() {
                   ? new Date(gcConnection.connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                   : '—' })}
               </p>
+              <div className="form-group mt-8">
+                <label className="form-label">{t('sub.rate_label')}</label>
+                <input type="number" min="0" step="0.01" inputMode="decimal" className="form-input" placeholder="65"
+                  value={subscriptionRate} onChange={e => setSubscriptionRate(e.target.value)} />
+                <p className="text-sm text-muted mt-8">{t('sub.rate_hint')}</p>
+                {monthlyAmount(subscriptionRate, 4) !== null && (currentUser.currency || 'GBP') === 'GBP' && (
+                  <ul className="text-sm mt-8" style={{ paddingLeft: 18 }}>
+                    {SUBSCRIPTION_TIERS.map(n => (
+                      <li key={n}>
+                        {t('sub.tier_option', { n })} · {t('sub.per_month', { amount: formatCurrency(monthlyAmount(subscriptionRate, n), 'GBP') })}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(currentUser.currency || 'GBP') !== 'GBP' && (
+                  <p className="text-sm mt-8" style={{ color: 'var(--danger)' }}>{t('sub.gbp_only')}</p>
+                )}
+              </div>
+              <button className="btn btn-primary mb-16" onClick={handleSaveSubscriptionRate} disabled={subRateSaving} style={{ width: '100%' }}>
+                {subRateSaving ? t('profile.saving_dots') : t('sub.rate_save')}
+              </button>
               <button className="btn btn-outline" onClick={() => setShowGcDisconnectConfirm(true)} style={{ width: '100%' }}>
                 {t('profile.disconnect')}
               </button>
@@ -747,6 +791,9 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Client: monthly plan (Phase 3) — renders nothing unless offered */}
+      {!isTrainer && <SubscriptionCard />}
 
       {/* Client: Training Profile — accessible anytime, not just at onboarding */}
       {!isTrainer && (
