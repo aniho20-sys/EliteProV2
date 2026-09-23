@@ -5,6 +5,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
 const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials } = require('./gcSecrets');
+const { errorRedirectUrl, oauthErrorCode } = require('./gcOAuthErrors');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
@@ -531,7 +532,7 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
   }
 
   if (!code || !state) {
-    res.redirect(`${PROFILE_URL}?gc=error`);
+    res.redirect(errorRedirectUrl(PROFILE_URL, 'missing_params'));
     return;
   }
 
@@ -548,7 +549,7 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
   const nonceResult = await consumeNonce(String(state));
   if (!nonceResult.ok) {
     console.warn('[gcOAuthCallback] rejected state:', nonceResult.reason);
-    res.redirect(`${PROFILE_URL}?gc=error`);
+    res.redirect(errorRedirectUrl(PROFILE_URL, `state_${nonceResult.reason}`));
     return;
   }
   const trainerId = nonceResult.trainerId;
@@ -558,7 +559,7 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
   const trainerSnap = await db.doc(`users/${trainerId}`).get();
   if (!trainerSnap.exists || trainerSnap.data().role !== 'trainer') {
     await releaseNonce(String(state));
-    res.redirect(`${PROFILE_URL}?gc=error`);
+    res.redirect(errorRedirectUrl(PROFILE_URL, 'not_trainer'));
     return;
   }
 
@@ -574,12 +575,13 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
     }),
   });
   if (!tokenRes.ok) {
-    console.error('[gcOAuthCallback] token exchange failed', await tokenRes.text());
+    const body = await tokenRes.text();
+    console.error('[gcOAuthCallback] token exchange failed', tokenRes.status, body);
     // GoCardless's own authorization code is now spent regardless of
     // whether we release the nonce, so a retry needs a fresh Connect
     // attempt either way — release for hygiene, not because it helps here.
     await releaseNonce(String(state));
-    res.redirect(`${PROFILE_URL}?gc=error`);
+    res.redirect(errorRedirectUrl(PROFILE_URL, 'token_exchange', oauthErrorCode(body)));
     return;
   }
   const tokenJson = await tokenRes.json();
@@ -594,7 +596,7 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
   } catch (err) {
     console.error('[gcOAuthCallback] Secret Manager write failed after retries', err);
     await releaseNonce(String(state));
-    res.redirect(`${PROFILE_URL}?gc=error`);
+    res.redirect(errorRedirectUrl(PROFILE_URL, 'token_store'));
     return;
   }
 

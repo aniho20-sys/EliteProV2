@@ -13,6 +13,7 @@ import MovementPatternScanner from '../components/MovementPatternScanner';
 import PlatformStatsCard from '../components/PlatformStatsCard';
 import LanguagePicker from '../components/LanguagePicker';
 import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
+import { gcFailureMessage } from '../utils/gcErrors';
 
 function InstallAppCard() {
   const { t } = useLanguage();
@@ -196,9 +197,10 @@ export default function ProfilePage() {
     } else if (gcStatus === 'cancelled') {
       toast(t('profile.toast_gc_cancelled'), 'info');
     } else if (gcStatus === 'not-configured') {
-      toast('GoCardless isn\'t set up yet — check back soon.', 'info');
+      toast(t('profile.gc_not_configured'), 'info');
     } else {
-      toast(t('profile.toast_gc_failed'), 'error');
+      const params = new URLSearchParams(location.search);
+      toast(gcFailureMessage(t, params.get('reason'), params.get('detail')), 'error', 10000);
     }
     navigate('/profile', { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
