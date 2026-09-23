@@ -160,9 +160,12 @@ export function AppProvider({ children }) {
       (snap) => {
         setUsers(prev => {
           const clientDocs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-          // Keep own doc only; replace every client doc with the fresh snapshot
-          const ownDoc = prev.filter(u => u.id === uid);
-          return [...ownDoc, ...clientDocs];
+          // Replace every client doc with the fresh snapshot; keep own doc and any
+          // trainer doc. For a client, that trainer doc is their own coach
+          // (added by the trainer-profile listener below) — dropping it here raced
+          // that listener and could leave a client with no trainer in `users`.
+          const kept = prev.filter(u => u.id === uid || u.role === 'trainer');
+          return [...kept, ...clientDocs];
         });
         markLoaded('users');
       },
