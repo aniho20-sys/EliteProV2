@@ -79,7 +79,7 @@ Routine 每次 fire 都被指派一條新 branch，寫完冇 merge 就留低。*
 |---|---|---|
 | **1. Credit System UAT** | 🟡 部分完成 | Book 即扣、取消退款、早取消上限、透支 1 堂全部上線並有 test。透支兩條路徑已於 2026-08-04 真機實測通過。剩返 Top-Up rate 選擇器、續約提醒、Landing Page 全程 E2E 未實測 |
 | **2. UI Cleanup** | ✅ 完成 | `STYLE.md` 建立並全app執法：session 顏色統一、hex 轉 variable、empty state 補 action、密度檢視、dark mode pass |
-| **3. GoCardless 訂閱** | 🟡 Step 1-2 已上線 **並經真機驗收** | schema + rules + OAuth connect 後端（4 個 function）已部署 live。**2026-09-23 Ani 喺 iPhone 撳 Connect，sandbox 連接成功**（第四次嘗試；前三次分別係 secret 未建立、`client_id` 貼咗欄位名稱、Client secret 藏喺「Reveal」後面冇 copy 到）。Step 3（訂閱管理UI + mandate 創建）未開工。仍然：`environment: 'sandbox'` 寫死、冇 webhook handler、冇 live 分支 |
+| **3. GoCardless 訂閱** | 🟡 Step 1-2 已上線 **並經真機驗收** | schema + rules + OAuth connect 後端（4 個 function）已部署 live。**2026-09-23 Ani 喺 iPhone 撳 Connect，sandbox 連接成功**（第四次嘗試；前三次分別係 secret 未建立、`client_id` 貼咗欄位名稱、Client secret 藏喺「Reveal」後面冇 copy 到）。**Step 3（學生訂閱 + GoCardless mandate）2026-09-23 已 deploy，等真機驗收**：`gcStartSubscription`／`gcSubscriptionReturn`／`gcRefreshSubscription`，server 定價、唔信 redirect、sandbox 期間只限教練標記咗嘅測試學生。未做：Step 4（扣款 webhook → 自動加堂）、暫停／取消、live 分支 |
 | **4. PWA / FCM Push** | ✅ 完成 live | PWA 可安裝、離線持久化、13 個 function 之中 6 個負責 push（訊息／排程／計劃／log／低堂數）|
 | **5. Venue Marketplace** | ⬜ 未開始 | gym啦 Sprint 1 code 已寫但 `GYMLA_ENABLED=false` 隱藏緊。開之前必查 `isTrainer`/operator 三態問題（見 backlog #17）|
 

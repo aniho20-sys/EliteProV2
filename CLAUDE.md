@@ -183,6 +183,7 @@ Top-level config files:
   renewalRateNext: number,  // rate once a client's sessions run out first (unit = `currency` below)
   currency: string,         // one of CURRENCIES (utils/currencyUtils.js) — defaults to 'GBP' when absent, see convention #31
   bankDetails: { accountName: string, sortCode: string, accountNumber: string },
+  subscriptionRate: number,  // per-session rate monthly plans are priced from (GBP); server re-reads it, client never sends a price
   // client-only:
   trainerId: string | null, // UID of trainer
   age: number,
@@ -193,6 +194,7 @@ Top-level config files:
   sessionOffset: number,           // used credit — see "Session credit accounting" below
   renewalPrompt3Shown: boolean,    // one-time "3 sessions left" prompt already shown
   renewalPrompt1Shown: boolean,    // one-time "1 session left" prompt already shown
+  subscriptionTester: boolean,     // sandbox gate — trainer-set only (not in the self-update allowlist)
 }
 ```
 
@@ -384,8 +386,8 @@ Append-only top-up history — one entry per top-up, never updated/deleted (corr
 }
 ```
 
-#### `subscriptions/{subscriptionId}` (Phase 3 — schema + rules live, no creation UI yet)
-Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. No documents exist yet — subscription creation/mandate flow is unbuilt.
+#### `subscriptions/{subscriptionId}` (Phase 3 — Step 3 live in sandbox, 2026-09-23)
+Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. Created by `gcStartSubscription`, activated by `gcSubscriptionReturn` / `gcRefreshSubscription` only after GoCardless itself reports the billing request fulfilled (`functions/gcSubscriptions.js`). Doc id is a Firestore auto-id, not `Date.now()` (#4) — it appears in a public return URL, so it must not be guessable. **Sessions are not granted yet** — that is Step 4 (payment webhooks). While `SANDBOX` is true in `gcSubscriptions.js`, only clients with `subscriptionTester: true` (set by their trainer) can start a plan.
 ```js
 {
   id: string,
@@ -394,7 +396,13 @@ Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-sub
   tier: 4 | 8 | 12,             // monthly session quota
   ratePerSession: number,       // locked at signup — immutable after creation
   monthlyAmount: number,        // derived at creation, stored for display/audit
-  status: 'active' | 'paused' | 'past_due' | 'cancelled',
+  status: 'pending' | 'completing' | 'active' | 'paused' | 'past_due' | 'cancelled' | 'abandoned' | 'failed',
+                                // pending = sent to GoCardless, not yet confirmed; completing = a return is
+                                // being processed (transaction claim, recoverable after 2 min);
+                                // abandoned = superseded or cancelled on GoCardless; failed = GoCardless refused
+  currency: 'GBP',              // Bacs Direct Debit is GBP-only
+  billingRequestId: string,     // GoCardless billing request that produces the mandate
+  lastError: string | null,     // GoCardless status/type/message of the last failure — never a token or body
   startDate: string,            // 'YYYY-MM-DD'
   provider: 'gocardless' | 'stripe',   // which processor holds this subscription
   providerAuthorisationId: string,     // GoCardless: mandate id · Stripe: payment_method id
