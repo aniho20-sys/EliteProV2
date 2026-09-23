@@ -1,6 +1,6 @@
 # ElitePro BACKLOG — 單一待辦清單
 
-> **最後更新**：2026-09-23（A6 Ani 攞咗 GoCardless API，剩返 Secret Manager 三步 · B2 中文 invoice 已修 · B10 等 B11 語言決定 · outreach 無方案）
+> **最後更新**：2026-09-23（A6 Ani 攞咗 access token —— 唔係 Connect 掣要嗰樣，要去 Partners 攞 Client ID／Secret · B2 中文 invoice 已修 · B10 等 B11 語言決定 · outreach 無方案）
 > **規則**：任何新決定／新批准**即刻**寫入呢度，唔好等下次週報。
 > 週報第【上週講過但未做】節對返呢份文件。
 
@@ -92,13 +92,37 @@
 
 ---
 
-## A6. GoCardless sandbox —— 🟡 **Ani 2026-09-23 話攞咗 API，仲差第 3–5 步**
+## A6. GoCardless sandbox —— 🟡 **Ani 攞咗 access token，但個 Connect 掣要嘅係 partner app 嘅 Client ID／Secret**
 
 | | |
 |---|---|
-| **狀態** | 第 1–2 步（sandbox 帳戶、partner app）Ani 話做咗 · **第 3–5 步未做** |
+| **狀態** | 第 1 步（sandbox 帳戶）✅ · Ani 2026-09-23 攞咗一個 **access token** · 第 2 步（partner app）**未確認** · 第 3–5 步未做 |
 | **點知** | 2026-09-23 撳過 probe，仍然彈 `?gc=not-configured` |
-| **剩返幾耐** | 約 10 分鐘，全部喺 Google Cloud Console |
+| **更正** | 同日較早我將「攞咗 API」理解成 Client ID／Secret，寫咗「第 1–2 步做咗」。Ani 之後講明係 access token —— 兩樣唔同，所以改返 |
+
+### Access token 同 Client ID／Secret 係兩樣嘢
+
+| | 係乜 | 喺 dashboard 邊度 | 現有 code 用唔用 |
+|---|---|---|---|
+| **Access token** | 代表**你自己一個**商戶帳戶直接 call API | Developers → Create → Access token | ❌ Connect 掣唔用。只係 `gocardless-access-findings-2026-08-18.md` §3 嘅**後備方案**用 |
+| **Client ID + Secret** | 代表 **ElitePro 呢個 app**，等任何教練都可以撳 Connect 駁自己個帳戶 | Developers → **Partners** → 入 ElitePro 個 app | ✅ 就係 `GC_CLIENT_ID` / `GC_CLIENT_SECRET` |
+
+### 下一步：去睇你有冇 partner app
+
+`manage-sandbox.gocardless.com/developers/partners`
+
+- **見到 ElitePro** → 撳入去，Client ID 同 Secret 就喺入面 → 做下面第 3–5 步
+- **一片空白** → 撳 Create，跟 `gocardless-sandbox-setup-guide.md` 第 2 步填（Redirect URL 要逐字一樣）
+
+### 點解唔直接用個 access token
+
+用得（後備方案寫咗點做：存入 `gc-token-<Ani 嘅 UID>`），但而家做會**完全冇嘢睇得見**：
+- Profile 個 GoCardless 卡照樣顯示「未連結」—— 嗰個狀態係 OAuth callback 先會寫，要另外改約 20 行 code
+- 訂閱 UI（Phase 3 Step 3）未起，冇任何畫面會用到個 token
+
+即係放完入去，你冇辦法知佢 work 唔 work。Partner app 路線撳完 Connect 即刻見到「Connected · sandbox」。
+
+**Access token 唔使刪**（sandbox，冇真錢），但唔好貼入 chat。留住做後備。
 
 ### ⚠️ Client Secret 唔好貼入 chat
 
