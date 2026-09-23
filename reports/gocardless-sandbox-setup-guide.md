@@ -203,6 +203,26 @@ only ever have answered "GoCardless isn't set up yet".
 - After approving, you land back on Profile with a confirmation and the card
   reads **Connected · sandbox**
 
+## Traps hit for real on 2026-09-23 (read before the live setup)
+
+The sandbox connection took four attempts. None of the failures was in the
+code; all three were in getting the right value from one console to the other.
+The live environment will present the same pages, so these will recur:
+
+| Attempt | What went into Secret Manager | Symptom |
+|---|---|---|
+| 1 | Nothing yet — secrets not created | Connect toast: "not set up yet" |
+| 2 | The **label** "Client ID" instead of its value | GoCardless page: "An app with the provided client_id does not exist" |
+| 3 | Client secret still wrong — on the app page the secret shows only a **"Reveal" link**, so there is no value on screen until it is tapped | In-app toast (since d128430): *invalid_client* |
+| 4 | Revealed secret, copied whole | ✅ Connected · sandbox |
+
+Also on that page: the `AP01M3…` string at the top **with a copy icon** is the
+App ID, not a credential. It is the only value with a copy button, which makes
+it the most tempting wrong one.
+
+Since d128430 a failed Connect names its cause in the app itself (see the
+table below), so none of this needs Cloud Logging any more.
+
 ## If it does not work
 
 | Symptom | Likely cause |

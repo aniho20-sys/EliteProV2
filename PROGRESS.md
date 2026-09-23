@@ -1,6 +1,6 @@
 # ElitePro 開發進度紀錄
 
-> 最後更新：**2026-09-17**（實際用戶數）· **2026-09-12**（remote branch 盤點）· 之前 **2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
+> 最後更新：**2026-09-23**（GoCardless sandbox 連接真機成功）· **2026-09-17**（實際用戶數）· **2026-09-12**（remote branch 盤點）· 之前 **2026-08-13**（Session 35-40 — exerciseOverrides、STYLE.md + Phase 2 執法、Phase 3 Step 1-2 上線、invoice PDF、code health audit、學生 onboarding 修復、credit 透支 booking、workout log/session 解耦規則、invite code bug、Node 22 升級、exercise 重複防護 + 軟合併 UI + 前端 vitest）
 >
 > ⚠️ **所有 agent 開工前必讀。** 過時嘅 PROGRESS.md 曾經令 audit 判斷出錯，見「Phase 狀態速查」。
 
@@ -79,7 +79,7 @@ Routine 每次 fire 都被指派一條新 branch，寫完冇 merge 就留低。*
 |---|---|---|
 | **1. Credit System UAT** | 🟡 部分完成 | Book 即扣、取消退款、早取消上限、透支 1 堂全部上線並有 test。透支兩條路徑已於 2026-08-04 真機實測通過。剩返 Top-Up rate 選擇器、續約提醒、Landing Page 全程 E2E 未實測 |
 | **2. UI Cleanup** | ✅ 完成 | `STYLE.md` 建立並全app執法：session 顏色統一、hex 轉 variable、empty state 補 action、密度檢視、dark mode pass |
-| **3. GoCardless 訂閱** | 🟡 Step 1-2 已上線 | schema + rules + OAuth connect 後端（4 個 function）**已部署 live**。Step 3（訂閱管理UI + mandate 創建）未開工。⚠️ Connect 掣未有真人試過 sandbox flow |
+| **3. GoCardless 訂閱** | 🟡 Step 1-2 已上線 **並經真機驗收** | schema + rules + OAuth connect 後端（4 個 function）已部署 live。**2026-09-23 Ani 喺 iPhone 撳 Connect，sandbox 連接成功**（第四次嘗試；前三次分別係 secret 未建立、`client_id` 貼咗欄位名稱、Client secret 藏喺「Reveal」後面冇 copy 到）。Step 3（訂閱管理UI + mandate 創建）未開工。仍然：`environment: 'sandbox'` 寫死、冇 webhook handler、冇 live 分支 |
 | **4. PWA / FCM Push** | ✅ 完成 live | PWA 可安裝、離線持久化、13 個 function 之中 6 個負責 push（訊息／排程／計劃／log／低堂數）|
 | **5. Venue Marketplace** | ⬜ 未開始 | gym啦 Sprint 1 code 已寫但 `GYMLA_ENABLED=false` 隱藏緊。開之前必查 `isTrainer`/operator 三態問題（見 backlog #17）|
 
