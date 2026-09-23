@@ -96,7 +96,7 @@
 
 | | |
 |---|---|
-| **狀態** | 第 1 步（sandbox 帳戶）✅ · Ani 2026-09-23 攞咗一個 **access token** · 第 2 步（partner app）**未做** —— 同日 Ani 截圖 Partners 頁係空白（「This is where you will find your apps」），喺啱嘅 host `manage-sandbox.` · 第 3–5 步未做 |
+| **狀態** | 第 1 步（sandbox 帳戶）✅ · Ani 2026-09-23 攞咗一個 **access token** · 第 2 步（partner app）✅ Ani 2026-09-23 建立咗，攞咗 Client ID／Secret · 第 3 步（Secret Manager API）✅ 截圖顯示「API 已啟用」—— 原來之前已經開咗 · 第 4–5 步進行中 |
 | **點知** | 2026-09-23 撳過 probe，仍然彈 `?gc=not-configured` |
 | **更正** | 同日較早我將「攞咗 API」理解成 Client ID／Secret，寫咗「第 1–2 步做咗」。Ani 之後講明係 access token —— 兩樣唔同，所以改返 |
 
