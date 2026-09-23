@@ -408,14 +408,42 @@ Function, can).
 1. **Pause cap window:** rolling 12 months from request date (my
    assumption above), or calendar year? Doesn't block starting the build,
    but needs an answer before the pause-cap test (§7.5) is finalized.
-2. **GC pause mechanism:** sandbox exploration will settle whether
-   GoCardless supports pausing a subscription natively vs.
-   cancel-and-recreate — no decision needed from Ani here, just flagging
-   that this is genuinely unverified until we're in the sandbox.
+2. **GC pause mechanism:** ~~unverified until we're in the sandbox~~ —
+   **answered 2026-09-23 from GoCardless's current API reference**:
+   subscriptions pause and resume natively,
+   `POST /subscriptions/{id}/actions/pause` and `…/actions/resume`. No
+   cancel-and-recreate needed. (Behaviour in sandbox — e.g. what a pause
+   does to a charge already scheduled — still to be exercised in Step 5.)
 3. Nothing else blocks starting — pricing, rollover, cancellation, and
    the multi-tenant OAuth direction are all clear enough to build against.
 
 ---
+
+## 10a. API shape for Step 3 (checked against current docs, 2026-09-23)
+
+GoCardless moved its developer docs from `developer.gocardless.com` to
+`docs.gocardless.com/docs/api-reference/…` since this design was written.
+Verified there, not from memory:
+
+1. `POST /billing_requests` with a `mandate_request` (`scheme`, `currency`, …)
+   — made server-side with the **trainer's** access token (Secret Manager,
+   `gc-token-<trainerId>`), so the mandate lands in the trainer's own account.
+2. `POST /billing_request_flows` with `links.billing_request`,
+   `redirect_uri`, `exit_uri` (optionally `prefilled_customer`,
+   `lock_customer_details`) → returns `authorisation_url`, valid **7 days**.
+3. The student is sent to `authorisation_url` — a GoCardless-hosted page. Bank
+   details are entered there and never touch ElitePro.
+4. On return, the server re-fetches the billing request rather than trusting
+   the redirect; once `status: fulfilled`, the mandate id is
+   `links.mandate_request_mandate`.
+5. `POST /subscriptions` — `amount` in **pence**, `currency`,
+   `interval_unit: monthly`, `links.mandate`; `metadata` (max 3 keys) carries
+   our `subscriptionId`/`clientId`.
+
+**`app_fee` exists on subscriptions** — the field a platform uses to take a
+cut of each payment. Deliberately unused: `PRODUCT.md` says ElitePro earns from
+trainer subscriptions, never commission. Setting it would be a business-model
+change, Ani's call, not an implementation detail.
 
 ## 11. Build Order (once approved)
 
