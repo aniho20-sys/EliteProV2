@@ -139,6 +139,16 @@ describe('GUARDIAN: no user-facing file escapes the translation inventory', () =
 });
 
 describe('GUARDIAN: the translation debt can only shrink', () => {
+  // Always present, so the suite still runs when AWAITING is empty. With only the
+  // test.each below, an empty ledger produced zero tests and vitest failed the whole
+  // suite with "No test found" — from 2026-09-18, when the debt reached zero, until
+  // 2026-09-23. It went unnoticed because the summary line still read "N passed": a
+  // failed SUITE is reported on the "Test Files" line, not the "Tests" line, and CI
+  // does not run vitest at all.
+  test('every ledger entry names a real file', () => {
+    for (const rel of Object.keys(AWAITING)) expect(ALL).toContain(rel);
+  });
+
   test.each(Object.keys(AWAITING))('%s', (rel) => {
     const actual = counts.get(rel);
     const recorded = AWAITING[rel];
