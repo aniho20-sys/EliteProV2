@@ -10,7 +10,8 @@ const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gc
 const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
 const { summariseSignups } = require('./signupQueue');
-const { startSubscription, completeSubscription, SubscriptionError } = require('./gcSubscriptions');
+const { startSubscription, completeSubscription, cancelSubscriptionsFor, SubscriptionError } = require('./gcSubscriptions');
+const { deleteAccountData } = require('./accountDeletion');
 
 initializeApp();
 const db = getFirestore();
@@ -70,31 +71,46 @@ async function sendPush(userId, tokens, notification, data) {
 }
 
 // ─── GDPR: Cascaded delete when Firebase Auth user is deleted ───
+// Order matters. Plans are cancelled at GoCardless FIRST, while the trainer's token
+// still exists — a deleted account must never go on being charged. Then the data
+// goes (functions/accountDeletion.js has the deleted / detached / kept list). The
+// trainer's own token and connection are removed last, and only when every one of
+// their clients' plans was confirmed cancelled: if any failed, the token is the only
+// way left to cancel it, so it stays and the owner is emailed to finish by hand.
 exports.onAccountDelete = functions.auth.user().onDelete(async (user) => {
   const uid = user.uid;
-  const batch = db.batch();
+  const deps = { db, readToken: readGcAccessToken, fetchImpl: fetch, now: () => new Date(), reason: 'account_deleted' };
 
-  const [msgFrom, msgTo, logs, schedTrainer, schedClient, plans] = await Promise.all([
-    db.collection('messages').where('from', '==', uid).get(),
-    db.collection('messages').where('to', '==', uid).get(),
-    db.collection('workoutLogs').where('clientId', '==', uid).get(),
-    db.collection('schedule').where('trainerId', '==', uid).get(),
-    db.collection('schedule').where('clientId', '==', uid).get(),
-    db.collection('workoutPlans').where('trainerId', '==', uid).get(),
-  ]);
+  const asClient = await cancelSubscriptionsFor({ ...deps, uid, field: 'clientId' });
+  const asTrainer = await cancelSubscriptionsFor({ ...deps, uid, field: 'trainerId' });
+  const failed = [...asClient.failed, ...asTrainer.failed];
 
-  msgFrom.docs.forEach(d => batch.delete(d.ref));
-  msgTo.docs.forEach(d => batch.delete(d.ref));
-  logs.docs.forEach(d => batch.delete(d.ref));
-  schedTrainer.docs.forEach(d => batch.delete(d.ref));
-  schedClient.docs.forEach(d => batch.delete(d.ref));
-  plans.docs.forEach(d => batch.delete(d.ref));
+  const summary = await deleteAccountData({ db, uid });
 
-  const exercises = await db.collection('exercises').where('trainerId', '==', uid).get();
-  exercises.docs.forEach(d => batch.delete(d.ref));
+  if (asTrainer.failed.length === 0) {
+    await deleteGcAccessToken(uid).catch(err => console.error(`[GDPR] token delete failed uid=${uid}`, err));
+    await db.doc(`paymentConnections/${uid}`).delete();
+  }
 
-  await batch.commit();
-  console.log(`[GDPR] Deleted all data for uid=${uid}`);
+  if (failed.length > 0) {
+    console.error(`[GDPR] uid=${uid}: ${failed.length} GoCardless plan(s) NOT cancelled`, failed);
+    await db.collection('mail').add({
+      to: OWNER_EMAIL,
+      message: {
+        subject: `ACTION NEEDED: ${failed.length} GoCardless plan(s) still active for a deleted account`,
+        text: [
+          `An ElitePro account was deleted (uid ${uid}), but these monthly plans could not be`,
+          'cancelled automatically. Cancel each mandate in the GoCardless dashboard of the',
+          'trainer shown, or the client will keep being charged.',
+          '',
+          ...failed.map(f => `subscription ${f.id} · trainer ${f.trainerId} · ${f.error}`),
+        ].join('\n'),
+      },
+    });
+  }
+
+  console.log(`[GDPR] uid=${uid}: deleted ${summary.deleted} docs, detached ${summary.detachedClients} clients, `
+    + `cancelled ${asClient.cancelled.length + asTrainer.cancelled.length} plan(s), ${failed.length} failed`);
 });
 
 // ─── New Message → server-side rate limit + push to recipient ───

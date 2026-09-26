@@ -110,7 +110,8 @@ src/
 └── main.jsx                  # Entry point
 
 functions/                    # Cloud Functions (deployed and live on Blaze) — 13 functions:
-├── index.js                  # onAccountDelete, onNewMessage, onNewSchedule, onScheduleUpdate,
+├── accountDeletion.js         # What onAccountDelete deletes / detaches / keeps (financial records kept)
+├── index.js                  # onAccountDelete (cancels GoCardless plans first — see accountDeletion.js), onNewMessage, onNewSchedule, onScheduleUpdate,
 │                              # onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow (push to client when
 │                              # sessions remaining ≤ 3, push to trainer when ≤ 2), onScheduleBooked +
 │                              # onScheduleCreditUpdate (server-side session credit accounting — see
@@ -584,7 +585,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 
 ## Firestore Security Rules Summary
 - **Auth required** for all reads and writes
-- **users**: Any auth can read; self-create own profile; trainer can create/update their clients. `role` field is **immutable after creation** — prevents client→trainer privilege escalation
+- **users**: Read only your own doc, your own clients, or your own trainer (single `get` + the two AppContext `list` queries — an unconstrained read of the collection fails); self-create own profile; trainer can create/update their clients. `role` field is **immutable after creation** — prevents client→trainer privilege escalation
 - **bodyStats**: Only the client or their trainer can read/write; only the client can delete
 - **intakeForms**: Owner client or their trainer can read; only the owner client can create/update. **Delete is disabled**
 - **workoutPlans**: Owner trainer or assigned client can read; trainer creates/updates/deletes own plans. `trainerId` is immutable after creation

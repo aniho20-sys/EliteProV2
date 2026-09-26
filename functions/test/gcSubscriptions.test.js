@@ -1,6 +1,7 @@
 /* global describe, test, expect, beforeEach */
 const {
   monthlyAmountPence, startSubscription, completeSubscription, conflictingResourceId,
+  cancelSubscriptionsFor,
 } = require('../gcSubscriptions');
 
 // ── A small in-memory Firestore: just the calls gcSubscriptions makes. ──
@@ -227,5 +228,114 @@ describe('conflictingResourceId', () => {
   test('only a 409 with a link counts', () => {
     expect(conflictingResourceId({ status: 422, body: {} })).toBeNull();
     expect(conflictingResourceId({ status: 409, body: { error: { errors: [{}] } } })).toBeNull();
+  });
+});
+
+// ── Account deletion: stop every plan before the account's data goes ──
+describe('cancelSubscriptionsFor — a deleted account is never charged again', () => {
+  const cancelDeps = (db, gc, extra = {}) => ({
+    db, uid: 'c1', field: 'clientId', readToken: async () => 'tok-t1',
+    fetchImpl: gc.fetchImpl, now: () => NOW, reason: 'account_deleted', ...extra,
+  });
+  const alreadyCancelled = () => [422, { error: { type: 'invalid_state', errors: [{ reason: 'cancellation_failed' }] } }];
+  const ok = (key) => () => [200, { [key]: { status: 'cancelled' } }];
+
+  test('active plan: subscription then mandate cancelled, doc marked cancelled', async () => {
+    const db = fakeDb({ 'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'active',
+      providerSubscriptionId: 'SB1', providerAuthorisationId: 'MD1' } });
+    const gc = fakeGc({
+      'POST /subscriptions/SB1/actions/cancel': ok('subscriptions'),
+      'POST /mandates/MD1/actions/cancel': ok('mandates'),
+    });
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc));
+    expect(gc.calls.map(c => c.path)).toEqual(['/subscriptions/SB1/actions/cancel', '/mandates/MD1/actions/cancel']);
+    expect(gc.calls[0].headers.Authorization).toBe('Bearer tok-t1');
+    expect(r).toEqual({ cancelled: ['S1'], failed: [] });
+    expect(db.store.get('subscriptions/S1')).toMatchObject({ status: 'cancelled', cancelReason: 'account_deleted', cancelError: null });
+  });
+
+  test('already cancelled at GoCardless (the client did it at their bank) counts as done', async () => {
+    const db = fakeDb({ 'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'active',
+      providerSubscriptionId: 'SB1', providerAuthorisationId: 'MD1' } });
+    const gc = fakeGc({
+      'POST /subscriptions/SB1/actions/cancel': alreadyCancelled,
+      'POST /mandates/MD1/actions/cancel': alreadyCancelled,
+    });
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc));
+    expect(r.cancelled).toEqual(['S1']);
+    expect(db.store.get('subscriptions/S1').status).toBe('cancelled');
+  });
+
+  test('pending, but the client finished GoCardless\'s page: the mandate is found and cancelled', async () => {
+    const db = fakeDb({ 'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'pending', billingRequestId: 'BRQ1' } });
+    const gc = fakeGc({
+      'GET /billing_requests/BRQ1': () => [200, { billing_requests: { status: 'fulfilled', links: { mandate_request_mandate: 'MD9' } } }],
+      'POST /mandates/MD9/actions/cancel': ok('mandates'),
+    });
+    await cancelSubscriptionsFor(cancelDeps(db, gc));
+    expect(gc.calls.map(c => `${c.method} ${c.path}`)).toEqual(['GET /billing_requests/BRQ1', 'POST /mandates/MD9/actions/cancel']);
+    expect(db.store.get('subscriptions/S1').status).toBe('cancelled');
+  });
+
+  test('pending and unfinished: the billing request is cancelled so it can never complete', async () => {
+    const db = fakeDb({ 'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'pending', billingRequestId: 'BRQ1' } });
+    const gc = fakeGc({
+      'GET /billing_requests/BRQ1': () => [200, { billing_requests: { status: 'pending', links: {} } }],
+      'POST /billing_requests/BRQ1/actions/cancel': ok('billing_requests'),
+    });
+    await cancelSubscriptionsFor(cancelDeps(db, gc));
+    expect(gc.calls.map(c => c.path)).toContain('/billing_requests/BRQ1/actions/cancel');
+    expect(db.store.get('subscriptions/S1').status).toBe('cancelled');
+  });
+
+  test('finished plans are left alone — no GoCardless call at all', async () => {
+    const db = fakeDb({
+      'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'cancelled', providerAuthorisationId: 'MD1' },
+      'subscriptions/S2': { clientId: 'c1', trainerId: 't1', status: 'abandoned' },
+      'subscriptions/S3': { clientId: 'c1', trainerId: 't1', status: 'failed' },
+    });
+    const gc = fakeGc({});
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc));
+    expect(gc.calls).toHaveLength(0);
+    expect(r).toEqual({ cancelled: [], failed: [] });
+  });
+
+  test('a failure is recorded and reported, never thrown, and does not stop the next plan', async () => {
+    const db = fakeDb({
+      'subscriptions/S1': { clientId: 'c1', trainerId: 'tGone', status: 'active', providerAuthorisationId: 'MD1' },
+      'subscriptions/S2': { clientId: 'c1', trainerId: 't1', status: 'active', providerAuthorisationId: 'MD2' },
+    });
+    const gc = fakeGc({ 'POST /mandates/MD2/actions/cancel': ok('mandates') });
+    const readToken = async (trainerId) => {
+      if (trainerId === 'tGone') throw new Error('secret not found');
+      return 'tok-t1';
+    };
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc, { readToken }));
+    expect(r.cancelled).toEqual(['S2']);
+    expect(r.failed).toEqual([{ id: 'S1', trainerId: 'tGone', error: 'secret not found' }]);
+    expect(db.store.get('subscriptions/S1')).toMatchObject({ status: 'active', cancelError: 'secret not found' });
+  });
+
+  test('a GoCardless error other than "already cancelled" is a failure, not a silent success', async () => {
+    const db = fakeDb({ 'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'active', providerAuthorisationId: 'MD1' } });
+    const gc = fakeGc({ 'POST /mandates/MD1/actions/cancel': () => [500, { error: { type: 'gocardless', message: 'boom' } }] });
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc));
+    expect(r.failed).toHaveLength(1);
+    expect(db.store.get('subscriptions/S1').status).toBe('active');
+  });
+
+  test('a trainer\'s deletion reaches every client\'s plan', async () => {
+    const db = fakeDb({
+      'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'active', providerAuthorisationId: 'MD1' },
+      'subscriptions/S2': { clientId: 'c2', trainerId: 't1', status: 'paused', providerAuthorisationId: 'MD2' },
+      'subscriptions/S3': { clientId: 'c3', trainerId: 'tOther', status: 'active', providerAuthorisationId: 'MD3' },
+    });
+    const gc = fakeGc({
+      'POST /mandates/MD1/actions/cancel': ok('mandates'),
+      'POST /mandates/MD2/actions/cancel': ok('mandates'),
+    });
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc, { uid: 't1', field: 'trainerId' }));
+    expect(r.cancelled.sort()).toEqual(['S1', 'S2']);
+    expect(db.store.get('subscriptions/S3').status).toBe('active');
   });
 });

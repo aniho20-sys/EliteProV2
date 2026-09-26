@@ -296,6 +296,77 @@ async function completeSubscription({ db, subscriptionId, readToken, fetchImpl, 
   return { status: 'active' };
 }
 
+// GoCardless refuses to cancel something already cancelled, failed or finished
+// with `cancellation_failed`. For our purposes that is the outcome we wanted.
+function alreadyInactive(err) {
+  const errors = err?.body?.error?.errors;
+  return err instanceof GcApiError && Array.isArray(errors)
+    && errors.some(e => e?.reason === 'cancellation_failed');
+}
+
+// Statuses with nothing left to stop at GoCardless.
+const FINISHED_STATUSES = ['cancelled', 'abandoned', 'failed'];
+
+// Stop every plan where `field` (clientId or trainerId) is `uid`, so no bank is
+// charged on behalf of an account that no longer exists. Used by onAccountDelete.
+//
+// Cancelling the MANDATE is what actually guarantees no further collection —
+// GoCardless cancels its pending payments with it. The subscription is cancelled
+// first anyway so its own record says so. A plan still `pending` may have been
+// completed on GoCardless's page without our return ever arriving, so the billing
+// request is re-read before deciding there is no mandate to cancel.
+//
+// A failure is recorded on the doc (status stays as it was, `cancelError` set) and
+// returned, never thrown: one trainer's revoked token must not stop the rest of the
+// account's data from being deleted, and the caller tells the owner to finish by hand.
+async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, now, reason }) {
+  const result = { cancelled: [], failed: [] };
+  const snap = await db.collection('subscriptions').where(field, '==', uid).get();
+
+  for (const d of snap.docs) {
+    const sub = d.data();
+    if (FINISHED_STATUSES.includes(sub.status)) continue;
+
+    const cancel = async (token, path) => {
+      try {
+        await gcRequest({ fetchImpl, token, method: 'POST', path, body: { data: {} } });
+      } catch (err) {
+        if (!alreadyInactive(err)) throw err;
+      }
+    };
+
+    try {
+      const token = await readToken(sub.trainerId);
+      let mandateId = sub.providerAuthorisationId || null;
+
+      if (sub.providerSubscriptionId) {
+        await cancel(token, `/subscriptions/${sub.providerSubscriptionId}/actions/cancel`);
+      }
+      if (!mandateId && sub.billingRequestId) {
+        const br = (await gcRequest({
+          fetchImpl, token, method: 'GET', path: `/billing_requests/${sub.billingRequestId}`,
+        })).billing_requests;
+        mandateId = (br.links && br.links.mandate_request_mandate) || null;
+        if (!mandateId && br.status !== 'cancelled' && br.status !== 'fulfilled') {
+          await cancel(token, `/billing_requests/${sub.billingRequestId}/actions/cancel`);
+        }
+      }
+      if (mandateId) {
+        await cancel(token, `/mandates/${mandateId}/actions/cancel`);
+      }
+
+      const ts = now().toISOString();
+      await d.ref.update({ status: 'cancelled', cancelledAt: ts, cancelReason: reason, cancelError: null, updatedAt: ts });
+      result.cancelled.push(d.ref.id);
+    } catch (err) {
+      const error = describeError(err);
+      await d.ref.update({ cancelError: error, updatedAt: now().toISOString() });
+      result.failed.push({ id: d.ref.id, trainerId: sub.trainerId, error });
+    }
+  }
+  return result;
+}
+
 // What goes into Firestore about a failure: the status and GoCardless's own
 // error type/message — never a token or a request body.
 function describeError(err) {
@@ -313,3 +384,4 @@ exports.monthlyAmountPence = monthlyAmountPence;
 exports.conflictingResourceId = conflictingResourceId;
 exports.startSubscription = startSubscription;
 exports.completeSubscription = completeSubscription;
+exports.cancelSubscriptionsFor = cancelSubscriptionsFor;
