@@ -115,10 +115,13 @@ service cloud.firestore {
 
     // ── Owner operations ──
     // OWNER_EMAIL is literal because rules cannot read secrets — it must
-    // stay in sync with the constant of the same name in functions/index.js.
+    // stay in sync with the constant of the same name in functions/ownerAuth.js.
     // Everything here is written server-side by the Admin SDK, which bypasses these rules.
+    // email_verified: the token carries whatever address an account signed up with, proven
+    // or not. Same condition as isOwnerToken in functions/ownerAuth.js.
     match /platformEvents/{eventId} {
-      allow read: if isAuth() && request.auth.token.email == 'aniho20@gmail.com';
+      allow read: if isAuth() && request.auth.token.email == 'aniho20@gmail.com'
+        && request.auth.token.email_verified == true;
       allow write: if false;
     }
 

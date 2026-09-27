@@ -12,6 +12,7 @@ const { selectTestAccounts } = require('./testAccounts');
 const { summariseSignups } = require('./signupQueue');
 const { startSubscription, completeSubscription, cancelSubscriptionsFor, SubscriptionError } = require('./gcSubscriptions');
 const { deleteAccountData } = require('./accountDeletion');
+const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
 
 initializeApp();
 const db = getFirestore();
@@ -773,10 +774,9 @@ exports.cleanupExpiredGcNonces = functions.pubsub
 // record. The record is the one that matters — push and email can both silently fail
 // (token expired, extension not installed), and a missed signup is a lost founding member.
 //
-// OWNER_EMAIL is a literal on purpose. It also has to appear literally in firestore.rules,
-// which cannot read secrets, so keeping the two in one obvious place beats hiding one of
-// them. It identifies who to notify; it grants nothing on its own.
-const OWNER_EMAIL = 'aniho20@gmail.com';
+// OWNER_EMAIL (functions/ownerAuth.js) is a literal on purpose. It also has to appear
+// literally in firestore.rules, which cannot read secrets. Here it identifies who to notify;
+// owner-only access goes through isOwnerToken, which also requires a verified email.
 const FOUNDING_PLACES = 5;
 
 async function findOwner() {
@@ -886,7 +886,7 @@ exports.getPlatformStats = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
   }
-  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+  if (!isOwnerToken(context.auth.token)) {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 
@@ -931,7 +931,7 @@ exports.getPlatformStats = functions.https.onCall(async (data, context) => {
 // phone announcing itself. Only what an event counts towards changes here.
 exports.setSignupExcluded = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
-  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+  if (!isOwnerToken(context.auth.token)) {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 
@@ -962,7 +962,7 @@ exports.getAccountAudit = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
   }
-  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+  if (!isOwnerToken(context.auth.token)) {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 
@@ -1102,7 +1102,7 @@ async function findTestAccounts() {
 
 exports.previewTestAccountCleanup = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
-  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+  if (!isOwnerToken(context.auth.token)) {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 
@@ -1121,7 +1121,7 @@ exports.previewTestAccountCleanup = functions.https.onCall(async (data, context)
 
 exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
-  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+  if (!isOwnerToken(context.auth.token)) {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 
@@ -1256,7 +1256,7 @@ exports.resolveInviteCode = functions.https.onCall(async (data, context) => {
 // an open version of it would be the enumeration oracle the protection exists to prevent.
 exports.lookupAccountByEmail = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
-  if ((context.auth.token.email || '').toLowerCase() !== OWNER_EMAIL) {
+  if (!isOwnerToken(context.auth.token)) {
     throw new functions.https.HttpsError('permission-denied', 'Owner only');
   }
 

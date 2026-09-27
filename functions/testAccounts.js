@@ -1,4 +1,4 @@
-/* global module */
+/* global module, require */
 // Which accounts count as disposable test accounts, and which real ones sit downstream
 // of them.
 //
@@ -13,7 +13,7 @@
 // Firebase Auth is therefore the primary register here, and Firestore is folded in only to
 // catch profiles whose Auth record has already been removed.
 
-const OWNER_EMAIL = 'aniho20@gmail.com';
+const { OWNER_EMAIL } = require('./ownerAuth');
 
 // Domains that provably cannot belong to a real person. Nothing else is ever swept
 // automatically — an address on a real domain is a judgement call, and judgement calls
