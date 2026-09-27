@@ -1,4 +1,3 @@
-/* global module */
 // Invite code normalisation, server side.
 //
 // This is a deliberate second copy of src/utils/inviteCodeUtils.js. functions/ is its own

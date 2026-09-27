@@ -16,8 +16,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Nothing deploys unless every suite passes. Until 2026-09-27 this workflow built and
+  # deployed with no tests at all: ~470 tests existed but only ran when an agent remembered
+  # to run them by hand, and on 2026-09-27 a commit went live with a failing frontend guard
+  # (authMessages.test.js) because only the functions and rules suites had been run.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+
+      # The Firestore emulator is a Java program.
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: |
+          npm ci --legacy-peer-deps
+          (cd functions && npm ci)
+          (cd firestore-tests && npm ci)
+
+      # Errors fail the build; warnings do not. `npm run build` cannot catch an undefined
+      # variable (CLAUDE.md #45) — eslint is the check that does.
+      - name: Lint
+        run: npx eslint .
+
+      - name: Frontend tests
+        run: npx vitest run
+
+      # Emulator only — never the real project (CLAUDE.md #38). The --project value just
+      # names the emulator's namespace; no credentials are written in this job.
+      - name: Cloud Functions + Firestore rules tests (emulator)
+        run: >-
+          npx firebase-tools@latest emulators:exec --only firestore --project elitepro-16718
+          "cd functions && npx jest --testPathPattern=test/ --forceExit && cd ../firestore-tests && npx jest --testPathPattern=. --forceExit"
+
   deploy_hosting:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,6 +122,7 @@ jobs:
 
   deploy_functions:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4

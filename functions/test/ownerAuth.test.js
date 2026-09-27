@@ -1,4 +1,3 @@
-/* global describe, test, expect, require */
 // Owner-only callables gate on isOwnerToken. The bug it guards: until 2026-09-27 the check
 // compared the token's email only, so an account that merely CLAIMED the owner's address —
 // never proving it — would have passed. Pure function, no emulator needed.

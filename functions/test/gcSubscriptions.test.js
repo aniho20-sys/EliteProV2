@@ -1,4 +1,3 @@
-/* global describe, test, expect, beforeEach */
 const {
   monthlyAmountPence, startSubscription, completeSubscription, conflictingResourceId,
   cancelSubscriptionsFor,

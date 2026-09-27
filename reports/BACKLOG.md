@@ -298,6 +298,7 @@ Phase 3 Step 1–2 已經 deploy 咗，但**從來未有真人撳過個掣**。S
 | ✅ **B14** | **刪帳戶：取消 GoCardless 月費 + 刪健康資料** | 2026-09-26 Ani「好」| `app-audit-2026-09-26` 🔴1、2 | **已完成 2026-09-26** —— 刪帳戶會先喺 GoCardless 取消月費同 mandate，之後先刪資料；取消唔到就 email 你手動處理。入會問卷（傷患）、身體數據而家都會刪；教練刪帳戶，學生會解除連結而唔係被刪。發票同堂數記錄刻意保留（稅務記錄）。122 條 functions 測試全過，兩條 guard 都示範過會捉到 bug。唔使你真機驗收（伺服器邏輯）|
 | ✅ **B15** | **裝 4 個 skill** | 2026-09-26 Ani「揀四個」| `app-audit-2026-09-26` | **已完成 2026-09-26** —— rules auditor、rules creation、webapp testing、verification-before-completion（commit 68ba101）|
 | ✅ **B16** | **owner-only 功能加 `email_verified` 檢查** | 2026-09-26 | rules auditor | **已完成 2026-09-27** —— Ani 2026-09-27 答「我自己就用 Google」。6 個 owner callable（`functions/ownerAuth.js`）同 `platformEvents` rule 都要求 email 已驗證。Google 登入永遠係已驗證，所以唔會鎖到你。**Ani 2026-09-27 真機確認：Profile「平台數據」仍然見到** |
+| ✅ **B17** | **CI 跑晒測試先 deploy** | 2026-09-27 Ani「好」| `app-audit-2026-09-26` 🔴4 | **已完成 2026-09-27** —— 每次 push：lint → 前端 282 條 → 伺服器 127 條 → 權限規則 73 條，全過先 deploy。順手修好 lint 設定（~440 個假錯 → 0），同埋 09-27 自己漏跑前端測試而上咗線嘅一條 guard |
 | **B5a** | 問 Airwallex：FPS recurring 係真 pull 定要客戶每月撳 | 2026-09-06 | 同上 | 決定香港市場有冇「自動月費」。(a) 真 mandate = 香港做得成 / (b) 每月推通知要客戶確認 = 只係「自動提醒」,價值差好遠 |
 | ✅ **B6** | **impeccable demo 手機 preview** | 2026-09-17 批 | — | **已完成** —— 三條 link 喺下面 |
 | ~~B7~~ | ~~`/analytics` 獲客指標~~ | — | — | **暫緩** |

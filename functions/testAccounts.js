@@ -1,4 +1,3 @@
-/* global module, require */
 // Which accounts count as disposable test accounts, and which real ones sit downstream
 // of them.
 //

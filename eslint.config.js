@@ -56,7 +56,9 @@ const TRANSLATED_FILES = [
 ]
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .claude/ holds vendored agent skills (third-party code, linted upstream) and
+  // design-ref/ holds reference mockups — neither ships.
+  globalIgnores(['dist', '.claude', 'design-ref', '**/node_modules']),
   {
     files: ['src/**/*.{js,jsx}'],
     rules: {
@@ -141,5 +143,19 @@ export default defineConfig([
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
+  },
+  // Cloud Functions, the rules test suite and build scripts run in Node, not the browser.
+  // Without this every require/module/process was reported as undefined — ~440 errors
+  // that were all configuration, and buried the handful of real ones (2026-09-27).
+  {
+    files: ['functions/**/*.js', 'firestore-tests/**/*.js', 'scripts/**/*.{js,cjs}', '*.config.js'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.jest },
+      sourceType: 'commonjs',
+    },
+  },
+  {
+    files: ['*.config.js', 'scripts/**/*.js'],
+    languageOptions: { sourceType: 'module' },
   },
 ])

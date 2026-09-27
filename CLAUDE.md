@@ -631,7 +631,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 ## Deployment
 - **Primary**: Firebase Hosting at `https://elitepro-16718.web.app`
 - **CI branch**: `claude/fitness-app-features-LbxtG` — this is the single source of truth
-- **Auto-deploy**: GitHub Actions (`.github/workflows/firebase-hosting.yml`) triggers on every push to `claude/fitness-app-features-LbxtG` → builds + deploys to Firebase Hosting
+- **Auto-deploy**: GitHub Actions (`.github/workflows/firebase-hosting.yml`) triggers on every push to `claude/fitness-app-features-LbxtG` → a `test` job runs first (`npx eslint .`, `npx vitest run`, then the functions + firestore-tests Jest suites inside one Firestore emulator session); **hosting and functions deploy only if it passes**, rules after functions. A red test means nothing ships — fix the cause, never skip the test
 - **Firestore rules**: deploy with `npm run deploy:rules`
 - **Required secrets** (GitHub): `FIREBASE_SERVICE_ACCOUNT`
 
@@ -946,7 +946,7 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 
     **eslint 仲會捉到 build 同 test 都睇唔到嘅第二類 bug**：同一次 run 報咗 `React Hook "useLanguage" is called conditionally` —— 個 hook 被加咗喺 early return **之後**,即使 import 修好咗都仍然係壞嘅。**加 `const { t } = useLanguage()` 一律放喺 component 第一行**,唔好跟住其他 `const` 排落去,因為 `AppRoutes` 呢類 component 中間有 early return。
 
-    ⚠️ `npm run lint` 有 226 個 pre-existing error（2026-08-04 凍結）,所以跑全套睇唔出新錯 —— **跑 `npx eslint <你改過嘅檔案>` 逐個檔案,睇 exit code**。
+    ~~⚠️ `npm run lint` 有 226 個 pre-existing error~~ —— **2026-09-27 更正**：嗰批錯幾乎全部係設定問題（`functions/`、`firestore-tests/` 冇設 Node globals）。修好之後 `npx eslint .` 係 **0 error**，而且 CI 每次 deploy 前都會跑,有 error 就唔會上線。
 
     **連帶嘅教訓（同 #40 同一個形狀,但今次係自己犯）**：當時嘅「驗證」係 `print("App.jsx:", "useLanguage" in t)`。但嗰個 script 已經喺同一個檔案加咗 `const { t } = useLanguage()`,所以個字串一定喺度,個 check 永遠 True。**驗證咗一件同要驗證嘅事無關嘅嘢,然後見到 True 就當成功。** 驗證 import 就要 grep `^import.*<名>`,唔係 grep 個名。
 

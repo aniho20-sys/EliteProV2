@@ -1,4 +1,3 @@
-/* global describe, test, expect */
 const { errorRedirectUrl, oauthErrorCode } = require('../gcOAuthErrors');
 
 const BASE = 'https://elitepro-16718.web.app/#/profile';

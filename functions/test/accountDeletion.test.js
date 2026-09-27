@@ -1,4 +1,3 @@
-/* global describe, test, expect, beforeEach, afterAll, process, require */
 /**
  * What onAccountDelete removes, detaches and keeps — against the Firestore emulator.
  *

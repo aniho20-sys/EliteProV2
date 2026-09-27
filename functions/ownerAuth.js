@@ -1,4 +1,3 @@
-/* global exports */
 // Who counts as the platform owner for the owner-only callables (Platform Stats,
 // signup exclusions, account audit, test-account cleanup, account lookup).
 //

@@ -157,8 +157,9 @@ describe('GUARDIAN: the reset button is wired and cannot fail silently', () => {
     expect(src).toMatch(/exports\.lookupAccountByEmail/);
     expect(src).toMatch(/canResetPassword/);
     // Owner-gated: an open version of this is exactly the enumeration oracle that
-    // Firebase's protection exists to prevent.
+    // Firebase's protection exists to prevent. The gate is isOwnerToken (functions/ownerAuth.js,
+    // 2026-09-27), which also requires a verified email.
     const idx = src.indexOf('exports.lookupAccountByEmail');
-    expect(src.slice(idx, idx + 500)).toMatch(/OWNER_EMAIL/);
+    expect(src.slice(idx, idx + 500)).toMatch(/if \(!isOwnerToken\(context\.auth\.token\)\)/);
   });
 });

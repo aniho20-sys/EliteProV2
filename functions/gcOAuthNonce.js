@@ -1,4 +1,3 @@
-/* global require, exports */
 // CSRF protection for the GoCardless OAuth connect flow (functions/index.js
 // gcOAuthStart / gcOAuthCallback). The GoCardless redirect back to
 // gcOAuthCallback carries no Firebase ID token, so `state` is the only signal

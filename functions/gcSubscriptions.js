@@ -1,4 +1,3 @@
-/* global require, exports */
 // Phase 3 Step 3 — a client subscribes to a monthly plan through GoCardless.
 //
 // Flow (verified against GoCardless's current API reference, 2026-09-23 —
@@ -235,7 +234,7 @@ async function completeSubscription({ db, subscriptionId, readToken, fetchImpl, 
   let token;
   try {
     token = await readToken(sub.trainerId);
-  } catch (err) {
+  } catch {
     await release({ lastError: 'trainer token unavailable' });
     return { status: 'pending' };
   }

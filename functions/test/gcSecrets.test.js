@@ -1,4 +1,3 @@
-/* global jest, describe, test, expect */
 // No emulator needed: Secret Manager is mocked, which is the whole point —
 // this tests what gcSecrets does with the bytes it gets back.
 

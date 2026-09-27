@@ -1,4 +1,3 @@
-/* global exports */
 // Why a GoCardless connect attempt failed, carried back to the app in the
 // redirect URL so the trainer's toast can say what went wrong.
 //

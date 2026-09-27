@@ -1,4 +1,3 @@
-/* global module */
 // Turning trainer_signup events into a queue: who is number what, who holds a founding
 // place, and how many places are left.
 //

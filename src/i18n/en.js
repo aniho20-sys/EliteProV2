@@ -127,7 +127,6 @@ const en = {
   'plans.empty_title': 'No workout plans yet',
   'plans.empty_desc_trainer': 'Create a plan to start assigning workouts to your clients.',
   'plans.empty_desc_client': 'Your coach will create plans for you soon.',
-  'plans.watch_demo': 'Watch Demo',
   'plans.open_link': 'Open Link',
   'plans.duplicate': 'Duplicate',
   'plans.move_up': 'Move up',

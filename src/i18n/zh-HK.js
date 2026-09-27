@@ -210,7 +210,6 @@ const zhHK = {
   'plans.empty_title': '尚未有訓練計劃',
   'plans.empty_desc_trainer': '建立計劃，開始為學生編排訓練。',
   'plans.empty_desc_client': '教練將會為你建立計劃。',
-  'plans.watch_demo': '觀看示範',
   'plans.open_link': '開啟連結',
   'plans.duplicate': '複製',
   'plans.move_up': '上移',

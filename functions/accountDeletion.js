@@ -1,4 +1,3 @@
-/* global exports */
 // What happens to an account's data when its Firebase Auth user is deleted
 // (onAccountDelete in index.js). Split out so the list is tested, not just read.
 //

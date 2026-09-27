@@ -1,4 +1,3 @@
-/* global require, exports, process, Buffer */
 // Per-trainer GoCardless OAuth access tokens — dynamic, created one-per-trainer
 // at connect time. This module also reads ElitePro's own static app-level
 // GoCardless credentials (readGcAppCredentials, below) — both talk to Secret
