@@ -8,6 +8,7 @@ import { localToday } from '../utils/dateUtils';
 import { isSafeUrl } from '../utils/urlUtils';
 import { getInvoiceTotal } from '../utils/invoiceUtils';
 import { CURRENCIES, formatCurrency } from '../utils/currencyUtils';
+import { sharePdf } from '../utils/sharePdf';
 
 const EMPTY_ITEM = { description: '', qty: 1, unitPrice: 0 };
 
@@ -135,23 +136,7 @@ export default function InvoicePage() {
       const { generateInvoicePdfBytes, invoicePdfFilename } = await import('../utils/invoicePdf');
       const client = getClient(invoice.clientId);
       const bytes = await generateInvoicePdfBytes(invoice, currentUser, client);
-      const filename = invoicePdfFilename(invoice, client);
-      const file = new File([bytes], filename, { type: 'application/pdf' });
-
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: filename });
-        } catch (err) {
-          if (err?.name !== 'AbortError') throw err;
-        }
-      } else {
-        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      await sharePdf(bytes, invoicePdfFilename(invoice, client));
     } catch {
       toast(t('inv.toast_pdf_failed'), 'error');
     } finally {

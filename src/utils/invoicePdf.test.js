@@ -5,7 +5,7 @@ import { generateInvoicePdfBytes, wrapText } from './invoicePdf';
 import { needsCjkFont, __resetFontCache } from './pdfFont';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
-const FONT = readFileSync(join(ROOT, 'public/fonts/NotoSansHK-Regular.ttf'));
+const FONT = readFileSync(join(ROOT, 'public/fonts/NotoSansHK-Regular-TT.ttf'));
 
 // The browser fetches /fonts/… over HTTP; under vitest there is no server, so
 // the same path is served from disk. Everything else about the code path —
@@ -99,8 +99,53 @@ describe('GUARDIAN: CJK line wrapping', () => {
     expect(lines.join(' ')).toBe('Personal training session');
   });
 
+  test('a space the source had is kept either side of Chinese', () => {
+    expect(wrapText('私人訓練 Personal training', fakeFont, 10, 1000)).toEqual(['私人訓練 Personal training']);
+    expect(wrapText('Goal: 增肌減脂', fakeFont, 10, 1000)).toEqual(['Goal: 增肌減脂']);
+    expect(wrapText('Session 1 私人訓練', fakeFont, 10, 1000)).toEqual(['Session 1 私人訓練']);
+  });
+
   test('a mixed line keeps the English word whole', () => {
     const lines = wrapText('Session 私人訓練', fakeFont, 10, 100);
     expect(lines.join('')).toContain('Session');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GUARDIAN: the bundled font must be one @pdf-lib/fontkit can subset.
+// ---------------------------------------------------------------------------
+// Both found 2026-09-28 by rendering a Chinese invoice with MuPDF (FreeType):
+//  1. The font had CFF outlines. fontkit's CFF subset could not be opened at all, so
+//     Chinese came out blank in Chrome and Android's viewer — while every test above
+//     passed, because a PDF with an unreadable font is still a small, valid PDF.
+//  2. After converting to TrueType, glyphs were not padded. fontkit writes short loca
+//     (offset / 2) for a small subset, so one odd-length glyph shifted all later ones.
+// See public/fonts/README.md and scripts/cjk-font-to-truetype.py.
+describe('GUARDIAN: the bundled CJK font', () => {
+  const u16 = (o) => FONT.readUInt16BE(o);
+  const u32 = (o) => FONT.readUInt32BE(o);
+  const tables = () => {
+    const out = {};
+    for (let i = 0; i < u16(4); i++) {
+      const rec = 12 + i * 16;
+      out[FONT.toString('latin1', rec, rec + 4)] = { offset: u32(rec + 8), length: u32(rec + 12) };
+    }
+    return out;
+  };
+
+  test('has TrueType (glyf) outlines, not CFF', () => {
+    expect(u32(0)).toBe(0x00010000); // 'OTTO' is CFF
+    expect(Object.keys(tables())).toContain('glyf');
+    expect(Object.keys(tables())).not.toContain('CFF ');
+  });
+
+  test('every glyph is an even number of bytes', () => {
+    const t = tables();
+    const longLoca = u16(t.head.offset + 50) === 1;
+    const numGlyphs = u16(t.maxp.offset + 4);
+    const at = (i) => (longLoca ? u32(t.loca.offset + i * 4) : u16(t.loca.offset + i * 2) * 2);
+    let odd = 0;
+    for (let i = 0; i < numGlyphs; i++) if ((at(i + 1) - at(i)) % 2) odd++;
+    expect(odd).toBe(0);
   });
 });

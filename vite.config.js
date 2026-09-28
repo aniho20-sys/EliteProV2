@@ -27,7 +27,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // The CJK PDF font and the fontkit chunk that parses it. Neither is
-            // precached — the font is 5.7 MB, fontkit 694 KB, and
+            // precached — the font is 6.7 MB, fontkit 694 KB, and
             // most sessions never generate a Chinese invoice at all (see
             // public/fonts/README.md). Cached on first use instead, so each is
             // paid once per device rather than by every install.

@@ -21,16 +21,18 @@ export function wrapText(str, font, size, maxWidth) {
   // still breaks at its spaces first, and only splits mid-run when it must.
   const pieces = [];
   for (const word of source.split(/\s+/).filter(Boolean)) {
-    if (needsCjkFont(word)) pieces.push(...Array.from(word).map((ch) => ({ ch, glue: true })));
-    else pieces.push({ ch: word, glue: false });
+    // wordStart: the source had a space before this piece, so the line keeps one.
+    if (needsCjkFont(word)) pieces.push(...Array.from(word).map((ch, i) => ({ ch, wordStart: i === 0 })));
+    else pieces.push({ ch: word, wordStart: true });
   }
 
   const lines = [];
   let line = '';
   for (const piece of pieces) {
-    // A CJK character joins the previous text directly; a Latin word takes a
-    // space, unless the line so far ends in a CJK character.
-    const sep = !line || piece.glue || needsCjkFont(line.slice(-1)) ? '' : ' ';
+    // Characters inside a CJK run join directly; a space the source had between two
+    // words is kept, whichever script is either side of it. (It used to be dropped after
+    // any CJK character, printing "私人訓練 Personal training" as "私人訓練Personal".)
+    const sep = line && piece.wordStart ? ' ' : '';
     const candidate = `${line}${sep}${piece.ch}`;
     if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
       lines.push(line);
@@ -76,7 +78,7 @@ export async function generateInvoicePdfBytes(invoice, trainer, client) {
 
   // Loaded only when some string in this invoice needs it. Note there is no
   // bold CJK face: a Chinese client name in a bold slot renders regular rather
-  // than dragging in a second 5.7 MB download for emphasis alone.
+  // than dragging in a second 6.7 MB download for emphasis alone.
   const cjk = anyNeedsCjkFont(invoiceStrings(invoice, trainer, client))
     ? await embedCjkFont(doc)
     : null;
