@@ -968,6 +968,16 @@ const zhHK = {
   'progress.deleted': '已刪除量度紀錄',
 
   // ── 月度報告 ──
+  // 「App 錯誤」卡 —— Ani 2026-09-28 全部照批（reports/i18n-approval-client-errors-2026-09-28.md）
+  'errors.title': 'App 錯誤',
+  'errors.desc': '所有用戶手機上出現的錯誤，最新的排最前。複製其中一項，貼到 Claude 對話即可跟進修正。',
+  'errors.empty_title': '未有錯誤報告',
+  'errors.empty_desc': '如果 app 在任何人的手機上出錯，會在此顯示，你亦會收到通知。',
+  'errors.load_failed': '未能載入錯誤報告，請檢查網絡連線後再試。',
+  'errors.seen': '出現 {count} 次 · 最近一次 {when}',
+  'errors.affected': '受影響帳戶：{people}',
+  'errors.details': '詳情',
+  'errors.copy': '複製給 Claude',
   'report.title': '月度訓練報告',
   'report.month': '報告月份',
   'report.stat_sessions': '課堂',
