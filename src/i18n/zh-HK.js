@@ -979,8 +979,6 @@ const zhHK = {
   'report.due_date': '到期日',
   'report.payment_method': '付款方式',
   'report.ph_payment': 'FPS / PayMe：9XXX-XXXX',
-  'report.print': '列印／儲存為 PDF',
-  'report.print_hint': '瀏覽器列印視窗 →「儲存為 PDF」',
 
   // ── 訓練紀錄（學生） ──
   'wlog.title': '訓練紀錄',
