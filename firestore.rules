@@ -167,6 +167,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Error reports from the app, grouped per error (functions/clientErrors.js). Written
+    // only by the reportClientError function; the owner reads them on her Profile. They
+    // hold stack traces and user ids, so nobody else reads them.
+    match /clientErrors/{errorId} {
+      allow read: if isAuth() && request.auth.token.email == 'aniho20@gmail.com'
+        && request.auth.token.email_verified == true;
+      allow write: if false;
+    }
+    // The per-day caps on the above. Server-only.
+    match /clientErrorBudget/{day} {
+      allow read, write: if false;
+    }
+
     // Invite code reservations — one document per code, owned by exactly one trainer.
     // Written and read only by Cloud Functions (functions/inviteCodes.js).
     match /inviteCodes/{code} {

@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { reportError } from '../utils/errorReporter';
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -8,6 +9,12 @@ export default class ErrorBoundary extends Component {
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+
+  // The white screen this boundary replaces used to be seen only by the person holding
+  // the phone. Now it is reported (utils/errorReporter.js).
+  componentDidCatch(error, info) {
+    reportError(error, 'boundary', info?.componentStack || '');
   }
 
   handleReset = () => {

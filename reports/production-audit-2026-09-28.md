@@ -67,6 +67,7 @@
 - **P4、P5、P1 已修**（B18、B19）。P5 係修 P4 時發現：學生新預約預先寫 `deductedAtBooking: true`，`onScheduleBooked` 會跳過扣堂。
 - P2 + P3 已修（B20）：連接教練同邀請碼改由伺服器處理；B21 改由 component test 驗。
 - High-value 2（遲取消用 UTC）已修（B22）：用教練時區計。
+- High-value 1（冇錯誤監察）已修（B23）：app 報錯去 `reportClientError`，推送通知 Ani。
 
 ## Next action
 

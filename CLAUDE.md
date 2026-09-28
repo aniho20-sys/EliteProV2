@@ -102,6 +102,7 @@ src/
 │   ├── exerciseUtils.js      # resolveExerciseName / canonicalExercise (follows mergedInto) / liveExercises (hides tombstones) / inferMovementPattern + explainMovementPattern (keyword classifier, see convention #35)
 │   ├── invoicePdf.js         # Client-side PDF generation via pdf-lib (dynamically imported) — see convention #30
 │   ├── sessionUtils.js       # Session colour/label helpers
+│   ├── errorReporter.js      # Sends uncaught errors, unhandled rejections and ErrorBoundary crashes to reportClientError (installed in main.jsx)
 │   ├── urlUtils.js           # URL safety validators: isSafeUrl(url), isYouTube(url)
 │   ├── workoutShareUtils.js  # Post-workout share text builder (buildWorkoutShareText, pickClosingMessage) for WorkoutCompleteScreen's native share button
 │   └── workoutUtils.js       # Workout set normalisation helpers (UNIT_OPTIONS, emptySet, hasValue, formatSet, etc.)
@@ -121,6 +122,7 @@ functions/                    # Cloud Functions (deployed and live on Blaze) —
 │                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
 │                              # (daily scheduled function)
 ├── inviteCodes.js             # Invite code reservation + resolve + connectWithInviteCode/ensureInviteCode logic (P2/P3)
+├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
 ├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
 │                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)
 ├── gcSecrets.js               # Per-trainer GoCardless access tokens + app-level Partner credentials,
@@ -601,6 +603,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **subscriptions**: Trainer or client owner can read; Cloud-Function-only writes (`allow write: if false`)
 - **paymentConnections**: Owner trainer only can read; Cloud-Function-only writes (Admin SDK bypasses the rule)
 - **oauthNonces**: No client read or write at all — created/consumed entirely server-side
+- **clientErrors**: Owner reads (verified email); written only by the `reportClientError` function. `clientErrorBudget` is server-only
 
 ## Styling Conventions
 - All styles live in `src/styles/index.css`

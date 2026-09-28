@@ -8,6 +8,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 const isGhPages = process.env.DEPLOY_TARGET === 'gh-pages'
 
 export default defineConfig({
+  // Which deploy an error report came from (src/utils/errorReporter.js).
+  define: {
+    __APP_BUILD__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({

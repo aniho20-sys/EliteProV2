@@ -14,6 +14,7 @@ const { deleteAccountData } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
+const { normalizeReport, recordClientError } = require('./clientErrors');
 
 initializeApp();
 const db = getFirestore();
@@ -891,6 +892,62 @@ exports.onNewTrainerSignup = functions.firestore
 // Owner-only operating numbers for the Profile page. A callable rather than a stored
 // counter: it cannot drift, needs no backfill for the accounts that already exist, and
 // the owner check happens server-side where it cannot be edited away in devtools.
+// ── Error monitoring (functions/clientErrors.js) ──
+// The app reports uncaught errors, failed promises and white screens here. Open to
+// signed-out callers on purpose — the login page can crash too — and bounded by the daily
+// budget in clientErrors.js. Never throws back at the app: a reporter that errors would
+// only produce another report.
+exports.reportClientError = functions.https.onCall(async (data, context) => {
+  const report = normalizeReport(data);
+  if (!report) return { ok: false };
+  const uid = context.auth ? context.auth.uid : null;
+  let result;
+  try {
+    result = await recordClientError(db, report, { uid });
+  } catch (err) {
+    console.error('[clientErrors] could not record', err);
+    return { ok: false };
+  }
+  if (!result.stored || !result.notify) return { ok: true };
+
+  let who = 'signed out';
+  if (uid) {
+    const user = await db.doc(`users/${uid}`).get().catch(() => null);
+    const u = user && user.exists ? user.data() : {};
+    who = `${u.role || 'no profile'} ${u.name || ''}`.trim();
+  }
+  const title = result.isNew ? 'New app error' : `App error again (${result.count} times)`;
+  const owner = await findOwner().catch(() => null);
+  await Promise.allSettled([
+    owner
+      ? sendPush(owner.id, owner.data().fcmTokens, {
+        title,
+        body: `${report.message.slice(0, 120)} — ${who}, ${report.url || 'unknown page'}`,
+      }, { url: '/#/profile' })
+      : Promise.resolve(),
+    // Sent only if the Trigger Email extension is installed; otherwise the document waits
+    // unread, which is harmless (#29).
+    db.collection('mail').add({
+      to: OWNER_EMAIL,
+      message: {
+        subject: `ElitePro: ${title}: ${report.message.slice(0, 80)}`,
+        text: [
+          `Error:   ${report.message}`,
+          `Where:   ${report.source} · ${report.url}`,
+          `Who:     ${who}${uid ? ` (${uid})` : ''}`,
+          `Seen:    ${result.count} time(s)`,
+          `Device:  ${report.userAgent}`,
+          `Build:   ${report.build}`,
+          `Id:      clientErrors/${result.id}`,
+          '',
+          report.stack,
+        ].join('\n'),
+      },
+    }),
+  ]);
+  return { ok: true };
+});
+
 exports.getPlatformStats = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
