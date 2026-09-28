@@ -65,7 +65,7 @@
 ## 跟進（同日）
 
 - **P4、P5、P1 已修**（B18、B19）。P5 係修 P4 時發現：學生新預約預先寫 `deductedAtBooking: true`，`onScheduleBooked` 會跳過扣堂。
-- P2 + P3 未做（B20）。
+- P2 + P3 已修（B20）：連接教練同邀請碼改由伺服器處理，等 Ani 真機試（B21）。
 
 ## Next action
 

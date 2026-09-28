@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, updateDoc, getDocs, collection, query, where } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where } = require('firebase/firestore');
 
 // End-to-end coverage for the invite-code connect flow — the FIRST thing a new
 // student does. Broken on 2026-08-04: connectToTrainer() resolved the code against
@@ -108,20 +108,23 @@ describe('invite code lookup is no longer a client-side query', () => {
   });
 });
 
-describe('invite code connect flow (end to end)', () => {
-  test('client connects with a valid code and appears in that trainer\'s client list', async () => {
-    const clientDb = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
+// Since 2026-09-28 (P2, reports/production-audit-2026-09-28.md) the connect step is the
+// connectWithInviteCode callable: it checks the code and writes trainerId on the Admin
+// SDK. A rules-disabled write is the accurate simulation of it here; the callable's own
+// behaviour is covered in functions/test/inviteCodes.test.js.
+const connectServerSide = (clientId, trainerId) => testEnv.withSecurityRulesDisabled(
+  (context) => updateDoc(doc(context.firestore(), 'users', clientId), { trainerId }),
+);
 
-    // 1. resolve the code (server-side, as resolveInviteCode does)
+describe('invite code connect flow (end to end)', () => {
+
+  test('a client connected server-side appears in that trainer\'s client list', async () => {
     const resolved = await resolveServerSide(CODE);
     expect(resolved).not.toBeNull();
-    const trainerId = resolved.id;
+    await connectServerSide(UNCONNECTED_CLIENT, resolved.id);
 
-    // 2. write trainerId onto own profile (self-update allowlist must include it)
-    await assertSucceeds(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { trainerId }));
-
-    // 3. the trainer's own client-list query now returns the student — this is the
-    //    listener AppContext runs, so passing here means the coach really sees them.
+    // The trainer's own client-list query returns the student — this is the listener
+    // AppContext runs, so passing here means the coach really sees them.
     const trainerDb = testEnv.authenticatedContext(TRAINER).firestore();
     const clients = await getDocs(query(
       collection(trainerDb, 'users'),
@@ -131,8 +134,7 @@ describe('invite code connect flow (end to end)', () => {
   });
 
   test('connecting does not put the student in a different trainer\'s client list', async () => {
-    const clientDb = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
-    await updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { trainerId: TRAINER });
+    await connectServerSide(UNCONNECTED_CLIENT, TRAINER);
 
     const otherDb = testEnv.authenticatedContext(OTHER_TRAINER).firestore();
     const clients = await getDocs(query(
@@ -141,20 +143,58 @@ describe('invite code connect flow (end to end)', () => {
     ));
     expect(clients.empty).toBe(true);
   });
+});
 
-  test('a client still cannot escalate to trainer while setting trainerId', async () => {
+describe('P2: nobody points trainerId at a coach from the browser', () => {
+  test('a client cannot set their own trainerId — not even with the right code in hand', async () => {
     const clientDb = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
-    await assertFails(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), {
-      trainerId: TRAINER,
-      role: 'trainer',
-    }));
+    await assertFails(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { trainerId: TRAINER }));
   });
 
-  test('a client cannot grant themselves sessions while connecting', async () => {
+  test('a removed client cannot reattach and read the coach\'s profile', async () => {
     const clientDb = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
-    await assertFails(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), {
-      trainerId: TRAINER,
-      totalSessions: 100,
-    }));
+    await assertFails(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { trainerId: TRAINER }));
+    await assertFails(getDoc(doc(clientDb, 'users', TRAINER)));
+  });
+
+  test('a trainer cannot attach themselves to another coach', async () => {
+    const db = testEnv.authenticatedContext(OTHER_TRAINER).firestore();
+    await assertFails(updateDoc(doc(db, 'users', OTHER_TRAINER), { trainerId: TRAINER }));
+  });
+
+  test('a trainer cannot hand their client to another coach', async () => {
+    await connectServerSide(UNCONNECTED_CLIENT, OTHER_TRAINER);
+    const db = testEnv.authenticatedContext(OTHER_TRAINER).firestore();
+    await assertFails(updateDoc(doc(db, 'users', UNCONNECTED_CLIENT), { trainerId: TRAINER }));
+  });
+
+  test('clearing trainerId still works: a client leaving, a trainer removing a client', async () => {
+    await connectServerSide(UNCONNECTED_CLIENT, TRAINER);
+    await assertSucceeds(updateDoc(
+      doc(testEnv.authenticatedContext(TRAINER).firestore(), 'users', UNCONNECTED_CLIENT), { trainerId: null },
+    ));
+    await connectServerSide(UNCONNECTED_CLIENT, TRAINER);
+    await assertSucceeds(updateDoc(
+      doc(testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore(), 'users', UNCONNECTED_CLIENT), { trainerId: null },
+    ));
+  });
+
+  test('a client still cannot escalate to trainer or grant themselves sessions', async () => {
+    const clientDb = testEnv.authenticatedContext(UNCONNECTED_CLIENT).firestore();
+    await assertFails(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { role: 'trainer' }));
+    await assertFails(updateDoc(doc(clientDb, 'users', UNCONNECTED_CLIENT), { totalSessions: 100 }));
+  });
+});
+
+describe('P3: a trainer cannot choose their own invite code', () => {
+  test('copying another trainer\'s code is refused', async () => {
+    const db = testEnv.authenticatedContext(OTHER_TRAINER).firestore();
+    await assertFails(updateDoc(doc(db, 'users', OTHER_TRAINER), { inviteCode: CODE }));
+  });
+
+  test('the reservations are invisible to the browser', async () => {
+    const db = testEnv.authenticatedContext(TRAINER).firestore();
+    await assertFails(getDoc(doc(db, 'inviteCodes', CODE)));
+    await assertFails(setDoc(doc(db, 'inviteCodes', 'MINE99'), { trainerId: TRAINER }));
   });
 });

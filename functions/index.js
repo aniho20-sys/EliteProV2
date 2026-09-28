@@ -12,6 +12,7 @@ const { summariseSignups } = require('./signupQueue');
 const { startSubscription, completeSubscription, cancelSubscriptionsFor, SubscriptionError } = require('./gcSubscriptions');
 const { deleteAccountData } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
+const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
 
 initializeApp();
 const db = getFirestore();
@@ -1232,18 +1233,42 @@ exports.resolveInviteCode = functions.https.onCall(async (data, context) => {
   const code = normalizeInviteCode((data && data.code) || '');
   if (!code) throw new functions.https.HttpsError('invalid-argument', 'Code required');
 
-  // Deliberately a SINGLE-field equality query. Firestore auto-indexes every single field,
-  // whereas adding `role == 'trainer'` as a second filter can require a composite index —
-  // which, missing in production, throws failed-precondition and breaks this exact flow
-  // again (#34). Role is filtered below in JS, where it costs nothing.
-  const snap = await db.collection('users').where('inviteCode', '==', code).limit(10).get();
-  const match = snap.docs.find(d => (d.data() || {}).role === 'trainer');
-  if (!match) return { found: false };
+  // Lookup, uniqueness and the single-field query rule live in functions/inviteCodes.js.
+  const trainer = await resolveTrainerByCode(db, code);
+  return trainer ? { found: true, trainer } : { found: false };
+});
 
-  return {
-    found: true,
-    trainer: { id: match.id, name: (match.data() || {}).name || 'Coach' },
-  };
+function toInviteHttpsError(err) {
+  if (err instanceof InviteCodeError) return new functions.https.HttpsError(err.code, err.message);
+  console.error('[inviteCodes] unexpected error', err);
+  return new functions.https.HttpsError('internal', 'Something went wrong');
+}
+
+// ── Connecting to a coach (P2, reports/production-audit-2026-09-28.md) ──
+// The only way a client's trainerId is ever set to a coach. It used to be a client-side
+// write of any uid at all, which let a removed client reattach themselves; now the code
+// is the credential, checked here, and firestore.rules lets a client only clear trainerId.
+exports.connectWithInviteCode = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  const code = normalizeInviteCode((data && data.code) || '');
+  if (!code) throw new functions.https.HttpsError('invalid-argument', 'Code required');
+  try {
+    return await connectClientByCode(db, context.auth.uid, code);
+  } catch (err) {
+    throw toInviteHttpsError(err);
+  }
+});
+
+// ── Issuing a trainer's invite code (P3) ──
+// Trainers can no longer write their own inviteCode, so a copied code cannot be created.
+// Called at trainer signup and whenever a trainer has no code yet.
+exports.ensureInviteCode = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return { code: await ensureInviteCode(db, context.auth.uid) };
+  } catch (err) {
+    throw toInviteHttpsError(err);
+  }
 });
 
 // Owner-only: what does Firebase actually know about this email address?

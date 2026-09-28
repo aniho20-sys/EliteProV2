@@ -44,8 +44,15 @@ const CALLER = { auth: { uid: 'someone-signing-up', token: { email: 'new@student
 // targeted deletes, are what keep the suites independent.
 const FIXTURES = [TRAINER, OTHER_TRAINER, CLIENT_WITH_CODE];
 
+// Resolving a code for the first time reserves it (inviteCodes/{code}, 2026-09-28), so the
+// reservations are fixtures too and go with them.
+const CODES = ['3XQPKM', 'ZZZZZZ', 'CLIENT1'];
+
 async function wipeFixtures() {
-  await Promise.all(FIXTURES.map(id => db.doc(`users/${id}`).delete()));
+  await Promise.all([
+    ...FIXTURES.map(id => db.doc(`users/${id}`).delete()),
+    ...CODES.map(code => db.doc(`inviteCodes/${code}`).delete()),
+  ]);
 }
 
 beforeEach(async () => {
@@ -155,9 +162,10 @@ describe('GUARDIAN: the lookup query stays index-safe', () => {
     // A second equality filter (role == "trainer") would require a composite index that
     // does not exist in production, and a missing index fails at runtime looking exactly
     // like a wrong code. Role is filtered in JS instead; this pins that choice.
-    const src = require('fs').readFileSync(require('path').join(__dirname, '../index.js'), 'utf8');
-    const fn = src.slice(src.indexOf('exports.resolveInviteCode'));
-    const body = fn.slice(0, fn.indexOf('\n});'));
+    // The lookup moved into resolveTrainerByCode (functions/inviteCodes.js) on 2026-09-28.
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../inviteCodes.js'), 'utf8');
+    const fn = src.slice(src.indexOf('async function resolveTrainerByCode'));
+    const body = fn.slice(0, fn.indexOf('\n}\n'));
     expect(body).toMatch(/\.where\('inviteCode', '==', code\)/);
     expect(body.match(/\.where\(/g)).toHaveLength(1);
   });

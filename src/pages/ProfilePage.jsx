@@ -172,7 +172,9 @@ export default function ProfilePage() {
   // repeated generate+write calls before the first one resolves.
   useEffect(() => {
     if (isTrainer && !inviteCode) {
-      getInviteCode(currentUser.id).then(code => { if (code) setInviteCode(code); });
+      getInviteCode(currentUser.id)
+        .then(code => { if (code) setInviteCode(code); })
+        .catch(err => console.error('[ProfilePage] invite code not issued', err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTrainer, currentUser.id]);

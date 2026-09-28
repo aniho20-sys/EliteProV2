@@ -120,6 +120,7 @@ functions/                    # Cloud Functions (deployed and live on Blaze) —
 │                              # HTTP endpoint — no Firebase Auth context, CSRF-protected via
 │                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
 │                              # (daily scheduled function)
+├── inviteCodes.js             # Invite code reservation + resolve + connectWithInviteCode/ensureInviteCode logic (P2/P3)
 ├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
 │                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)
 ├── gcSecrets.js               # Per-trainer GoCardless access tokens + app-level Partner credentials,
@@ -625,7 +626,8 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 ## Invite Code System
 - Trainers have a unique 6-char uppercase alphanumeric invite code (stored on their Firestore profile)
 - Clients enter the code during registration (RoleSelectPage) or later (ProfilePage)
-- `connectToTrainer(clientId, code)` sets `trainerId` on the client's profile
+- **Both writes are server-side since 2026-09-28** (P2 + P3, `reports/production-audit-2026-09-28.md`): `connectToTrainer()` calls the `connectWithInviteCode` callable, which checks the code and sets `trainerId`; a trainer's code comes from the `ensureInviteCode` callable. `firestore.rules` refuses `inviteCode` from the browser and lets `trainerId` only be cleared (a client leaving, a trainer removing a client) — never pointed at a coach
+- A code is owned by a reservation doc `inviteCodes/{code} → { trainerId }` (server-only, `allow read, write: if false`), so no two trainers can hold one code. Codes issued before reservations are honoured only while exactly one trainer carries them, and are reserved on first use — `functions/inviteCodes.js`
 - **Shareable link**: `https://elitepro-16718.web.app/#/?invite=XXXXXX` — App.jsx parses `?invite=` from hash on startup and saves to `sessionStorage`; RoleSelectPage reads it on mount to auto-fill the code and pre-select the client role
 
 ## Deployment

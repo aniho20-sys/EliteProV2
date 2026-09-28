@@ -37,6 +37,17 @@ service cloud.firestore {
       return isAuth() && userRole() == 'operator';
     }
 
+    // trainerId may be cleared (a client leaving, a trainer removing a client) but never
+    // pointed at a coach from the browser. Connecting goes through the
+    // connectWithInviteCode callable, which checks the code (P2,
+    // reports/production-audit-2026-09-28.md). Otherwise anyone knowing a coach's uid —
+    // every removed client does — could attach themselves and read that coach's profile,
+    // bank details included, and whole schedule.
+    function trainerIdOnlyCleared() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trainerId'])
+        || request.resource.data.trainerId == null;
+    }
+
     function isTrainerOf(clientId) {
       let cd = get(/databases/$(database)/documents/users/$(clientId)).data;
       return isAuth()
@@ -81,13 +92,15 @@ service cloud.firestore {
       // offers, and profile fields only. Credit, billing and gating fields are only ever
       // set by the client's trainer (update branch below) or by Cloud Functions. When
       // gym啦 returns, operators are created server-side, never by self-signup.
-      // trainerId is still accepted here for the invite-code signup path; tightening that
-      // is P2, which moves connecting to a coach server-side.
       allow create: if (isOwner(userId)
           && request.resource.data.id == userId
           && request.resource.data.role in ['trainer', 'client']
           && request.resource.data.keys().hasOnly(['id', 'name', 'email', 'role', 'avatar',
-               'joinDate', 'trainerId', 'goals', 'age', 'height', 'speciality', 'inviteCode']))
+               'joinDate', 'trainerId', 'goals', 'age', 'height', 'speciality'])
+          // Both are issued server-side now (P2 + P3): connectWithInviteCode sets trainerId,
+          // ensureInviteCode sets inviteCode. A self-chosen code is how one trainer copied
+          // another's.
+          && (!('trainerId' in request.resource.data) || request.resource.data.trainerId == null))
         || (isTrainer()
             && request.resource.data.role == 'client'
             && request.resource.data.trainerId == request.auth.uid);
@@ -103,7 +116,7 @@ service cloud.firestore {
           && request.resource.data.role == resource.data.role
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['name','email','avatar','fcmTokens','goals','notes',
-                         'age','height','speciality','trainerId','inviteCode',
+                         'age','height','speciality','trainerId',
                          'renewalRate','renewalRateNext','bankDetails','currency',
                          'renewalPrompt3Shown','renewalPrompt1Shown',
                          'renewalPromptSnoozedUntil',
@@ -119,12 +132,17 @@ service cloud.firestore {
           // bad write cannot park the client on a language the app does not have.
           && (!('language' in request.resource.data)
               || request.resource.data.language in ['en', 'zh-HK'])
+          // inviteCode is not in the list above: only ensureInviteCode writes it (P3).
+          && trainerIdOnlyCleared()
         // Trainer updating their own client's full profile (totalSessions, sessionOffset, etc.)
         // Session credit accounting itself (booking/cancel/complete) runs server-side via
         // Cloud Functions using the admin SDK, which bypasses these rules entirely — so no
         // client-side sessionOffset write path is needed even for a removed client.
         || isTrainerOf(userId)
-            && request.resource.data.role == resource.data.role;
+            && request.resource.data.role == resource.data.role
+            // A trainer may remove a client but not hand them to another coach — that
+            // would give an account the trainer controls a way into that coach's data.
+            && trainerIdOnlyCleared();
       allow delete: if isOwner(userId);
     }
 
@@ -138,6 +156,12 @@ service cloud.firestore {
       allow read: if isAuth() && request.auth.token.email == 'aniho20@gmail.com'
         && request.auth.token.email_verified == true;
       allow write: if false;
+    }
+
+    // Invite code reservations — one document per code, owned by exactly one trainer.
+    // Written and read only by Cloud Functions (functions/inviteCodes.js).
+    match /inviteCodes/{code} {
+      allow read, write: if false;
     }
 
     // The Trigger Email extension's queue. Contains the owner's address and message

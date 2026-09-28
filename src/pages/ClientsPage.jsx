@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -17,9 +17,16 @@ export default function ClientsPage() {
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
   const [copied, setCopied] = useState(false);
 
+  // Asked once per mount: getInviteCode is recreated on every AppContext render, and it is
+  // now a server call, so an effect keyed on it would call ensureInviteCode on every render
+  // while the code is still empty — and forever if that call fails.
+  const inviteRequested = useRef(false);
   useEffect(() => {
-    if (!inviteCode && currentUser?.id) {
-      getInviteCode(currentUser.id).then(code => code && setInviteCode(code));
+    if (!inviteCode && currentUser?.id && !inviteRequested.current) {
+      inviteRequested.current = true;
+      getInviteCode(currentUser.id)
+        .then(code => code && setInviteCode(code))
+        .catch(err => console.error('[ClientsPage] invite code not issued', err));
     }
   }, [currentUser, inviteCode, getInviteCode]);
 

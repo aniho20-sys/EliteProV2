@@ -35,8 +35,8 @@ beforeEach(async () => {
 
 const as = (uid) => env.authenticatedContext(uid).firestore();
 const common = { id: NEW, name: 'New Person', email: 'new@example.test', avatar: null, joinDate: '2026-09-28' };
-const clientSignup = { ...common, role: 'client', trainerId: COACH, goals: '', age: '', height: '' };
-const trainerSignup = { ...common, role: 'trainer', speciality: '', inviteCode: 'NEWCDE' };
+const clientSignup = { ...common, role: 'client', trainerId: null, goals: '', age: '', height: '' };
+const trainerSignup = { ...common, role: 'trainer', speciality: '' };
 const create = (data, uid = NEW) => setDoc(doc(as(uid), 'users', NEW), data);
 
 describe('real signups still work', () => {
@@ -44,8 +44,14 @@ describe('real signups still work', () => {
     await assertSucceeds(create(clientSignup));
   });
 
-  test('client signup with no coach yet', async () => {
-    await assertSucceeds(create({ ...clientSignup, trainerId: null }));
+  // Since P2 + P3 the coach and the invite code are issued server-side after the profile
+  // exists (connectWithInviteCode / ensureInviteCode), so neither arrives in the create.
+  test('P2: a signup cannot name its own coach', async () => {
+    await assertFails(create({ ...clientSignup, trainerId: COACH }));
+  });
+
+  test('P3: a trainer signup cannot choose its own invite code', async () => {
+    await assertFails(create({ ...trainerSignup, inviteCode: 'AAAAAA' }));
   });
 
   test('trainer signup, as completeProfile writes it', async () => {

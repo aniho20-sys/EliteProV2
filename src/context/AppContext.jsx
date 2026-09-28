@@ -34,14 +34,6 @@ export const isPermissionError = (err) => {
   return code === 'permission-denied' || code === 'functions/permission-denied';
 };
 
-// Generate a short 6-char invite code
-function generateInviteCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I/O/0/1
-  const arr = new Uint8Array(6);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, n => chars[n % chars.length]).join('');
-}
-
 export function AppProvider({ children }) {
   // --- Individual collection states ---
   const [users, setUsers] = useState([]);
@@ -378,17 +370,14 @@ export function AppProvider({ children }) {
   };
 
   // Complete profile for real Firebase Auth users → creates Firestore doc
+  // The profile is created with no coach and no invite code; both are issued server-side
+  // afterwards (P2 + P3, reports/production-audit-2026-09-28.md) — firestore.rules no longer
+  // accepts either from the browser. RoleSelectPage has already checked the code, so a
+  // failure here is a dropped connection, not a wrong code: the account exists either way
+  // and the client can connect from Profile, the trainer's code is issued on next visit.
   const completeProfile = async (role, name, inviteCode) => {
     if (!firebaseUser) return;
-    let trainerId = null;
-    if (role === 'client' && inviteCode) {
-      // In-memory first, then a targeted Firestore query. The previous fallback read the
-      // ENTIRE users collection and filtered client-side — correct but O(all users) per
-      // signup; findTrainerByCodeRemote filters server-side instead.
-      const trainer = await findTrainerByCodeRemote(inviteCode);
-      if (trainer) trainerId = trainer.id;
-    }
-    const profile = {
+    let profile = {
       id: firebaseUser.uid,
       name: name || firebaseUser.displayName || 'User',
       email: firebaseUser.email || '',
@@ -396,11 +385,24 @@ export function AppProvider({ children }) {
       avatar: firebaseUser.photoURL || null,
       joinDate: localToday(),
       ...(role === 'client'
-        ? { trainerId, goals: '', age: '', height: '' }
-        : { speciality: '', inviteCode: generateInviteCode() }
+        ? { trainerId: null, goals: '', age: '', height: '' }
+        : { speciality: '' }
       ),
     };
     await setDoc(doc(db, 'users', profile.id), profile);
+
+    try {
+      if (role === 'client' && inviteCode) {
+        const { data } = await httpsCallable(functions, 'connectWithInviteCode')({ code: normalizeInviteCode(inviteCode) });
+        if (data && data.found) profile = { ...profile, trainerId: data.trainer.id };
+      } else if (role === 'trainer') {
+        const { data } = await httpsCallable(functions, 'ensureInviteCode')();
+        if (data && data.code) profile = { ...profile, inviteCode: data.code };
+      }
+    } catch (err) {
+      console.error('[completeProfile] follow-up call failed', err);
+    }
+
     setCurrentUser(profile);
     return profile;
   };
@@ -649,13 +651,14 @@ export function AppProvider({ children }) {
   };
 
   // ========== Invite Code ==========
+  // A trainer's code is issued by the ensureInviteCode callable, which guarantees no other
+  // trainer holds it (P3). Trainers can no longer write their own inviteCode.
   const getInviteCode = async (trainerId) => {
     const trainer = users.find(u => u.id === trainerId && u.role === 'trainer');
     if (!trainer) return null;
     if (trainer.inviteCode) return trainer.inviteCode;
-    const code = generateInviteCode();
-    await updateDoc(doc(db, 'users', trainerId), { inviteCode: code });
-    return code;
+    const { data } = await httpsCallable(functions, 'ensureInviteCode')();
+    return (data && data.code) || null;
   };
 
   const findTrainerByCode = (code) => {
@@ -695,16 +698,18 @@ export function AppProvider({ children }) {
       return { success: false, reason: 'invalid', error: 'Enter your coach\'s invite code' };
     }
 
+    // One server call checks the code and sets trainerId (P2): the browser may no longer
+    // write a coach's uid onto its own profile.
     let trainer;
     try {
-      trainer = await findTrainerByCodeRemote(normalized);
+      const { data } = await httpsCallable(functions, 'connectWithInviteCode')({ code: normalized });
+      trainer = data && data.found ? data.trainer : null;
     } catch (err) {
-      console.error('[connectToTrainer] lookup failed', err);
+      console.error('[connectToTrainer] connect failed', err);
       return {
         success: false,
-        // The lookup is a callable now, and the Functions SDK prefixes its error codes
-        // ('functions/permission-denied'), so a bare equality check would silently report
-        // every permission failure as a network one.
+        // The Functions SDK prefixes its error codes ('functions/permission-denied'), so a
+        // bare equality check would silently report every permission failure as a network one.
         reason: isPermissionError(err) ? 'permission' : 'network',
         error: 'Could not check that code right now. Check your connection and try again.',
       };
@@ -712,17 +717,6 @@ export function AppProvider({ children }) {
 
     if (!trainer) {
       return { success: false, reason: 'invalid', error: 'Invalid invite code' };
-    }
-
-    try {
-      await updateDoc(doc(db, 'users', clientId), { trainerId: trainer.id });
-    } catch (err) {
-      console.error('[connectToTrainer] update failed', err);
-      return {
-        success: false,
-        reason: err?.code === 'permission-denied' ? 'permission' : 'network',
-        error: 'Code is valid, but saving failed. Check your connection and try again.',
-      };
     }
 
     // The self-doc listener refreshes `users`, but patch optimistically so the UI flips
