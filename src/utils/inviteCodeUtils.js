@@ -1,4 +1,4 @@
-// Invite codes are 6-char uppercase alphanumeric (see generateInviteCode in AppContext).
+// Invite codes are 6-char uppercase alphanumeric (issued server-side, functions/inviteCodes.js).
 // Clients type or paste them, so normalise defensively before comparing: iOS keyboards
 // insert non-breaking spaces, and copy/paste from WhatsApp or a share sheet can carry
 // zero-width joiners, directional marks and stray punctuation that are invisible on
