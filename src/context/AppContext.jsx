@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { db, auth, functions } from '../firebase';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, runTransaction,
+  onSnapshot, writeBatch, getDocs, query, where, or, orderBy, limit, runTransaction,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import {
@@ -751,6 +751,14 @@ export function AppProvider({ children }) {
     return snap.exists() ? snap.data() : null;
   };
 
+  // Owner-only: the app's error reports, most recent first (functions/clientErrors.js).
+  // firestore.rules lets only the owner read them; for anyone else this rejects.
+  // A single-field orderBy, which Firestore indexes automatically (#34).
+  const getClientErrors = async () => {
+    const snap = await getDocs(query(collection(db, 'clientErrors'), orderBy('lastSeen', 'desc'), limit(20)));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  };
+
   // Owner-only operating numbers. The owner check lives in the Cloud Function, not here —
   // a client-side role check on a page anyone can open is decoration, not access control.
   const getPlatformStats = async () => {
@@ -1079,7 +1087,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getPaymentConnection, startGcConnect, disconnectGc, getSubscriptions, startSubscription, refreshSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,

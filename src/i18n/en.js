@@ -946,6 +946,16 @@ const en = {
   'progress.confirm_delete': 'Delete measurement from {date}?',
   'progress.deleted': 'Measurement deleted',
   // ── Monthly report modal (trainer) ──
+  // Owner-only: the app's error reports (ClientErrorsCard, functions/clientErrors.js).
+  'errors.title': 'App errors',
+  'errors.desc': 'Crashes and failures from everyone\'s phones, newest first. Copy one and paste it into a Claude chat to get it fixed.',
+  'errors.empty_title': 'No errors reported',
+  'errors.empty_desc': 'If the app crashes on anyone\'s phone, it appears here and you get a notification.',
+  'errors.load_failed': 'Could not load the error reports. Check your connection and try again.',
+  'errors.seen': 'Seen {count}× · last {when}',
+  'errors.affected': 'Accounts affected: {people}',
+  'errors.details': 'Details',
+  'errors.copy': 'Copy for Claude',
   'report.title': 'Monthly Training Report',
   'report.month': 'Report Month',
   'report.stat_sessions': 'Sessions',

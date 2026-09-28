@@ -64,3 +64,11 @@ export function formatFullDate(dateStr, lang = 'en') {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 }
+
+// "Sep 28, 9:50 PM" / 「9月28日 下午9:50」 — when something happened, for an instant rather
+// than a stored 'YYYY-MM-DD' (an ISO timestamp, shown in the viewer's own time zone).
+export function formatDateTime(iso, lang = 'en') {
+  return new Date(iso).toLocaleString(tags(lang).other, {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}

@@ -19,6 +19,7 @@ const TRANSLATED_FILES = [
   'src/pages/LoginPage.jsx',
   'src/pages/SchedulePage.jsx',
   'src/pages/ProfilePage.jsx',
+  'src/components/ClientErrorsCard.jsx',
   'src/components/LanguagePicker.jsx',
   'src/pages/TrainerDashboard.jsx',
   'src/pages/InvoicePage.jsx',

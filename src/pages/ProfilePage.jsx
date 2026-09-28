@@ -11,6 +11,7 @@ import { CURRENCIES, formatCurrency } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
 import MovementPatternScanner from '../components/MovementPatternScanner';
 import PlatformStatsCard from '../components/PlatformStatsCard';
+import ClientErrorsCard from '../components/ClientErrorsCard';
 import LanguagePicker from '../components/LanguagePicker';
 import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 import { gcFailureMessage } from '../utils/gcErrors';
@@ -773,6 +774,9 @@ export default function ProfilePage() {
       {/* Renders only for the owner — the component hides itself when the Cloud Function
           refuses the call, so no role list needs maintaining here. */}
       {isTrainer && <PlatformStatsCard />}
+
+      {/* Owner-only; firestore.rules is the real gate (clientErrors is owner-read). */}
+      {isTrainer && isOwner && <ClientErrorsCard />}
 
       {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (

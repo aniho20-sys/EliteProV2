@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { formatDayDate, formatLongDate, formatMonthYear, formatWeekdayShort, formatShortDate, formatFullDate } from './format';
+import { formatDayDate, formatLongDate, formatMonthYear, formatWeekdayShort, formatShortDate, formatFullDate, formatDateTime } from './format';
 import { parseLocalDate } from '../utils/dateUtils';
 
 const DATE = '2026-06-10'; // a Wednesday
@@ -63,5 +63,13 @@ describe('zh-HK', () => {
   test('weekday short accepts a Date or a date string', () => {
     expect(formatWeekdayShort(parseLocalDate(DATE), 'zh-HK')).toBe('週三');
     expect(formatWeekdayShort(DATE, 'zh-HK')).toBe('週三');
+  });
+});
+
+describe('formatDateTime', () => {
+  test('an instant, in the viewer\'s zone and language', () => {
+    const iso = new Date(2026, 8, 28, 21, 50).toISOString(); // local 21:50
+    expect(formatDateTime(iso, 'en')).toBe('Sep 28, 9:50 PM');
+    expect(formatDateTime(iso, 'zh-HK')).toMatch(/^9月28日.*9:50$/);
   });
 });
