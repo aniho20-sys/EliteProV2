@@ -44,15 +44,22 @@ export default function SubscriptionCard() {
 
   useEffect(() => { if (offered) load(); }, [offered, load]);
 
+  // One wording for a subscription status, whether it arrives on the return from GoCardless
+  // or from "Check again". They used to be two copies, and "Check again" told a student
+  // whose Direct Debit GoCardless had refused that it was still being confirmed.
+  const announce = (status) => {
+    if (status === 'active') toast(t('sub.toast_active'));
+    else if (status === 'pending' || status === 'completing') toast(t('sub.toast_pending'), 'info');
+    else if (status === 'abandoned' || status === 'exit') toast(t('sub.toast_abandoned'), 'info');
+    else toast(t('sub.toast_failed'), 'error');
+  };
+
   // Back from GoCardless: gcSubscriptionReturn has already asked GoCardless and
   // redirected here with the outcome.
   useEffect(() => {
     const sub = new URLSearchParams(location.search).get('sub');
     if (!sub) return;
-    if (sub === 'active') toast(t('sub.toast_active'));
-    else if (sub === 'pending' || sub === 'completing') toast(t('sub.toast_pending'), 'info');
-    else if (sub === 'abandoned' || sub === 'exit') toast(t('sub.toast_abandoned'), 'info');
-    else toast(t('sub.toast_failed'), 'error');
+    announce(sub);
     navigate('/profile', { replace: true });
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,9 +90,7 @@ export default function SubscriptionCard() {
     setChecking(true);
     try {
       const { status } = await refreshSubscription(current.id);
-      if (status === 'active') toast(t('sub.toast_active'));
-      else if (status === 'abandoned') toast(t('sub.toast_abandoned'), 'info');
-      else toast(t('sub.toast_pending'), 'info');
+      announce(status);
       await load();
     } catch {
       toast(t('sub.toast_failed'), 'error');
