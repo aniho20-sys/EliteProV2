@@ -188,6 +188,21 @@ describe('onScheduleCreditUpdate — cancellation', () => {
     expect(client.earlyCancelCount).toBeUndefined();
   });
 
+  // P4 (reports/production-audit-2026-09-28.md): moving a session's date and cancelling it
+  // in one write judged "late" by the NEW date, so a session 2h away — or already finished —
+  // became an early cancel and was refunded. Late/early must come from the date it had.
+  test('moving the date and cancelling in one write is judged by the original time', async () => {
+    await seedClient({ sessionOffset: 4 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(2), deductedAtBooking: true });
+
+    const change = await updateScheduleStatus(ref, snap, { ...sessionDateTime(24 * 30), status: 'cancelled' });
+    await wrappedOnScheduleCreditUpdate(change);
+
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(4); // late cancel — charge kept
+    expect(client.earlyCancelCount).toBeUndefined();
+  });
+
   test('early-cancel cap: 3rd early cancel in the same month is not refunded', async () => {
     const month = new Date().toISOString().slice(0, 7);
     await seedClient({ sessionOffset: 6, earlyCancelMonth: month, earlyCancelCount: 2 });

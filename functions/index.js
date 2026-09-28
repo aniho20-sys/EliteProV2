@@ -355,7 +355,11 @@ exports.onScheduleCreditUpdate = functions.firestore
     const clientRef = db.doc(`users/${after.clientId}`);
 
     if (after.status === 'cancelled') {
-      const sessionDt = new Date(`${after.date}T${after.time}:00`);
+      // Late or early is judged by when the session WAS, not by what the cancelling write
+      // says. Reading after.date let a date change in the same write turn a finished
+      // session into an "early" cancel and refund it (P4). Rules now stop clients changing
+      // the date at all; this keeps a trainer's edit-then-cancel honest too.
+      const sessionDt = new Date(`${before.date}T${before.time}:00`);
       const isLate = (sessionDt.getTime() - Date.now()) / (1000 * 60 * 60) < 24;
 
       if (!after.deductedAtBooking) {

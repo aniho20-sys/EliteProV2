@@ -71,8 +71,23 @@ service cloud.firestore {
       allow list: if isAuth()
         && (resource.data.id == request.auth.uid
             || resource.data.trainerId == request.auth.uid);
-      // Self-create own profile, OR trainer creating a managed ghost client
-      allow create: if isOwner(userId)
+      // Self-create own profile, OR trainer creating a managed ghost client.
+      //
+      // Self-create used to accept any document at all (P1,
+      // reports/production-audit-2026-09-28.md): a new account could make itself an
+      // 'operator' — the gym啦 role that writes studios and reads every trainer
+      // application — or start life with totalSessions: 1000 or subscriptionTester: true.
+      // It is now exactly what completeProfile() writes: the two roles RoleSelectPage
+      // offers, and profile fields only. Credit, billing and gating fields are only ever
+      // set by the client's trainer (update branch below) or by Cloud Functions. When
+      // gym啦 returns, operators are created server-side, never by self-signup.
+      // trainerId is still accepted here for the invite-code signup path; tightening that
+      // is P2, which moves connecting to a coach server-side.
+      allow create: if (isOwner(userId)
+          && request.resource.data.id == userId
+          && request.resource.data.role in ['trainer', 'client']
+          && request.resource.data.keys().hasOnly(['id', 'name', 'email', 'role', 'avatar',
+               'joinDate', 'trainerId', 'goals', 'age', 'height', 'speciality', 'inviteCode']))
         || (isTrainer()
             && request.resource.data.role == 'client'
             && request.resource.data.trainerId == request.auth.uid);
@@ -214,25 +229,40 @@ service cloud.firestore {
         // Trainer books for their own client only
         (request.resource.data.trainerId == request.auth.uid &&
          get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.trainerId == request.auth.uid) ||
-        // Client books with their own trainer only
+        // Client books with their own trainer only — as a plain pending booking. The
+        // credit fields are the server's: onScheduleBooked skips any doc that already says
+        // deductedAtBooking, so a client writing it themselves booked for free (P5,
+        // reports/production-audit-2026-09-28.md). isBlocked/lateCancellation likewise.
         (request.resource.data.clientId == request.auth.uid &&
-         userTrainerId() == request.resource.data.trainerId) ||
+         userTrainerId() == request.resource.data.trainerId &&
+         request.resource.data.status == 'pending' &&
+         !request.resource.data.keys().hasAny(['deductedAtBooking', 'bookedOnCredit',
+                                               'isBlocked', 'lateCancellation'])) ||
         // Trainer blocks their own time (no client)
         (isTrainer() && request.resource.data.trainerId == request.auth.uid
          && request.resource.data.isBlocked == true
          && request.resource.data.clientId == '')
       );
-      // trainerId and clientId are immutable — only status/notes/time/type may change
-      allow update: if isAuth() && (
-        resource.data.trainerId == request.auth.uid ||
-        resource.data.clientId == request.auth.uid
-      )
+      // trainerId and clientId are immutable. The trainer may change anything else.
+      // A client may do exactly one thing: cancel their own upcoming session. They used
+      // to be able to change any field, so moving a finished session into the future and
+      // cancelling it in the same write refunded the credit (P4,
+      // reports/production-audit-2026-09-28.md). lateCancellation is the flag the late
+      // cancel confirmation sets; the credit logic decides by time, not by that flag.
+      allow update: if isAuth()
         && request.resource.data.trainerId == resource.data.trainerId
-        && request.resource.data.clientId == resource.data.clientId;
-      allow delete: if isAuth() && (
-        resource.data.trainerId == request.auth.uid ||
-        resource.data.clientId == request.auth.uid
-      );
+        && request.resource.data.clientId == resource.data.clientId
+        && (
+          resource.data.trainerId == request.auth.uid
+          || (resource.data.clientId == request.auth.uid
+              && resource.data.status in ['pending', 'confirmed']
+              && request.resource.data.status == 'cancelled'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['status', 'lateCancellation']))
+        );
+      // Trainer only. A client deleting a session erased the record of it — nothing in the
+      // app offers a client delete, cancelling is the client's path.
+      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
     }
 
     // ── Messages ──

@@ -62,6 +62,11 @@
 - **App Check 有冇 enforce**：`.env.example` 有設定步驟，但 console 狀態睇唔到
 - **真機**：上面所有 UI 相關嘅嘢都要 Ani 用手機實際撳過先算（CLAUDE.md #36）
 
+## 跟進（同日）
+
+- **P4、P5、P1 已修**（B18、B19）。P5 係修 P4 時發現：學生新預約預先寫 `deductedAtBooking: true`，`onScheduleBooked` 會跳過扣堂。
+- P2 + P3 未做（B20）。
+
 ## Next action
 
 先修 **P4 同 P1**：兩個都細，而且一個直接關錢。之後做 **P2 + P3**（伺服器負責連接教練），要改埋註冊流程，需要 Ani 真機試一次邀請碼。

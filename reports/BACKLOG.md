@@ -299,8 +299,8 @@ Phase 3 Step 1–2 已經 deploy 咗，但**從來未有真人撳過個掣**。S
 | ✅ **B15** | **裝 4 個 skill** | 2026-09-26 Ani「揀四個」| `app-audit-2026-09-26` | **已完成 2026-09-26** —— rules auditor、rules creation、webapp testing、verification-before-completion（commit 68ba101）|
 | ✅ **B16** | **owner-only 功能加 `email_verified` 檢查** | 2026-09-26 | rules auditor | **已完成 2026-09-27** —— Ani 2026-09-27 答「我自己就用 Google」。6 個 owner callable（`functions/ownerAuth.js`）同 `platformEvents` rule 都要求 email 已驗證。Google 登入永遠係已驗證，所以唔會鎖到你。**Ani 2026-09-27 真機確認：Profile「平台數據」仍然見到** |
 | ✅ **B17** | **CI 跑晒測試先 deploy** | 2026-09-27 Ani「好」| `app-audit-2026-09-26` 🔴4 | **已完成 2026-09-27** —— 每次 push：lint → 前端 282 條 → 伺服器 127 條 → 權限規則 73 條，全過先 deploy。順手修好 lint 設定（~440 個假錯 → 0），同埋 09-27 自己漏跑前端測試而上咗線嘅一條 guard |
-| **B18** | 🔵 **P4 學生改日期再取消 = 退堂** | 2026-09-28 | `production-audit-2026-09-28` | emulator 證實：已完成嘅堂改去未來再取消，`sessionOffset` 5→4。修：rules 唔准學生改 date/time；函數用修改前日期判斷遲取消 |
-| **B19** | 🔵 **P1 註冊可自封 operator／送自己堂數** | 2026-09-28 | 同上 | emulator 證實：新帳戶寫入 `role:'operator'`、`totalSessions:1000` 成功。修：create 規則限 role 同禁 credit 欄位 |
+| ✅ **B18** | **P4 學生改日期再取消 = 退堂（連 P5 預標已扣堂 = 免費堂）** | 2026-09-28 | `production-audit-2026-09-28` | **已完成 2026-09-28** —— 學生只可以取消自己未上嘅堂，改唔到日期、刪唔到堂；新預約唔可以預先寫「已扣堂」；函數用修改前日期判斷遲取消。新 `schedule.rules.test.js` 12 條 + functions 1 條，示範過舊 code 會 fail（rules 6 條、functions 1 條）。唔使 Ani 真機試：學生撳「取消」嘅寫入同之前一模一樣 |
+| ✅ **B19** | **P1 註冊可自封 operator／送自己堂數** | 2026-09-28 | 同上 | **已完成 2026-09-28** —— 自己開帳戶只准 trainer／client，欄位只准 `completeProfile()` 寫嘅嗰 12 個。新 `userCreate.rules.test.js` 10 條（包括用真實註冊資料嘅兩條，防止擋咗正常註冊），示範過舊 rule 會 fail 4 條 |
 | **B20** | 🔵 **P2+P3 自己連教練／抄邀請碼** | 2026-09-28 | 同上 | emulator 證實：被踢學生自己連返並讀到教練銀行戶口；教練 B 可抄教練 A 邀請碼。修：連接教練同邀請碼改由伺服器處理（改動較大，改完要 Ani 真機試邀請碼） |
 | **B5a** | 問 Airwallex：FPS recurring 係真 pull 定要客戶每月撳 | 2026-09-06 | 同上 | 決定香港市場有冇「自動月費」。(a) 真 mandate = 香港做得成 / (b) 每月推通知要客戶確認 = 只係「自動提醒」,價值差好遠 |
 | ✅ **B6** | **impeccable demo 手機 preview** | 2026-09-17 批 | — | **已完成** —— 三條 link 喺下面 |
