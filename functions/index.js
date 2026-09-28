@@ -13,6 +13,7 @@ const { startSubscription, completeSubscription, cancelSubscriptionsFor, Subscri
 const { deleteAccountData } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
+const { zonedToEpochMs } = require('./zonedTime');
 
 initializeApp();
 const db = getFirestore();
@@ -360,8 +361,12 @@ exports.onScheduleCreditUpdate = functions.firestore
       // says. Reading after.date let a date change in the same write turn a finished
       // session into an "early" cancel and refund it (P4). Rules now stop clients changing
       // the date at all; this keeps a trainer's edit-then-cancel honest too.
-      const sessionDt = new Date(`${before.date}T${before.time}:00`);
-      const isLate = (sessionDt.getTime() - Date.now()) / (1000 * 60 * 60) < 24;
+      // The date and time are the trainer's wall clock, not UTC (functions/zonedTime.js).
+      const trainerId = after.trainerId || before.trainerId;
+      const trainerDoc = trainerId ? await db.doc(`users/${trainerId}`).get() : null;
+      const timeZone = trainerDoc && trainerDoc.exists ? trainerDoc.data().timeZone : undefined;
+      const sessionMs = zonedToEpochMs(before.date, before.time, timeZone);
+      const isLate = (sessionMs - Date.now()) / (1000 * 60 * 60) < 24;
 
       if (!after.deductedAtBooking) {
         if (!isLate) return; // legacy booking, early cancel — always free

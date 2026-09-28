@@ -91,6 +91,15 @@ function sessionDateTime(hoursFromNow) {
   return { date, time };
 }
 
+// { date, time } as the wall clock in `timeZone` reads `hoursFromNow` hours from now.
+function zonedSessionDateTime(hoursFromNow, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  }).formatToParts(new Date(Date.now() + hoursFromNow * 60 * 60 * 1000));
+  const v = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return { date: `${v.year}-${v.month}-${v.day}`, time: `${v.hour}:${v.minute}` };
+}
+
 async function createSchedule(fields) {
   const ref = await db.collection('schedule').add({
     trainerId: TRAINER_ID,
@@ -201,6 +210,33 @@ describe('onScheduleCreditUpdate — cancellation', () => {
     const client = await getClient();
     expect(client.sessionOffset).toBe(4); // late cancel — charge kept
     expect(client.earlyCancelCount).toBeUndefined();
+  });
+
+  // A session's date and time are the trainer's wall clock. The server runs in UTC and
+  // used to read them as UTC, so in London summer time every session looked an hour later
+  // than it was and a cancel 23h ahead was refunded as "early" (production audit
+  // 2026-09-28, High-value 2). Hong Kong and New York are used because their offsets are
+  // never zero, so these fail on the old code whatever the season the suite runs in.
+  test('time zone: a cancel 20h ahead in Hong Kong is late, not refunded', async () => {
+    await seedClient({ sessionOffset: 4 });
+    await db.doc(`users/${TRAINER_ID}`).update({ timeZone: 'Asia/Hong_Kong' });
+    const { ref, snap } = await createSchedule({ ...zonedSessionDateTime(20, 'Asia/Hong_Kong'), deductedAtBooking: true });
+
+    const change = await updateScheduleStatus(ref, snap, { status: 'cancelled' });
+    await wrappedOnScheduleCreditUpdate(change);
+
+    expect((await getClient()).sessionOffset).toBe(4);
+  });
+
+  test('time zone: a cancel 27h ahead in New York is early, and refunded', async () => {
+    await seedClient({ sessionOffset: 4 });
+    await db.doc(`users/${TRAINER_ID}`).update({ timeZone: 'America/New_York' });
+    const { ref, snap } = await createSchedule({ ...zonedSessionDateTime(27, 'America/New_York'), deductedAtBooking: true });
+
+    const change = await updateScheduleStatus(ref, snap, { status: 'cancelled' });
+    await wrappedOnScheduleCreditUpdate(change);
+
+    expect((await getClient()).sessionOffset).toBe(3);
   });
 
   test('early-cancel cap: 3rd early cancel in the same month is not refunded', async () => {

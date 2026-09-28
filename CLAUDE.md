@@ -186,6 +186,7 @@ Top-level config files:
   currency: string,         // one of CURRENCIES (utils/currencyUtils.js) — defaults to 'GBP' when absent, see convention #31
   bankDetails: { accountName: string, sortCode: string, accountNumber: string },
   subscriptionRate: number,  // per-session rate monthly plans are priced from (GBP); server re-reads it, client never sends a price
+  timeZone: string,         // IANA zone (e.g. 'Europe/London'), written once by the app from the trainer's browser; onScheduleCreditUpdate places session date/time in it (functions/zonedTime.js) — absent = read as UTC
   // client-only:
   trainerId: string | null, // UID of trainer
   age: number,

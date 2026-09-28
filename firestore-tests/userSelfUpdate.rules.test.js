@@ -108,6 +108,25 @@ describe('users/{userId} self-update allowlist', () => {
     await assertSucceeds(updateDoc(doc(db, 'users', TRAINER_A), { subscriptionRate: 65 }));
   });
 
+  // 2026-09-28: the trainer's time zone, which onScheduleCreditUpdate uses to judge a late
+  // cancel. The app writes it from the browser the first time a trainer opens it.
+  test('trainer can save their time zone', async () => {
+    const db = testEnv.authenticatedContext(TRAINER_A).firestore();
+    await assertSucceeds(updateDoc(doc(db, 'users', TRAINER_A), { timeZone: 'Europe/London' }));
+  });
+
+  test('a time zone must be a short string', async () => {
+    const db = testEnv.authenticatedContext(TRAINER_A).firestore();
+    await assertFails(updateDoc(doc(db, 'users', TRAINER_A), { timeZone: 1 }));
+    await assertFails(updateDoc(doc(db, 'users', TRAINER_A), { timeZone: '' }));
+    await assertFails(updateDoc(doc(db, 'users', TRAINER_A), { timeZone: 'x'.repeat(65) }));
+  });
+
+  test('the time zone write cannot smuggle in extra sessions', async () => {
+    const db = testEnv.authenticatedContext(CLIENT_A).firestore();
+    await assertFails(updateDoc(doc(db, 'users', CLIENT_A), { timeZone: 'Europe/London', totalSessions: 999 }));
+  });
+
   // subscriptionTester unlocks the sandbox plan picker for one client. It must be the
   // trainer's decision: a client able to set it on themselves could open a GoCardless
   // flow the trainer never agreed to.

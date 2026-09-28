@@ -237,6 +237,21 @@ export function AppProvider({ children }) {
     return () => unsub();
   }, [currentUser?.id, currentUser?.role]);
 
+  // --- Trainer time zone ---
+  // Session dates and times are the trainer's wall clock; the server needs the zone to
+  // judge a late cancel (functions/zonedTime.js) and otherwise reads them as UTC, an hour
+  // out during British Summer Time. Written once, from this browser, when missing — not
+  // overwritten on every visit, so opening the app abroad does not move every session.
+  const trainerZoneMissing = currentUser?.role === 'trainer' && !currentUser.timeZone;
+  useEffect(() => {
+    if (!trainerZoneMissing) return;
+    let timeZone;
+    try { timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return; }
+    if (!timeZone) return;
+    updateDoc(doc(db, 'users', currentUser.id), { timeZone })
+      .catch(err => console.error('[timeZone] could not save', err));
+  }, [trainerZoneMissing, currentUser?.id]);
+
   // --- gym啦: studios, studioSlots, trainerApplications listeners ---
   useEffect(() => {
     if (!currentUser?.id) return;

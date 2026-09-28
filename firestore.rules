@@ -121,7 +121,16 @@ service cloud.firestore {
                          'renewalPrompt3Shown','renewalPrompt1Shown',
                          'renewalPromptSnoozedUntil',
                          'businessName','intakeCompleted',
-                         'language','subscriptionRate'])
+                         'language','subscriptionRate','timeZone'])
+          // timeZone: the trainer's IANA zone, written by the app from the browser.
+          // onScheduleCreditUpdate reads it off the TRAINER's doc to place a session's
+          // wall-clock time (functions/zonedTime.js); on a client doc nothing reads it.
+          // A trainer can only move the late-cancel line for their own clients, whose
+          // credit they can already edit directly.
+          && (!('timeZone' in request.resource.data)
+              || (request.resource.data.timeZone is string
+                  && request.resource.data.timeZone.size() > 0
+                  && request.resource.data.timeZone.size() <= 64))
           // subscriptionRate: a trainer's per-session rate for monthly plans (Phase 3).
           // Harmless on a client doc — the server reads it only from the TRAINER's doc,
           // and prices every plan itself; the client never sends a price. Deliberately
