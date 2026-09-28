@@ -299,6 +299,9 @@ Phase 3 Step 1–2 已經 deploy 咗，但**從來未有真人撳過個掣**。S
 | ✅ **B15** | **裝 4 個 skill** | 2026-09-26 Ani「揀四個」| `app-audit-2026-09-26` | **已完成 2026-09-26** —— rules auditor、rules creation、webapp testing、verification-before-completion（commit 68ba101）|
 | ✅ **B16** | **owner-only 功能加 `email_verified` 檢查** | 2026-09-26 | rules auditor | **已完成 2026-09-27** —— Ani 2026-09-27 答「我自己就用 Google」。6 個 owner callable（`functions/ownerAuth.js`）同 `platformEvents` rule 都要求 email 已驗證。Google 登入永遠係已驗證，所以唔會鎖到你。**Ani 2026-09-27 真機確認：Profile「平台數據」仍然見到** |
 | ✅ **B17** | **CI 跑晒測試先 deploy** | 2026-09-27 Ani「好」| `app-audit-2026-09-26` 🔴4 | **已完成 2026-09-27** —— 每次 push：lint → 前端 282 條 → 伺服器 127 條 → 權限規則 73 條，全過先 deploy。順手修好 lint 設定（~440 個假錯 → 0），同埋 09-27 自己漏跑前端測試而上咗線嘅一條 guard |
+| **B18** | 🔵 **P4 學生改日期再取消 = 退堂** | 2026-09-28 | `production-audit-2026-09-28` | emulator 證實：已完成嘅堂改去未來再取消，`sessionOffset` 5→4。修：rules 唔准學生改 date/time；函數用修改前日期判斷遲取消 |
+| **B19** | 🔵 **P1 註冊可自封 operator／送自己堂數** | 2026-09-28 | 同上 | emulator 證實：新帳戶寫入 `role:'operator'`、`totalSessions:1000` 成功。修：create 規則限 role 同禁 credit 欄位 |
+| **B20** | 🔵 **P2+P3 自己連教練／抄邀請碼** | 2026-09-28 | 同上 | emulator 證實：被踢學生自己連返並讀到教練銀行戶口；教練 B 可抄教練 A 邀請碼。修：連接教練同邀請碼改由伺服器處理（改動較大，改完要 Ani 真機試邀請碼） |
 | **B5a** | 問 Airwallex：FPS recurring 係真 pull 定要客戶每月撳 | 2026-09-06 | 同上 | 決定香港市場有冇「自動月費」。(a) 真 mandate = 香港做得成 / (b) 每月推通知要客戶確認 = 只係「自動提醒」,價值差好遠 |
 | ✅ **B6** | **impeccable demo 手機 preview** | 2026-09-17 批 | — | **已完成** —— 三條 link 喺下面 |
 | ~~B7~~ | ~~`/analytics` 獲客指標~~ | — | — | **暫緩** |
