@@ -68,6 +68,7 @@
 - P2 + P3 已修（B20）：連接教練同邀請碼改由伺服器處理；B21 改由 component test 驗。
 - High-value 2（遲取消用 UTC）已修（B22）：用教練時區計。
 - High-value 1（冇錯誤監察）已修（B23）：app 報錯去 `reportClientError`，推送通知 Ani。
+- High-value 3、4 已修（B28、B27，2026-09-29）：教練改學生資料有欄位限制；學生只見教練忙碌時間，睇唔到其他學生嘅課堂。
 
 ## Next action
 

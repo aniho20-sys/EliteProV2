@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock, RotateCcw } from 'lucide-react';
@@ -27,7 +27,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerSchedule, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage, updateClient } = useApp();
+  const { currentUser, getSchedule, getTrainerBusySlots, refreshTrainerBusySlots, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage, updateClient } = useApp();
   const toast = useToast();
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
@@ -58,6 +58,13 @@ export default function SchedulePage() {
   const [blockTimes, setBlockTimes] = useState(new Set());
   const [recapSession, setRecapSession] = useState(null); // schedule item to recap
   const [recapNote, setRecapNote] = useState('');
+
+  // A client's view of when the coach is busy is fetched, not live, so refresh it each time
+  // the booking form opens — another client may have booked since the page loaded.
+  useEffect(() => {
+    if (!showAdd || isTrainer) return;
+    refreshTrainerBusySlots().catch(err => console.error('[availability] refresh failed', err));
+  }, [showAdd, isTrainer, refreshTrainerBusySlots]);
   const [recapSend, setRecapSend] = useState(true);
   const [savingRecap, setSavingRecap] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(null);
@@ -95,8 +102,9 @@ export default function SchedulePage() {
   const allSchedule = getSchedule(
     isTrainer ? { trainerId: currentUser.id } : { clientId: currentUser.id }
   );
-  // For availability checks: trainers use their own schedule; clients use trainer's full schedule
-  const refSchedule = isTrainer ? allSchedule : getTrainerSchedule();
+  // For availability checks: trainers use their own schedule. Clients use when their coach is
+  // busy (times only — getTrainerAvailability) plus their own sessions, which stay live.
+  const refSchedule = isTrainer ? allSchedule : [...getTrainerBusySlots(), ...allSchedule];
 
   const isWithin24Hours = (date, time) => {
     const sessionDt = new Date(`${date}T${time}:00`);

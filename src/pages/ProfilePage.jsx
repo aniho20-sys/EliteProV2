@@ -99,6 +99,7 @@ export default function ProfilePage() {
   }[currentUser.role] || currentUser.role;
 
   const [editing, setEditing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [form, setForm] = useState({
     name: currentUser.name || '',
     email: currentUser.email || '',
@@ -267,7 +268,7 @@ export default function ProfilePage() {
     ? getClient(currentUser.trainerId)?.name || 'Unknown'
     : null;
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const updates = { ...form };
     // Don't allow Firebase Auth users to change email — managed by provider
@@ -276,9 +277,17 @@ export default function ProfilePage() {
       updates.age = Number(updates.age) || currentUser.age;
       updates.height = Number(updates.height) || currentUser.height;
     }
-    updateClient(currentUser.id, updates);
-    setEditing(false);
-    toast(t('profile.toast_updated'));
+    // Awaited (#11): it used to report "updated" whether or not the write was accepted.
+    setSavingProfile(true);
+    try {
+      await updateClient(currentUser.id, updates);
+      setEditing(false);
+      toast(t('profile.toast_updated'));
+    } catch {
+      toast(t('profile.toast_generic_error'), 'error');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   // Here the address is the signed-in user's own, so the account definitely exists and the
@@ -550,7 +559,7 @@ export default function ProfilePage() {
               </>
             )}
             <div className="flex gap-8 mt-16">
-              <button type="submit" className="btn btn-primary"><Save size={16} /> {t('common.save')}</button>
+              <button type="submit" className="btn btn-primary" disabled={savingProfile}><Save size={16} /> {t('common.save')}</button>
               <button type="button" className="btn btn-outline" onClick={() => setEditing(false)}>{t('common.cancel')}</button>
             </div>
           </form>

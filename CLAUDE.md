@@ -122,6 +122,7 @@ functions/                    # Cloud Functions (deployed and live on Blaze) —
 │                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
 │                              # (daily scheduled function)
 ├── inviteCodes.js             # Invite code reservation + resolve + connectWithInviteCode/ensureInviteCode logic (P2/P3)
+├── availability.js            # getTrainerAvailability: a client's view of when their coach is busy (times only)
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
 ├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
 │                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)
@@ -509,7 +510,8 @@ updateWorkoutLog(logId, updates)  // trainer adds trainerNotes; clients edit the
 
 // Schedule
 getSchedule({ trainerId?, clientId?, date? })
-getTrainerSchedule(trainerId)    // returns all schedule items for a trainer
+getTrainerBusySlots()            // client: when their coach is busy — { date, time, duration } only
+refreshTrainerBusySlots()        // client: re-fetch the above (booking form calls it on open)
 addScheduleItem(item)
 updateScheduleItem(itemId, updates)
 deleteScheduleItem(itemId)
@@ -589,12 +591,12 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 
 ## Firestore Security Rules Summary
 - **Auth required** for all reads and writes
-- **users**: Read only your own doc, your own clients, or your own trainer (single `get` + the two AppContext `list` queries — an unconstrained read of the collection fails); self-create own profile as `trainer`/`client` with only the fields `completeProfile()` writes (no credit/billing/tester fields — `firestore-tests/userCreate.rules.test.js`); trainer can create/update their clients. `role` field is **immutable after creation** — prevents client→trainer privilege escalation
+- **users**: Read only your own doc, your own clients, or your own trainer (single `get` + the two AppContext `list` queries — an unconstrained read of the collection fails); self-create own profile as `trainer`/`client` with only the fields `completeProfile()` writes (no credit/billing/tester fields — `firestore-tests/userCreate.rules.test.js`); trainer can create their clients and update only the allowlisted fields the app writes (session balance, renewal/churn snoozes, tags, tester flag, badges, clearing `trainerId` — `firestore-tests/trainerClientUpdate.rules.test.js`). `role` field is **immutable after creation** — prevents client→trainer privilege escalation
 - **bodyStats**: Only the client or their trainer can read/write; only the client can delete
 - **intakeForms**: Owner client or their trainer can read; only the owner client can create/update. **Delete is disabled**
 - **workoutPlans**: Owner trainer or assigned client can read; trainer creates/updates/deletes own plans. `trainerId` is immutable after creation
 - **workoutLogs**: Owner client or their trainer can read; clients create and update their own logs; trainers can update logs they created (full fields) or add `trainerNotes` to any client log; **delete is disabled**
-- **schedule**: Trainer, client, or any client of the same trainer can read; trainer books for own clients only, client books with own trainer only (as `status: 'pending'`, no credit fields); a client's only update is cancelling their own pending/confirmed session (`status` + `lateCancellation`); only the trainer deletes; `trainerId`+`clientId` are immutable after creation — `firestore-tests/schedule.rules.test.js`
+- **schedule**: Only the trainer and the session's own client can read (other clients of the same trainer get busy times only, from the `getTrainerAvailability` callable — `functions/availability.js`, 2026-09-29); trainer books for own clients only, client books with own trainer only (as `status: 'pending'`, no credit fields); a client's only update is cancelling their own pending/confirmed session (`status` + `lateCancellation`); only the trainer deletes; `trainerId`+`clientId` are immutable after creation — `firestore-tests/schedule.rules.test.js`
 - **messages**: Sender and recipient can read; sender creates; recipient can only update `read` field; **delete is disabled**
 - **exercises**: Trainer reads own; client reads trainer's + personal; any auth can create with valid trainerId; trainer can update/delete own exercises. `trainerId` is immutable after creation
 - **exerciseOverrides**: Trainer reads/writes own; client reads their own trainer's (read-only, never writes). `trainerId`+`exerciseId` are immutable after creation

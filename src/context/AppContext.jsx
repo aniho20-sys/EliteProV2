@@ -41,7 +41,7 @@ export function AppProvider({ children }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [workoutLogs, setWorkoutLogs] = useState([]);
   const [schedule, setSchedule] = useState([]);
-  const [trainerSchedule, setTrainerSchedule] = useState([]);
+  const [trainerBusySlots, setTrainerBusySlots] = useState([]);
   const [messages, setMessages] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [exerciseOverrides, setExerciseOverrides] = useState([]);
@@ -107,7 +107,7 @@ export function AppProvider({ children }) {
       // Not authed: reset state and mark as non-loading
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
-      setWorkoutLogs([]); setSchedule([]); setTrainerSchedule([]); setMessages([]); setExercises([]); setExerciseOverrides([]); setTemplates([]);
+      setWorkoutLogs([]); setSchedule([]); setTrainerBusySlots([]); setMessages([]); setExercises([]); setExerciseOverrides([]); setTemplates([]);
       loadedRef.current = new Set();
       retryCountRef.current = 0;
       setLoading(false);
@@ -308,15 +308,24 @@ export function AppProvider({ children }) {
     return () => unsub();
   }, [currentUser?.id, currentUser?.trainerId, currentUser?.role]);
 
-  // --- Trainer schedule for clients: load trainer's full schedule so clients see real availability ---
+  // --- When a client's coach is busy (for booking) ---
+  // Dates, times and lengths only, from the getTrainerAvailability function. Clients used to
+  // listen to the coach's whole schedule, which showed them other clients' sessions and the
+  // coach's notes (production audit 2026-09-28, High-value 4); firestore.rules no longer
+  // allows it. Not live: the booking form refreshes it when it opens, and a client's own
+  // bookings come from their own schedule listener, which is.
+  const refreshTrainerBusySlots = useCallback(async () => {
+    const { data } = await httpsCallable(functions, 'getTrainerAvailability')();
+    setTrainerBusySlots((data && data.slots) || []);
+  }, []);
+
   useEffect(() => {
     if (!currentUser?.id || currentUser.role !== 'client' || !currentUser.trainerId) return;
-    const unsub = onSnapshot(
-      query(collection(db, 'schedule'), where('trainerId', '==', currentUser.trainerId)),
-      (snap) => setTrainerSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id }))),
-      () => {},
-    );
-    return () => unsub();
+    let cancelled = false;
+    httpsCallable(functions, 'getTrainerAvailability')()
+      .then(({ data }) => { if (!cancelled) setTrainerBusySlots((data && data.slots) || []); })
+      .catch(err => console.error('[availability] load failed', err));
+    return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.trainerId, currentUser?.role]);
 
   // --- Body Stats: per-client subcollection listeners (reactive on users list) ---
@@ -586,7 +595,7 @@ export function AppProvider({ children }) {
   };
 
   // Returns the trainer's full schedule (for clients to check real availability)
-  const getTrainerSchedule = () => trainerSchedule;
+  const getTrainerBusySlots = () => trainerBusySlots;
 
   const addScheduleItem = async (item) => {
     const newItem = { ...item, id: `sched-${Date.now()}`, status: item.status || 'pending' };
@@ -1078,7 +1087,7 @@ export function AppProvider({ children }) {
     data: { users, workoutPlans, workoutLogs, schedule, messages, exercises, invoices },
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
-    getSchedule, getTrainerSchedule, addScheduleItem, updateScheduleItem, deleteScheduleItem,
+    getSchedule, getTrainerBusySlots, refreshTrainerBusySlots, addScheduleItem, updateScheduleItem, deleteScheduleItem,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
     getSessionStats,
     getPersonalRecords,

@@ -128,6 +128,8 @@ beforeEach(() => {
         : { data: { found: false } };
     }
     if (name === 'ensureInviteCode') return { data: { code: 'NEW234' } };
+    // Once connected, the app asks when the new coach is busy (functions/availability.js).
+    if (name === 'getTrainerAvailability') return { data: { slots: [] } };
     throw new Error(`unexpected callable ${name}`);
   });
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -142,11 +144,15 @@ describe('student signs up with a coach\'s invite code', () => {
     await signUp({ role: 'client', code: 'ani123' });
     await waitFor(() => expect(calls.some(c => c[1] === 'connectWithInviteCode')).toBe(true));
 
-    expect(calls.map(c => `${c[0]}:${c[1]}`)).toEqual([
+    // The sign-up itself, in order. After it, the app may also fetch the new coach's busy
+    // times — only ever after the connection, never before.
+    const sequence = calls.map(c => `${c[0]}:${c[1]}`);
+    expect(sequence.slice(0, 3)).toEqual([
       'callable:resolveInviteCode',
       'setDoc:users/student-1',
       'callable:connectWithInviteCode',
     ]);
+    expect(sequence.slice(3).every(c => c === 'callable:getTrainerAvailability')).toBe(true);
     expect(calls[0][2]).toEqual({ code: 'ANI123' });
     expect(calls[2][2]).toEqual({ code: 'ANI123' });
   });
@@ -239,7 +245,7 @@ describe('connectToTrainer', () => {
 // ── The names above must be names the server exports ──
 
 describe('callables the app uses exist on the server', () => {
-  test.each(['resolveInviteCode', 'connectWithInviteCode', 'ensureInviteCode'])('%s', (name) => {
+  test.each(['resolveInviteCode', 'connectWithInviteCode', 'ensureInviteCode', 'getTrainerAvailability'])('%s', (name) => {
     expect(exportedCallables).toContain(name);
     // …and the app calls it by exactly that name.
     expect(source('src/context/AppContext.jsx')).toContain(`'${name}'`);

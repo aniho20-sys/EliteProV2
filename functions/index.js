@@ -15,6 +15,7 @@ const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
+const { trainerAvailability } = require('./availability');
 
 initializeApp();
 const db = getFirestore();
@@ -892,6 +893,14 @@ exports.onNewTrainerSignup = functions.firestore
 // Owner-only operating numbers for the Profile page. A callable rather than a stored
 // counter: it cannot drift, needs no backfill for the accounts that already exist, and
 // the owner check happens server-side where it cannot be edited away in devtools.
+// ── A client's view of when their coach is free (functions/availability.js) ──
+// Replaces clients reading the coach's whole schedule, which exposed other clients'
+// sessions and the coach's notes on them (production audit 2026-09-28, High-value 4).
+exports.getTrainerAvailability = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  return trainerAvailability(db, context.auth.uid);
+});
+
 // ── Error monitoring (functions/clientErrors.js) ──
 // The app reports uncaught errors, failed promises and white screens here. Open to
 // signed-out callers on purpose — the login page can crash too — and bounded by the daily

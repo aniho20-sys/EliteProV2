@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, updateDoc, deleteDoc } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc } = require('firebase/firestore');
 
 // What a client may do to a session, and what they may put in a new booking.
 //
@@ -103,5 +103,26 @@ describe('client bookings', () => {
   test('may not create a booking that is already completed, or a blocked slot', async () => {
     await assertFails(setDoc(doc(as(CLIENT), 'schedule', 'new3'), { ...base, id: 'new3', status: 'completed' }));
     await assertFails(setDoc(doc(as(CLIENT), 'schedule', 'new4'), { ...base, id: 'new4', status: 'pending', isBlocked: true }));
+  });
+});
+
+// Production audit 2026-09-28, High-value 4: every client of a coach could read every
+// session of that coach — who else trains there, and the coach's notes on them. Booking
+// availability now comes from the getTrainerAvailability function (times only).
+describe('who may read a session', () => {
+  test('the coach and the client it belongs to', async () => {
+    await assertSucceeds(getDoc(doc(as(COACH), 'schedule', 'upcoming')));
+    await assertSucceeds(getDoc(doc(as(CLIENT), 'schedule', 'upcoming')));
+  });
+
+  test("not another client of the same coach", async () => {
+    await assertFails(getDoc(doc(as(OTHER), 'schedule', 'upcoming')));
+  });
+
+  test("not another client of the same coach, even a blocked slot", async () => {
+    await env.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), 'schedule', 'blocked'), { trainerId: COACH, clientId: '', isBlocked: true, date: '2026-10-21', time: '09:00' });
+    });
+    await assertFails(getDoc(doc(as(OTHER), 'schedule', 'blocked')));
   });
 });
