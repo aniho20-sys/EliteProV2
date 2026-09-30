@@ -199,6 +199,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // GoCardless webhook events already processed, by event id (functions/gcWebhooks.js).
+    // Server-only.
+    match /gcEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     // Invite code reservations — one document per code, owned by exactly one trainer.
     // Written and read only by Cloud Functions (functions/inviteCodes.js).
     match /inviteCodes/{code} {

@@ -68,11 +68,9 @@ GoCardless account, instead of everyone sharing one login.
      ```
    - **Leave blank** (all marked Optional on the form as of 2026-09-23):
      **Post onboarding URL**, **Payment setup URL**, **Webhook URL**, and leave
-     **Webhook client certificate** unticked. None of them is read by any code
-     in this repo. The Webhook URL matters most: there is **no GoCardless
-     webhook endpoint** in `functions/index.js` yet (checked 2026-09-23), so any
-     URL typed there would have GoCardless delivering events to a 404.
-     Add it when the webhook handler is built, not before.
+     **Webhook client certificate** unticked. The **Webhook URL** is now
+     needed (the handler exists since 2026-09-30) — it is set separately in
+     **step 7** below, so an app created before that date can add it later.
    - **"I agree to the terms of the partner agreement"** — required to submit.
      It is a real agreement between Ani's business and GoCardless, even in
      sandbox, and nobody on the agent side has read it. Ani's call.
@@ -167,6 +165,41 @@ starts working.
 If you want a green CI run to confirm anyway, ask and a no-op commit can be
 pushed.
 
+
+## 7. Webhook: so a paid month adds sessions (added 2026-09-30, Step 4)
+
+Without this, a student's monthly Direct Debit is still collected by GoCardless,
+but ElitePro never hears about it — no sessions are added. The agent cannot do
+this step: it needs your GoCardless login and your Google Cloud login.
+
+1. Open **https://manage-sandbox.gocardless.com/developers/partners** → tap the
+   **ElitePro** app → **Edit** (top right) → **Webhook URL**, paste exactly:
+   ```
+   https://us-central1-elitepro-16718.cloudfunctions.net/gcWebhook
+   ```
+   Save.
+2. On the same app page, **Webhooks** section → **Webhook secret** → tap
+   **Reveal**, then the copy button. GoCardless creates this value; you do not
+   choose it. **Do not paste it into chat.**
+3. Open
+   **https://console.cloud.google.com/security/secret-manager?project=elitepro-16718**
+   → **+ Create Secret** → Name `GC_WEBHOOK_SECRET` (exactly), Secret value =
+   what you copied in step 2 → **Create secret**. Nothing else to change.
+
+No redeploy. The function reads the secret on every call.
+
+**Traps (same shape as 2026-09-23):** copying the label instead of the value,
+or copying the secret before tapping Reveal. If either happens, every event is
+refused (answer 498) and no sessions are added. Nothing is lost: GoCardless
+tries each delivery 9 times at growing intervals, and any failed one can be
+retried by hand from its dashboard (Developers → Webhooks, kept 3 months) once
+the secret is fixed.
+
+**How to tell it worked:** in the GoCardless app page's webhook list, each
+delivery shows a response code. `200` = received and processed. `503` = the
+`GC_WEBHOOK_SECRET` secret does not exist yet. `498` = the secret's value is
+not the one GoCardless shows.
+
 ---
 
 ## How to check whether steps 3–5 are already done
@@ -195,8 +228,8 @@ only ever have answered "GoCardless isn't set up yet".
 
 ## What "done" looks like
 
-- Secret Manager lists exactly three secrets: `GC_CLIENT_ID`,
-  `GC_CLIENT_SECRET`, `GC_REDIRECT_URI`
+- Secret Manager lists four secrets: `GC_CLIENT_ID`, `GC_CLIENT_SECRET`,
+  `GC_REDIRECT_URI`, and (from step 7) `GC_WEBHOOK_SECRET`
 - In the app, as a trainer: Profile → **GoCardless Connection** card → tapping
   **Connect GoCardless** opens a real GoCardless sandbox consent page, not an
   error toast
@@ -239,6 +272,8 @@ table below), so none of this needs Cloud Logging any more.
 - [Partners: connecting your users](https://developer.gocardless.com/partners/connecting-your-users/)
 - [Partners introduction](https://developer.gocardless.com/getting-started/partners/introduction/)
 - [Sandbox accounts (support)](https://support.gocardless.com/hc/en-us/articles/212553869-Sandbox-accounts)
+- [App details (support)](https://support.gocardless.com/hc/en-us/articles/30497505670684-App-details) — webhook secret: "hidden by default. Click Reveal to view it"
+- [Webhooks reference](https://docs.gocardless.com/docs/api-reference/webhooks) — 9 delivery attempts, 10 s timeout, manual retry from the Dashboard
 - `reports/gocardless-access-findings-2026-08-18.md` — the fuller write-up of
   what was verified, including what could not be established (GoCardless
   publishes no timeline for live approval)

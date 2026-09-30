@@ -144,6 +144,20 @@ async function readGcAppCredentials() {
   }
 }
 
+// The GoCardless webhook endpoint secret (Step 4) — Secret Manager secret GC_WEBHOOK_SECRET,
+// copied from the partner app's webhook settings in the GoCardless dashboard. Like the app
+// credentials: read at call time, and null — never a throw — when it is not there yet, so
+// gcWebhook answers "not ready" instead of the deploy failing (#29).
+async function readGcWebhookSecret() {
+  try {
+    return await readAppSecret('GC_WEBHOOK_SECRET');
+  } catch (err) {
+    console.warn('[gcSecrets] GoCardless webhook secret not configured yet:', err.message);
+    return null;
+  }
+}
+
+exports.readGcWebhookSecret = readGcWebhookSecret;
 exports.writeGcAccessToken = writeGcAccessToken;
 exports.readGcAccessToken = readGcAccessToken;
 exports.deleteGcAccessToken = deleteGcAccessToken;

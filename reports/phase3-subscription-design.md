@@ -210,6 +210,19 @@ On each confirmed monthly payment for a subscription:
    ```
    grant = subscription.tier + subscription.rolloverBanked
    ```
+
+   > ⚠️ **Correction (2026-09-30, while building Step 4).** This formula
+   > double-counts. A client's credit is a running balance
+   > (`totalSessions − sessionOffset`), so last month's unused sessions are
+   > *already in it* — adding `rolloverBanked` again would hand them out a
+   > second time. What the roll-over rule actually changes is how much of the
+   > leftover *survives*. As built (`functions/gcWebhooks.js` `rollover()`):
+   > each confirmed payment adds `tier`, and separately takes back the part of
+   > last period's unused allowance above `floor(tier / 2)` — written as its
+   > own `creditLedger` entry (`type: 'subscription_rollover_forfeit'`, negative
+   > `qty`), and never more than the client currently holds, so pack sessions
+   > bought separately are never touched. The cap examples in §4 still hold
+   > exactly; only the arithmetic that delivers them changed.
 4. Write one `creditLedger` entry: `{ clientId, trainerId, date: today,
    qty: grant, rate: subscription.ratePerSession, addedBy:
    'subscription-period' }` (reusing `addCreditLedgerEntry`'s existing

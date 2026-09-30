@@ -3,7 +3,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
-const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials, readGcAccessToken } = require('./gcSecrets');
+const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials, readGcAccessToken, readGcWebhookSecret } = require('./gcSecrets');
 const { errorRedirectUrl, oauthErrorCode } = require('./gcOAuthErrors');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
@@ -16,6 +16,7 @@ const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeE
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
 const { trainerAvailability } = require('./availability');
+const { verifyWebhookSignature, handleWebhook } = require('./gcWebhooks');
 
 initializeApp();
 const db = getFirestore();
@@ -890,9 +891,35 @@ exports.onNewTrainerSignup = functions.firestore
     return null;
   });
 
-// Owner-only operating numbers for the Profile page. A callable rather than a stored
-// counter: it cannot drift, needs no backfill for the accounts that already exist, and
-// the owner check happens server-side where it cannot be edited away in devtools.
+// ── GoCardless webhooks — Phase 3 Step 4 (functions/gcWebhooks.js) ──
+// Registered as the partner app's Webhook URL in the GoCardless dashboard:
+//   https://us-central1-elitepro-16718.cloudfunctions.net/gcWebhook
+// Public like gcOAuthCallback, and proven to be GoCardless by the signature, not by who
+// can reach it. 498 = bad signature (GoCardless's documented answer); 5xx = GoCardless
+// retries (9 attempts in all, then a manual retry from its dashboard).
+async function pushTo(userId, notification) {
+  const snap = await db.doc(`users/${userId}`).get().catch(() => null);
+  if (!snap || !snap.exists) return;
+  await sendPush(userId, snap.data().fcmTokens, notification, { url: '/#/profile' }).catch(() => {});
+}
+
+exports.gcWebhook = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') { res.status(405).send('POST only'); return; }
+  const secret = await readGcWebhookSecret();
+  if (!secret) { res.status(503).send('Not configured'); return; }
+  if (!verifyWebhookSignature(req.rawBody, req.get('Webhook-Signature'), secret)) {
+    res.status(498).send('Invalid signature');
+    return;
+  }
+  let body;
+  try { body = JSON.parse(req.rawBody.toString('utf8')); } catch { res.status(400).send('Bad JSON'); return; }
+  const { failed } = await handleWebhook({
+    db, body, readToken: readGcAccessToken, fetchImpl: fetch, now: () => new Date(),
+    notify: ({ userId, title, body: text }) => pushTo(userId, { title, body: text }),
+  });
+  res.status(failed ? 500 : 200).send(failed ? 'Retry' : 'OK');
+});
+
 // ── A client's view of when their coach is free (functions/availability.js) ──
 // Replaces clients reading the coach's whole schedule, which exposed other clients'
 // sessions and the coach's notes on them (production audit 2026-09-28, High-value 4).
@@ -957,6 +984,9 @@ exports.reportClientError = functions.https.onCall(async (data, context) => {
   return { ok: true };
 });
 
+// Owner-only operating numbers for the Profile page. A callable rather than a stored
+// counter: it cannot drift, needs no backfill for the accounts that already exist, and
+// the owner check happens server-side where it cannot be edited away in devtools.
 exports.getPlatformStats = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');

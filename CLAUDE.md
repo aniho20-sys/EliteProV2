@@ -110,7 +110,7 @@ src/
 ├── App.jsx                   # Root: provider tree + routing + invite code URL parsing + GYMLA_ENABLED flag
 └── main.jsx                  # Entry point
 
-functions/                    # Cloud Functions (deployed and live on Blaze) — 13 functions:
+functions/                    # Cloud Functions (deployed and live on Blaze):
 ├── accountDeletion.js         # What onAccountDelete deletes / detaches / keeps (financial records kept)
 ├── index.js                  # onAccountDelete (cancels GoCardless plans first — see accountDeletion.js), onNewMessage, onNewSchedule, onScheduleUpdate,
 │                              # onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow (push to client when
@@ -120,7 +120,11 @@ functions/                    # Cloud Functions (deployed and live on Blaze) —
 │                              # (callable, builds authorize URL), gcOAuthCallback (public onRequest
 │                              # HTTP endpoint — no Firebase Auth context, CSRF-protected via
 │                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
-│                              # (daily scheduled function)
+│                              # (daily scheduled function), gcWebhook (public onRequest — GoCardless
+│                              # payment/subscription/mandate events, signature-checked, see gcWebhooks.js)
+├── gcWebhooks.js              # Step 4: verifies the webhook signature, grants a month's sessions on a
+│                              # confirmed payment (idempotent per payment id, roll-over cap), past_due on
+│                              # failure, cancelled on subscription/mandate end; per-event dedupe in gcEvents
 ├── inviteCodes.js             # Invite code reservation + resolve + connectWithInviteCode/ensureInviteCode logic (P2/P3)
 ├── availability.js            # getTrainerAvailability: a client's view of when their coach is busy (times only)
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
@@ -388,12 +392,16 @@ Append-only top-up history — one entry per top-up, never updated/deleted (corr
   date: string,      // 'YYYY-MM-DD'
   qty: number,        // sessions added
   rate: number | null,// £/session charged for this top-up
-  addedBy: string,    // trainer UID
+  addedBy: string,    // trainer UID, or 'subscription' for a monthly-plan payment
+  type: string,       // optional: absent = pack top-up · 'overdraft' / 'overdraft_reversed' (#33) ·
+                      // 'subscription' (qty = tier, doc id subpay-{paymentId}) ·
+                      // 'subscription_rollover_forfeit' (qty negative, doc id subforfeit-{paymentId})
 }
 ```
+Monthly-plan entries are written only by `gcWebhook` (`functions/gcWebhooks.js`), keyed on the GoCardless payment id so a redelivered webhook can never grant twice.
 
-#### `subscriptions/{subscriptionId}` (Phase 3 — Step 3 live in sandbox, 2026-09-23)
-Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. Created by `gcStartSubscription`, activated by `gcSubscriptionReturn` / `gcRefreshSubscription` only after GoCardless itself reports the billing request fulfilled (`functions/gcSubscriptions.js`). Doc id is a Firestore auto-id, not `Date.now()` (#4) — it appears in a public return URL, so it must not be guessable. **Sessions are not granted yet** — that is Step 4 (payment webhooks). While `SANDBOX` is true in `gcSubscriptions.js`, only clients with `subscriptionTester: true` (set by their trainer) can start a plan.
+#### `subscriptions/{subscriptionId}` (Phase 3 — Step 3 live in sandbox 2026-09-23; Step 4 webhooks 2026-09-30)
+Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. Created by `gcStartSubscription`, activated by `gcSubscriptionReturn` / `gcRefreshSubscription` only after GoCardless itself reports the billing request fulfilled (`functions/gcSubscriptions.js`). Doc id is a Firestore auto-id, not `Date.now()` (#4) — it appears in a public return URL, so it must not be guessable. Sessions are granted by `gcWebhook` when GoCardless confirms each monthly payment (Step 4, `functions/gcWebhooks.js`): the tier is added to `totalSessions`, and last period's unused allowance beyond `floor(tier/2)` is forfeited (never more than the client holds). A failed or charged-back payment sets `past_due`; a later confirmed one sets it back to `active`. Ending a subscription or mandate on GoCardless sets `cancelled`. While `SANDBOX` is true in `gcSubscriptions.js`, only clients with `subscriptionTester: true` (set by their trainer) can start a plan.
 ```js
 {
   id: string,
@@ -413,9 +421,12 @@ Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-sub
   provider: 'gocardless' | 'stripe',   // which processor holds this subscription
   providerAuthorisationId: string,     // GoCardless: mandate id · Stripe: payment_method id
   providerSubscriptionId: string,
-  currentPeriodStart: string,
-  currentPeriodEnd: string,
-  rolloverBanked: number,
+  currentPeriodStart: string,   // charge date of the last confirmed payment
+  currentPeriodEnd: string,     // start + 1 month − 1 day
+  rolloverBanked: number,       // unused sessions carried into the current period (≤ floor(tier/2))
+  lastPaymentId: string,        // GoCardless payment id of the last payment event acted on
+  lastPaymentStatus: 'confirmed' | 'failed',
+  paymentFailedAt: string | null,  // 'YYYY-MM-DD' of the last failure, cleared on the next confirmed payment
   pausedAt: string | null,
   pauseResumeDate: string | null,
   pauseHistory: [{ pausedAt: string, resumeDate: string, requestedAt: string }],
@@ -606,6 +617,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **paymentConnections**: Owner trainer only can read; Cloud-Function-only writes (Admin SDK bypasses the rule)
 - **oauthNonces**: No client read or write at all — created/consumed entirely server-side
 - **clientErrors**: Owner reads (verified email); written only by the `reportClientError` function. `clientErrorBudget` is server-only
+- **gcEvents**: Server-only (`allow read, write: if false`) — one doc per processed GoCardless webhook event id, so a redelivery is skipped
 
 ## Styling Conventions
 - All styles live in `src/styles/index.css`
