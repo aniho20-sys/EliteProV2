@@ -18,7 +18,7 @@ process.env.GCLOUD_PROJECT = 'elitepro-fn-test-delete';
 const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp({ projectId: 'elitepro-fn-test-delete' });
 const db = admin.firestore();
-const { deleteAccountData, CHUNK } = require('../accountDeletion');
+const { deleteAccountData, removeManagedClient, CHUNK } = require('../accountDeletion');
 
 const CLIENT = 'del-client-1';
 const TRAINER = 'del-trainer-1';
@@ -138,4 +138,66 @@ test('a message to yourself matches two queries and is still deleted once, witho
   await db.doc('messages/self').set({ from: CLIENT, to: CLIENT });
   await expect(deleteAccountData({ db, uid: CLIENT })).resolves.toBeTruthy();
   expect(await exists('messages/self')).toBe(false);
+});
+
+// ── Clients without the app (B35) ──
+// A coach can add a client who never installs the app. The record is the coach's alone,
+// so it is deleted — never detached — when the coach removes it or deletes their account.
+const MANAGED = 'managed-1759200000000-ab12';
+
+async function seedManaged() {
+  const w = (path, data) => db.doc(path).set(data);
+  await Promise.all([
+    w(`users/${MANAGED}`, { id: MANAGED, role: 'client', trainerId: TRAINER, managed: true, name: 'Sam' }),
+    w(`bodyStats/${MANAGED}`, { clientId: MANAGED }),
+    w(`bodyStats/${MANAGED}/entries/e1`, { weight: 90 }),
+    w('workoutLogs/ml1', { clientId: MANAGED, trainerId: TRAINER }),
+    w('schedule/ms1', { trainerId: TRAINER, clientId: MANAGED }),
+    w('workoutPlans/mp1', { trainerId: TRAINER, clientId: MANAGED }),
+    w('invoices/mi1', { trainerId: TRAINER, clientId: MANAGED }),
+    w('creditLedger/mc1', { trainerId: TRAINER, clientId: MANAGED }),
+  ]);
+}
+const MANAGED_DATA = [`users/${MANAGED}`, `bodyStats/${MANAGED}`, `bodyStats/${MANAGED}/entries/e1`,
+  'workoutLogs/ml1', 'schedule/ms1', 'workoutPlans/mp1'];
+
+describe('a client without the app', () => {
+  beforeEach(seedManaged);
+
+  test('deleting the coach deletes the no-app client and their data, and still only detaches real clients', async () => {
+    const res = await deleteAccountData({ db, uid: TRAINER });
+    expect(res.deletedManagedClients).toBe(1);
+    expect(res.detachedClients).toBe(2);
+    for (const p of MANAGED_DATA) expect(await exists(p)).toBe(false);
+    expect((await db.doc(`users/${CLIENT}`).get()).data().trainerId).toBeNull();
+    for (const p of ['invoices/mi1', 'creditLedger/mc1']) expect(await exists(p)).toBe(true);
+  });
+
+  test('the coach removing them deletes the record and what hangs off it; financial records stay', async () => {
+    await expect(removeManagedClient({ db, trainerId: TRAINER, clientId: MANAGED })).resolves.toMatchObject({ removed: true });
+    for (const p of MANAGED_DATA) expect(await exists(p)).toBe(false);
+    for (const p of ['invoices/mi1', 'creditLedger/mc1', `users/${CLIENT}`, 'workoutLogs/l1']) expect(await exists(p)).toBe(true);
+  });
+
+  test('a second tap is harmless', async () => {
+    await removeManagedClient({ db, trainerId: TRAINER, clientId: MANAGED });
+    await expect(removeManagedClient({ db, trainerId: TRAINER, clientId: MANAGED })).resolves.toEqual({ removed: false });
+  });
+
+  test("another coach cannot remove them", async () => {
+    await expect(removeManagedClient({ db, trainerId: 'someone-else', clientId: MANAGED }))
+      .rejects.toMatchObject({ code: 'permission-denied' });
+    expect(await exists(`users/${MANAGED}`)).toBe(true);
+  });
+
+  test('a client with an account can never be deleted this way, even by their own coach', async () => {
+    const REAL_LOOKALIKE = 'managed-1759200000001-zz99';
+    await db.doc(`users/${REAL_LOOKALIKE}`).set({ id: REAL_LOOKALIKE, role: 'client', trainerId: TRAINER });
+    await expect(removeManagedClient({ db, trainerId: TRAINER, clientId: REAL_LOOKALIKE }))
+      .rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(removeManagedClient({ db, trainerId: TRAINER, clientId: CLIENT }))
+      .rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(await exists(`users/${CLIENT}`)).toBe(true);
+    expect(await exists(`users/${REAL_LOOKALIKE}`)).toBe(true);
+  });
 });

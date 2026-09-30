@@ -2,13 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, Copy, Check, Share2, UserPlus } from 'lucide-react';
+import { Search, Copy, Check, Share2, UserPlus, Plus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { inviteUrl } from '../utils/inviteLink';
+import { hasAppAccount, MANAGED_NAME_MAX } from '../utils/managedClient';
 
 export default function ClientsPage() {
-  const { currentUser, getClients, getBodyStats, getInviteCode } = useApp();
+  const { currentUser, getClients, getBodyStats, getInviteCode, addManagedClient } = useApp();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const toast = useToast();
@@ -17,6 +18,29 @@ export default function ClientsPage() {
   const [activeTag, setActiveTag] = useState('All');
   const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
   const [copied, setCopied] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  // B35: a coach can start with a client who has not signed up (or never will) instead
+  // of waiting for them to download the app — the first thing a new coach wants to try.
+  const closeAdd = () => { if (!adding) { setShowAdd(false); setNewName(''); } };
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (adding || !newName.trim()) return;
+    setAdding(true);
+    try {
+      const client = await addManagedClient(newName);
+      toast(t('clients.toast_added', { name: client.name }));
+      setShowAdd(false);
+      setNewName('');
+      navigate(`/clients/${client.id}`);
+    } catch {
+      toast(t('clients.toast_add_failed'), 'error');
+    } finally {
+      setAdding(false);
+    }
+  };
 
   // Asked once per mount: getInviteCode is recreated on every AppContext render, and it is
   // now a server call, so an effect keyed on it would call ensureInviteCode on every render
@@ -64,8 +88,13 @@ export default function ClientsPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">{t('nav.clients')}</h1>
-        <p className="page-subtitle">{t('clients.active_count', { count: clients.length })}</p>
+        <div>
+          <h1 className="page-title">{t('nav.clients')}</h1>
+          <p className="page-subtitle">{t('clients.active_count', { count: clients.length })}</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+          <Plus size={18} /> {t('clients.add_client')}
+        </button>
       </div>
 
       {/* Invite Code Card */}
@@ -128,6 +157,7 @@ export default function ClientsPage() {
             return (
               <div key={client.id} className="card client-card" onClick={() => navigate(`/clients/${client.id}`)}>
                 <div className="client-name">{client.name}</div>
+                {!hasAppAccount(client) && <span className="tag tag-primary mt-8">{t('clients.no_app')}</span>}
                 <div className="client-meta">{t('clients.meta_line', { age: client.age || '—', height: client.height || '—', date: client.joinDate })}</div>
                 {latest && <div className="client-meta mt-8">{t('clients.meta_stats', { weight: latest.weight, bf: latest.bodyFat })}</div>}
                 <div className="client-goals">{client.goals}</div>
@@ -142,6 +172,32 @@ export default function ClientsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {showAdd && (
+        <div className="modal-overlay" onClick={closeAdd}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">{t('clients.add_title')}</h3>
+            <p className="text-sm text-secondary mb-16">{t('clients.add_desc')}</p>
+            <form onSubmit={handleAdd}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="add-client-name">{t('clients.add_name_label')}</label>
+                <input
+                  id="add-client-name" className="form-input" autoFocus required
+                  maxLength={MANAGED_NAME_MAX} value={newName}
+                  placeholder={t('clients.add_name_ph')}
+                  onChange={e => setNewName(e.target.value)}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={closeAdd} disabled={adding}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={adding || !newName.trim()}>
+                  {adding ? t('common.saving') : t('clients.add_client')}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

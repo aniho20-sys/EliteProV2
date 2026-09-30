@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { Send, ArrowLeft, MessageCircle, Users } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { useToast } from '../context/ToastContext';
+import { hasAppAccount } from '../utils/managedClient';
 
 export default function MessagesPage() {
   const { t } = useLanguage();
@@ -19,7 +20,8 @@ export default function MessagesPage() {
   // Get contacts
   let contacts;
   if (isTrainer) {
-    contacts = getClients(currentUser.id);
+    // A client without the app can never read a message, so they are not a contact.
+    contacts = getClients(currentUser.id).filter(hasAppAccount);
   } else {
     const trainer = getClient(currentUser.trainerId);
     contacts = trainer ? [trainer] : [];

@@ -5,6 +5,7 @@ import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCir
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { hasAppAccount } from '../utils/managedClient';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
 import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
@@ -156,7 +157,8 @@ export default function TrainerDashboard() {
     if (completingRef.current.has(session.id)) return;
     const client = getClient(session.clientId);
     setRecapNote(`Great session today, ${client?.name?.split(' ')[0] || 'client'}! 💪`);
-    setRecapSend(true);
+    // A client without the app cannot read a recap message, so none is offered or sent.
+    setRecapSend(hasAppAccount(client));
     setRecapSession(session);
   };
 
@@ -308,6 +310,7 @@ export default function TrainerDashboard() {
   // only real resolution is the client actually completing it.
   const trainingProfileClients = clients.reduce((acc, client) => {
     if (client.intakeCompleted) return acc;
+    if (!hasAppAccount(client)) return acc; // no app, no form to fill in — nothing to ask
     const hasUpcoming = getSchedule({ trainerId: currentUser.id, clientId: client.id })
       .some(s => s.date >= today && s.status !== 'cancelled');
     if (hasUpcoming) acc.push({ client });
@@ -356,7 +359,7 @@ export default function TrainerDashboard() {
           <div className="onboarding-steps">
             <Link to="/clients" className="onboarding-step">
               <span className="onboarding-num">1</span>
-              <span>{t('tdash.step_connect')}</span>
+              <span>{t('tdash.step_add_client')}</span>
             </Link>
             <Link to="/plans" className="onboarding-step">
               <span className="onboarding-num">2</span>
@@ -501,13 +504,15 @@ export default function TrainerDashboard() {
                     </Link>
                   </div>
                   <div className="needs-attention-item-actions">
-                    <button
-                      className="btn btn-primary btn-sm"
-                      disabled={sendingReminderFor === client.id}
-                      onClick={() => handleSendRenewalReminder(client, remaining)}
-                    >
-                      <Send size={14} /> {sendingReminderFor === client.id ? t('tdash.sending') : t('tdash.send_renewal_reminder')}
-                    </button>
+                    {hasAppAccount(client) && (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={sendingReminderFor === client.id}
+                        onClick={() => handleSendRenewalReminder(client, remaining)}
+                      >
+                        <Send size={14} /> {sendingReminderFor === client.id ? t('tdash.sending') : t('tdash.send_renewal_reminder')}
+                      </button>
+                    )}
                     <div className="needs-attention-snooze-wrap">
                       <button
                         className="btn btn-outline btn-sm"
@@ -550,12 +555,14 @@ export default function TrainerDashboard() {
                     </Link>
                   </div>
                   <div className="needs-attention-item-actions">
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={() => handleOpenQuickMsg(client, { inactive: true, lowSessions: false })}
-                    >
-                      <MessageCircle size={14} /> {t('tdash.send_checkin')}
-                    </button>
+                    {hasAppAccount(client) && (
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => handleOpenQuickMsg(client, { inactive: true, lowSessions: false })}
+                      >
+                        <MessageCircle size={14} /> {t('tdash.send_checkin')}
+                      </button>
+                    )}
                     <div className="needs-attention-snooze-wrap">
                       <button
                         className="btn btn-outline btn-sm"
@@ -751,15 +758,19 @@ export default function TrainerDashboard() {
               <div className="recap-row"><span className="form-label">{t('common.date')}</span><span>{recapSession.date} · {recapSession.time}</span></div>
               <div className="recap-row"><span className="form-label">{t('common.type')}</span><span>{recapSession.type}</span></div>
             </div>
-            <div className="form-group">
-              <label className="form-label">{t('tdash.msg_to_client')}</label>
-              <textarea className="form-textarea" rows={3} value={recapNote} onChange={e => setRecapNote(e.target.value)} placeholder={t('tdash.recap_placeholder')} disabled={savingRecap} />
-            </div>
-            <label className="recap-send-toggle">
-              <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
-              <Send size={14} />
-              {t('tdash.send_recap')}
-            </label>
+            {hasAppAccount(getClient(recapSession.clientId)) && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">{t('tdash.msg_to_client')}</label>
+                  <textarea className="form-textarea" rows={3} value={recapNote} onChange={e => setRecapNote(e.target.value)} placeholder={t('tdash.recap_placeholder')} disabled={savingRecap} />
+                </div>
+                <label className="recap-send-toggle">
+                  <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
+                  <Send size={14} />
+                  {t('tdash.send_recap')}
+                </label>
+              </>
+            )}
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setRecapSession(null)} disabled={savingRecap}>{t('common.cancel')}</button>
               <button className="btn btn-accent" onClick={handleConfirmComplete} disabled={savingRecap}>{savingRecap ? t('common.saving') : t('tdash.mark_complete_btn')}</button>

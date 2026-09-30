@@ -10,7 +10,7 @@ const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
 const { summariseSignups } = require('./signupQueue');
 const { startSubscription, completeSubscription, cancelSubscriptionsFor, SubscriptionError } = require('./gcSubscriptions');
-const { deleteAccountData } = require('./accountDeletion');
+const { deleteAccountData, removeManagedClient, RemoveManagedError } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
@@ -918,6 +918,19 @@ exports.gcWebhook = functions.https.onRequest(async (req, res) => {
     notify: ({ userId, title, body: text }) => pushTo(userId, { title, body: text }),
   });
   res.status(failed ? 500 : 200).send(failed ? 'Retry' : 'OK');
+});
+
+// ── A coach removing a client who has no app (B35, functions/accountDeletion.js) ──
+// Server-side because the record has no owner account to delete its body stats and
+// logs, and firestore.rules lets a trainer neither delete a user nor detach a managed one.
+exports.removeManagedClient = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await removeManagedClient({ db, trainerId: context.auth.uid, clientId: data && data.clientId });
+  } catch (err) {
+    if (err instanceof RemoveManagedError) throw new functions.https.HttpsError(err.code, err.message);
+    throw err;
+  }
 });
 
 // ── A client's view of when their coach is free (functions/availability.js) ──

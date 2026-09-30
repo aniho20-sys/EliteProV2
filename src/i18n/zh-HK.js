@@ -568,7 +568,6 @@ const zhHK = {
   'tdash.onboarding_sub': '你的訓練平台 —— 三步即可啟用：',
   'tdash.share_invite': '向學生分享你的邀請碼：',
   'common.copy': '複製',
-  'tdash.step_connect': '學生輸入邀請碼連接',
   'tdash.step_plan': '指派訓練計劃',
   'tdash.step_book': '預約第一堂',
   'common.today': '今日',

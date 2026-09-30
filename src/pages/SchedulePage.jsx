@@ -6,6 +6,7 @@ import { getSessionColor, SESSION_DANGER_THRESHOLD, OVERDRAFT_LIMIT } from '../u
 import { formatCurrency } from '../utils/currencyUtils';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { hasAppAccount } from '../utils/managedClient';
 import RenewalPromptModal from '../components/RenewalPromptModal';
 import PaymentSheetModal from '../components/PaymentSheetModal';
 import { renewalPromptKind, renewalSnoozeUntil, RENEWAL_SNOOZE_FIELD } from '../utils/renewalPrompt';
@@ -327,7 +328,8 @@ export default function SchedulePage() {
     setRecapSession(session);
     const client = getClient(session.clientId);
     setRecapNote(`Great session today, ${client?.name?.split(' ')[0] || 'client'}! 💪`);
-    setRecapSend(true);
+    // A client without the app cannot read a recap message, so none is offered or sent.
+    setRecapSend(hasAppAccount(client));
   };
 
   const handleConfirmComplete = async () => {
@@ -658,22 +660,26 @@ export default function SchedulePage() {
                 );
               })()}
             </div>
-            <div className="form-group">
-              <label className="form-label">{t('sched.message_optional')}</label>
-              <textarea
-                className="form-textarea"
-                rows={3}
-                value={recapNote}
-                onChange={e => setRecapNote(e.target.value)}
-                placeholder={t('sched.note_placeholder')}
-                disabled={savingRecap}
-              />
-            </div>
-            <label className="recap-send-toggle">
-              <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
-              <Send size={14} />
-              {t('sched.send_recap')}
-            </label>
+            {hasAppAccount(getClient(recapSession.clientId)) && (
+              <>
+              <div className="form-group">
+                <label className="form-label">{t('sched.message_optional')}</label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  value={recapNote}
+                  onChange={e => setRecapNote(e.target.value)}
+                  placeholder={t('sched.note_placeholder')}
+                  disabled={savingRecap}
+                />
+              </div>
+              <label className="recap-send-toggle">
+                <input type="checkbox" checked={recapSend} onChange={e => setRecapSend(e.target.checked)} disabled={savingRecap} />
+                <Send size={14} />
+                {t('sched.send_recap')}
+              </label>
+              </>
+            )}
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setRecapSession(null)} disabled={savingRecap}>{t('common.cancel')}</button>
               <button className="btn btn-accent" onClick={handleConfirmComplete} disabled={savingRecap}>

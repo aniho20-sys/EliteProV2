@@ -10,6 +10,10 @@
 // DETACHED, not deleted — a trainer's clients are real people with their own
 //   accounts. They are unlinked (trainerId: null) so they can connect to someone
 //   else, and keep their own logs and body stats.
+//   Except clients WITHOUT the app (managed: true, B35): they have no account, and the
+//   record exists only because the coach typed it in. With the coach gone nobody could
+//   read or delete it, so it is deleted like the coach's own data — same list as above,
+//   run for that client's id.
 //
 // KEPT — financial records: invoices, creditLedger, subscriptions. A trainer has
 //   to keep what they billed and were paid (UK tax records), and a subscription
@@ -60,16 +64,46 @@ async function deleteAccountData({ db, uid }) {
   del(db.doc(`bodyStats/${uid}`));
   del(db.doc(`intakeForms/${uid}`));
   del(db.doc(`users/${uid}`));
+  const managed = [];
   for (const c of clients.docs) {
-    if (c.ref.path !== `users/${uid}`) ops.push({ type: 'update', ref: c.ref, data: { trainerId: null } });
+    if (c.ref.path === `users/${uid}`) continue;
+    if (c.data().managed === true) managed.push(c.id);
+    else ops.push({ type: 'update', ref: c.ref, data: { trainerId: null } });
   }
 
   await commitInChunks(db, ops);
+  let deleted = ops.filter(o => o.type === 'delete').length;
+  for (const clientId of managed) deleted += (await deleteAccountData({ db, uid: clientId })).deleted;
   return {
-    deleted: ops.filter(o => o.type === 'delete').length,
+    deleted,
     detachedClients: ops.filter(o => o.type === 'update').length,
+    deletedManagedClients: managed.length,
   };
 }
 
+class RemoveManagedError extends Error {
+  constructor(code, message) { super(message); this.code = code; }
+}
+
+// A coach removing a client who has no app. Unlike removing a client with an account
+// (which only detaches them), there is no one to keep the record for, so it and what
+// hangs off it are deleted — the same list as a deleted account. Invoices and the
+// credit ledger are kept, as always.
+async function removeManagedClient({ db, trainerId, clientId }) {
+  if (typeof clientId !== 'string' || !/^managed-[0-9]{10,16}-[a-z0-9]{4}$/.test(clientId)) {
+    throw new RemoveManagedError('invalid-argument', 'Not a client without the app');
+  }
+  const snap = await db.doc(`users/${clientId}`).get();
+  if (!snap.exists) return { removed: false }; // already gone — a second tap, or a retry
+  const c = snap.data();
+  if (c.managed !== true || c.trainerId !== trainerId) {
+    throw new RemoveManagedError('permission-denied', 'Not your client');
+  }
+  const { deleted } = await deleteAccountData({ db, uid: clientId });
+  return { removed: true, deleted };
+}
+
 exports.deleteAccountData = deleteAccountData;
+exports.removeManagedClient = removeManagedClient;
+exports.RemoveManagedError = RemoveManagedError;
 exports.CHUNK = CHUNK;

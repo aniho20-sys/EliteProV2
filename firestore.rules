@@ -101,9 +101,22 @@ service cloud.firestore {
           // ensureInviteCode sets inviteCode. A self-chosen code is how one trainer copied
           // another's.
           && (!('trainerId' in request.resource.data) || request.resource.data.trainerId == null))
+        // A client without the app, added by their coach (B35, 2026-09-30). The record
+        // belongs to the coach: an id only this path can use ('managed-<ms>-<4>', never a
+        // Firebase Auth uid, so no one can pre-create a document a future account would
+        // sign in to), the coach as trainerId, a name, and nothing else. Credit is added
+        // afterwards exactly as for any client. Removal is server-side
+        // (removeManagedClient), which also deletes what hangs off the record.
         || (isTrainer()
+            && userId.matches('managed-[0-9]{10,16}-[a-z0-9]{4}')
+            && request.resource.data.id == userId
             && request.resource.data.role == 'client'
-            && request.resource.data.trainerId == request.auth.uid);
+            && request.resource.data.managed == true
+            && request.resource.data.trainerId == request.auth.uid
+            && request.resource.data.keys().hasOnly(['id', 'name', 'role', 'trainerId', 'managed', 'joinDate'])
+            && request.resource.data.name is string
+            && request.resource.data.name.size() > 0
+            && request.resource.data.name.size() <= 80);
       // Role is immutable after creation — prevents client→trainer privilege escalation.
       // Self-update is restricted to personal profile fields only — billing fields
       // (totalSessions, sessionOffset) are intentionally excluded to prevent clients
@@ -170,7 +183,11 @@ service cloud.firestore {
                            'tags','subscriptionTester','badges','trainerId'])
             // A trainer may remove a client but not hand them to another coach — that
             // would give an account the trainer controls a way into that coach's data.
-            && trainerIdOnlyCleared();
+            && trainerIdOnlyCleared()
+            // A client without the app is never detached: with no account and no coach,
+            // nobody could read or delete the record again. removeManagedClient deletes it.
+            && !(resource.data.get('managed', false) == true
+                 && 'trainerId' in request.resource.data.diff(resource.data).affectedKeys());
       allow delete: if isOwner(userId);
     }
 

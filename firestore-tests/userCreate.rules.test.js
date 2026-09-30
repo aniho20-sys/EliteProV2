@@ -83,9 +83,11 @@ describe('P1: self-create cannot grant itself anything', () => {
   });
 });
 
-describe('trainer creating a managed client is unchanged', () => {
-  test('a trainer may create a client of their own, with credit', async () => {
-    await assertSucceeds(setDoc(doc(as(COACH), 'users', 'ghost1'), {
+// B35 (2026-09-30) narrowed this branch: it used to accept any id and any fields, and no
+// app code used it. It now accepts only a no-app client record — managedClient.rules.test.js.
+describe('trainer creating a client', () => {
+  test('the old shape — any id, starting credit — is refused', async () => {
+    await assertFails(setDoc(doc(as(COACH), 'users', 'ghost1'), {
       id: 'ghost1', role: 'client', trainerId: COACH, name: 'Ghost', totalSessions: 10,
     }));
   });

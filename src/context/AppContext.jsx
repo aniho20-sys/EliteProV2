@@ -17,6 +17,7 @@ import { localToday } from '../utils/dateUtils';
 import { canonicalExercise } from '../utils/exerciseUtils';
 import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
+import { managedClientId, MANAGED_NAME_MAX } from '../utils/managedClient';
 
 // Exported so the screenshot renderer in mock/ can supply a stubbed value and mount the
 // real pages without Firebase. The app itself always goes through AppProvider/useApp.
@@ -479,9 +480,31 @@ export function AppProvider({ children }) {
     setUsers(prev => prev.map(u => u.id === clientId ? { ...u, ...updates } : u));
   };
 
-  // Removes client from trainer's roster by clearing trainerId.
-  // Cannot delete user docs per Firestore rules — orphan instead.
+  // A client who does not use the app, added by their coach (B35). Only the fields
+  // firestore.rules accepts for this shape; credit is added afterwards like any client.
+  const addManagedClient = async (name) => {
+    const trimmed = (name || '').trim().slice(0, MANAGED_NAME_MAX);
+    if (!trimmed) throw new Error('empty name');
+    const id = managedClientId();
+    // The signed-in uid — what the rule compares trainerId against — rather than the
+    // profile, which arrives later by listener.
+    const record = { id, name: trimmed, role: 'client', trainerId: firebaseUser.uid, managed: true, joinDate: localToday() };
+    await setDoc(doc(db, 'users', id), record);
+    // Same reason as updateClient's optimistic patch: the trainerId listener can lag.
+    setUsers(prev => prev.some(u => u.id === id) ? prev : [...prev, record]);
+    return record;
+  };
+
+  // A client with an account is detached (trainerId cleared) and keeps their account.
+  // A client without the app has nothing to keep, so the server deletes the record and
+  // what hangs off it (functions/accountDeletion.js) — the rules allow neither here.
   const removeClient = async (clientId) => {
+    const client = users.find(u => u.id === clientId);
+    if (client?.managed === true) {
+      await httpsCallable(functions, 'removeManagedClient')({ clientId });
+      setUsers(prev => prev.filter(u => u.id !== clientId));
+      return;
+    }
     await updateDoc(doc(db, 'users', clientId), { trainerId: null });
   };
 
@@ -1082,7 +1105,7 @@ export function AppProvider({ children }) {
     googleAuthError, clearGoogleAuthError: () => setGoogleAuthError(null),
     signInWithGoogle, signUpEmail, signInEmail, sendPasswordReset, completeProfile,
     deleteAccount,
-    getClients, getClient, updateClient, removeClient, getCreditLedger, getTrainerCreditLedger, addCreditLedgerEntry,
+    getClients, getClient, updateClient, addManagedClient, removeClient, getCreditLedger, getTrainerCreditLedger, addCreditLedgerEntry,
     getBodyStats, addBodyStat, updateBodyStat, deleteBodyStat,
     data: { users, workoutPlans, workoutLogs, schedule, messages, exercises, invoices },
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,

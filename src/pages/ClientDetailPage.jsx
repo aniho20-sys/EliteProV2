@@ -19,6 +19,7 @@ import EmptyState from '../components/EmptyState';
 import SessionDateList from '../components/SessionDateList';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { hasAppAccount } from '../utils/managedClient';
 
 
 
@@ -422,7 +423,10 @@ export default function ClientDetailPage() {
 
       <div className="page-header">
         <h1 className="page-title">{client.name}</h1>
-        <p className="page-subtitle">{t('cdetail.summary_line', { age: client.age, height: client.height, goals: client.goals })}</p>
+        {!hasAppAccount(client) && <span className="tag tag-primary">{t('clients.no_app')}</span>}
+        {(client.age || client.height || client.goals) && (
+          <p className="page-subtitle">{t('cdetail.summary_line', { age: client.age, height: client.height, goals: client.goals })}</p>
+        )}
         {client.notes && <p className="text-sm text-muted mt-8" style={{ fontStyle: 'italic' }}>{t('cdetail.notes_line', { notes: client.notes })}</p>}
       </div>
 
@@ -787,7 +791,11 @@ export default function ClientDetailPage() {
 
       {tab === 'notes' && (
         <div className="card">
-          <NotesSection clientId={clientId} />
+          {hasAppAccount(client) ? (
+            <NotesSection clientId={clientId} />
+          ) : (
+            <p className="text-sm text-secondary">{t('cdetail.no_app_messages', { name: client.name })}</p>
+          )}
         </div>
       )}
 
@@ -903,7 +911,7 @@ export default function ClientDetailPage() {
               {t('cdetail.remove_desc', { name: client.name })}
             </p>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              {t('cdetail.remove_note')}
+              {hasAppAccount(client) ? t('cdetail.remove_note') : t('cdetail.remove_note_managed')}
             </p>
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setShowRemoveConfirm(false)} disabled={removing}>{t('common.cancel')}</button>

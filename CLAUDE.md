@@ -111,7 +111,7 @@ src/
 └── main.jsx                  # Entry point
 
 functions/                    # Cloud Functions (deployed and live on Blaze):
-├── accountDeletion.js         # What onAccountDelete deletes / detaches / keeps (financial records kept)
+├── accountDeletion.js         # What onAccountDelete deletes / detaches / keeps (financial records kept); also removeManagedClient (B35)
 ├── index.js                  # onAccountDelete (cancels GoCardless plans first — see accountDeletion.js), onNewMessage, onNewSchedule, onScheduleUpdate,
 │                              # onNewWorkoutPlan, onNewWorkoutLog, onSessionsLow (push to client when
 │                              # sessions remaining ≤ 3, push to trainer when ≤ 2), onScheduleBooked +
@@ -205,8 +205,10 @@ Top-level config files:
   renewalPrompt3Shown: boolean,    // one-time "3 sessions left" prompt already shown
   renewalPrompt1Shown: boolean,    // one-time "1 session left" prompt already shown
   subscriptionTester: boolean,     // sandbox gate — trainer-set only (not in the self-update allowlist)
+  managed: boolean,                // true = a client WITHOUT the app, added by their coach (B35) — see below
 }
 ```
+**Clients without the app (`managed: true`, B35, 2026-09-30).** A coach can add a client who has no account (Clients → Add client), so a new coach can try plans, bookings, session packs and invoices before any client signs up. The doc id is `managed-<ms>-<4>` — the only id shape `firestore.rules` lets a trainer create, never a Firebase Auth uid — and it carries only `id, name, role, trainerId, managed, joinDate`. Everything that reaches a client *through the app* is hidden for them via `hasAppAccount(client)` (`utils/managedClient.js`): messages, check-in/renewal reminders, the training-profile nudge, the recap message. Removing one (`removeClient`) calls the `removeManagedClient` callable, which deletes the record and what hangs off it; deleting the coach's account deletes them too (`functions/accountDeletion.js`) — never detached, since nobody could reach an orphaned record. **Not built:** turning a no-app client into a real account later (linking) — history would need moving, which #27 forbids doing as a rewrite.
 
 #### `bodyStats/{clientId}`
 ```js
@@ -484,7 +486,8 @@ deleteAccount()              // deletes Firestore profile + bodyStats + Firebase
 getClients(trainerId)        // returns client users for a trainer
 getClient(clientId)
 updateClient(clientId, updates)
-removeClient(clientId)       // sets trainerId to null (detaches client from trainer)
+addManagedClient(name)       // trainer: adds a client without the app (B35); returns the record
+removeClient(clientId)       // sets trainerId to null (detaches client); a client without the app is deleted server-side (removeManagedClient)
 
 // Credit Ledger
 getCreditLedger(clientId)    // async — fetches append-only top-up history, newest first
@@ -602,7 +605,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 
 ## Firestore Security Rules Summary
 - **Auth required** for all reads and writes
-- **users**: Read only your own doc, your own clients, or your own trainer (single `get` + the two AppContext `list` queries — an unconstrained read of the collection fails); self-create own profile as `trainer`/`client` with only the fields `completeProfile()` writes (no credit/billing/tester fields — `firestore-tests/userCreate.rules.test.js`); trainer can create their clients and update only the allowlisted fields the app writes (session balance, renewal/churn snoozes, tags, tester flag, badges, clearing `trainerId` — `firestore-tests/trainerClientUpdate.rules.test.js`). `role` field is **immutable after creation** — prevents client→trainer privilege escalation
+- **users**: Read only your own doc, your own clients, or your own trainer (single `get` + the two AppContext `list` queries — an unconstrained read of the collection fails); self-create own profile as `trainer`/`client` with only the fields `completeProfile()` writes (no credit/billing/tester fields — `firestore-tests/userCreate.rules.test.js`); trainer can create only a no-app client record (`managed-…` id, six fields — `firestore-tests/managedClient.rules.test.js`) and update only the allowlisted fields the app writes (session balance, renewal/churn snoozes, tags, tester flag, badges, clearing `trainerId` — `firestore-tests/trainerClientUpdate.rules.test.js`). `role` field is **immutable after creation** — prevents client→trainer privilege escalation
 - **bodyStats**: Only the client or their trainer can read/write; only the client can delete
 - **intakeForms**: Owner client or their trainer can read; only the owner client can create/update. **Delete is disabled**
 - **workoutPlans**: Owner trainer or assigned client can read; trainer creates/updates/deletes own plans. `trainerId` is immutable after creation
