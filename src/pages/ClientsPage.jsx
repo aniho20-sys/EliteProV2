@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Copy, Check, Share2, UserPlus } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import { inviteUrl } from '../utils/inviteLink';
 
 export default function ClientsPage() {
   const { currentUser, getClients, getBodyStats, getInviteCode } = useApp();
@@ -48,11 +49,14 @@ export default function ClientsPage() {
 
   const handleShare = async () => {
     if (!inviteCode) return;
+    // The link opens sign-up with the code already filled in; the text alone left the
+    // client to find the app by themselves.
+    const url = inviteUrl(inviteCode);
     const text = t('clients.share_text', { code: inviteCode });
     if (navigator.share) {
-      try { await navigator.share({ title: t('profile.share_title'), text }); } catch { /* cancelled */ }
+      try { await navigator.share({ title: t('profile.share_title'), text, url }); } catch { /* cancelled */ }
     } else {
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText(`${text}\n${url}`);
       toast(t('clients.toast_msg_copied'));
     }
   };

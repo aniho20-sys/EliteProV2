@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, Mail, LogIn, KeyRound } from 'lucide-react';
 import { isMobileOrPwa } from '../utils/deviceUtils';
+import { opensAsSignUp } from '../utils/inviteLink';
 import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 
 export default function LoginPage() {
@@ -15,7 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const location = useLocation();
+  const [isSignUp, setIsSignUp] = useState(() => opensAsSignUp(location.search));
   const [authLoading, setAuthLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');

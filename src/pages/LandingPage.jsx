@@ -80,7 +80,7 @@ function Cta({ block, onClick }) {
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const goSignUp = () => navigate('/login');
+  const goSignUp = () => navigate('/login?signup=1');
 
   return (
     <div className="lp">

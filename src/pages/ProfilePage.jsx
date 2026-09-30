@@ -16,6 +16,7 @@ import LanguagePicker from '../components/LanguagePicker';
 import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 import { gcFailureMessage } from '../utils/gcErrors';
 import SubscriptionCard from '../components/SubscriptionCard';
+import { inviteUrl } from '../utils/inviteLink';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
 
 function InstallAppCard() {
@@ -124,7 +125,7 @@ export default function ProfilePage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const codeCopiedTimer = useRef(null);
   const linkCopiedTimer = useRef(null);
-  const INVITE_URL = `https://elitepro-16718.web.app/#/?invite=${inviteCode}`;
+  const INVITE_URL = inviteUrl(inviteCode);
 
   // Trainer: working hours
   const [workHours, setWorkHours] = useState({
