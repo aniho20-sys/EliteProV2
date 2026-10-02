@@ -311,14 +311,47 @@ function alreadyInactive(err) {
 // Statuses with nothing left to stop at GoCardless.
 const FINISHED_STATUSES = ['cancelled', 'abandoned', 'failed'];
 
+// Stop one plan at GoCardless. Cancelling the MANDATE is what actually guarantees no
+// further collection — GoCardless cancels its pending payments with it. The subscription
+// is cancelled first anyway so its own record says so. A plan still `pending` may have
+// been completed on GoCardless's page without our return ever arriving, so the billing
+// request is re-read before deciding there is no mandate to cancel. Throws on failure;
+// the doc is updated only once GoCardless has agreed.
+async function cancelAtGoCardless({ ref, sub, readToken, fetchImpl, now, reason }) {
+  const environment = environmentOf(sub);
+  const cancel = async (token, path) => {
+    try {
+      await gcRequest({ fetchImpl, token, environment, method: 'POST', path, body: { data: {} } });
+    } catch (err) {
+      if (!alreadyInactive(err)) throw err;
+    }
+  };
+
+  const token = await readToken(sub.trainerId);
+  let mandateId = sub.providerAuthorisationId || null;
+
+  if (sub.providerSubscriptionId) {
+    await cancel(token, `/subscriptions/${sub.providerSubscriptionId}/actions/cancel`);
+  }
+  if (!mandateId && sub.billingRequestId) {
+    const br = (await gcRequest({
+      fetchImpl, token, environment, method: 'GET', path: `/billing_requests/${sub.billingRequestId}`,
+    })).billing_requests;
+    mandateId = (br.links && br.links.mandate_request_mandate) || null;
+    if (!mandateId && br.status !== 'cancelled' && br.status !== 'fulfilled') {
+      await cancel(token, `/billing_requests/${sub.billingRequestId}/actions/cancel`);
+    }
+  }
+  if (mandateId) {
+    await cancel(token, `/mandates/${mandateId}/actions/cancel`);
+  }
+
+  const ts = now().toISOString();
+  await ref.update({ status: 'cancelled', cancelledAt: ts, cancelReason: reason, cancelError: null, updatedAt: ts });
+}
+
 // Stop every plan where `field` (clientId or trainerId) is `uid`, so no bank is
 // charged on behalf of an account that no longer exists. Used by onAccountDelete.
-//
-// Cancelling the MANDATE is what actually guarantees no further collection —
-// GoCardless cancels its pending payments with it. The subscription is cancelled
-// first anyway so its own record says so. A plan still `pending` may have been
-// completed on GoCardless's page without our return ever arriving, so the billing
-// request is re-read before deciding there is no mandate to cancel.
 //
 // A failure is recorded on the doc (status stays as it was, `cancelError` set) and
 // returned, never thrown: one trainer's revoked token must not stop the rest of the
@@ -330,38 +363,8 @@ async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, no
   for (const d of snap.docs) {
     const sub = d.data();
     if (FINISHED_STATUSES.includes(sub.status)) continue;
-    const environment = environmentOf(sub);
-
-    const cancel = async (token, path) => {
-      try {
-        await gcRequest({ fetchImpl, token, environment, method: 'POST', path, body: { data: {} } });
-      } catch (err) {
-        if (!alreadyInactive(err)) throw err;
-      }
-    };
-
     try {
-      const token = await readToken(sub.trainerId);
-      let mandateId = sub.providerAuthorisationId || null;
-
-      if (sub.providerSubscriptionId) {
-        await cancel(token, `/subscriptions/${sub.providerSubscriptionId}/actions/cancel`);
-      }
-      if (!mandateId && sub.billingRequestId) {
-        const br = (await gcRequest({
-          fetchImpl, token, environment, method: 'GET', path: `/billing_requests/${sub.billingRequestId}`,
-        })).billing_requests;
-        mandateId = (br.links && br.links.mandate_request_mandate) || null;
-        if (!mandateId && br.status !== 'cancelled' && br.status !== 'fulfilled') {
-          await cancel(token, `/billing_requests/${sub.billingRequestId}/actions/cancel`);
-        }
-      }
-      if (mandateId) {
-        await cancel(token, `/mandates/${mandateId}/actions/cancel`);
-      }
-
-      const ts = now().toISOString();
-      await d.ref.update({ status: 'cancelled', cancelledAt: ts, cancelReason: reason, cancelError: null, updatedAt: ts });
+      await cancelAtGoCardless({ ref: d.ref, sub, readToken, fetchImpl, now, reason });
       result.cancelled.push(d.ref.id);
     } catch (err) {
       const error = describeError(err);
@@ -370,6 +373,34 @@ async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, no
     }
   }
   return result;
+}
+
+// A client — or their coach — cancels a plan from the app (B36). Repeating it is
+// harmless: a plan already finished just reports its status. A plan mid-way through
+// its own activation (`completing`, claimed moments ago) is not cancelled under it,
+// or the activation could still create a GoCardless subscription a second later.
+async function cancelSubscription({ db, uid, subscriptionId, readToken, fetchImpl, now }) {
+  if (typeof subscriptionId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(subscriptionId)) {
+    throw new SubscriptionError('invalid-argument', 'Bad subscription id');
+  }
+  const ref = db.doc(`subscriptions/${subscriptionId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new SubscriptionError('not-found', 'No such subscription');
+  const sub = snap.data();
+  const by = uid === sub.clientId ? 'client' : uid === sub.trainerId ? 'trainer' : null;
+  if (!by) throw new SubscriptionError('permission-denied', 'Not your subscription');
+  if (FINISHED_STATUSES.includes(sub.status)) return { status: sub.status };
+  const activating = sub.status === 'completing'
+    && now().getTime() - new Date(sub.updatedAt).getTime() <= CLAIM_TTL_MS;
+  if (activating) throw new SubscriptionError('failed-precondition', 'Still being set up — try again in a minute');
+
+  try {
+    await cancelAtGoCardless({ ref, sub, readToken, fetchImpl, now, reason: `cancelled_by_${by}` });
+  } catch (err) {
+    await ref.update({ cancelError: describeError(err), updatedAt: now().toISOString() });
+    throw new SubscriptionError('unavailable', 'GoCardless did not confirm the cancellation');
+  }
+  return { status: 'cancelled' };
 }
 
 // What goes into Firestore about a failure: the status and GoCardless's own
@@ -390,3 +421,4 @@ exports.conflictingResourceId = conflictingResourceId;
 exports.startSubscription = startSubscription;
 exports.completeSubscription = completeSubscription;
 exports.cancelSubscriptionsFor = cancelSubscriptionsFor;
+exports.cancelSubscription = cancelSubscription;

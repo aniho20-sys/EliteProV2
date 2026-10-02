@@ -67,6 +67,10 @@ async function connectDirect({ db, trainerId, accessToken, webhookSecret, fetchI
     status: 'connected',
     connectedAt: now().toISOString(),
   });
+  // Readable by this trainer's clients (their coach's profile), so the plan card can say
+  // "test mode" only when it is — a client must never be told no real money is taken
+  // while it is. Written only here and by the OAuth callback; cleared on disconnect.
+  await db.doc(`users/${trainerId}`).update({ gcEnvironment: environment });
   return {
     environment,
     creditorName: creditor.name || null,

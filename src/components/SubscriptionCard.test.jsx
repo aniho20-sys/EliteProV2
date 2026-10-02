@@ -243,3 +243,81 @@ describe('AppContext → server', () => {
     expect(server).toContain('(data && data.subscriptionId)');
   });
 });
+
+// ── B36: live or test, failed payments, cancelling ──
+
+describe('test mode is said only when it is true', () => {
+  test.each([
+    ['a coach who connected before the label existed', undefined, true],
+    ['a sandbox connection', 'sandbox', true],
+    ['a live connection', 'live', false],
+  ])('%s', async (_label, gcEnvironment, shown) => {
+    renderCard({ trainer: { ...TRAINER, gcEnvironment } });
+    expect(await screen.findByText('Monthly plan')).toBeTruthy();
+    expect(!!screen.queryByText('Test mode — no real money is taken')).toBe(shown);
+  });
+});
+
+describe('a failed payment', () => {
+  test('the student is told, and the plan is not shown as Active', async () => {
+    ctx.getSubscriptions = vi.fn(async () => [{ ...active, status: 'past_due' }]);
+    renderCard();
+    expect(await screen.findByText('Payment failed')).toBeTruthy();
+    expect(screen.getByText(/didn't go through/)).toBeTruthy();
+    expect(screen.queryByText('Active')).toBeNull();
+  });
+});
+
+describe('cancelling a plan', () => {
+  beforeEach(() => {
+    ctx.getSubscriptions = vi.fn().mockResolvedValueOnce([active]).mockResolvedValue([{ ...active, status: 'cancelled' }]);
+    ctx.cancelSubscription = vi.fn(async () => ({ status: 'cancelled' }));
+  });
+
+  test('asks first; "Keep plan" changes nothing', async () => {
+    renderCard();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel plan' }));
+    expect(screen.getByText('Cancel your monthly plan?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep plan' }));
+    expect(screen.queryByText('Cancel your monthly plan?')).toBeNull();
+    expect(ctx.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  test('confirmed: this plan is cancelled once, the student is told, and plans can be picked again', async () => {
+    let finish;
+    ctx.cancelSubscription = vi.fn(() => new Promise(r => { finish = r; }));
+    renderCard();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel plan' }));
+    const yes = screen.getByRole('button', { name: 'Yes, cancel plan' });
+    fireEvent.click(yes);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelling…' })); // a second tap while waiting
+    finish({ status: 'cancelled' });
+    expect(await screen.findByText('Your monthly plan has been cancelled.')).toBeTruthy();
+    expect(ctx.cancelSubscription).toHaveBeenCalledTimes(1);
+    expect(ctx.cancelSubscription).toHaveBeenCalledWith('sub12345678');
+    expect(await screen.findByText('Set up Direct Debit with GoCardless')).toBeTruthy();
+  });
+
+  test('a failure says so and keeps the plan showing', async () => {
+    ctx.cancelSubscription = vi.fn(async () => { throw Object.assign(new Error('x'), { code: 'functions/unavailable' }); });
+    renderCard();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel plan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel plan' }));
+    expect(await screen.findByText(/Couldn't cancel the plan/)).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
+  });
+
+  test('the app calls the cancel function the server exports, with the field it reads', async () => {
+    let api;
+    function Grab() { api = useApp(); return null; }
+    const calls = [];
+    fb.callable = vi.fn(async (name, payload) => { calls.push([name, payload]); return { data: {} }; });
+    render(<AppProvider><Grab /></AppProvider>);
+    await waitFor(() => expect(api.firebaseUser).toBeTruthy());
+    await api.cancelSubscription('sub12345678');
+    expect(calls).toEqual([['gcCancelSubscription', { subscriptionId: 'sub12345678' }]]);
+    const server = source('functions/index.js');
+    expect(server).toMatch(/^exports\.gcCancelSubscription = functions\.https\.onCall/m);
+    expect(server).toContain('subscriptionId: data && data.subscriptionId');
+  });
+});

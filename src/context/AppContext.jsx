@@ -884,6 +884,19 @@ export function AppProvider({ children }) {
     return (await call({ subscriptionId })).data;
   };
 
+  // B36: stop a monthly plan (the client's own, or a coach's client's). The server cancels
+  // it at GoCardless first and only then marks it cancelled.
+  const cancelSubscription = async (subscriptionId) => {
+    const call = httpsCallable(functions, 'gcCancelSubscription');
+    return (await call({ subscriptionId })).data;
+  };
+
+  // Coach: every plan of every client, for the "payment failed" list. Single-field query (#34).
+  const getTrainerSubscriptions = async (trainerId) => {
+    const snap = await getDocs(query(collection(db, 'subscriptions'), where('trainerId', '==', trainerId)));
+    return snap.docs.map(d => d.data());
+  };
+
   // ========== Exercises ==========
   // Merges the current trainer's (or client's own trainer's) exerciseOverrides onto the
   // base list, so every page that lists exercises via getExercises() picks up the
@@ -1126,7 +1139,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,

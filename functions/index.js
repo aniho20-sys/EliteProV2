@@ -10,7 +10,7 @@ const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gc
 const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
 const { summariseSignups } = require('./signupQueue');
-const { startSubscription, completeSubscription, cancelSubscriptionsFor, SubscriptionError } = require('./gcSubscriptions');
+const { startSubscription, completeSubscription, cancelSubscriptionsFor, cancelSubscription, SubscriptionError } = require('./gcSubscriptions');
 const { deleteAccountData, removeManagedClient, RemoveManagedError } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
@@ -641,6 +641,8 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
     status: 'connected',
     connectedAt: new Date().toISOString(),
   });
+  // What the trainer's clients may know: test mode or not (see gcDirect.js).
+  await db.doc(`users/${trainerId}`).update({ gcEnvironment: 'sandbox' });
 
   // Only now, with everything actually persisted, is the nonce truly spent.
   await finalizeNonce(String(state));
@@ -667,6 +669,7 @@ exports.gcDisconnect = functions.https.onCall(async (data, context) => {
 
   await deleteGcAccessToken(trainerId);
   await deleteTrainerWebhookSecret(trainerId); // own-account connections (B36); a no-op otherwise
+  await db.doc(`users/${trainerId}`).update({ gcEnvironment: FieldValue.delete() });
   await db.doc(`paymentConnections/${trainerId}`).set({
     trainerId,
     provider: 'gocardless',
@@ -757,6 +760,19 @@ exports.gcSubscriptionReturn = functions.https.onRequest(async (req, res) => {
 // "Check again" for a subscription still pending after the return — Bacs
 // mandate setup can lag the redirect. Only the subscription's own client or
 // trainer may trigger the check.
+// A client (or their coach) cancels a monthly plan from the app (B36). Ownership and the
+// GoCardless calls are in gcSubscriptions.cancelSubscription.
+exports.gcCancelSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await cancelSubscription({
+      ...subscriptionDeps(), uid: context.auth.uid, subscriptionId: data && data.subscriptionId,
+    });
+  } catch (err) {
+    throw toHttpsError(err);
+  }
+});
+
 exports.gcRefreshSubscription = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');

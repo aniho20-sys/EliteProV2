@@ -169,3 +169,33 @@ describe('nothing is offered that could only reach a client through the app', ()
     expect(screen.queryByText('Nora NoApp')).toBeNull();
   });
 });
+
+// ── B36: failed monthly payments, and money owed by a client without the app ──
+describe('money on the dashboard', () => {
+  const failedPlan = { id: 'subFailed01', clientId: REAL.id, trainerId: 'coach-1', status: 'past_due', monthlyAmount: 216.67, paymentFailedAt: '2026-10-01' };
+  const itemsFor = (name) => screen.getAllByText(name).map(n => n.closest('.needs-attention-item')).filter(Boolean);
+
+  test('a client whose monthly payment failed is listed under "Payment failed"', async () => {
+    renderPage(<TrainerDashboard />, appWith({
+      getSessionStats: () => ({ used: 0, total: 10, remaining: 10 }),
+      getTrainerSubscriptions: vi.fn(async () => [failedPlan, { ...failedPlan, id: 'ok', clientId: NO_APP.id, status: 'active' }]),
+    }));
+    expect(await screen.findByText(/Monthly payment failed/)).toBeTruthy();
+    const failedItems = itemsFor('Rita Real').filter(i => /Monthly payment failed/.test(i.textContent));
+    expect(failedItems).toHaveLength(1);
+    expect(itemsFor('Nora NoApp').some(i => /Monthly payment failed/.test(i.textContent))).toBe(false);
+  });
+
+  test('if plans cannot be loaded, the dashboard still shows', async () => {
+    renderPage(<TrainerDashboard />, appWith({ getTrainerSubscriptions: vi.fn(async () => { throw new Error('offline'); }) }));
+    expect((await screen.findAllByText('Rita Real')).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Monthly payment failed/)).toBeNull();
+  });
+
+  test('a client without the app who owes a session gets no "send reminder" — they could never read it', () => {
+    renderPage(<TrainerDashboard />, appWith({ getSessionStats: () => ({ used: 11, total: 10, remaining: -1 }) }));
+    const owed = (name) => itemsFor(name).find(i => /Top up/i.test(i.textContent));
+    expect(within(owed('Rita Real')).queryAllByText(/reminder/i).length).toBeGreaterThan(0);
+    expect(within(owed('Nora NoApp')).queryAllByText(/reminder/i)).toHaveLength(0);
+  });
+});

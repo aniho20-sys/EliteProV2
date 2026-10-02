@@ -64,6 +64,15 @@ test('a live token connects as live; both values go to Secret Manager; nothing s
   expect(stored).not.toContain(SECRET);
 });
 
+test("the coach's clients can tell live from test mode: the coach's profile says which, and nothing more", async () => {
+  await connectDirect(deps());
+  const coach = (await db.doc('users/coachA').get()).data();
+  expect(coach.gcEnvironment).toBe('live');
+  expect(JSON.stringify(coach)).not.toContain(LIVE_TOKEN);
+  await connectDirect(deps({ accessToken: SANDBOX_TOKEN }));
+  expect((await db.doc('users/coachA').get()).data().gcEnvironment).toBe('sandbox');
+});
+
 test('a sandbox token is recognised as sandbox — by GoCardless, not by its name', async () => {
   const out = await connectDirect(deps({ accessToken: SANDBOX_TOKEN }));
   expect(out.environment).toBe('sandbox');

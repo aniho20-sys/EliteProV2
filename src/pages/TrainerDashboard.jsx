@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy, ClipboardList } from 'lucide-react';
@@ -10,6 +10,7 @@ import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/d
 import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
 import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
+import { formatShortDate } from '../i18n/format';
 
 // t() only ever takes a literal key (#39), so the weekday labels are looked up by
 // index from a fixed list rather than built from the day name.
@@ -137,8 +138,8 @@ const isSnoozed = (dateStr, today) => !!dateStr && dateStr > today;
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { t } = useLanguage();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, updateClient, sendMessage, getClient, getSessionStats } = useApp();
+  const { t, lang } = useLanguage();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, updateClient, sendMessage, getClient, getSessionStats, getTrainerSubscriptions } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
   const [recapNote, setRecapNote] = useState('');
@@ -150,6 +151,17 @@ export default function TrainerDashboard() {
   const [showAttentionAll, setShowAttentionAll] = useState(false);
   const [snoozeMenuFor, setSnoozeMenuFor] = useState(null); // `${category}-${clientId}` or null
   const [sendingReminderFor, setSendingReminderFor] = useState(null); // clientId
+  // B36: monthly plans whose last Direct Debit failed (status past_due). Fetched once —
+  // gcWebhook changes them, never this page — and quietly empty if the fetch fails.
+  const [failedPlans, setFailedPlans] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    (getTrainerSubscriptions ? getTrainerSubscriptions(currentUser.id) : Promise.resolve([]))
+      .then(subs => { if (!cancelled) setFailedPlans(subs.filter(s => s.status === 'past_due')); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.id]);
 
   const openRecap = (e, session) => {
     e.preventDefault();
@@ -282,6 +294,11 @@ export default function TrainerDashboard() {
   }, []).sort((a, b) => b.owed - a.owed);
   const owedIds = new Set(owedClients.map(o => o.client.id));
 
+  // Money not received comes first, next to money owed.
+  const paymentFailedClients = failedPlans
+    .map(plan => ({ plan, client: clients.find(c => c.id === plan.clientId) }))
+    .filter(({ client }) => client);
+
   // Two independent tracks — a client can appear in both if they genuinely
   // qualify for both, and each has its own snooze so handling/snoozing one
   // never hides the other.
@@ -317,19 +334,21 @@ export default function TrainerDashboard() {
     return acc;
   }, []);
 
-  const totalAttentionCount = owedClients.length + renewalClients.length + churnClients.length + trainingProfileClients.length;
+  const totalAttentionCount = owedClients.length + paymentFailedClients.length + renewalClients.length + churnClients.length + trainingProfileClients.length;
   // Collapsed view shows the 3 most urgent across all categories, filled in
   // priority order: owed money > renewal > churn > missing profile.
   const cap = (n, used) => showAttentionAll ? n : Math.max(0, Math.min(3 - used, n));
   const visibleOwedCount = showAttentionAll ? owedClients.length : Math.min(3, owedClients.length);
-  const visibleRenewalCount = cap(renewalClients.length, visibleOwedCount);
-  const visibleChurnCount = cap(churnClients.length, visibleOwedCount + visibleRenewalCount);
-  const visibleProfileCount = cap(trainingProfileClients.length, visibleOwedCount + visibleRenewalCount + visibleChurnCount);
+  const visibleFailedCount = cap(paymentFailedClients.length, visibleOwedCount);
+  const visibleRenewalCount = cap(renewalClients.length, visibleOwedCount + visibleFailedCount);
+  const visibleChurnCount = cap(churnClients.length, visibleOwedCount + visibleFailedCount + visibleRenewalCount);
+  const visibleProfileCount = cap(trainingProfileClients.length, visibleOwedCount + visibleFailedCount + visibleRenewalCount + visibleChurnCount);
   const visibleOwed = owedClients.slice(0, visibleOwedCount);
+  const visibleFailed = paymentFailedClients.slice(0, visibleFailedCount);
   const visibleRenewal = renewalClients.slice(0, visibleRenewalCount);
   const visibleChurn = churnClients.slice(0, visibleChurnCount);
   const visibleProfile = trainingProfileClients.slice(0, visibleProfileCount);
-  const hiddenAttentionCount = totalAttentionCount - visibleOwed.length - visibleRenewal.length - visibleChurn.length - visibleProfile.length;
+  const hiddenAttentionCount = totalAttentionCount - visibleOwed.length - visibleFailed.length - visibleRenewal.length - visibleChurn.length - visibleProfile.length;
 
   return (
     <div>
@@ -470,13 +489,42 @@ export default function TrainerDashboard() {
                     <button className="btn btn-primary btn-sm" onClick={() => navigate(`/clients/${client.id}`)}>
                       {t('tdash.top_up')}
                     </button>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      disabled={sendingReminderFor === client.id}
-                      onClick={() => handleSendRenewalReminder(client, 0)}
-                    >
-                      <Send size={14} /> {sendingReminderFor === client.id ? t('tdash.sending') : t('tdash.send_reminder')}
-                    </button>
+                    {hasAppAccount(client) && (
+                      <button
+                        className="btn btn-outline btn-sm"
+                        disabled={sendingReminderFor === client.id}
+                        onClick={() => handleSendRenewalReminder(client, 0)}
+                      >
+                        <Send size={14} /> {sendingReminderFor === client.id ? t('tdash.sending') : t('tdash.send_reminder')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {visibleFailed.length > 0 && (
+            <>
+              <div className="needs-attention-category">
+                <span className="needs-attention-category-dot" style={{ background: 'var(--danger)' }} />
+                {t('tdash.payment_failed')} <span className="text-muted">({paymentFailedClients.length})</span>
+              </div>
+              {visibleFailed.map(({ client, plan }) => (
+                <div key={`failed-${plan.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--danger)' }}>
+                  <div className="needs-attention-item-top">
+                    <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
+                    <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="needs-attention-name">{client.name}</div>
+                      <div className="needs-attention-meta">
+                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                          {plan.paymentFailedAt
+                            ? t('tdash.payment_failed_on', { date: formatShortDate(plan.paymentFailedAt, lang) })
+                            : t('tdash.payment_failed')}
+                        </span>
+                        <span className="text-muted"> · {formatCurrency(plan.monthlyAmount, 'GBP')}</span>
+                      </div>
+                    </Link>
                   </div>
                 </div>
               ))}

@@ -1,6 +1,6 @@
 const {
   monthlyAmountPence, startSubscription, completeSubscription, conflictingResourceId,
-  cancelSubscriptionsFor,
+  cancelSubscriptionsFor, cancelSubscription,
 } = require('../gcSubscriptions');
 
 // ── A small in-memory Firestore: just the calls gcSubscriptions makes. ──
@@ -376,5 +376,64 @@ describe('environment', () => {
     });
     await cancelSubscriptionsFor({ db, uid: 'c1', field: 'clientId', readToken: async () => 'tok', fetchImpl: gc.fetchImpl, now: () => NOW, reason: 'test' });
     expect(gc.calls.map(c => c.host)).toEqual([SANDBOX_HOST, SANDBOX_HOST]);
+  });
+});
+
+// ── A client (or their coach) cancels from the app (B36) ──
+describe('cancelSubscription', () => {
+  const ACTIVE = { clientId: 'c1', trainerId: 't1', status: 'active', environment: 'live', providerSubscriptionId: 'SB1', providerAuthorisationId: 'MD1' };
+  const cancelRoutes = () => ({
+    'POST /subscriptions/SB1/actions/cancel': () => [200, {}],
+    'POST /mandates/MD1/actions/cancel': () => [200, {}],
+  });
+  const run = (db, gc, uid, subscriptionId = 'SUBSCRIPTION01') =>
+    cancelSubscription({ db, uid, subscriptionId, readToken: async () => 'tok', fetchImpl: gc.fetchImpl, now: () => NOW });
+
+  test('the client stops it: GoCardless subscription and mandate cancelled, on the plan\'s own GoCardless', async () => {
+    const db = fakeDb({ ...seed(), 'subscriptions/SUBSCRIPTION01': { ...ACTIVE } });
+    const gc = fakeGc(cancelRoutes());
+    await expect(run(db, gc, 'c1')).resolves.toEqual({ status: 'cancelled' });
+    expect(gc.calls.map(c => `${c.host} ${c.path}`)).toEqual([
+      'https://api.gocardless.com /subscriptions/SB1/actions/cancel',
+      'https://api.gocardless.com /mandates/MD1/actions/cancel',
+    ]);
+    expect(db.store.get('subscriptions/SUBSCRIPTION01')).toMatchObject({ status: 'cancelled', cancelReason: 'cancelled_by_client' });
+  });
+
+  test('a payment-failed plan can be cancelled too; so can the coach', async () => {
+    const db = fakeDb({ ...seed(), 'subscriptions/SUBSCRIPTION01': { ...ACTIVE, status: 'past_due' } });
+    await expect(run(db, fakeGc(cancelRoutes()), 't1')).resolves.toEqual({ status: 'cancelled' });
+    expect(db.store.get('subscriptions/SUBSCRIPTION01').cancelReason).toBe('cancelled_by_trainer');
+  });
+
+  test('nobody else can', async () => {
+    const db = fakeDb({ ...seed(), 'subscriptions/SUBSCRIPTION01': { ...ACTIVE } });
+    const gc = fakeGc(cancelRoutes());
+    await expect(run(db, gc, 'someone-else')).rejects.toMatchObject({ code: 'permission-denied' });
+    expect(gc.calls).toEqual([]);
+    expect(db.store.get('subscriptions/SUBSCRIPTION01').status).toBe('active');
+  });
+
+  test('already finished: says so, asks GoCardless nothing (a second tap)', async () => {
+    const db = fakeDb({ ...seed(), 'subscriptions/SUBSCRIPTION01': { ...ACTIVE, status: 'cancelled' } });
+    const gc = fakeGc({});
+    await expect(run(db, gc, 'c1')).resolves.toEqual({ status: 'cancelled' });
+    expect(gc.calls).toEqual([]);
+  });
+
+  test('mid-activation is not cancelled under itself', async () => {
+    const db = fakeDb({ ...seed(), 'subscriptions/SUBSCRIPTION01': { ...ACTIVE, status: 'completing', updatedAt: NOW.toISOString() } });
+    const gc = fakeGc({});
+    await expect(run(db, gc, 'c1')).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(gc.calls).toEqual([]);
+  });
+
+  test('GoCardless refuses: the plan stays as it was, the error is recorded, and the app is told', async () => {
+    const db = fakeDb({ ...seed(), 'subscriptions/SUBSCRIPTION01': { ...ACTIVE } });
+    const gc = fakeGc({ 'POST /subscriptions/SB1/actions/cancel': () => [500, { error: { type: 'api_error', message: 'down' } }] });
+    await expect(run(db, gc, 'c1')).rejects.toMatchObject({ code: 'unavailable' });
+    const sub = db.store.get('subscriptions/SUBSCRIPTION01');
+    expect(sub.status).toBe('active');
+    expect(sub.cancelError).toContain('500');
   });
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CalendarCheck, ShieldCheck, RefreshCw } from 'lucide-react';
+import { CalendarCheck, ShieldCheck, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -17,7 +17,7 @@ import { SkeletonLine } from './Skeleton';
 // the same gate; hiding it here is only so a real client is never shown it at all.
 export default function SubscriptionCard() {
   const { t } = useLanguage();
-  const { currentUser, data, getSubscriptions, startSubscription, refreshSubscription } = useApp();
+  const { currentUser, data, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,9 +26,15 @@ export default function SubscriptionCard() {
   const [tier, setTier] = useState(8);
   const [starting, setStarting] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const trainer = (data.users || []).find(u => u.id === currentUser.trainerId);
   const rate = trainer?.subscriptionRate;
+  // The server writes gcEnvironment onto the coach's profile when they connect GoCardless.
+  // Anything but 'live' is the sandbox — including coaches who connected before it existed —
+  // and only then may the card say no real money is taken (B36).
+  const testMode = trainer?.gcEnvironment !== 'live';
   const offered = currentUser.role === 'client'
     && currentUser.subscriptionTester === true
     && !!trainer && monthlyAmount(rate, 4) !== null
@@ -51,6 +57,7 @@ export default function SubscriptionCard() {
     if (status === 'active') toast(t('sub.toast_active'));
     else if (status === 'pending' || status === 'completing') toast(t('sub.toast_pending'), 'info');
     else if (status === 'abandoned' || status === 'exit') toast(t('sub.toast_abandoned'), 'info');
+    else if (status === 'cancelled') toast(t('sub.toast_cancelled'), 'info');
     else toast(t('sub.toast_failed'), 'error');
   };
 
@@ -86,6 +93,21 @@ export default function SubscriptionCard() {
     }
   };
 
+  const handleCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      await cancelSubscription(current.id);
+      toast(t('sub.toast_cancelled'));
+      setConfirmCancel(false);
+      await load();
+    } catch {
+      toast(t('sub.toast_cancel_failed'), 'error', 10000);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const handleCheck = async () => {
     setChecking(true);
     try {
@@ -104,16 +126,28 @@ export default function SubscriptionCard() {
       <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <CalendarCheck size={18} /> {t('sub.title')}
       </h3>
-      <p className="text-sm" style={{ marginBottom: 8 }}><span className="tag tag-warning">{t('sub.sandbox_badge')}</span></p>
+      {testMode && <p className="text-sm" style={{ marginBottom: 8 }}><span className="tag tag-warning">{t('sub.sandbox_badge')}</span></p>}
 
       {subs === null ? (
         <div className="mt-8"><SkeletonLine /><SkeletonLine width="60%" /></div>
       ) : current && ['active', 'paused', 'past_due'].includes(current.status) ? (
         <div className="mt-8">
-          <span className="tag tag-accent">{t('sub.active')}</span>
+          {current.status === 'past_due' ? (
+            <>
+              <span className="tag tag-danger">{t('sub.payment_failed_tag')}</span>
+              <p className="text-sm mt-8" style={{ display: 'flex', gap: 6, color: 'var(--danger)' }}>
+                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {t('sub.payment_failed_desc')}
+              </p>
+            </>
+          ) : (
+            <span className="tag tag-accent">{t('sub.active')}</span>
+          )}
           <p className="text-sm mt-8">
             {t('sub.your_plan', { n: current.tier, amount: formatCurrency(current.monthlyAmount, 'GBP') })}
           </p>
+          <button type="button" className="btn btn-outline btn-sm mt-8" onClick={() => setConfirmCancel(true)}>
+            {t('sub.cancel')}
+          </button>
         </div>
       ) : current ? (
         <div className="mt-8">
@@ -150,6 +184,21 @@ export default function SubscriptionCard() {
       <p className="text-sm text-muted mt-16" style={{ display: 'flex', gap: 6 }}>
         <ShieldCheck size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {t('sub.privacy')}
       </p>
+
+      {confirmCancel && current && (
+        <div className="modal-overlay" onClick={() => !cancelling && setConfirmCancel(false)}>
+          <div className="modal" role="dialog" aria-modal="true" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">{t('sub.cancel_title')}</h3>
+            <p className="text-sm text-secondary">{t('sub.cancel_desc')}</p>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-outline" onClick={() => setConfirmCancel(false)} disabled={cancelling}>{t('sub.cancel_keep')}</button>
+              <button type="button" className="btn btn-danger" onClick={handleCancel} disabled={cancelling}>
+                {cancelling ? t('sub.cancelling') : t('sub.cancel_confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
