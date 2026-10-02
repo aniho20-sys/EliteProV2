@@ -854,6 +854,13 @@ export function AppProvider({ children }) {
     await disconnect();
   };
 
+  // B36: the trainer's own GoCardless account. The two values go to the server and on to
+  // Secret Manager; the result says which GoCardless (live/sandbox) accepted the token.
+  const connectGcDirect = async ({ accessToken, webhookSecret }) => {
+    const call = httpsCallable(functions, 'gcConnectDirect');
+    return (await call({ accessToken, webhookSecret })).data;
+  };
+
   // ========== Subscriptions (Phase 3 Step 3) ==========
   // Written only by Cloud Functions (firestore.rules: allow write: if false) — the
   // client asks, the server prices and records. One-off fetches rather than a
@@ -1119,7 +1126,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getPaymentConnection, startGcConnect, disconnectGc, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,

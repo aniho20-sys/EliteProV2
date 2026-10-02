@@ -17,6 +17,7 @@ import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 import { gcFailureMessage } from '../utils/gcErrors';
 import SubscriptionCard from '../components/SubscriptionCard';
 import { inviteUrl } from '../utils/inviteLink';
+import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
 
 function InstallAppCard() {
@@ -77,7 +78,7 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -168,6 +169,11 @@ export default function ProfilePage() {
   const [gcConnecting, setGcConnecting] = useState(false);
   const [gcDisconnecting, setGcDisconnecting] = useState(false);
   const [showGcDisconnectConfirm, setShowGcDisconnectConfirm] = useState(false);
+  // B36: connect the trainer's own GoCardless account (token + webhook secret)
+  const [gcDirectOpen, setGcDirectOpen] = useState(false);
+  const [gcDirectSecret, setGcDirectSecret] = useState('');
+  const [gcDirectToken, setGcDirectToken] = useState('');
+  const [gcDirectSaving, setGcDirectSaving] = useState(false);
 
   // Load invite code for trainer
   // getInviteCode/inviteCode deliberately excluded: getInviteCode is recreated on every
@@ -247,6 +253,41 @@ export default function ProfilePage() {
       toast(t('sub.rate_save_failed'), 'error');
     } finally {
       setSubRateSaving(false);
+    }
+  };
+
+  const handleCopyGcWebhookUrl = () => {
+    navigator.clipboard.writeText(gcWebhookUrl(currentUser.id))
+      .then(() => toast(t('profile.gc_direct_url_copied')))
+      .catch(() => toast(t('profile.toast_generic_error'), 'error'));
+  };
+
+  const handleGcDirectConnect = async (e) => {
+    e.preventDefault();
+    if (gcDirectSaving || !gcDirectToken.trim() || !gcDirectSecret.trim()) return;
+    setGcDirectSaving(true);
+    try {
+      const result = await connectGcDirect({ accessToken: gcDirectToken, webhookSecret: gcDirectSecret });
+      toast(t('profile.gc_direct_connected'));
+      if (result?.verificationStatus && result.verificationStatus !== 'successful') {
+        toast(t('profile.gc_direct_unverified'), 'info', 10000);
+      }
+      setGcDirectToken('');
+      setGcDirectSecret('');
+      setGcDirectOpen(false);
+      setGcConnection(await getPaymentConnection(currentUser.id));
+    } catch (err) {
+      // The server says which: a token GoCardless refused, or input that is not a token
+      // or secret at all (most often the label copied instead of the value).
+      const refused = err?.code === 'functions/invalid-argument' && /did not accept/i.test(err?.message || '');
+      toast(
+        refused ? t('profile.gc_direct_bad_token')
+          : err?.code === 'functions/invalid-argument' ? t('profile.gc_direct_bad_input')
+            : t('profile.gc_direct_failed'),
+        'error', 10000,
+      );
+    } finally {
+      setGcDirectSaving(false);
     }
   };
 
@@ -719,6 +760,9 @@ export default function ProfilePage() {
                 <span className="tag tag-accent">{t('profile.connected')}</span>
                 <span className="tag tag-primary" style={{ textTransform: 'capitalize' }}>{gcConnection.environment}</span>
               </div>
+              {gcConnection.mode === 'direct' && gcConnection.verificationStatus && gcConnection.verificationStatus !== 'successful' && (
+                <p className="text-sm mb-8" style={{ color: 'var(--warning)' }}>{t('profile.gc_direct_unverified')}</p>
+              )}
               <p className="text-sm text-muted mb-12">
                 {t('profile.connected_on', { date: gcConnection.connectedAt
                   ? new Date(gcConnection.connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -753,6 +797,47 @@ export default function ProfilePage() {
             <button className="btn btn-primary mt-8" onClick={handleGcConnect} disabled={gcConnecting} style={{ width: '100%' }}>
               <CreditCard size={16} /> {gcConnecting ? t('profile.connecting_dots') : t('profile.connect_gc')}
             </button>
+          )}
+
+          {/* B36: the trainer's own account — offered until one is connected, including
+              while a sandbox partner connection is in place, so it can be switched to live. */}
+          {!gcLoading && !(gcConnection?.status === 'connected' && gcConnection?.mode === 'direct') && (
+            <div className="mt-16">
+              <button type="button" className="btn btn-outline" style={{ width: '100%' }}
+                aria-expanded={gcDirectOpen} onClick={() => setGcDirectOpen(o => !o)}>
+                {t('profile.gc_direct_toggle')}
+              </button>
+              {gcDirectOpen && (
+                <form className="mt-8" onSubmit={handleGcDirectConnect}>
+                  <p className="text-sm text-secondary mb-8">{t('profile.gc_direct_intro')}</p>
+                  <p className="text-sm mb-8">{t('profile.gc_direct_step_webhook')}</p>
+                  <div className="flex gap-8 mb-16" style={{ alignItems: 'center' }}>
+                    <code className="text-sm" style={{ wordBreak: 'break-all', flex: 1 }}>{gcWebhookUrl(currentUser.id)}</code>
+                    <button type="button" className="btn btn-sm btn-outline" onClick={handleCopyGcWebhookUrl}>
+                      <Copy size={14} /> {t('common.copy')}
+                    </button>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="gc-direct-secret">{t('profile.gc_direct_step_secret')}</label>
+                    <input id="gc-direct-secret" className="form-input" value={gcDirectSecret}
+                      placeholder={t('profile.gc_direct_secret_label')}
+                      autoComplete="off" autoCapitalize="none" spellCheck={false}
+                      onChange={e => setGcDirectSecret(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="gc-direct-token">{t('profile.gc_direct_step_token')}</label>
+                    <input id="gc-direct-token" className="form-input" value={gcDirectToken}
+                      placeholder={t('profile.gc_direct_token_label')}
+                      autoComplete="off" autoCapitalize="none" spellCheck={false}
+                      onChange={e => setGcDirectToken(e.target.value)} />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%' }}
+                    disabled={gcDirectSaving || !gcDirectToken.trim() || !gcDirectSecret.trim()}>
+                    <CreditCard size={16} /> {gcDirectSaving ? t('profile.connecting_dots') : t('profile.gc_direct_connect')}
+                  </button>
+                </form>
+              )}
+            </div>
           )}
         </div>
       )}
