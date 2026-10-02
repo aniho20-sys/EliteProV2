@@ -122,9 +122,16 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
 │                              # (daily scheduled function), gcWebhook (public onRequest — GoCardless
 │                              # payment/subscription/mandate events, signature-checked, see gcWebhooks.js)
+├── gcEnv.js                   # B36: sandbox vs live API host, read from each trainer's paymentConnections
+│                              # (absent = sandbox); subscriptions record their own environment
+├── gcDirect.js                # B36: gcConnectDirect — a trainer connects their OWN GoCardless account with an
+│                              # access token + their webhook endpoint's secret (both → Secret Manager);
+│                              # live/sandbox decided by which API accepts the token, never by its name
 ├── gcWebhooks.js              # Step 4: verifies the webhook signature, grants a month's sessions on a
 │                              # confirmed payment (idempotent per payment id, roll-over cap), past_due on
-│                              # failure, cancelled on subscription/mandate end; per-event dedupe in gcEvents
+│                              # failure, cancelled on subscription/mandate end; per-event dedupe in gcEvents.
+│                              # Two routes: bare URL = partner app (GC_WEBHOOK_SECRET, links.organisation);
+│                              # gcWebhook/<uid> = that trainer's own account (secret gc-webhook-<uid>)
 ├── inviteCodes.js             # Invite code reservation + resolve + connectWithInviteCode/ensureInviteCode logic (P2/P3)
 ├── availability.js            # getTrainerAvailability: a client's view of when their coach is busy (times only)
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
@@ -421,6 +428,7 @@ Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-sub
   lastError: string | null,     // GoCardless status/type/message of the last failure — never a token or body
   startDate: string,            // 'YYYY-MM-DD'
   provider: 'gocardless' | 'stripe',   // which processor holds this subscription
+  environment: 'sandbox' | 'live',     // where it was created; completing/cancelling always go there (absent = sandbox)
   providerAuthorisationId: string,     // GoCardless: mandate id · Stripe: payment_method id
   providerSubscriptionId: string,
   currentPeriodStart: string,   // charge date of the last confirmed payment
@@ -441,8 +449,11 @@ Non-sensitive GoCardless connection metadata, written server-side only by `gcOAu
 {
   trainerId: string,
   provider: 'gocardless' | 'stripe',
-  providerAccountId: string | null,   // GoCardless: organisation id · Stripe: stripe_user_id
-  environment: 'sandbox' | 'live',
+  providerAccountId: string | null,   // GoCardless: organisation id (partner) or creditor id (direct) · Stripe: stripe_user_id
+  mode: 'direct' | undefined,          // 'direct' = the trainer's own account (gcConnectDirect, B36); absent = partner OAuth
+  creditorName: string | null,         // direct only, from GoCardless
+  verificationStatus: string | null,   // direct only: GoCardless pays out only once 'successful'
+  environment: 'sandbox' | 'live',     // absent = sandbox (functions/gcEnv.js)
   status: 'connected' | 'disconnected',
   connectedAt: string,      // ISO datetime
   disconnectedAt: string,   // ISO datetime, present after a disconnect

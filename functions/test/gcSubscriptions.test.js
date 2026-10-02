@@ -38,8 +38,9 @@ function fakeDb(seed = {}) {
 function fakeGc(routes) {
   const calls = [];
   const fetchImpl = async (url, init) => {
-    const path = url.replace('https://api-sandbox.gocardless.com', '');
-    calls.push({ method: init.method, path, headers: init.headers, body: init.body && JSON.parse(init.body) });
+    const host = url.match(/^https:\/\/[^/]+/)[0];
+    const path = url.slice(host.length);
+    calls.push({ host, method: init.method, path, headers: init.headers, body: init.body && JSON.parse(init.body) });
     const handler = routes[`${init.method} ${path}`];
     if (!handler) throw new Error(`unexpected GoCardless call: ${init.method} ${path}`);
     const [status, body] = handler(calls[calls.length - 1]);
@@ -336,5 +337,44 @@ describe('cancelSubscriptionsFor — a deleted account is never charged again', 
     const r = await cancelSubscriptionsFor(cancelDeps(db, gc, { uid: 't1', field: 'trainerId' }));
     expect(r.cancelled.sort()).toEqual(['S1', 'S2']);
     expect(db.store.get('subscriptions/S3').status).toBe('active');
+  });
+});
+
+// ── Sandbox or live, per connection (B36) ──
+// A plan is made on the GoCardless the trainer is connected to, records which one, and is
+// only ever completed or cancelled there — never sent to the other world after the
+// trainer reconnects.
+describe('environment', () => {
+  const SANDBOX_HOST = 'https://api-sandbox.gocardless.com';
+  const LIVE_HOST = 'https://api.gocardless.com';
+
+  test('no environment on the connection (every connection made so far) = sandbox', async () => {
+    const db = fakeDb(seed());
+    const gc = fakeGc(happyStartRoutes());
+    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 });
+    expect(gc.calls.every(c => c.host === SANDBOX_HOST)).toBe(true);
+    expect(db.store.get(`subscriptions/${out.subscriptionId}`).environment).toBe('sandbox');
+  });
+
+  test('a live connection: the plan is made on live GoCardless and says so', async () => {
+    const db = fakeDb({ ...seed(), 'paymentConnections/t1': { status: 'connected', environment: 'live' } });
+    const gc = fakeGc(happyStartRoutes());
+    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 });
+    expect(gc.calls.map(c => c.host)).toEqual([LIVE_HOST, LIVE_HOST]);
+    expect(db.store.get(`subscriptions/${out.subscriptionId}`).environment).toBe('live');
+  });
+
+  test('completing and cancelling follow the plan\'s own environment, not the current connection', async () => {
+    const db = fakeDb({
+      ...seed(),
+      'paymentConnections/t1': { status: 'connected', environment: 'live' }, // reconnected since
+      'subscriptions/OLD': { clientId: 'c1', trainerId: 't1', status: 'active', environment: 'sandbox', providerSubscriptionId: 'SB9', providerAuthorisationId: 'MD9' },
+    });
+    const gc = fakeGc({
+      'POST /subscriptions/SB9/actions/cancel': () => [200, {}],
+      'POST /mandates/MD9/actions/cancel': () => [200, {}],
+    });
+    await cancelSubscriptionsFor({ db, uid: 'c1', field: 'clientId', readToken: async () => 'tok', fetchImpl: gc.fetchImpl, now: () => NOW, reason: 'test' });
+    expect(gc.calls.map(c => c.host)).toEqual([SANDBOX_HOST, SANDBOX_HOST]);
   });
 });

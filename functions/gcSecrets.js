@@ -45,10 +45,14 @@ function sleep(ms) {
 // this as a hard failure (and release the OAuth nonce for a clean retry —
 // see gcOAuthNonce.js) once every attempt here has been exhausted.
 async function writeGcAccessToken(trainerId, accessToken) {
+  return writeSecretWithRetry(secretId(trainerId), accessToken);
+}
+
+async function writeSecretWithRetry(id, value) {
   let lastErr;
   for (let attempt = 1; attempt <= WRITE_RETRY_ATTEMPTS; attempt++) {
     try {
-      await writeGcAccessTokenOnce(trainerId, accessToken);
+      await writeSecretOnce(id, value);
       return;
     } catch (err) {
       lastErr = err;
@@ -58,9 +62,9 @@ async function writeGcAccessToken(trainerId, accessToken) {
   throw lastErr;
 }
 
-async function writeGcAccessTokenOnce(trainerId, accessToken) {
+async function writeSecretOnce(id, value) {
   const parent = `projects/${projectId()}`;
-  const fullName = `${parent}/secrets/${secretId(trainerId)}`;
+  const fullName = `${parent}/secrets/${id}`;
 
   try {
     await secretClient.getSecret({ name: fullName });
@@ -68,14 +72,14 @@ async function writeGcAccessTokenOnce(trainerId, accessToken) {
     if (err.code !== 5 /* NOT_FOUND */) throw err;
     await secretClient.createSecret({
       parent,
-      secretId: secretId(trainerId),
+      secretId: id,
       secret: { replication: { automatic: {} } },
     });
   }
 
   await secretClient.addSecretVersion({
     parent: fullName,
-    payload: { data: Buffer.from(accessToken, 'utf8') },
+    payload: { data: Buffer.from(value, 'utf8') },
   });
 }
 
@@ -93,7 +97,11 @@ async function readGcAccessToken(trainerId) {
 // unknown — not committing to that API shape without confirming it in
 // sandbox first.
 async function deleteGcAccessToken(trainerId) {
-  const fullName = `projects/${projectId()}/secrets/${secretId(trainerId)}`;
+  return deleteSecret(secretId(trainerId));
+}
+
+async function deleteSecret(id) {
+  const fullName = `projects/${projectId()}/secrets/${id}`;
   try {
     await secretClient.deleteSecret({ name: fullName });
   } catch (err) {
@@ -157,7 +165,39 @@ async function readGcWebhookSecret() {
   }
 }
 
+// A trainer's OWN webhook endpoint secret (B36, own-account connection). A merchant's
+// webhook endpoint, created in their own GoCardless dashboard, has its own secret; the
+// trainer pastes it into ElitePro once (gcConnectDirect). A request signed with it can
+// only have come from that trainer's GoCardless account — which is how gcWebhook/<uid>
+// knows whose events they are without trusting anything inside the event.
+function webhookSecretId(trainerId) {
+  return `gc-webhook-${trainerId}`;
+}
+
+async function writeTrainerWebhookSecret(trainerId, value) {
+  return writeSecretWithRetry(webhookSecretId(trainerId), value);
+}
+
+// null, never a throw, when there is none: the caller answers "not configured" (#29).
+async function readTrainerWebhookSecret(trainerId) {
+  try {
+    const name = `projects/${projectId()}/secrets/${webhookSecretId(trainerId)}/versions/latest`;
+    const [version] = await secretClient.accessSecretVersion({ name });
+    return version.payload.data.toString('utf8').trim() || null;
+  } catch (err) {
+    console.warn(`[gcSecrets] no webhook secret for trainer ${trainerId}:`, err.message);
+    return null;
+  }
+}
+
+async function deleteTrainerWebhookSecret(trainerId) {
+  return deleteSecret(webhookSecretId(trainerId));
+}
+
 exports.readGcWebhookSecret = readGcWebhookSecret;
+exports.writeTrainerWebhookSecret = writeTrainerWebhookSecret;
+exports.readTrainerWebhookSecret = readTrainerWebhookSecret;
+exports.deleteTrainerWebhookSecret = deleteTrainerWebhookSecret;
 exports.writeGcAccessToken = writeGcAccessToken;
 exports.readGcAccessToken = readGcAccessToken;
 exports.deleteGcAccessToken = deleteGcAccessToken;

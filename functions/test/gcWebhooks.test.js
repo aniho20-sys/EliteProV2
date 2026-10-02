@@ -249,3 +249,48 @@ describe('retries', () => {
       .toEqual({ processed: 3, failed: 0 });
   });
 });
+
+// ── A trainer's own GoCardless account (B36) ──
+// Events arrive at gcWebhook/<uid>, signed with that trainer's own secret, so the trainer
+// is known before the body is read. Tenant isolation must hold all the same.
+describe("a trainer's own GoCardless account", () => {
+  const { webhookRoute } = require('../gcWebhooks');
+
+  test('the URL decides the route: bare = partner app, /<uid> = that trainer, anything else refused', () => {
+    expect(webhookRoute('/')).toEqual({ trainerId: null });
+    expect(webhookRoute('')).toEqual({ trainerId: null });
+    expect(webhookRoute('/zY3mbXFAXoaYvGxEQwH15zTZtOF3')).toEqual({ trainerId: 'zY3mbXFAXoaYvGxEQwH15zTZtOF3' });
+    expect(webhookRoute('/zY3mbXFAXoaYvGxEQwH15zTZtOF3/')).toEqual({ trainerId: 'zY3mbXFAXoaYvGxEQwH15zTZtOF3' });
+    for (const bad of ['/a/b', '/../x', '/short', '/has space here', '/x%2Fy1234567']) {
+      expect(webhookRoute(bad)).toEqual({ invalid: true });
+    }
+  });
+
+  test('a proven trainer is used as-is — the event\'s organisation is not consulted', async () => {
+    payments.PM1 = { id: 'PM1', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    // No organisation at all (a merchant's own endpoint may not send one).
+    const event = { id: 'EVD1', resource_type: 'payments', action: 'confirmed', links: { payment: 'PM1' } };
+    const res = await run([event], { trainerId: 'coachA' });
+    expect(res).toEqual({ processed: 1, failed: 0 });
+    expect((await client()).totalSessions).toBe(8);
+  });
+
+  test("a proven trainer still cannot touch another trainer's plan", async () => {
+    payments.PM1 = { id: 'PM1', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    await run([ev('EVD2', 'payments', 'confirmed', { payment: 'PM1' })], { trainerId: 'coachB' });
+    expect((await client()).totalSessions).toBe(0);
+    expect((await db.doc('gcEvents/EVD2').get()).data().outcome).toBe('not_ours');
+  });
+
+  test('payments are looked up on the GoCardless the trainer is connected to', async () => {
+    payments.PM1 = { id: 'PM1', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    await run([paymentConfirmed('EVS', 'PM1')]);
+    expect(fetchCalls[0].url).toBe('https://api-sandbox.gocardless.com/payments/PM1'); // no environment recorded = sandbox
+
+    fetchCalls = [];
+    await db.doc('paymentConnections/coachA').update({ environment: 'live' });
+    payments.PM2 = { id: 'PM2', status: 'confirmed', charge_date: '2026-11-01', links: { subscription: 'SB1' } };
+    await run([paymentConfirmed('EVL', 'PM2')]);
+    expect(fetchCalls[0].url).toBe('https://api.gocardless.com/payments/PM2');
+  });
+});

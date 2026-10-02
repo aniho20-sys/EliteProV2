@@ -21,10 +21,12 @@
 // Every external dependency is injected (db, token reader, fetch, clock) so
 // the rules below are unit-tested without the emulator or GoCardless.
 
-const GC_API_BASE = 'https://api-sandbox.gocardless.com';  // sandbox only — see index.js header
-// While we are on sandbox, only clients a trainer has marked `subscriptionTester`
-// may start a plan. Real clients must never be shown a GoCardless page that looks
-// real and takes nothing. Flip together with GC_API_BASE when going live.
+const { apiBase, environmentOf } = require('./gcEnv');
+
+// Only clients a trainer has marked `subscriptionTester` may start a plan. On sandbox
+// that is because a real client must never see a GoCardless page that looks real and
+// takes nothing; on live (B36, Ani's own account first) it is the pilot: the trainer
+// chooses which one or two clients pay this way before anyone else is offered it.
 const SANDBOX = true;
 const GC_VERSION = '2015-07-06';
 const TIERS = [4, 8, 12];
@@ -65,7 +67,7 @@ function monthlyAmountPence(ratePerSession, tier) {
   return Math.round((pence * tier * 13) / 12);
 }
 
-async function gcRequest({ fetchImpl, token, method, path, body, idempotencyKey }) {
+async function gcRequest({ fetchImpl, token, environment = 'sandbox', method, path, body, idempotencyKey }) {
   const headers = {
     Authorization: `Bearer ${token}`,
     'GoCardless-Version': GC_VERSION,
@@ -73,7 +75,7 @@ async function gcRequest({ fetchImpl, token, method, path, body, idempotencyKey 
   };
   if (body) headers['Content-Type'] = 'application/json';
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
-  const res = await fetchImpl(`${GC_API_BASE}${path}`, {
+  const res = await fetchImpl(`${apiBase(environment)}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -126,6 +128,7 @@ async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, ret
   if (!connSnap.exists || connSnap.data().status !== 'connected') {
     throw new SubscriptionError('failed-precondition', 'Trainer has not connected GoCardless');
   }
+  const environment = environmentOf(connSnap.data());
 
   // One plan at a time. Older `pending` attempts (the client opened
   // GoCardless and walked away) are superseded, not blocking — the hosted
@@ -160,6 +163,7 @@ async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, ret
     currency: 'GBP',
     status: 'pending',
     provider: 'gocardless',
+    environment,
     providerAuthorisationId: null,
     providerSubscriptionId: null,
     rolloverBanked: 0,
@@ -173,7 +177,7 @@ async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, ret
 
   try {
     const br = await gcRequest({
-      fetchImpl, token, method: 'POST', path: '/billing_requests',
+      fetchImpl, token, environment, method: 'POST', path: '/billing_requests',
       idempotencyKey: `br-${subscriptionId}`,
       body: { billing_requests: {
         mandate_request: { scheme: 'bacs', currency: 'GBP', metadata: { subscription_id: subscriptionId } },
@@ -183,7 +187,7 @@ async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, ret
 
     const [givenName, ...rest] = String(client.name || '').trim().split(/\s+/);
     const flow = await gcRequest({
-      fetchImpl, token, method: 'POST', path: '/billing_request_flows',
+      fetchImpl, token, environment, method: 'POST', path: '/billing_request_flows',
       body: { billing_request_flows: {
         redirect_uri: returnUrl(subscriptionId),
         exit_uri: exitUrl,
@@ -228,6 +232,7 @@ async function completeSubscription({ db, subscriptionId, readToken, fetchImpl, 
   });
   if (claimed.status !== 'claimed') return { status: claimed.status };
   const sub = claimed.sub;
+  const environment = environmentOf(sub);
 
   const release = (fields) => ref.update({ status: 'pending', ...fields, updatedAt: now().toISOString() });
 
@@ -241,7 +246,7 @@ async function completeSubscription({ db, subscriptionId, readToken, fetchImpl, 
 
   let br;
   try {
-    br = (await gcRequest({ fetchImpl, token, method: 'GET', path: `/billing_requests/${sub.billingRequestId}` }))
+    br = (await gcRequest({ fetchImpl, token, environment, method: 'GET', path: `/billing_requests/${sub.billingRequestId}` }))
       .billing_requests;
   } catch (err) {
     await release({ lastError: describeError(err) });
@@ -263,7 +268,7 @@ async function completeSubscription({ db, subscriptionId, readToken, fetchImpl, 
   let gcSubscriptionId;
   try {
     const created = await gcRequest({
-      fetchImpl, token, method: 'POST', path: '/subscriptions',
+      fetchImpl, token, environment, method: 'POST', path: '/subscriptions',
       idempotencyKey: `sub-${subscriptionId}`,
       body: { subscriptions: {
         amount: Math.round(sub.monthlyAmount * 100),
@@ -325,10 +330,11 @@ async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, no
   for (const d of snap.docs) {
     const sub = d.data();
     if (FINISHED_STATUSES.includes(sub.status)) continue;
+    const environment = environmentOf(sub);
 
     const cancel = async (token, path) => {
       try {
-        await gcRequest({ fetchImpl, token, method: 'POST', path, body: { data: {} } });
+        await gcRequest({ fetchImpl, token, environment, method: 'POST', path, body: { data: {} } });
       } catch (err) {
         if (!alreadyInactive(err)) throw err;
       }
@@ -343,7 +349,7 @@ async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, no
       }
       if (!mandateId && sub.billingRequestId) {
         const br = (await gcRequest({
-          fetchImpl, token, method: 'GET', path: `/billing_requests/${sub.billingRequestId}`,
+          fetchImpl, token, environment, method: 'GET', path: `/billing_requests/${sub.billingRequestId}`,
         })).billing_requests;
         mandateId = (br.links && br.links.mandate_request_mandate) || null;
         if (!mandateId && br.status !== 'cancelled' && br.status !== 'fulfilled') {

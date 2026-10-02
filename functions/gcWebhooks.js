@@ -15,6 +15,7 @@
 // written once.
 
 const crypto = require('crypto');
+const { apiBase, connectionEnvironment } = require('./gcEnv');
 
 const ALREADY_EXISTS = 6;
 
@@ -72,8 +73,8 @@ async function subscriptionBy(db, field, value, trainerId) {
   return mine.length === 1 ? mine[0] : null;
 }
 
-async function gcGet({ fetchImpl, token, path }) {
-  const res = await fetchImpl(`https://api-sandbox.gocardless.com${path}`, {
+async function gcGet({ fetchImpl, token, environment, path }) {
+  const res = await fetchImpl(`${apiBase(environment)}${path}`, {
     headers: { Authorization: `Bearer ${token}`, 'GoCardless-Version': '2015-07-06', Accept: 'application/json' },
   });
   const text = await res.text();
@@ -148,15 +149,23 @@ const FINISHED = ['cancelled', 'abandoned', 'failed'];
 
 // One event. Returns a short outcome for the audit record; throws only for failures worth
 // a GoCardless retry (our side unavailable), never for events we simply do not act on.
-async function processEvent({ db, event, readToken, fetchImpl, now, notify }) {
+//
+// Whose event it is comes from one of two places, never from both:
+//   - the partner app's endpoint: links.organisation, mapped to the one trainer connected
+//     to that GoCardless organisation;
+//   - a trainer's own endpoint (gcWebhook/<uid>, B36): `trainerId`, already proven by the
+//     signature — only that trainer's GoCardless account holds the secret it was signed
+//     with. links.organisation is then not consulted at all.
+async function processEvent({ db, event, readToken, fetchImpl, now, notify, trainerId: provenTrainerId }) {
   const links = event.links || {};
-  const trainerId = await trainerForOrganisation(db, links.organisation);
+  const trainerId = provenTrainerId || await trainerForOrganisation(db, links.organisation);
   if (!trainerId) return 'unknown_organisation';
   const kind = `${event.resource_type}.${event.action}`;
 
   if (event.resource_type === 'payments' && ['confirmed', 'failed', 'charged_back'].includes(event.action)) {
     const token = await readToken(trainerId); // a failure here is retried
-    const payment = (await gcGet({ fetchImpl, token, path: `/payments/${links.payment}` })).payments;
+    const environment = await connectionEnvironment(db, trainerId);
+    const payment = (await gcGet({ fetchImpl, token, environment, path: `/payments/${links.payment}` })).payments;
     const sub = await subscriptionBy(db, 'providerSubscriptionId', payment.links && payment.links.subscription, trainerId);
     if (!sub) return 'not_ours';
 
@@ -213,7 +222,7 @@ async function processEvent({ db, event, readToken, fetchImpl, now, notify }) {
 // The whole webhook body. Each event is recorded under its GoCardless id, so a redelivery
 // of one already processed is skipped; one that failed is not recorded, and GoCardless
 // retries it. Returns { failed } — any failure means "please send this again".
-async function handleWebhook({ db, body, readToken, fetchImpl, now, notify }) {
+async function handleWebhook({ db, body, readToken, fetchImpl, now, notify, trainerId }) {
   const events = Array.isArray(body && body.events) ? body.events : [];
   let failed = 0;
   for (const event of events) {
@@ -221,7 +230,7 @@ async function handleWebhook({ db, body, readToken, fetchImpl, now, notify }) {
     const seenRef = db.doc(`gcEvents/${event.id}`);
     if ((await seenRef.get()).exists) continue;
     try {
-      const outcome = await processEvent({ db, event, readToken, fetchImpl, now, notify });
+      const outcome = await processEvent({ db, event, readToken, fetchImpl, now, notify, trainerId });
       try {
         await seenRef.create({
           outcome,
@@ -241,4 +250,15 @@ async function handleWebhook({ db, body, readToken, fetchImpl, now, notify }) {
   return { processed: events.length - failed, failed };
 }
 
-module.exports = { verifyWebhookSignature, periodEnd, rollover, processEvent, handleWebhook, SESSIONS_FORFEIT };
+// gcWebhook is reached two ways: at its bare URL by the partner app, and at
+// gcWebhook/<trainer uid> by a trainer's own GoCardless account (B36). Returns
+// { trainerId: null } for the bare URL, { trainerId } for a well-formed uid, and
+// { invalid: true } for anything else — which is refused, not treated as the bare URL.
+function webhookRoute(path) {
+  const p = String(path || '/').replace(/\/+$/, '');
+  if (p === '') return { trainerId: null };
+  const m = p.match(/^\/([A-Za-z0-9]{10,128})$/);
+  return m ? { trainerId: m[1] } : { invalid: true };
+}
+
+module.exports = { webhookRoute, verifyWebhookSignature, periodEnd, rollover, processEvent, handleWebhook, SESSIONS_FORFEIT };

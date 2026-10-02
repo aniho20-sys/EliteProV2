@@ -3,7 +3,8 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
-const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials, readGcAccessToken, readGcWebhookSecret } = require('./gcSecrets');
+const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials, readGcAccessToken, readGcWebhookSecret,
+  writeTrainerWebhookSecret, readTrainerWebhookSecret, deleteTrainerWebhookSecret } = require('./gcSecrets');
 const { errorRedirectUrl, oauthErrorCode } = require('./gcOAuthErrors');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
@@ -16,7 +17,8 @@ const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeE
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
 const { trainerAvailability } = require('./availability');
-const { verifyWebhookSignature, handleWebhook } = require('./gcWebhooks');
+const { verifyWebhookSignature, handleWebhook, webhookRoute } = require('./gcWebhooks');
+const { connectDirect, DirectConnectError } = require('./gcDirect');
 
 initializeApp();
 const db = getFirestore();
@@ -664,6 +666,7 @@ exports.gcDisconnect = functions.https.onCall(async (data, context) => {
   }
 
   await deleteGcAccessToken(trainerId);
+  await deleteTrainerWebhookSecret(trainerId); // own-account connections (B36); a no-op otherwise
   await db.doc(`paymentConnections/${trainerId}`).set({
     trainerId,
     provider: 'gocardless',
@@ -696,6 +699,25 @@ function toHttpsError(err) {
   console.error('[subscriptions] unexpected error', err);
   return new functions.https.HttpsError('internal', 'Something went wrong');
 }
+
+// ── A trainer connects their own GoCardless account (B36, functions/gcDirect.js) ──
+// The values arrive over HTTPS from the trainer's own signed-in app and go straight to
+// Secret Manager; they are never logged and never written to Firestore.
+exports.gcConnectDirect = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await connectDirect({
+      db, trainerId: context.auth.uid,
+      accessToken: data && data.accessToken, webhookSecret: data && data.webhookSecret,
+      fetchImpl: fetch, writeToken: writeGcAccessToken, writeWebhookSecret: writeTrainerWebhookSecret,
+      now: () => new Date(),
+    });
+  } catch (err) {
+    if (err instanceof DirectConnectError) throw new functions.https.HttpsError(err.code, err.message);
+    console.error('[gcConnectDirect] failed', err.message);
+    throw new functions.https.HttpsError('unavailable', 'Could not save the connection');
+  }
+});
 
 exports.gcStartSubscription = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -905,7 +927,11 @@ async function pushTo(userId, notification) {
 
 exports.gcWebhook = functions.https.onRequest(async (req, res) => {
   if (req.method !== 'POST') { res.status(405).send('POST only'); return; }
-  const secret = await readGcWebhookSecret();
+  // Bare URL: the partner app, its one secret. gcWebhook/<uid>: that trainer's own
+  // GoCardless account, signed with the secret only that trainer gave us (B36).
+  const route = webhookRoute(req.path);
+  if (route.invalid) { res.status(404).send('Not found'); return; }
+  const secret = route.trainerId ? await readTrainerWebhookSecret(route.trainerId) : await readGcWebhookSecret();
   if (!secret) { res.status(503).send('Not configured'); return; }
   if (!verifyWebhookSignature(req.rawBody, req.get('Webhook-Signature'), secret)) {
     res.status(498).send('Invalid signature');
@@ -915,6 +941,7 @@ exports.gcWebhook = functions.https.onRequest(async (req, res) => {
   try { body = JSON.parse(req.rawBody.toString('utf8')); } catch { res.status(400).send('Bad JSON'); return; }
   const { failed } = await handleWebhook({
     db, body, readToken: readGcAccessToken, fetchImpl: fetch, now: () => new Date(),
+    trainerId: route.trainerId,
     notify: ({ userId, title, body: text }) => pushTo(userId, { title, body: text }),
   });
   res.status(failed ? 500 : 200).send(failed ? 'Retry' : 'OK');
