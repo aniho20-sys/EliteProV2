@@ -126,7 +126,9 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # (absent = sandbox); subscriptions record their own environment
 ├── gcDirect.js                # B36: gcConnectDirect — a trainer connects their OWN GoCardless account with an
 │                              # access token + their webhook endpoint's secret (both → Secret Manager);
-│                              # live/sandbox decided by which API accepts the token, never by its name
+│                              # live/sandbox decided by which API accepts the token, never by its name;
+│                              # going live retires leftover sandbox plans (never the reverse);
+│                              # gcRefreshConnection re-reads verification until 'successful'
 ├── gcWebhooks.js              # Step 4: verifies the webhook signature, grants a month's sessions on a
 │                              # confirmed payment (idempotent per payment id, roll-over cap), past_due on
 │                              # failure, cancelled on subscription/mandate end; per-event dedupe in gcEvents.
@@ -200,6 +202,8 @@ Top-level config files:
   currency: string,         // one of CURRENCIES (utils/currencyUtils.js) — defaults to 'GBP' when absent, see convention #31
   bankDetails: { accountName: string, sortCode: string, accountNumber: string },
   subscriptionRate: number,  // per-session rate monthly plans are priced from (GBP); server re-reads it, client never sends a price
+  gcEnvironment: 'sandbox' | 'live',  // server-written on GoCardless connect, cleared on disconnect; clients read it
+                            // from their coach's profile so the plan card says "test mode" only when true (B36)
   timeZone: string,         // IANA zone (e.g. 'Europe/London'), written once by the app from the trainer's browser; onScheduleCreditUpdate places session date/time in it (functions/zonedTime.js) — absent = read as UTC
   // client-only:
   trainerId: string | null, // UID of trainer
@@ -508,6 +512,10 @@ addCreditLedgerEntry(clientId, { qty, rate })  // logs a top-up, adds sessions, 
 getPaymentConnection(trainerId)  // async — one-off fetch of paymentConnections/{trainerId}, not a live listener
 startGcConnect()             // calls gcOAuthStart, returns the GoCardless authorize URL to redirect to
 disconnectGc()                // calls gcDisconnect
+connectGcDirect({ accessToken, webhookSecret })  // B36: the trainer's own GoCardless account (gcConnectDirect)
+refreshGcConnection()        // B36: re-read the own account's verification status (gcRefreshConnection)
+cancelSubscription(subscriptionId)  // B36: client or their coach stops a plan (gcCancelSubscription)
+getTrainerSubscriptions(trainerId)  // coach: all clients' plans, for the dashboard's "Payment failed" list
 
 // Badges (write path only — see src/context/badgeUtils.js, no display UI yet)
 checkAndAwardBadges(clientId) // async — called from WorkoutLogPage on every log save; returns newly-earned badges

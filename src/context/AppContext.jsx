@@ -856,6 +856,12 @@ export function AppProvider({ children }) {
 
   // B36: the trainer's own GoCardless account. The two values go to the server and on to
   // Secret Manager; the result says which GoCardless (live/sandbox) accepted the token.
+  // B36: has GoCardless verified the trainer's own account since they connected it?
+  const refreshGcConnection = async () => {
+    const call = httpsCallable(functions, 'gcRefreshConnection');
+    return (await call()).data;
+  };
+
   const connectGcDirect = async ({ accessToken, webhookSecret }) => {
     const call = httpsCallable(functions, 'gcConnectDirect');
     return (await call({ accessToken, webhookSecret })).data;
@@ -1139,7 +1145,7 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,

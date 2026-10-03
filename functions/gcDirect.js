@@ -12,7 +12,7 @@
 // from the trainer's say-so: the token is tried against each API, and only the one that
 // accepts it decides. A live token cannot be stored as sandbox, or the reverse.
 
-const { API_BASE } = require('./gcEnv');
+const { API_BASE, environmentOf } = require('./gcEnv');
 
 class DirectConnectError extends Error {
   constructor(code, message) { super(message); this.code = code; }
@@ -71,11 +71,50 @@ async function connectDirect({ db, trainerId, accessToken, webhookSecret, fetchI
   // "test mode" only when it is — a client must never be told no real money is taken
   // while it is. Written only here and by the OAuth callback; cleared on disconnect.
   await db.doc(`users/${trainerId}`).update({ gcEnvironment: environment });
+
+  // Going live retires the trainer's leftover sandbox plans. They took no money, cannot be
+  // reached any more (the sandbox token was just replaced), and left in place one would
+  // keep a client's card showing a test plan and refusing a real one ("already subscribed").
+  // Only in this direction: connecting a sandbox token never touches a live plan, which
+  // may still be collecting real money at GoCardless.
+  let retiredSandboxPlans = 0;
+  if (environment === 'live') {
+    const plans = await db.collection('subscriptions').where('trainerId', '==', trainerId).get();
+    const ts = now().toISOString();
+    for (const d of plans.docs) {
+      const p = d.data();
+      if (environmentOf(p) !== 'sandbox' || ['cancelled', 'abandoned', 'failed'].includes(p.status)) continue;
+      await d.ref.update({ status: 'abandoned', lastError: 'sandbox plan retired when GoCardless went live', updatedAt: ts });
+      retiredSandboxPlans++;
+    }
+  }
   return {
     environment,
+    retiredSandboxPlans,
     creditorName: creditor.name || null,
     verificationStatus: creditor.verification_status || null,
   };
 }
 
-module.exports = { connectDirect, identifyToken, DirectConnectError };
+// GoCardless verifies a new account some time after it is connected. The status saved at
+// connect time would otherwise say "still verifying" for ever, so the Profile page asks
+// for a fresh one while it is not yet 'successful'. Reads only; never touches the token
+// beyond using it, and a failure leaves the saved status as it was.
+async function refreshDirectStatus({ db, trainerId, readToken, fetchImpl }) {
+  const ref = db.doc(`paymentConnections/${trainerId}`);
+  const snap = await ref.get();
+  const conn = snap.exists ? snap.data() : null;
+  if (!conn || conn.mode !== 'direct' || conn.status !== 'connected') return { verificationStatus: null };
+  if (conn.verificationStatus === 'successful') return { verificationStatus: 'successful' };
+  const token = await readToken(trainerId);
+  const res = await fetchImpl(`${API_BASE[environmentOf(conn)]}/creditors`, {
+    headers: { Authorization: `Bearer ${token}`, 'GoCardless-Version': '2015-07-06', Accept: 'application/json' },
+  });
+  if (!res.ok) return { verificationStatus: conn.verificationStatus || null };
+  const creditor = (JSON.parse(await res.text()).creditors || [])[0];
+  const verificationStatus = (creditor && creditor.verification_status) || conn.verificationStatus || null;
+  if (verificationStatus !== conn.verificationStatus) await ref.update({ verificationStatus });
+  return { verificationStatus };
+}
+
+module.exports = { connectDirect, identifyToken, refreshDirectStatus, DirectConnectError };

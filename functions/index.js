@@ -18,7 +18,7 @@ const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
 const { trainerAvailability } = require('./availability');
 const { verifyWebhookSignature, handleWebhook, webhookRoute } = require('./gcWebhooks');
-const { connectDirect, DirectConnectError } = require('./gcDirect');
+const { connectDirect, refreshDirectStatus, DirectConnectError } = require('./gcDirect');
 
 initializeApp();
 const db = getFirestore();
@@ -719,6 +719,18 @@ exports.gcConnectDirect = functions.https.onCall(async (data, context) => {
     if (err instanceof DirectConnectError) throw new functions.https.HttpsError(err.code, err.message);
     console.error('[gcConnectDirect] failed', err.message);
     throw new functions.https.HttpsError('unavailable', 'Could not save the connection');
+  }
+});
+
+// The trainer's own GoCardless account: ask again whether GoCardless has verified it
+// (gcDirect.refreshDirectStatus). Only the signed-in trainer's own connection.
+exports.gcRefreshConnection = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await refreshDirectStatus({ db, trainerId: context.auth.uid, readToken: readGcAccessToken, fetchImpl: fetch });
+  } catch (err) {
+    console.error('[gcRefreshConnection] failed', err.message);
+    throw new functions.https.HttpsError('unavailable', 'Could not reach GoCardless');
   }
 });
 

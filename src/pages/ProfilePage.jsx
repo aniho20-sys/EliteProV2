@@ -78,7 +78,7 @@ function getAuthProvider(firebaseUser) {
 }
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -194,6 +194,13 @@ export default function ProfilePage() {
     getPaymentConnection(currentUser.id).then(conn => {
       setGcConnection(conn);
       setGcLoading(false);
+      // An own account GoCardless had not verified yet: ask again, quietly. The saved
+      // status was taken at connect time and would otherwise never catch up (B36).
+      if (conn?.mode === 'direct' && conn.status === 'connected' && conn.verificationStatus !== 'successful' && refreshGcConnection) {
+        refreshGcConnection()
+          .then(({ verificationStatus }) => setGcConnection(prev => (prev ? { ...prev, verificationStatus } : prev)))
+          .catch(() => {});
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTrainer, currentUser.id]);

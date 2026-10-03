@@ -153,3 +153,38 @@ describe('the app and the server agree', () => {
     expect(appSrc).toContain("httpsCallable(functions, 'gcConnectDirect')");
   });
 });
+
+describe('an own account GoCardless was still verifying', () => {
+  const pendingConn = { status: 'connected', mode: 'direct', environment: 'live', verificationStatus: 'in_review' };
+
+  test('verified since: Profile asks again and the notice goes', async () => {
+    app.getPaymentConnection = vi.fn(async () => pendingConn);
+    app.refreshGcConnection = vi.fn(async () => ({ verificationStatus: 'successful' }));
+    renderProfile();
+    await waitFor(() => expect(app.refreshGcConnection).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByText(/still verifying your account/)).toBeNull());
+  });
+
+  test('still in review, or GoCardless unreachable: the notice stays and nothing breaks', async () => {
+    app.getPaymentConnection = vi.fn(async () => pendingConn);
+    app.refreshGcConnection = vi.fn(async () => { throw new Error('offline'); });
+    renderProfile();
+    expect(await screen.findByText(/still verifying your account/)).toBeTruthy();
+  });
+
+  test('already verified: GoCardless is not asked again', async () => {
+    app.getPaymentConnection = vi.fn(async () => ({ ...pendingConn, verificationStatus: 'successful' }));
+    app.refreshGcConnection = vi.fn();
+    renderProfile();
+    expect(await screen.findByText('Connected')).toBeTruthy();
+    expect(app.refreshGcConnection).not.toHaveBeenCalled();
+  });
+
+  test('the refresh function the app calls is one the server exports', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { cwd } = await import('node:process');
+    expect(readFileSync(join(cwd(), 'functions/index.js'), 'utf8')).toMatch(/^exports\.gcRefreshConnection = functions\.https\.onCall/m);
+    expect(readFileSync(join(cwd(), 'src/context/AppContext.jsx'), 'utf8')).toContain("httpsCallable(functions, 'gcRefreshConnection')");
+  });
+});
