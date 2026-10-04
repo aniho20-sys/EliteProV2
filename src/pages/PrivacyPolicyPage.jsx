@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
-const LAST_UPDATED = '26 April 2026';
+const LAST_UPDATED = '4 October 2026';
 const CONTACT_EMAIL = 'elitepro616@gmail.com';
 const CONTROLLER = 'Elitepro Team';
 
@@ -67,6 +67,21 @@ export default function PrivacyPolicyPage() {
             <li>Session bookings: date, time, type, status, notes</li>
           </ul>
 
+          <h3>Trial Session Requests (no account needed)</h3>
+          <p>
+            A trainer can publish a booking page where anyone can ask for a trial session. If you send
+            a request, we collect:
+          </p>
+          <ul>
+            <li>Your name, and the phone number or email address you give</li>
+            <li>The date and time you asked for, and any message you write</li>
+            <li>
+              A one-way hash of your network address and the day, used only to limit how many requests
+              one visitor can send per day. Your network address itself is not stored.
+            </li>
+          </ul>
+          <p>We do not ask for health information on this page.</p>
+
           <h3>Financial Records (Trainers)</h3>
           <ul>
             <li>Invoice records between trainer and client (amount, status, date)</li>
@@ -94,6 +109,10 @@ export default function PrivacyPolicyPage() {
               <tr>
                 <td>Processing health &amp; body measurement data</td>
                 <td>Explicit consent (Art. 9(2)(a) GDPR) — given when you create your account</td>
+              </tr>
+              <tr>
+                <td>Passing your trial session request to the trainer, so they can contact you</td>
+                <td>Steps taken at your request before a contract (Art. 6(1)(b) GDPR), with your agreement on the booking page</td>
               </tr>
               <tr>
                 <td>Security and abuse prevention (App Check, rate limiting)</td>
@@ -160,6 +179,12 @@ export default function PrivacyPolicyPage() {
               and will be anonymised or purged within <strong>90 days</strong> via our scheduled deletion process.
             </li>
             <li>Invoice records may be retained for up to <strong>7 years</strong> to comply with accounting obligations.</li>
+            <li>
+              A trial session request is deleted as soon as the trainer answers it. If they confirm it, your
+              name and contact details become part of their client records. A request nobody answers is
+              deleted <strong>7 days</strong> after the date you asked for. The daily request counter is
+              deleted the next day.
+            </li>
           </ul>
         </section>
 

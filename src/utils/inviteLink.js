@@ -14,3 +14,10 @@ export function opensAsSignUp(search, storage = sessionStorage) {
   if (new URLSearchParams(search || '').get('signup') === '1') return true;
   try { return !!storage.getItem('elitepro_invite_code'); } catch { return false; }
 }
+
+// A coach's public booking page (B38): a stranger asks for a trial session, no account
+// needed. The slug is issued by savePublicBooking and is not the invite code — the invite
+// code makes an account the coach's client, which a published link must not do.
+export function bookingUrl(slug) {
+  return `${APP_URL}/#/book/${slug}`;
+}

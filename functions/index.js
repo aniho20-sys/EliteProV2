@@ -19,6 +19,7 @@ const { normalizeReport, recordClientError } = require('./clientErrors');
 const { trainerAvailability } = require('./availability');
 const { verifyWebhookSignature, handleWebhook, webhookRoute } = require('./gcWebhooks');
 const { connectDirect, refreshDirectStatus, DirectConnectError } = require('./gcDirect');
+const publicBooking = require('./publicBooking');
 
 initializeApp();
 const db = getFirestore();
@@ -182,7 +183,9 @@ exports.onNewSchedule = functions.firestore
             body: `${trainerName} scheduled ${sched.type} on ${sched.date} at ${sched.time}`,
           }, data)
         : null,
-      trainerSnap.exists
+      // A trial session (B38) is created by the coach confirming a request — telling
+      // them they booked it is noise.
+      trainerSnap.exists && !sched.trial
         ? sendPush(sched.trainerId, trainerSnap.data().fcmTokens, {
             title: 'New Session Booking',
             body: `${clientName} booked ${sched.type} on ${sched.date} at ${sched.time}`,
@@ -287,7 +290,8 @@ exports.onScheduleBooked = functions.firestore
   .document('schedule/{schedId}')
   .onCreate(async (snap) => {
     const sched = snap.data();
-    if (!sched || sched.isBlocked || !sched.clientId || sched.deductedAtBooking) return;
+    // A trial session from the public booking page (B38) is outside the session pack.
+    if (!sched || sched.isBlocked || sched.trial || !sched.clientId || sched.deductedAtBooking) return;
 
     const clientRef = db.doc(`users/${sched.clientId}`);
     const ledgerRef = db.collection('creditLedger').doc();
@@ -356,7 +360,7 @@ exports.onScheduleCreditUpdate = functions.firestore
   .onUpdate(async (change) => {
     const before = change.before.data();
     const after = change.after.data();
-    if (!after || after.isBlocked || !after.clientId) return;
+    if (!after || after.isBlocked || after.trial || !after.clientId) return;
     if (!before || before.status === after.status) return;
 
     const clientRef = db.doc(`users/${after.clientId}`);
@@ -987,6 +991,66 @@ exports.removeManagedClient = functions.https.onCall(async (data, context) => {
     throw err;
   }
 });
+
+// ── Public booking page (B38, functions/publicBooking.js) ──
+// The first two are open to people who are NOT signed in: a stranger looking at a coach's
+// free hours and asking for a trial session. Bounds, budgets and the honeypot live in
+// publicBooking.js; nothing is booked until the coach confirms.
+function bookingError(err) {
+  if (err instanceof publicBooking.PublicBookingError) return new functions.https.HttpsError(err.code, err.message);
+  return err;
+}
+
+exports.getPublicBookingPage = functions.https.onCall(async (data) => {
+  try {
+    return await publicBooking.getPage({ db, slug: data && data.slug });
+  } catch (err) { throw bookingError(err); }
+});
+
+exports.requestTrialSession = functions.https.onCall(async (data, context) => {
+  let result;
+  try {
+    result = await publicBooking.requestTrial({ db, input: data, ip: context.rawRequest && context.rawRequest.ip });
+  } catch (err) { throw bookingError(err); }
+  if (result.stored) {
+    try {
+      const coach = await db.doc(`users/${result.trainerId}`).get();
+      if (coach.exists) {
+        await sendPush(result.trainerId, coach.data().fcmTokens, {
+          title: 'New trial request',
+          body: `${result.name} asked for ${result.date} at ${result.time}`,
+        }, { type: 'trial_request', url: '/#/' });
+      }
+    } catch (err) {
+      console.error('[requestTrialSession] push failed', err); // the request is stored; the dashboard shows it
+    }
+  }
+  return { ok: true };
+});
+
+exports.savePublicBooking = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await publicBooking.saveSettings({ db, trainerId: context.auth.uid, input: data });
+  } catch (err) { throw bookingError(err); }
+});
+
+exports.respondTrialRequest = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await publicBooking.respondToRequest({
+      db, trainerId: context.auth.uid, requestId: data && data.requestId, action: data && data.action,
+    });
+  } catch (err) { throw bookingError(err); }
+});
+
+exports.cleanupTrialRequests = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async () => {
+    const removed = await publicBooking.cleanup({ db });
+    console.log(`[cleanupTrialRequests] deleted ${removed.requests} request(s), ${removed.budgets} budget doc(s)`);
+    return null;
+  });
 
 // ── A client's view of when their coach is free (functions/availability.js) ──
 // Replaces clients reading the coach's whole schedule, which exposed other clients'

@@ -5,6 +5,7 @@ import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCir
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
+import TrialRequestsCard from '../components/TrialRequestsCard';
 import { hasAppAccount } from '../utils/managedClient';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
@@ -356,6 +357,8 @@ export default function TrainerDashboard() {
         <div className="page-date">{formatDayDate(today)}</div>
         <h1 className="page-title">{getGreeting()}, {currentUser.name.split(' ')[0]}</h1>
       </div>
+
+      <TrialRequestsCard />
 
       {clients.length === 0 && (
         <div className="card onboarding-card mb-16">

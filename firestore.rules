@@ -222,6 +222,21 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── Public booking page (B38, functions/publicBooking.js) ──
+    // A stranger's trial request: written only by requestTrialSession, answered (and
+    // deleted) only by respondTrialRequest. The coach it was sent to can read it.
+    match /trialRequests/{requestId} {
+      allow read: if isAuth() && resource.data.trainerId == request.auth.uid;
+      allow write: if false;
+    }
+    // The page link's reservation and the per-day request budgets: server-only.
+    match /bookingPages/{slug} {
+      allow read, write: if false;
+    }
+    match /trialBudget/{key} {
+      allow read, write: if false;
+    }
+
     // Invite code reservations — one document per code, owned by exactly one trainer.
     // Written and read only by Cloud Functions (functions/inviteCodes.js).
     match /inviteCodes/{code} {
@@ -323,12 +338,13 @@ service cloud.firestore {
         // Client books with their own trainer only — as a plain pending booking. The
         // credit fields are the server's: onScheduleBooked skips any doc that already says
         // deductedAtBooking, so a client writing it themselves booked for free (P5,
-        // reports/production-audit-2026-09-28.md). isBlocked/lateCancellation likewise.
+        // reports/production-audit-2026-09-28.md). isBlocked/lateCancellation likewise, and
+        // trial (B38), which the credit triggers skip.
         (request.resource.data.clientId == request.auth.uid &&
          userTrainerId() == request.resource.data.trainerId &&
          request.resource.data.status == 'pending' &&
          !request.resource.data.keys().hasAny(['deductedAtBooking', 'bookedOnCredit',
-                                               'isBlocked', 'lateCancellation'])) ||
+                                               'isBlocked', 'lateCancellation', 'trial'])) ||
         // Trainer blocks their own time (no client)
         (isTrainer() && request.resource.data.trainerId == request.auth.uid
          && request.resource.data.isBlocked == true

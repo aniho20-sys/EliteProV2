@@ -903,6 +903,34 @@ export function AppProvider({ children }) {
     return snap.docs.map(d => d.data());
   };
 
+  // ========== Public booking page (B38) ==========
+  // Settings and the link are written server-side (savePublicBooking), which also reserves
+  // the link so no other coach can hold it. The profile listener brings the result back.
+  const savePublicBooking = async (settings) => {
+    const { data } = await httpsCallable(functions, 'savePublicBooking')(settings);
+    return data;
+  };
+  // Strangers' requests for a trial session. Read once when the dashboard opens; a push
+  // tells the coach a new one has arrived.
+  const getTrialRequests = async () => {
+    const snap = await getDocs(query(collection(db, 'trialRequests'), where('trainerId', '==', firebaseUser.uid)));
+    return snap.docs.map(d => d.data()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  };
+  // 'confirm' adds them as a client without the app and books the trial session; 'decline'
+  // deletes the request. Either way the request is gone afterwards.
+  const respondTrialRequest = async (requestId, action) => {
+    const { data } = await httpsCallable(functions, 'respondTrialRequest')({ requestId, action });
+    return data;
+  };
+  // The two the public page calls — open to visitors who are not signed in.
+  const getPublicBookingPage = async (slug) => {
+    const { data } = await httpsCallable(functions, 'getPublicBookingPage')({ slug });
+    return data;
+  };
+  const requestTrialSession = async (request) => {
+    await httpsCallable(functions, 'requestTrialSession')(request);
+  };
+
   // ========== Exercises ==========
   // Merges the current trainer's (or client's own trainer's) exerciseOverrides onto the
   // base list, so every page that lists exercises via getExercises() picks up the
@@ -1147,6 +1175,7 @@ export function AppProvider({ children }) {
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
     getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
+    savePublicBooking, getTrialRequests, respondTrialRequest, getPublicBookingPage, requestTrialSession,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

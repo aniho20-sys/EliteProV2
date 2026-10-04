@@ -155,6 +155,24 @@ describe('onScheduleBooked (deduct 1 credit at booking time)', () => {
     expect(schedAfter.data().deductedAtBooking).toBeUndefined();
   });
 
+  // B38: a trial session from the public booking page is paid for (or free) outside the
+  // session pack — the coach confirming one must not spend the new client's credit.
+  test('a trial session is not charged, and cancelling or completing it changes nothing', async () => {
+    await seedClient({ sessionOffset: 2, totalSessions: 10 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(48), status: 'confirmed', trial: true });
+
+    await wrappedOnScheduleBooked(snap);
+    expect((await getClient()).sessionOffset).toBe(2);
+    expect((await snap.ref.get()).data().deductedAtBooking).toBeUndefined();
+
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled' }));
+    expect((await getClient()).sessionOffset).toBe(2);
+    const reopened = await ref.get();
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, reopened, { status: 'completed' }));
+    expect((await getClient()).sessionOffset).toBe(2);
+    expect(await ledgerEntries()).toEqual([]);
+  });
+
   test('missing client doc does not crash and does not write a flag', async () => {
     const { snap } = await createSchedule({ ...sessionDateTime(48), clientId: 'no-such-client' });
 

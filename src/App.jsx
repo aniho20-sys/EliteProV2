@@ -34,6 +34,7 @@ const TrainingProfilePage = lazyPage(() => import('./pages/TrainingProfilePage')
 const PrivacyPolicyPage = lazyPage(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazyPage(() => import('./pages/TermsPage'));
 const LandingPage = lazyPage(() => import('./pages/LandingPage'));
+const PublicBookingPage = lazyPage(() => import('./pages/PublicBookingPage'));
 const OperatorDashboard = lazyPage(() => import('./pages/OperatorDashboard'));
 const TrainerApplicationPage = lazyPage(() => import('./pages/TrainerApplicationPage'));
 const StudioManagementPage = lazyPage(() => import('./pages/StudioManagementPage'));
@@ -57,6 +58,14 @@ function AppRoutes() {
   if (location.pathname === '/landing') return <Suspense fallback={<LoadingScreen />}><LandingPage /></Suspense>;
   if (location.pathname === '/privacy') return <Suspense fallback={<LoadingScreen />}><PrivacyPolicyPage /></Suspense>;
   if (location.pathname === '/terms') return <Suspense fallback={<LoadingScreen />}><TermsPage /></Suspense>;
+  // A coach's public booking page (B38) — for strangers, so signed in or not looks the same.
+  if (location.pathname.startsWith('/book/')) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes><Route path="/book/:slug" element={<PublicBookingPage />} /></Routes>
+      </Suspense>
+    );
+  }
 
   // A stranger arriving at the root URL gets the marketing page; a signed-in user falls
   // through to their own dashboard below. /login is the way back in, and is also where an

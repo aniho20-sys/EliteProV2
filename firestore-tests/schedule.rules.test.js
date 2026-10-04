@@ -100,6 +100,12 @@ describe('client bookings', () => {
     await assertFails(setDoc(doc(as(CLIENT), 'schedule', 'new2'), { ...base, id: 'new2', status: 'pending', deductedAtBooking: true }));
   });
 
+  // B38: trial sessions skip the credit triggers, so a client marking their own booking as
+  // one would book for free.
+  test('may not mark a booking as a trial session', async () => {
+    await assertFails(setDoc(doc(as(CLIENT), 'schedule', 'new5'), { ...base, id: 'new5', status: 'pending', trial: true }));
+  });
+
   test('may not create a booking that is already completed, or a blocked slot', async () => {
     await assertFails(setDoc(doc(as(CLIENT), 'schedule', 'new3'), { ...base, id: 'new3', status: 'completed' }));
     await assertFails(setDoc(doc(as(CLIENT), 'schedule', 'new4'), { ...base, id: 'new4', status: 'pending', isBlocked: true }));

@@ -5601,3 +5601,86 @@ tr:hover { background: var(--bg-card-hover); }
 .client-errors-message { overflow-wrap: anywhere; }
 .client-errors-url { overflow-wrap: anywhere; }
 .client-errors-stack { margin: 6px 0 0; max-height: 200px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.72rem; color: var(--text-muted); }
+
+/* ── Public booking page (B38) ── */
+.public-book { max-width: 560px; }
+.public-book-brand {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.public-book-brand span {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.public-book .legal-meta { margin-bottom: 24px; }
+.public-book-step {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.public-book-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.public-book-days .btn { flex: 0 0 auto; white-space: nowrap; }
+.public-book-times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.public-book-times .btn { justify-content: center; min-height: 44px; }
+.public-book-form { display: flex; flex-direction: column; gap: 4px; }
+.public-book-form .btn-primary { justify-content: center; min-height: 44px; margin-top: 8px; }
+.public-book-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.public-book-consent input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+.public-book-note { font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0; }
+.public-book-error { color: var(--danger); font-size: 0.875rem; margin: 0 0 12px; }
+.public-book-done { text-align: center; padding: 32px 20px; color: var(--accent); }
+.public-book-done .legal-title { font-size: 1.5rem; margin-top: 12px; }
+.public-book-done p { color: var(--text); line-height: 1.6; }
+/* Off-screen rather than display:none — some bots skip fields they can tell are hidden. */
+.public-book-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* ── Trial requests on the coach's dashboard (B38) ── */
+.trial-request { padding: 12px 0; border-top: 1px solid var(--border); }
+.trial-request:first-of-type { border-top: none; }
+.trial-request-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.trial-request-name { font-weight: 600; color: var(--text); }
+.trial-request-when { font-size: 0.85rem; color: var(--accent); }
+.trial-request-contact { font-size: 0.875rem; margin-top: 4px; word-break: break-all; }
+.trial-request-message { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; white-space: pre-wrap; }
+.trial-request-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.public-book-days-pick { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.public-book-days-pick .btn { min-width: 48px; justify-content: center; }
+.public-book-link {
+  font-size: 0.85rem;
+  word-break: break-all;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin: 8px 0;
+  color: var(--text);
+}

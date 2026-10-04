@@ -29,7 +29,8 @@ const exists = async (path) => (await db.doc(path).get()).exists;
 
 async function clearAll() {
   const cols = ['users', 'messages', 'workoutLogs', 'schedule', 'workoutPlans', 'exercises',
-    'templates', 'exerciseOverrides', 'intakeForms', 'bodyStats', 'invoices', 'creditLedger', 'subscriptions'];
+    'templates', 'exerciseOverrides', 'intakeForms', 'bodyStats', 'invoices', 'creditLedger', 'subscriptions',
+    'trialRequests', 'bookingPages'];
   for (const col of cols) {
     const snap = await db.collection(col).get();
     for (const d of snap.docs) await db.recursiveDelete(d.ref);
@@ -63,6 +64,9 @@ async function seed() {
     w('invoices/i1', { trainerId: TRAINER, clientId: CLIENT }),
     w('creditLedger/c1', { trainerId: TRAINER, clientId: CLIENT }),
     w('subscriptions/sub1', { trainerId: TRAINER, clientId: CLIENT, status: 'cancelled' }),
+    w('trialRequests/tr1', { trainerId: TRAINER, name: 'Jo', contact: '07700 900123' }),
+    w('trialRequests/tr2', { trainerId: 'someone-else', name: 'Sam', contact: 'sam@example.test' }),
+    w('bookingPages/abcdefgh23', { trainerId: TRAINER }),
   ]);
 }
 
@@ -114,11 +118,13 @@ describe('deleting a trainer', () => {
   test("their own content goes; the business's financial records stay", async () => {
     await deleteAccountData({ db, uid: TRAINER });
     for (const p of ['exercises/x1', 'templates/t1', `exerciseOverrides/${TRAINER}_squat`,
-      'workoutPlans/p1', 'workoutPlans/p2', 'schedule/s1', 'schedule/s2', 'messages/m2', 'messages/m3', `users/${TRAINER}`]) {
+      'workoutPlans/p1', 'workoutPlans/p2', 'schedule/s1', 'schedule/s2', 'messages/m2', 'messages/m3', `users/${TRAINER}`,
+      'trialRequests/tr1', 'bookingPages/abcdefgh23']) {
       expect(await exists(p)).toBe(false);
     }
     expect(await exists('invoices/i1')).toBe(true);
     expect(await exists('creditLedger/c1')).toBe(true);
+    expect(await exists('trialRequests/tr2')).toBe(true); // another coach's
   });
 });
 

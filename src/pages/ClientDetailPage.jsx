@@ -20,6 +20,7 @@ import SessionDateList from '../components/SessionDateList';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { hasAppAccount } from '../utils/managedClient';
+import { contactLinks } from '../utils/contactLinks';
 
 
 
@@ -424,6 +425,14 @@ export default function ClientDetailPage() {
       <div className="page-header">
         <h1 className="page-title">{client.name}</h1>
         {!hasAppAccount(client) && <span className="tag tag-primary">{t('clients.no_app')}</span>}
+        {/* Given on the public booking page (B38) — the only way to reach a client without the app. */}
+        {client.contact && (
+          <p className="text-sm mt-8">
+            <a href={contactLinks(client.contact).href}>
+              {client.contact}
+            </a>
+          </p>
+        )}
         {(client.age || client.height || client.goals) && (
           <p className="page-subtitle">{t('cdetail.summary_line', { age: client.age, height: client.height, goals: client.goals })}</p>
         )}

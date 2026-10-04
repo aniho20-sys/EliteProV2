@@ -16,6 +16,7 @@ import LanguagePicker from '../components/LanguagePicker';
 import { useLanguage, useAuthMessages } from '../i18n/LanguageContext';
 import { gcFailureMessage } from '../utils/gcErrors';
 import SubscriptionCard from '../components/SubscriptionCard';
+import PublicBookingCard from '../components/PublicBookingCard';
 import { inviteUrl } from '../utils/inviteLink';
 import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
@@ -678,6 +679,9 @@ export default function ProfilePage() {
           </button>
         </div>
       )}
+
+      {/* Trainer: public booking page for strangers (B38) — uses the working hours above */}
+      {isTrainer && <PublicBookingCard />}
 
       {/* Trainer: Business Details */}
       {isTrainer && (

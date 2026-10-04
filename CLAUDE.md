@@ -43,6 +43,8 @@ src/
 │   ├── Navigation.jsx        # Desktop sidebar (primary + collapsible More with secondary) + mobile top header + bottom nav (primary + More sheet); driven by LINK_DEFS/NAV_CONFIG
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
+│   ├── PublicBookingCard.jsx # Trainer (Profile): turn on the public booking page, trial price, days; shows the link (B38)
+│   ├── TrialRequestsCard.jsx # Trainer (Dashboard): strangers' trial requests — call/text/email, confirm (adds no-app client + trial session) or decline
 │   ├── PaymentSheetModal.jsx # Client: renewal payment sheet — trainer's bank details (per-row + Copy all), auto reference, rate-lock disclaimer
 │   ├── ProgressView.jsx      # Body composition chart + stats grid + history table; shared by ProgressPage & ClientDetailPage
 │   ├── SessionDateList.jsx   # Renders a list of session dates (used in monthly report / progress views)
@@ -91,6 +93,7 @@ src/
 │   ├── StudioManagementPage.jsx      # gym啦 (operator): manage studios + slots — gated behind GYMLA_ENABLED
 │   ├── StudioBookingPage.jsx         # gym啦 (trainer): book studio slots — gated behind GYMLA_ENABLED
 │   ├── TrainerApplicationPage.jsx    # gym啦: trainer application flow — gated behind GYMLA_ENABLED
+│   ├── PublicBookingPage.jsx         # /book/:slug — no auth: a stranger picks a free hour and asks the coach for a trial session (B38)
 │   ├── PrivacyPolicyPage.jsx         # Static privacy policy (no auth required)
 │   └── TermsPage.jsx                 # Static terms of service (no auth required)
 ├── styles/
@@ -136,6 +139,10 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # gcWebhook/<uid> = that trainer's own account (secret gc-webhook-<uid>)
 ├── inviteCodes.js             # Invite code reservation + resolve + connectWithInviteCode/ensureInviteCode logic (P2/P3)
 ├── availability.js            # getTrainerAvailability: a client's view of when their coach is busy (times only)
+├── publicBooking.js           # B38 public booking page: savePublicBooking (settings + link reservation), getPublicBookingPage +
+│                              # requestTrialSession (OPEN to signed-out visitors — free hours only, bounded fields, honeypot,
+│                              # per-visitor/per-coach daily budgets by hashed IP), respondTrialRequest (confirm = no-app client +
+│                              # trial session; decline = delete), cleanupTrialRequests (daily)
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
 ├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
 │                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)
@@ -217,6 +224,9 @@ Top-level config files:
   renewalPrompt1Shown: boolean,    // one-time "1 session left" prompt already shown
   subscriptionTester: boolean,     // sandbox gate — trainer-set only (not in the self-update allowlist)
   managed: boolean,                // true = a client WITHOUT the app, added by their coach (B35) — see below
+  contact: string,                 // managed only: phone/email given on the public booking page (B38); server-written
+  // trainer-only, server-written (savePublicBooking — not in the self-update allowlist):
+  publicBooking: { enabled: boolean, price: number, days: number[] /* 0 = Sunday */, slug: string },
 }
 ```
 **Clients without the app (`managed: true`, B35, 2026-09-30).** A coach can add a client who has no account (Clients → Add client), so a new coach can try plans, bookings, session packs and invoices before any client signs up. The doc id is `managed-<ms>-<4>` — the only id shape `firestore.rules` lets a trainer create, never a Firebase Auth uid — and it carries only `id, name, role, trainerId, managed, joinDate`. Everything that reaches a client *through the app* is hidden for them via `hasAppAccount(client)` (`utils/managedClient.js`): messages, check-in/renewal reminders, the training-profile nudge, the recap message. Removing one (`removeClient`) calls the `removeManagedClient` callable, which deletes the record and what hangs off it; deleting the coach's account deletes them too (`functions/accountDeletion.js`) — never detached, since nobody could reach an orphaned record. **Not built:** turning a no-app client into a real account later (linking) — history would need moving, which #27 forbids doing as a rewrite.
@@ -314,8 +324,17 @@ Written by `saveIntakeForm(clientId, data)` — both the one-time onboarding gat
   type: string,          // e.g. 'Training Session'
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled',
   notes: string,
+  trial: boolean,        // optional: a trial session confirmed from the public booking page (B38). The credit
+                         // triggers skip it — paid outside the session pack. A client can never set it (rules).
 }
 ```
+
+#### `trialRequests/{requestId}` (B38 public booking page)
+A stranger's request for a trial session. Written only by `requestTrialSession`, read by the coach it was sent to, deleted by `respondTrialRequest` (confirm moves name + contact onto a new no-app client and books a `trial: true` session; decline deletes) or by `cleanupTrialRequests` 7 days after the asked date. Unanswered requests block their hour on the page. No health data.
+```js
+{ id, trainerId, name, contact, message, date: 'YYYY-MM-DD', time: 'HH:MM', createdAt: ISO }
+```
+`bookingPages/{slug} → { trainerId }` reserves a page link (never the invite code — that connects an account as a client). `trialBudget/{day}_v_<hash>` / `{day}_c_<trainerId>` count requests per visitor (hashed IP + day, never the IP) and per coach. Both server-only.
 
 #### `messages/{msgId}`
 ```js
@@ -517,6 +536,13 @@ refreshGcConnection()        // B36: re-read the own account's verification stat
 cancelSubscription(subscriptionId)  // B36: client or their coach stops a plan (gcCancelSubscription)
 getTrainerSubscriptions(trainerId)  // coach: all clients' plans, for the dashboard's "Payment failed" list
 
+// Public booking page (B38)
+savePublicBooking({ enabled, price, days })  // trainer: server validates, issues the link, writes users.publicBooking
+getTrialRequests()                // trainer: one-off fetch of their unanswered trial requests
+respondTrialRequest(requestId, 'confirm' | 'decline')
+getPublicBookingPage(slug)        // no auth: { coachName, price, currency, minutes, timeZone, slots: [{date,time}] }
+requestTrialSession({ slug, date, time, name, contact, message, consent, website })  // no auth; website = honeypot
+
 // Badges (write path only — see src/context/badgeUtils.js, no display UI yet)
 checkAndAwardBadges(clientId) // async — called from WorkoutLogPage on every log save; returns newly-earned badges
 
@@ -617,6 +643,7 @@ Uses `HashRouter` (required for Firebase Hosting SPA compatibility).
 | `/training-profile` | — | TrainingProfilePage |
 | `/privacy` | PrivacyPolicyPage (no auth) | PrivacyPolicyPage (no auth) |
 | `/terms` | TermsPage (no auth) | TermsPage (no auth) |
+| `/book/:slug` | PublicBookingPage (no auth) | PublicBookingPage (no auth) |
 
 gym啦 (operator) routes — `/operator/studios`, `/apply`, `/studios/book` — are gated behind `GYMLA_ENABLED` in `App.jsx` (currently `false`); see convention #25.
 
@@ -639,6 +666,7 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **paymentConnections**: Owner trainer only can read; Cloud-Function-only writes (Admin SDK bypasses the rule)
 - **oauthNonces**: No client read or write at all — created/consumed entirely server-side
 - **clientErrors**: Owner reads (verified email); written only by the `reportClientError` function. `clientErrorBudget` is server-only
+- **trialRequests**: Coach it was sent to reads; no browser writes at all. **bookingPages**, **trialBudget**: server-only (`firestore-tests/publicBooking.rules.test.js`)
 - **gcEvents**: Server-only (`allow read, write: if false`) — one doc per processed GoCardless webhook event id, so a redelivery is skipped
 
 ## Styling Conventions

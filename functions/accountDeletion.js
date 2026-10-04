@@ -5,7 +5,7 @@
 //   messages sent or received, their workout logs, sessions they are in, plans
 //   they wrote or were given, exercises / templates / exercise overrides they
 //   made, body stats (entries + parent doc), the intake form (injuries, PAR-Q),
-//   and the profile itself.
+//   a coach's unanswered trial requests and booking-page link (B38), and the profile itself.
 //
 // DETACHED, not deleted — a trainer's clients are real people with their own
 //   accounts. They are unlinked (trainerId: null) so they can connect to someone
@@ -46,6 +46,9 @@ async function deleteAccountData({ db, uid }) {
     where('exercises', 'trainerId'),
     where('templates', 'trainerId'),
     where('exerciseOverrides', 'trainerId'),
+    // B38: strangers' trial requests to this coach, and the page link's reservation.
+    where('trialRequests', 'trainerId'),
+    where('bookingPages', 'trainerId'),
     db.collection(`bodyStats/${uid}/entries`).get(),
   ]);
   const clients = await where('users', 'trainerId');
