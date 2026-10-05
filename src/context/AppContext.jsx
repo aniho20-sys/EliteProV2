@@ -919,6 +919,16 @@ export function AppProvider({ children }) {
     snap => onChange(snap.docs.map(d => d.data()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))),
     err => { console.error('[trialRequests] listener failed', err); if (onError) onError(err); },
   );
+  // B40: group classes the coach puts on, live, and putting one on / cancelling it. Both
+  // writes are server-side: they also block or free the coach's calendar.
+  const subscribeGroupClasses = (onChange, onError) => onSnapshot(
+    query(collection(db, 'groupClasses'), where('trainerId', '==', firebaseUser.uid)),
+    snap => onChange(snap.docs.map(d => d.data()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))),
+    err => { console.error('[groupClasses] listener failed', err); if (onError) onError(err); },
+  );
+  const saveGroupClass = async (input) => (await httpsCallable(functions, 'saveGroupClass')(input)).data;
+  // Returns { tell: [{ name, contact }] } — the people to let know.
+  const cancelGroupClass = async (classId) => (await httpsCallable(functions, 'cancelGroupClass')({ classId })).data;
   // 'confirm' adds them as a client without the app and books the trial session; 'decline'
   // deletes the request. Either way the request is gone afterwards.
   const respondTrialRequest = async (requestId, action) => {
@@ -1178,7 +1188,7 @@ export function AppProvider({ children }) {
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
     getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
-    savePublicBooking, subscribeTrialRequests, respondTrialRequest, getPublicBookingPage, requestTrialSession,
+    savePublicBooking, subscribeTrialRequests, respondTrialRequest, subscribeGroupClasses, saveGroupClass, cancelGroupClass, getPublicBookingPage, requestTrialSession,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

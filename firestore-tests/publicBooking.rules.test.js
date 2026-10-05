@@ -33,6 +33,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users', STUDENT), { id: STUDENT, role: 'client', trainerId: COACH });
     await setDoc(doc(db, 'trialRequests', 'r1'), { id: 'r1', trainerId: COACH, name: 'Jo', contact: '07700 900123', date: '2026-10-20', time: '10:00' });
     await setDoc(doc(db, 'bookingPages', 'abcdefgh23'), { trainerId: COACH });
+    await setDoc(doc(db, 'groupClasses', 'gc1'), { id: 'gc1', trainerId: COACH, status: 'open', capacity: 3 });
   });
 });
 
@@ -72,6 +73,21 @@ describe('the page link and the daily budgets are server-only', () => {
     await assertFails(updateDoc(doc(as(COACH), 'users', COACH), {
       publicBooking: { enabled: true, price: 0, days: [1], slug: 'abcdefgh23' },
     }));
+  });
+});
+
+describe('group classes (B40)', () => {
+  test('the coach reads their own, live by the query the app uses; nobody else reads them', async () => {
+    await assertSucceeds(getDocs(query(collection(as(COACH), 'groupClasses'), where('trainerId', '==', COACH))));
+    await assertFails(getDoc(doc(as(OTHER_COACH), 'groupClasses', 'gc1')));
+    await assertFails(getDoc(doc(as(STUDENT), 'groupClasses', 'gc1')));
+    await assertFails(getDoc(doc(stranger(), 'groupClasses', 'gc1')));
+  });
+
+  test('written only by the server — a coach cannot make one bigger or reopen it', async () => {
+    await assertFails(updateDoc(doc(as(COACH), 'groupClasses', 'gc1'), { capacity: 50 }));
+    await assertFails(setDoc(doc(as(COACH), 'groupClasses', 'gc2'), { trainerId: COACH, status: 'open' }));
+    await assertFails(deleteDoc(doc(as(COACH), 'groupClasses', 'gc1')));
   });
 });
 

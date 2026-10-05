@@ -30,7 +30,7 @@ const exists = async (path) => (await db.doc(path).get()).exists;
 async function clearAll() {
   const cols = ['users', 'messages', 'workoutLogs', 'schedule', 'workoutPlans', 'exercises',
     'templates', 'exerciseOverrides', 'intakeForms', 'bodyStats', 'invoices', 'creditLedger', 'subscriptions',
-    'trialRequests', 'bookingPages'];
+    'trialRequests', 'bookingPages', 'groupClasses'];
   for (const col of cols) {
     const snap = await db.collection(col).get();
     for (const d of snap.docs) await db.recursiveDelete(d.ref);
@@ -67,6 +67,7 @@ async function seed() {
     w('trialRequests/tr1', { trainerId: TRAINER, name: 'Jo', contact: '07700 900123' }),
     w('trialRequests/tr2', { trainerId: 'someone-else', name: 'Sam', contact: 'sam@example.test' }),
     w('bookingPages/abcdefgh23', { trainerId: TRAINER }),
+    w('groupClasses/gc1', { trainerId: TRAINER, status: 'open' }),
   ]);
 }
 
@@ -119,7 +120,7 @@ describe('deleting a trainer', () => {
     await deleteAccountData({ db, uid: TRAINER });
     for (const p of ['exercises/x1', 'templates/t1', `exerciseOverrides/${TRAINER}_squat`,
       'workoutPlans/p1', 'workoutPlans/p2', 'schedule/s1', 'schedule/s2', 'messages/m2', 'messages/m3', `users/${TRAINER}`,
-      'trialRequests/tr1', 'bookingPages/abcdefgh23']) {
+      'trialRequests/tr1', 'bookingPages/abcdefgh23', 'groupClasses/gc1']) {
       expect(await exists(p)).toBe(false);
     }
     expect(await exists('invoices/i1')).toBe(true);

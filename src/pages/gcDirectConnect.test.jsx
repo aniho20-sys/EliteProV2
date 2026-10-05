@@ -39,7 +39,7 @@ function makeApp(over = {}) {
     getPaymentConnection: vi.fn(async () => ({ status: 'connected', environment: 'sandbox', connectedAt: '2026-09-23T10:00:00Z' })),
     startGcConnect: vi.fn(), disconnectGc: vi.fn(),
     connectGcDirect: vi.fn(async () => ({ environment: 'live', creditorName: "Ani's Studio", verificationStatus: 'successful' })),
-    getClients: () => [], getSubscriptions: vi.fn(async () => []), getClientErrors: vi.fn(async () => []),
+    getClients: () => [], getSchedule: () => [], getSubscriptions: vi.fn(async () => []), getClientErrors: vi.fn(async () => []),
     getPlatformStats: vi.fn(async () => null), updateExercise: vi.fn(),
     ...over,
   };

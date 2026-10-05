@@ -38,13 +38,17 @@ export default function TrialRequestsCard() {
       await respondTrialRequest(r.id, action);
       setRequests(list => list.filter(x => x.id !== r.id));
       setConfirmDecline(null);
-      if (action === 'confirm') toast(t('trial.toast_confirmed', { name: r.name, when: when(r) }));
+      if (action === 'confirm') {
+        toast(r.groupClassId
+          ? t('trial.toast_confirmed_group', { name: r.name, when: when(r) })
+          : t('trial.toast_confirmed', { name: r.name, when: when(r) }));
+      }
       else toast(t('trial.toast_declined', { name: r.name }), 'info');
     } catch (err) {
       if (err?.code === 'functions/not-found') {
         setRequests(list => list.filter(x => x.id !== r.id)); // already answered elsewhere
       }
-      toast(t('trial.toast_failed'), 'error');
+      toast(err?.code === 'functions/failed-precondition' ? t('trial.err_class_cancelled') : t('trial.toast_failed'), 'error');
     } finally {
       setBusy(null);
     }
@@ -66,6 +70,11 @@ export default function TrialRequestsCard() {
               <span className="trial-request-name">{r.name}</span>
               <span className="trial-request-when">{when(r)}</span>
             </div>
+            {r.groupClassId && (
+              <div className="text-sm" style={{ color: 'var(--accent)' }}>
+                {r.classTitle ? t('trial.group_class_named', { title: r.classTitle }) : t('trial.group_class')}
+              </div>
+            )}
             <div className="trial-request-contact">{r.contact}</div>
             {r.message && <div className="trial-request-message">{r.message}</div>}
             <div className="trial-request-actions">

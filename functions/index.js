@@ -1017,7 +1017,7 @@ exports.requestTrialSession = functions.https.onCall(async (data, context) => {
       const coach = await db.doc(`users/${result.trainerId}`).get();
       if (coach.exists) {
         await sendPush(result.trainerId, coach.data().fcmTokens, {
-          title: 'New trial request',
+          title: result.groupClassId ? 'New group class request' : 'New trial request',
           body: `${result.name} asked for ${result.date} at ${result.time}`,
         }, { type: 'trial_request', url: '/#/' });
       }
@@ -1044,11 +1044,26 @@ exports.respondTrialRequest = functions.https.onCall(async (data, context) => {
   } catch (err) { throw bookingError(err); }
 });
 
+// Group classes on the public page (B40): the coach puts one on, or cancels it.
+exports.saveGroupClass = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await publicBooking.saveGroupClass({ db, trainerId: context.auth.uid, input: data });
+  } catch (err) { throw bookingError(err); }
+});
+
+exports.cancelGroupClass = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await publicBooking.cancelGroupClass({ db, trainerId: context.auth.uid, classId: data && data.classId });
+  } catch (err) { throw bookingError(err); }
+});
+
 exports.cleanupTrialRequests = functions.pubsub
   .schedule('every 24 hours')
   .onRun(async () => {
     const removed = await publicBooking.cleanup({ db });
-    console.log(`[cleanupTrialRequests] deleted ${removed.requests} request(s), ${removed.budgets} budget doc(s)`);
+    console.log(`[cleanupTrialRequests] deleted ${removed.requests} request(s), ${removed.budgets} budget doc(s), ${removed.classes} old class(es)`);
     return null;
   });
 

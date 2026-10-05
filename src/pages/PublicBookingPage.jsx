@@ -26,6 +26,8 @@ export default function PublicBookingPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(null);
+  // B40: a 1-to-1 trial or a place in a group class, when the coach has classes on.
+  const [kind, setKind] = useState(null);
 
   const load = async () => {
     setLoadFailed(false);
@@ -52,6 +54,11 @@ export default function PublicBookingPage() {
     return [...byDay.entries()].map(([date, times]) => ({ date, times }));
   }, [page]);
   const activeDay = days.find(d => d.date === day) || days[0];
+  const classes = page?.groupClasses || [];
+  // Classes first only when there is no 1-to-1 time to offer.
+  const shownKind = kind || (days.length === 0 && classes.length > 0 ? 'group' : 'trial');
+  const pickKind = (k) => { setKind(k); setSlot(null); setError(''); };
+  const money = (amount) => (amount > 0 ? formatCurrency(amount, page.currency) : t('book.free'));
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
   const canSend = slot && form.name.trim() && form.contact.trim() && form.consent && !sending;
@@ -67,7 +74,7 @@ export default function PublicBookingPage() {
     } catch (err) {
       const code = err?.code || '';
       if (code === 'functions/failed-precondition') {
-        setError(t('book.err_taken'));
+        setError(slot.groupClassId ? t('book.err_class_full') : t('book.err_taken'));
         setSlot(null);
         await load();
       } else if (code === 'functions/resource-exhausted') {
@@ -99,16 +106,52 @@ export default function PublicBookingPage() {
           <div className="card public-book-done">
             <CheckCircle2 size={40} strokeWidth={1.5} />
             <h1 className="legal-title">{t('book.sent_title')}</h1>
-            <p>{t('book.sent_desc', { coach: page.coachName, when: `${formatDayDate(sent.date, lang)} ${sent.time}` })}</p>
+            <p>
+              {sent.groupClassId
+                ? t('book.sent_desc_group', { coach: page.coachName, when: `${formatDayDate(sent.date, lang)} ${sent.time}` })
+                : t('book.sent_desc', { coach: page.coachName, when: `${formatDayDate(sent.date, lang)} ${sent.time}` })}
+            </p>
           </div>
         ) : (
           <>
-            <h1 className="legal-title">{t('book.title', { coach: page.coachName })}</h1>
+            <h1 className="legal-title">
+              {shownKind === 'group' ? t('book.title_group', { coach: page.coachName }) : t('book.title', { coach: page.coachName })}
+            </h1>
             <p className="legal-meta">
-              {t('book.meta', { price, minutes: page.minutes })}
-              {page.timeZone && <><br />{t('book.times_in', { zone: page.timeZone })}</>}
+              {shownKind === 'trial' && t('book.meta', { price, minutes: page.minutes })}
+              {page.timeZone && <>{shownKind === 'trial' && <br />}{t('book.times_in', { zone: page.timeZone })}</>}
             </p>
 
+            {classes.length > 0 && (
+              <div className="public-book-kinds" role="group" aria-label={t('book.kind_label')}>
+                <button type="button" className={`btn btn-sm ${shownKind === 'trial' ? 'btn-primary' : 'btn-outline'}`}
+                  aria-pressed={shownKind === 'trial'} onClick={() => pickKind('trial')}>{t('book.kind_trial')}</button>
+                <button type="button" className={`btn btn-sm ${shownKind === 'group' ? 'btn-primary' : 'btn-outline'}`}
+                  aria-pressed={shownKind === 'group'} onClick={() => pickKind('group')}>{t('book.kind_group')}</button>
+              </div>
+            )}
+
+            {shownKind === 'group' ? (
+              <>
+                <h2 className="public-book-step">{t('book.pick_class')}</h2>
+                <div className="public-book-classes" role="group" aria-label={t('book.pick_class')}>
+                  {classes.map(c => {
+                    const chosen = slot?.groupClassId === c.id;
+                    return (
+                      <button key={c.id} type="button" className={`btn public-book-class ${chosen ? 'btn-primary' : 'btn-outline'}`}
+                        aria-pressed={chosen}
+                        onClick={() => { setSlot({ groupClassId: c.id, date: c.date, time: c.time }); setError(''); }}>
+                        <span className="public-book-class-when">{formatDayDate(c.date, lang)} {c.time}</span>
+                        {c.title && <span className="public-book-class-title">{c.title}</span>}
+                        <span className="public-book-class-meta">
+                          {t('book.class_price', { price: money(c.price) })}{' · '}{t('book.places_left', { count: c.spotsLeft })}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (<>
             <h2 className="public-book-step">{t('book.pick_time')}</h2>
             {days.length === 0 ? (
               <EmptyState compact icon={CalendarX} title={t('book.no_times')} description={t('book.no_times_desc')}
@@ -138,6 +181,7 @@ export default function PublicBookingPage() {
                 </div>
               </>
             )}
+            </>)}
 
             {error && <p className="public-book-error" role="alert">{error}</p>}
 

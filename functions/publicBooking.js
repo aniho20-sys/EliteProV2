@@ -31,6 +31,12 @@ const SLUG_LENGTH = 10;
 const SLUG_PATTERN = /^[a-z0-9]{10}$/;
 const ALREADY_EXISTS = 6;
 const TRIAL_TYPE = 'Trial session';
+const GROUP_TYPE = 'Group class';
+// Group classes (B40, 2026-10-05): a coach puts a class on at a set time; strangers on the
+// public page ask for a place. A class can be joined until shortly before it starts.
+const GROUP_LEAD_HOURS = 2;
+const GROUP_LIMITS = { capacity: [2, 20], title: 60 };
+const GROUP_KEEP_DAYS = 30;          // finished or cancelled classes are deleted this long after
 
 class PublicBookingError extends Error {
   // code is an HttpsError code
@@ -180,6 +186,7 @@ async function getPage({ db, slug, now = new Date() }) {
   if (!coach) throw new PublicBookingError('not-found', 'No such page');
   const { data } = coach;
   const { busy, openRequests } = await busyFor(db, coach.id, now);
+  const classes = openRequests >= MAX_OPEN_PER_COACH ? [] : await openGroupClasses(db, coach.id, data.timeZone, now);
   return {
     coachName: clean(data.businessName || data.name || 'Coach', LIMITS.name),
     price: data.publicBooking.price,
@@ -190,7 +197,107 @@ async function getPage({ db, slug, now = new Date() }) {
     slots: openRequests >= MAX_OPEN_PER_COACH ? [] : freeSlots({
       days: data.publicBooking.days || [], workingHours: data.workingHours, timeZone: data.timeZone, busy, now,
     }),
+    // Only what a stranger needs to choose one: never who else is coming.
+    groupClasses: classes
+      .filter(c => c.spotsLeft > 0)
+      .map(c => ({ id: c.id, date: c.date, time: c.time, minutes: c.duration, title: c.title, price: c.price, spotsLeft: c.spotsLeft })),
   };
+}
+
+// ── Group classes ──
+// Places taken = unanswered requests for the class + confirmed sessions in it. Counted from
+// the documents each time rather than kept as a counter, so nothing can drift.
+async function placesTaken(db, trainerId, tx) {
+  const read = (q) => (tx ? tx.get(q) : q.get());
+  const [requests, sessions] = await Promise.all([
+    read(db.collection('trialRequests').where('trainerId', '==', trainerId)),
+    read(db.collection('schedule').where('trainerId', '==', trainerId)),
+  ]);
+  const taken = new Map();
+  const add = (id) => { if (id) taken.set(id, (taken.get(id) || 0) + 1); };
+  requests.docs.forEach(d => add(d.data().groupClassId));
+  sessions.docs.forEach(d => { const x = d.data(); if (!x.isBlocked && x.status !== 'cancelled') add(x.groupClassId); });
+  return taken;
+}
+
+async function openGroupClasses(db, trainerId, timeZone, now, tx) {
+  const read = (q) => (tx ? tx.get(q) : q.get());
+  const [snap, taken] = await Promise.all([
+    read(db.collection('groupClasses').where('trainerId', '==', trainerId)),
+    placesTaken(db, trainerId, tx),
+  ]);
+  const earliest = now.getTime() + GROUP_LEAD_HOURS * 3600 * 1000;
+  return snap.docs.map(d => d.data())
+    .filter(c => c.status === 'open' && zonedToEpochMs(c.date, c.time, timeZone) >= earliest)
+    .map(c => ({ ...c, spotsLeft: Math.max(0, c.capacity - (taken.get(c.id) || 0)) }))
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+}
+
+function validateGroupClass(input, now, timeZone) {
+  const d = input || {};
+  const capacity = Number(d.capacity);
+  const minPeople = Number(d.minPeople);
+  const price = Number(d.price);
+  const [lo, hi] = GROUP_LIMITS.capacity;
+  if (typeof d.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.date) || !isHHMM(d.time)) throw new PublicBookingError('invalid-argument', 'when');
+  if (zonedToEpochMs(d.date, d.time, timeZone) <= now.getTime()) throw new PublicBookingError('invalid-argument', 'past');
+  if (!Number.isInteger(capacity) || capacity < lo || capacity > hi) throw new PublicBookingError('invalid-argument', 'capacity');
+  if (!Number.isInteger(minPeople) || minPeople < 1 || minPeople > capacity) throw new PublicBookingError('invalid-argument', 'minPeople');
+  if (!Number.isFinite(price) || price < 0 || price > MAX_PRICE) throw new PublicBookingError('invalid-argument', 'price');
+  return { date: d.date, time: d.time, capacity, minPeople, price: Math.round(price * 100) / 100, title: clean(d.title, GROUP_LIMITS.title) };
+}
+
+// A class is the coach's time, so it goes in their calendar as blocked time — which also
+// keeps 1-to-1 trial slots away from it — and is refused over anything already there.
+async function saveGroupClass({ db, trainerId, input, now = new Date() }) {
+  const user = await db.doc(`users/${trainerId}`).get();
+  if (!user.exists || user.data().role !== 'trainer') throw new PublicBookingError('permission-denied', 'Trainers only');
+  const cls = validateGroupClass(input, now, user.data().timeZone);
+  const ref = db.collection('groupClasses').doc();
+  const blockRef = db.doc(`schedule/gc-${ref.id}`);
+  await db.runTransaction(async (tx) => {
+    const sched = await tx.get(db.collection('schedule').where('trainerId', '==', trainerId));
+    const start = toMin(cls.time);
+    const clash = sched.docs.map(x => x.data()).some(x => x.status !== 'cancelled' && x.date === cls.date && isHHMM(x.time)
+      && start < toMin(x.time) + (Number(x.duration) || SLOT_MINUTES) && start + SLOT_MINUTES > toMin(x.time));
+    if (clash) throw new PublicBookingError('failed-precondition', 'Time taken');
+    tx.set(ref, { id: ref.id, trainerId, ...cls, duration: SLOT_MINUTES, status: 'open', createdAt: now.toISOString() });
+    tx.set(blockRef, {
+      id: blockRef.id, trainerId, clientId: '', isBlocked: true, date: cls.date, time: cls.time, duration: SLOT_MINUTES,
+      type: 'Blocked', status: 'blocked', notes: cls.title || GROUP_TYPE, groupClassId: ref.id,
+    });
+  });
+  return { id: ref.id };
+}
+
+// Cancelling: the class closes, its calendar block goes, unanswered requests are deleted and
+// confirmed places are cancelled. Nobody without the app can be told by the app, so the
+// coach gets back everyone's name and contact to tell them.
+async function cancelGroupClass({ db, trainerId, classId }) {
+  if (typeof classId !== 'string' || !/^[A-Za-z0-9]{1,40}$/.test(classId)) throw new PublicBookingError('invalid-argument', 'classId');
+  const ref = db.doc(`groupClasses/${classId}`);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || snap.data().trainerId !== trainerId) throw new PublicBookingError('not-found', 'No such class');
+    const [requests, sessions] = await Promise.all([
+      tx.get(db.collection('trialRequests').where('trainerId', '==', trainerId)),
+      tx.get(db.collection('schedule').where('trainerId', '==', trainerId)),
+    ]);
+    const asked = requests.docs.filter(d => d.data().groupClassId === classId);
+    const booked = sessions.docs.filter(d => d.data().groupClassId === classId && !d.data().isBlocked && d.data().status !== 'cancelled');
+    const people = await Promise.all(booked.map(d => tx.get(db.doc(`users/${d.data().clientId}`))));
+    tx.update(ref, { status: 'cancelled' });
+    tx.delete(db.doc(`schedule/gc-${classId}`));
+    asked.forEach(d => tx.delete(d.ref));
+    booked.forEach(d => tx.update(d.ref, { status: 'cancelled' }));
+    return {
+      cancelled: true,
+      tell: [
+        ...asked.map(d => ({ name: d.data().name, contact: d.data().contact })),
+        ...people.filter(p => p.exists).map(p => ({ name: p.data().name, contact: p.data().contact || '' })),
+      ],
+    };
+  });
 }
 
 // A visitor is counted by a hash of their IP and the day, never the IP itself.
@@ -213,7 +320,9 @@ async function requestTrial({ db, input, ip, now = new Date() }) {
   if (!name) throw new PublicBookingError('invalid-argument', 'name');
   if (!isContact(contact)) throw new PublicBookingError('invalid-argument', 'contact');
   if (data.consent !== true) throw new PublicBookingError('invalid-argument', 'consent');
-  if (typeof data.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) || !isHHMM(data.time)) {
+  const groupClassId = data.groupClassId === undefined || data.groupClassId === null ? null : String(data.groupClassId);
+  if (groupClassId !== null && !/^[A-Za-z0-9]{1,40}$/.test(groupClassId)) throw new PublicBookingError('invalid-argument', 'class');
+  if (groupClassId === null && (typeof data.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) || !isHHMM(data.time))) {
     throw new PublicBookingError('invalid-argument', 'slot');
   }
 
@@ -223,6 +332,7 @@ async function requestTrial({ db, input, ip, now = new Date() }) {
   const visitorRef = db.doc(`trialBudget/${day}_v_${visitorKey(ip, day)}`);
   const coachRef = db.doc(`trialBudget/${day}_c_${coach.id}`);
   const requestRef = db.collection('trialRequests').doc();
+  let when = { date: data.date, time: data.time };
 
   await db.runTransaction(async (tx) => {
     const [visitor, coachBudget, { busy, openRequests }] = await Promise.all([
@@ -232,22 +342,31 @@ async function requestTrial({ db, input, ip, now = new Date() }) {
     if (used(visitor) >= DAILY.perVisitor || used(coachBudget) >= DAILY.perCoach || openRequests >= MAX_OPEN_PER_COACH) {
       throw new PublicBookingError('resource-exhausted', 'Too many requests');
     }
-    const offered = freeSlots({
-      days: coach.data.publicBooking.days || [], workingHours: coach.data.workingHours,
-      timeZone: coach.data.timeZone, busy, now,
-    });
-    if (!offered.some(s => s.date === data.date && s.time === data.time)) {
-      throw new PublicBookingError('failed-precondition', 'Slot taken');
+    let extra = {};
+    if (groupClassId) {
+      // A place in a class: the class must be open, not about to start, and not full.
+      const cls = (await openGroupClasses(db, coach.id, coach.data.timeZone, now, tx)).find(c => c.id === groupClassId);
+      if (!cls || cls.spotsLeft <= 0) throw new PublicBookingError('failed-precondition', 'Class full');
+      when = { date: cls.date, time: cls.time };
+      extra = { groupClassId, classTitle: cls.title || '' };
+    } else {
+      const offered = freeSlots({
+        days: coach.data.publicBooking.days || [], workingHours: coach.data.workingHours,
+        timeZone: coach.data.timeZone, busy, now,
+      });
+      if (!offered.some(s => s.date === data.date && s.time === data.time)) {
+        throw new PublicBookingError('failed-precondition', 'Slot taken');
+      }
     }
     tx.set(visitorRef, { day, count: used(visitor) + 1 });
     tx.set(coachRef, { day, count: used(coachBudget) + 1 });
     tx.set(requestRef, {
       id: requestRef.id, trainerId: coach.id, name, contact, message,
-      date: data.date, time: data.time, createdAt: now.toISOString(),
+      ...when, ...extra, createdAt: now.toISOString(),
     });
   });
   console.log(`[requestTrial] stored ${requestRef.id} for ${coach.id}`);
-  return { ok: true, stored: true, requestId: requestRef.id, trainerId: coach.id, name, date: data.date, time: data.time };
+  return { ok: true, stored: true, requestId: requestRef.id, trainerId: coach.id, name, ...when, groupClassId };
 }
 
 // ── Coach: answer a request ──
@@ -263,6 +382,10 @@ async function respondToRequest({ db, trainerId, requestId, action, now = new Da
     const snap = await tx.get(ref);
     if (!snap.exists || snap.data().trainerId !== trainerId) throw new PublicBookingError('not-found', 'No such request');
     const r = snap.data();
+    // A place in a class that has since been cancelled cannot be confirmed (cancelling
+    // deletes such requests; this covers the two crossing).
+    const cls = r.groupClassId && action === 'confirm' ? await tx.get(db.doc(`groupClasses/${r.groupClassId}`)) : null;
+    if (cls && (!cls.exists || cls.data().status !== 'open')) throw new PublicBookingError('failed-precondition', 'Class cancelled');
     tx.delete(ref);
     if (action === 'decline') return { declined: true };
 
@@ -274,9 +397,12 @@ async function respondToRequest({ db, trainerId, requestId, action, now = new Da
       id: clientId, name: r.name, role: 'client', trainerId, managed: true,
       joinDate: localDate(now, null), contact: r.contact,
     });
+    // trial: true = paid outside the session pack; the credit triggers skip it. A class
+    // place is paid per person at the class price, the same way.
     tx.set(db.doc(`schedule/${schedId}`), {
       id: schedId, trainerId, clientId, date: r.date, time: r.time, duration: SLOT_MINUTES,
-      type: TRIAL_TYPE, status: 'confirmed', notes: r.message || '', trial: true,
+      type: r.groupClassId ? GROUP_TYPE : TRIAL_TYPE, status: 'confirmed', notes: r.message || '', trial: true,
+      ...(r.groupClassId ? { groupClassId: r.groupClassId } : {}),
     });
     return { confirmed: true, clientId, schedId };
   });
@@ -286,20 +412,22 @@ async function respondToRequest({ db, trainerId, requestId, action, now = new Da
 async function cleanup({ db, now = new Date() }) {
   const today = now.toISOString().slice(0, 10);
   const staleBefore = addDays(today, -STALE_DAYS);
-  const [requests, budgets] = await Promise.all([
+  const [requests, budgets, classes] = await Promise.all([
     db.collection('trialRequests').where('date', '<', staleBefore).get(),
     db.collection('trialBudget').where('day', '<', today).get(),
+    db.collection('groupClasses').where('date', '<', addDays(today, -GROUP_KEEP_DAYS)).get(),
   ]);
-  const refs = [...requests.docs, ...budgets.docs].map(d => d.ref);
+  const refs = [...requests.docs, ...budgets.docs, ...classes.docs].map(d => d.ref);
   for (let i = 0; i < refs.length; i += 400) {
     const batch = db.batch();
     refs.slice(i, i + 400).forEach(r => batch.delete(r));
     await batch.commit();
   }
-  return { requests: requests.size, budgets: budgets.size };
+  return { requests: requests.size, budgets: budgets.size, classes: classes.size };
 }
 
 module.exports = {
   freeSlots, validateSettings, saveSettings, getPage, requestTrial, respondToRequest, cleanup,
+  saveGroupClass, cancelGroupClass, GROUP_TYPE,
   isContact, PublicBookingError, LIMITS, DAILY, MAX_OPEN_PER_COACH, SLOT_MINUTES, TRIAL_TYPE,
 };

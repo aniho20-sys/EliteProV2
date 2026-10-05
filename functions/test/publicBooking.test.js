@@ -27,7 +27,7 @@ const NOW = new Date('2026-10-01T07:00:00Z');
 const TZ = 'Europe/London';
 
 async function clearAll() {
-  for (const col of ['users', 'schedule', 'trialRequests', 'trialBudget', 'bookingPages']) {
+  for (const col of ['users', 'schedule', 'trialRequests', 'trialBudget', 'bookingPages', 'groupClasses']) {
     const snap = await db.collection(col).get();
     await Promise.all(snap.docs.map(d => d.ref.delete()));
   }
@@ -116,7 +116,8 @@ describe('what a stranger sees', () => {
     await seedCoach();
     await db.doc('schedule/s1').set({ trainerId: COACH, clientId: 'c1', date: '2026-10-02', time: '09:00', duration: 60, status: 'confirmed', notes: 'knee', type: 'PT' });
     const page = await pb.getPage({ db, slug: SLUG, now: NOW });
-    expect(Object.keys(page).sort()).toEqual(['coachName', 'currency', 'minutes', 'price', 'slots', 'timeZone']);
+    // groupClasses (B40) carries class times, titles and places left — pinned in 'group classes' below.
+    expect(Object.keys(page).sort()).toEqual(['coachName', 'currency', 'groupClasses', 'minutes', 'price', 'slots', 'timeZone']);
     expect(page).toMatchObject({ coachName: 'Ani Ho', price: 20, currency: 'GBP', minutes: 60, timeZone: TZ });
     expect(page.slots.filter(s => s.date === '2026-10-02').map(s => s.time)).toEqual(['10:00', '11:00']);
     expect(page.slots.every(s => Object.keys(s).sort().join() === 'date,time')).toBe(true);
@@ -262,8 +263,104 @@ describe('daily cleanup', () => {
       db.doc('trialBudget/old').set({ day: '2026-09-30', count: 1 }),
       db.doc('trialBudget/today').set({ day: '2026-10-01', count: 1 }),
     ]);
-    expect(await pb.cleanup({ db, now: NOW })).toEqual({ requests: 1, budgets: 1 });
+    expect(await pb.cleanup({ db, now: NOW })).toEqual({ requests: 1, budgets: 1, classes: 0 });
     expect((await db.collection('trialRequests').get()).docs.map(d => d.id)).toEqual(['recent']);
     expect((await db.collection('trialBudget').get()).docs.map(d => d.id)).toEqual(['today']);
+  });
+});
+
+// ── B40: group classes ──
+describe('group classes', () => {
+  beforeEach(() => seedCoach());
+  const CLASS = { date: '2026-10-05', time: '18:00', capacity: 3, minPeople: 2, price: 15, title: 'Strength circuit' };
+  const put = (over = {}) => pb.saveGroupClass({ db, trainerId: COACH, input: { ...CLASS, ...over }, now: NOW });
+  const join = (classId, over = {}, ip = '203.0.113.7') => ask({ groupClassId: classId, date: undefined, time: undefined, ...over }, ip);
+
+  test('putting one on blocks the coach\'s calendar and shows on the page — without who is coming', async () => {
+    const { id } = await put();
+    expect((await db.doc(`groupClasses/${id}`).get()).data()).toMatchObject({ ...CLASS, trainerId: COACH, status: 'open', duration: 60 });
+    expect((await db.doc(`schedule/gc-${id}`).get()).data()).toMatchObject({ isBlocked: true, clientId: '', date: CLASS.date, time: CLASS.time, groupClassId: id });
+    await join(id);
+    const page = await pb.getPage({ db, slug: SLUG, now: NOW });
+    expect(page.groupClasses).toEqual([{ id, date: CLASS.date, time: CLASS.time, minutes: 60, title: 'Strength circuit', price: 15, spotsLeft: 2 }]);
+    expect(JSON.stringify(page)).not.toContain('Jo Bloggs');
+  });
+
+  test('refused over a session already in the calendar, in the past, or with nonsense numbers', async () => {
+    await db.doc('schedule/s1').set({ trainerId: COACH, clientId: 'c1', date: CLASS.date, time: '17:30', duration: 60, status: 'confirmed' });
+    await expect(put()).rejects.toMatchObject({ code: 'failed-precondition' });
+    await expect(put({ date: '2026-09-30' })).rejects.toMatchObject({ code: 'invalid-argument' });
+    for (const over of [{ capacity: 1 }, { capacity: 21 }, { minPeople: 4 }, { minPeople: 0 }, { price: -1 }, { time: '25:00' }]) {
+      await expect(put({ time: '19:00', ...over })).rejects.toMatchObject({ code: 'invalid-argument' });
+    }
+    await db.doc('users/student').set({ id: 'student', role: 'client' });
+    await expect(pb.saveGroupClass({ db, trainerId: 'student', input: CLASS, now: NOW })).rejects.toMatchObject({ code: 'permission-denied' });
+  });
+
+  test('places fill up; a full class is refused and leaves the page', async () => {
+    const { id } = await put({ capacity: 2, minPeople: 1 });
+    await join(id, { name: 'A' }, '198.51.100.1');
+    await join(id, { name: 'B' }, '198.51.100.2');
+    await expect(join(id, { name: 'C' }, '198.51.100.3')).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).groupClasses).toEqual([]);
+  });
+
+  test('a request carries the class\'s own time, whatever the visitor sends', async () => {
+    const { id } = await put();
+    const res = await join(id, { date: '2030-01-01', time: '03:00' });
+    expect((await db.doc(`trialRequests/${res.requestId}`).get()).data()).toMatchObject({
+      groupClassId: id, classTitle: 'Strength circuit', date: CLASS.date, time: CLASS.time,
+    });
+  });
+
+  test('not joinable within 2 hours of the start, nor another coach\'s class', async () => {
+    const { id } = await put({ date: '2026-10-01', time: '10:00' }); // 2h after NOW (08:00 London) is 10:00 — the edge
+    await expect(pb.requestTrial({ db, ip: 'x', now: new Date('2026-10-01T08:01:00Z'),
+      input: { slug: SLUG, name: 'Jo', contact: '07700 900123', consent: true, groupClassId: id } })).rejects.toMatchObject({ code: 'failed-precondition' });
+    await db.doc('groupClasses/other').set({ id: 'other', trainerId: OTHER, date: '2026-10-05', time: '18:00', capacity: 5, status: 'open', duration: 60 });
+    await expect(join('other')).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  test('confirming a place: a client without the app and their own session in the class, outside the pack', async () => {
+    const { id } = await put();
+    const { requestId } = await join(id);
+    const res = await pb.respondToRequest({ db, trainerId: COACH, requestId, action: 'confirm', now: NOW });
+    expect((await db.doc(`schedule/${res.schedId}`).get()).data()).toMatchObject({
+      clientId: res.clientId, date: CLASS.date, time: CLASS.time, type: pb.GROUP_TYPE, groupClassId: id, trial: true, status: 'confirmed',
+    });
+    // Still one place taken — now by the session instead of the request.
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).groupClasses[0].spotsLeft).toBe(2);
+  });
+
+  test('cancelling: closed, calendar freed, requests deleted, places cancelled — and the coach gets everyone to tell', async () => {
+    const { id } = await put();
+    const first = await join(id, { name: 'Jo Bloggs' }, '198.51.100.1');
+    await pb.respondToRequest({ db, trainerId: COACH, requestId: first.requestId, action: 'confirm', now: NOW });
+    const second = await join(id, { name: 'Sam Lee', contact: 'sam@example.test' }, '198.51.100.2');
+    await expect(pb.cancelGroupClass({ db, trainerId: OTHER, classId: id })).rejects.toMatchObject({ code: 'not-found' });
+    const res = await pb.cancelGroupClass({ db, trainerId: COACH, classId: id });
+    expect(res.tell).toEqual(expect.arrayContaining([
+      { name: 'Jo Bloggs', contact: '07700 900123' }, { name: 'Sam Lee', contact: 'sam@example.test' },
+    ]));
+    expect((await db.doc(`groupClasses/${id}`).get()).data().status).toBe('cancelled');
+    expect((await db.doc(`schedule/gc-${id}`).get()).exists).toBe(false);
+    expect((await db.doc(`trialRequests/${second.requestId}`).get()).exists).toBe(false);
+    const sessions = (await db.collection('schedule').get()).docs.map(d => d.data()).filter(x => x.groupClassId === id);
+    expect(sessions.every(x => x.status === 'cancelled')).toBe(true);
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).groupClasses).toEqual([]);
+  });
+
+  test('a request for a class cancelled in the meantime cannot be confirmed', async () => {
+    const { id } = await put();
+    const { requestId } = await join(id);
+    await db.doc(`groupClasses/${id}`).update({ status: 'cancelled' });
+    await expect(pb.respondToRequest({ db, trainerId: COACH, requestId, action: 'confirm', now: NOW }))
+      .rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  test('the class\'s hour is not offered as a 1-to-1 trial', async () => {
+    await put({ date: '2026-10-02', time: '10:00' });
+    const page = await pb.getPage({ db, slug: SLUG, now: NOW });
+    expect(page.slots.filter(s => s.date === '2026-10-02').map(s => s.time)).toEqual(['09:00', '11:00']);
   });
 });

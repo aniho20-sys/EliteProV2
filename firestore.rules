@@ -229,6 +229,12 @@ service cloud.firestore {
       allow read: if isAuth() && resource.data.trainerId == request.auth.uid;
       allow write: if false;
     }
+    // Group classes (B40): put on and cancelled only through saveGroupClass /
+    // cancelGroupClass, which also block the coach's calendar. The coach reads their own.
+    match /groupClasses/{classId} {
+      allow read: if isAuth() && resource.data.trainerId == request.auth.uid;
+      allow write: if false;
+    }
     // The page link's reservation and the per-day request budgets: server-only.
     match /bookingPages/{slug} {
       allow read, write: if false;

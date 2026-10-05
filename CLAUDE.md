@@ -44,6 +44,7 @@ src/
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
 │   ├── PublicBookingCard.jsx # Trainer (Profile): turn on the public booking page, trial price, days; shows the link (B38)
+│   ├── GroupClassesCard.jsx  # Trainer (Profile): put on / cancel group classes for the public booking page; booked + waiting counts; who to tell on cancel (B40)
 │   ├── SetupChecklist.jsx    # Trainer (Dashboard): 4-step setup card (client → price + bank → sessions → first booking), worked out from data by utils/setupSteps.js, gone once all done (B39)
 │   ├── TrialRequestsCard.jsx # Trainer (Dashboard): strangers' trial requests — call/text/email, confirm (adds no-app client + trial session) or decline
 │   ├── PaymentSheetModal.jsx # Client: renewal payment sheet — trainer's bank details (per-row + Copy all), auto reference, rate-lock disclaimer
@@ -336,6 +337,8 @@ A stranger's request for a trial session. Written only by `requestTrialSession`,
 ```js
 { id, trainerId, name, contact, message, date: 'YYYY-MM-DD', time: 'HH:MM', createdAt: ISO }
 ```
+**Group classes (B40)** — `groupClasses/{classId}`: `{ id, trainerId, date, time, duration, capacity, minPeople, price, title, status: 'open'|'cancelled', createdAt }`, written only by `saveGroupClass` / `cancelGroupClass` (coach reads own). Putting one on writes a blocked `schedule/gc-{classId}` (`groupClassId` set) so the hour leaves the 1-to-1 page; places = unanswered `trialRequests` with that `groupClassId` + non-cancelled sessions with it. A confirmed place is a `schedule` session `{ type: 'Group class', groupClassId, trial: true }` for a new no-app client. Cancelling closes the class, frees the calendar, deletes its requests, cancels its sessions and returns `{ tell: [{ name, contact }] }`.
+
 `bookingPages/{slug} → { trainerId }` reserves a page link (never the invite code — that connects an account as a client). `trialBudget/{day}_v_<hash>` / `{day}_c_<trainerId>` count requests per visitor (hashed IP + day, never the IP) and per coach. Both server-only.
 
 #### `messages/{msgId}`
@@ -543,7 +546,8 @@ savePublicBooking({ enabled, price, days })  // trainer: server validates, issue
 subscribeTrialRequests(onChange, onError?)  // trainer: live list of their unanswered trial requests; returns unsubscribe
 respondTrialRequest(requestId, 'confirm' | 'decline')
 getPublicBookingPage(slug)        // no auth: { coachName, price, currency, minutes, timeZone, slots: [{date,time}] }
-requestTrialSession({ slug, date, time, name, contact, message, consent, website })  // no auth; website = honeypot
+requestTrialSession({ slug, date, time, groupClassId?, name, contact, message, consent, website })  // no auth; website = honeypot; groupClassId = a place in a class
+subscribeGroupClasses(onChange, onError?) / saveGroupClass(input) / cancelGroupClass(classId)  // trainer: group classes (B40)
 
 // Badges (write path only — see src/context/badgeUtils.js, no display UI yet)
 checkAndAwardBadges(clientId) // async — called from WorkoutLogPage on every log save; returns newly-earned badges

@@ -58,6 +58,7 @@ const TRANSLATED_FILES = [
   'src/components/PublicBookingCard.jsx',
   'src/components/TrialRequestsCard.jsx',
   'src/components/SetupChecklist.jsx',
+  'src/components/GroupClassesCard.jsx',
 ]
 
 export default defineConfig([
