@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { formatCurrency } from '../utils/currencyUtils';
+import { renewalRates } from '../utils/renewalRates';
 import { useLanguage } from '../i18n/LanguageContext';
 
 // Renewal payment sheet — shown to a client renewing with their trainer.
@@ -13,7 +14,8 @@ export default function PaymentSheetModal({ client, trainer, remaining, onClose 
   const [copiedKey, setCopiedKey] = useState(null);
   const copiedTimer = useRef(null);
 
-  const rate = remaining > 0 ? trainer?.renewalRate : trainer?.renewalRateNext;
+  const rates = renewalRates(trainer);
+  const rate = remaining > 0 ? rates.now : rates.next;
   const reference = `${(client.name || 'CLIENT').split(' ')[0].slice(0, 4).toUpperCase()}-${client.id.slice(-4).toUpperCase()}`;
   const bank = trainer?.bankDetails || {};
 
@@ -53,7 +55,9 @@ export default function PaymentSheetModal({ client, trainer, remaining, onClose 
 
         {rate && (
           <div className="tag tag-accent mb-12" style={{ display: 'inline-block' }}>
-            {t('pay.locks_in', { rate: formatCurrency(rate, trainer?.currency) })}
+            {rates.lockIn
+              ? t('pay.locks_in', { rate: formatCurrency(rate, trainer?.currency) })
+              : t('pay.price_tag', { rate: formatCurrency(rate, trainer?.currency) })}
           </div>
         )}
 
@@ -84,10 +88,13 @@ export default function PaymentSheetModal({ client, trainer, remaining, onClose 
           </div>
         )}
 
-        <p className="text-sm text-muted mt-12" style={{ fontSize: '0.78rem', borderTop: '1px dashed var(--border)', paddingTop: 10 }}>
-          {t('pay.rate_note')}
-          {trainer?.renewalRateNext ? t('pay.rate_note_more', { rate: formatCurrency(trainer.renewalRateNext, trainer?.currency) }) : '.'}
-        </p>
+        {/* About the price lock — only true when the coach has a second, higher price (B39). */}
+        {rates.lockIn && (
+          <p className="text-sm text-muted mt-12" style={{ fontSize: '0.78rem', borderTop: '1px dashed var(--border)', paddingTop: 10 }}>
+            {t('pay.rate_note')}
+            {t('pay.rate_note_more', { rate: formatCurrency(rates.next, trainer?.currency) })}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import NotesSection from '../components/NotesSection';
 import EmptyState from '../components/EmptyState';
 import PaymentSheetModal from '../components/PaymentSheetModal';
+import { renewalRates } from '../utils/renewalRates';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -50,7 +51,9 @@ export default function ClientDashboard() {
   // back above the threshold and clears it naturally.
   const [renewalDismissed, setRenewalDismissed] = useState(false);
 
-  const trainerHasRates = !!(trainer?.renewalRate && trainer?.renewalRateNext);
+  // One price is enough (B39); `lockIn` says whether there is a second, higher one to warn about.
+  const rates = renewalRates(trainer);
+  const trainerHasRates = rates.now !== null;
   const showRenewalPrompt = sessRemaining !== null
     && trainerHasRates
     && sessRemaining <= RENEWAL_PROMPT_THRESHOLD
@@ -165,7 +168,7 @@ export default function ClientDashboard() {
                     onClick={() => setShowPaymentSheet(true)}
                     style={{ color: getSessionColor(sessRemaining), fontWeight: 600, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
-                    {t('dash.renew_early')} <ChevronRight size={14} />
+                    {rates.lockIn ? t('dash.renew_early') : t('dash.renew_top_up')} <ChevronRight size={14} />
                   </button>
                 )
               ) : (
@@ -196,10 +199,12 @@ export default function ClientDashboard() {
           </div>
           <p className="text-sm text-muted mb-12">
             {sessRemaining <= 0
-              ? <>{t('dash.renew_none_pre')}<strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}{t('common.per_session')}</strong>.</>
-              : sessRemaining === 1
-                ? <>{t('dash.renew_last_pre')}<strong>{formatCurrency(trainer.renewalRate, trainer.currency)}{t('common.per_session')}</strong>{t('dash.renew_last_post', { next: formatCurrency(trainer.renewalRateNext, trainer.currency) })}</>
-                : <>{t('dash.renew_soon_pre')}<strong>({formatCurrency(trainer.renewalRate, trainer.currency)}{t('common.per_session')})</strong>{t('dash.renew_soon_post', { next: formatCurrency(trainer.renewalRateNext, trainer.currency) })}</>}
+              ? <>{t('dash.renew_none_pre')}<strong>{formatCurrency(rates.next, trainer.currency)}{t('common.per_session')}</strong>.</>
+              : !rates.lockIn
+                ? <>{t('dash.renew_simple_pre')}<strong>{formatCurrency(rates.now, trainer.currency)}{t('common.per_session')}</strong>.</>
+                : sessRemaining === 1
+                  ? <>{t('dash.renew_last_pre')}<strong>{formatCurrency(rates.now, trainer.currency)}{t('common.per_session')}</strong>{t('dash.renew_last_post', { next: formatCurrency(rates.next, trainer.currency) })}</>
+                  : <>{t('dash.renew_soon_pre')}<strong>({formatCurrency(rates.now, trainer.currency)}{t('common.per_session')})</strong>{t('dash.renew_soon_post', { next: formatCurrency(rates.next, trainer.currency) })}</>}
           </p>
           <button className="btn btn-primary btn-sm" onClick={() => setShowPaymentSheet(true)}>{t('dash.renew')}</button>
         </div>

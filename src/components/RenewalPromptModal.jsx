@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { formatCurrency } from '../utils/currencyUtils';
+import { renewalRates } from '../utils/renewalRates';
 import { RENEWAL_SNOOZE_DAYS } from '../utils/renewalPrompt';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -22,7 +23,8 @@ export default function RenewalPromptModal({ kind, remainingAfter, trainer, onRe
   };
 
   const overdraft = kind === 'overdraft';
-  const rate = overdraft ? trainer?.renewalRateNext : trainer?.renewalRate;
+  const rates = renewalRates(trainer);
+  const rate = overdraft ? rates.next : rates.now;
 
   return (
     <div className="modal-overlay">
@@ -43,15 +45,20 @@ export default function RenewalPromptModal({ kind, remainingAfter, trainer, onRe
           {overdraft ? (
             <>
               {t('renewal.overdraft_pre')}
-              <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}{t('common.per_session')}</strong>
+              <strong>{formatCurrency(rates.next, trainer.currency)}{t('common.per_session')}</strong>
               {t('renewal.overdraft_post')}
             </>
-          ) : (
+          ) : rates.lockIn ? (
             <>
               {t('renewal.keep_rate_pre')}
               <strong>{formatCurrency(rate, trainer.currency)}{t('common.per_session')}</strong>
               {t('renewal.keep_rate_mid')}
-              <strong>{formatCurrency(trainer.renewalRateNext, trainer.currency)}{t('common.per_session')}</strong>.
+              <strong>{formatCurrency(rates.next, trainer.currency)}{t('common.per_session')}</strong>.
+            </>
+          ) : (
+            <>
+              {t('dash.renew_simple_pre')}
+              <strong>{formatCurrency(rate, trainer.currency)}{t('common.per_session')}</strong>.
             </>
           )}
         </p>

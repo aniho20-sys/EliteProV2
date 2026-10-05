@@ -26,9 +26,15 @@ describe('when the prompt fires', () => {
     expect(renewalPromptKind({ remainingAfter: 6, trainer, client, today: TODAY })).toBeNull();
   });
 
-  test('stays quiet when the trainer has not set rates — there is nothing to offer', () => {
+  test('stays quiet when the trainer has not set a price — there is nothing to offer', () => {
     expect(renewalPromptKind({ remainingAfter: 1, trainer: {}, client, today: TODAY })).toBeNull();
-    expect(renewalPromptKind({ remainingAfter: 1, trainer: { renewalRate: 50 }, client, today: TODAY })).toBeNull();
+  });
+
+  // B39: one price is enough. The second ("after running out") price is optional; requiring
+  // both meant a coach who set one price never had their clients asked to renew.
+  test('one price is enough', () => {
+    expect(renewalPromptKind({ remainingAfter: 1, trainer: { renewalRate: 50 }, client, today: TODAY })).toBe('low');
+    expect(renewalPromptKind({ remainingAfter: -1, trainer: { renewalRate: 50 }, client, today: TODAY })).toBe('overdraft');
   });
 
   test('stays quiet on unlimited/unknown balances', () => {

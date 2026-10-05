@@ -175,6 +175,9 @@ export default function SubscriptionCard() {
               </button>
             ))}
           </div>
+          {/* What gcWebhooks.js rollover() does at each payment (B39) — unused sessions above
+              half a month's worth end, and nothing on screen said so. */}
+          <p className="text-sm text-muted">{t('sub.rollover_note', { n: Math.floor(tier / 2) })}</p>
           <button className="btn btn-accent mt-8" onClick={handleStart} disabled={starting} style={{ width: '100%' }}>
             {starting ? t('sub.redirecting') : t('sub.subscribe')}
           </button>

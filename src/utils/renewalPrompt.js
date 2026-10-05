@@ -1,3 +1,4 @@
+import { hasRenewalPrice } from './renewalRates';
 import { localToday, addDays } from './dateUtils';
 import { RENEWAL_PROMPT_THRESHOLD } from './sessionUtils';
 
@@ -30,7 +31,7 @@ export const isRenewalPromptSnoozed = (client, today = localToday()) => {
 // stays testable without rendering anything.
 export const renewalPromptKind = ({ remainingAfter, trainer, client, today = localToday() }) => {
   if (remainingAfter === null || remainingAfter === undefined) return null;
-  if (!trainer?.renewalRate || !trainer?.renewalRateNext) return null;
+  if (!hasRenewalPrice(trainer)) return null;
   if (isRenewalPromptSnoozed(client, today)) return null;
   if (remainingAfter < 0) return 'overdraft';
   if (remainingAfter <= RENEWAL_PROMPT_THRESHOLD) return 'low';

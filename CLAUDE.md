@@ -44,6 +44,7 @@ src/
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
 │   ├── PublicBookingCard.jsx # Trainer (Profile): turn on the public booking page, trial price, days; shows the link (B38)
+│   ├── SetupChecklist.jsx    # Trainer (Dashboard): 4-step setup card (client → price + bank → sessions → first booking), worked out from data by utils/setupSteps.js, gone once all done (B39)
 │   ├── TrialRequestsCard.jsx # Trainer (Dashboard): strangers' trial requests — call/text/email, confirm (adds no-app client + trial session) or decline
 │   ├── PaymentSheetModal.jsx # Client: renewal payment sheet — trainer's bank details (per-row + Copy all), auto reference, rate-lock disclaimer
 │   ├── ProgressView.jsx      # Body composition chart + stats grid + history table; shared by ProgressPage & ClientDetailPage
@@ -100,6 +101,7 @@ src/
 │   └── index.css             # Global styles (CSS variables, skeleton, empty states)
 ├── utils/
 │   ├── authErrors.js         # Firebase Auth error code → friendly message map
+│   ├── renewalRates.js       # renewalRates(trainer) → { now, next, lockIn }: one price is enough, the higher after-run-out price is optional (B39) — use it, never read renewalRateNext directly
 │   ├── currencyUtils.js      # formatCurrency(amount, currencyCode) — single source of truth for money display, see convention #31
 │   ├── dateUtils.js          # Local timezone-safe date helpers: localToday, localDateAdd, parseLocalDate
 │   ├── exerciseUtils.js      # resolveExerciseName / canonicalExercise (follows mergedInto) / liveExercises (hides tombstones) / inferMovementPattern + explainMovementPattern (keyword classifier, see convention #35)
@@ -205,7 +207,7 @@ Top-level config files:
   inviteCode: string,       // 6-char uppercase alphanumeric
   businessName: string,     // optional — shown on printed invoices, falls back to `name` when unset
   renewalRate: number,      // current rate shown to clients renewing early (unit = `currency` below)
-  renewalRateNext: number,  // rate once a client's sessions run out first (unit = `currency` below)
+  renewalRateNext: number | null,  // optional (B39): rate once a client's sessions run out first; absent/null = same as renewalRate — read both via utils/renewalRates.js
   currency: string,         // one of CURRENCIES (utils/currencyUtils.js) — defaults to 'GBP' when absent, see convention #31
   bankDetails: { accountName: string, sortCode: string, accountNumber: string },
   subscriptionRate: number,  // per-session rate monthly plans are priced from (GBP); server re-reads it, client never sends a price
@@ -525,7 +527,7 @@ removeClient(clientId)       // sets trainerId to null (detaches client); a clie
 
 // Credit Ledger
 getCreditLedger(clientId)    // async — fetches append-only top-up history, newest first
-addCreditLedgerEntry(clientId, { qty, rate })  // logs a top-up, adds sessions, resets renewal prompt flags
+addCreditLedgerEntry(clientId, { qty, rate })  // logs a top-up, adds sessions, resets renewal prompt flags — the only way the app adds sessions (ClientDetailPage "Add sessions", B39)
 
 // GoCardless Connection (Phase 3, trainer-only)
 getPaymentConnection(trainerId)  // async — one-off fetch of paymentConnections/{trainerId}, not a live listener

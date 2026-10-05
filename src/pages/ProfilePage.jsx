@@ -20,6 +20,7 @@ import PublicBookingCard from '../components/PublicBookingCard';
 import { inviteUrl } from '../utils/inviteLink';
 import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
+import { renewalRates } from '../utils/renewalRates';
 
 function InstallAppCard() {
   const { t } = useLanguage();
@@ -77,6 +78,12 @@ function getAuthProvider(firebaseUser) {
   if (provider === 'password') return 'email';
   return 'unknown';
 }
+
+// ElitePro's own GoCardless partner app is sandbox-only and not approved for live (B36 took
+// the own-account route instead). Its Connect button only ever answered "isn't set up yet",
+// so it is hidden until the partner app goes live (B39). A coach already connected through
+// it still sees their connection and can disconnect.
+const GC_PARTNER_OPEN = false;
 
 export default function ProfilePage() {
   const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection } = useApp();
@@ -142,6 +149,8 @@ export default function ProfilePage() {
 
   // Trainer: renewal pricing (shown to clients when they run low on sessions)
   const [renewalRate, setRenewalRate] = useState(currentUser.renewalRate ?? '');
+  // The second, higher price is optional (B39) and folded away unless the coach uses one.
+  const [showLockIn, setShowLockIn] = useState(renewalRates(currentUser).lockIn);
   const [renewalRateNext, setRenewalRateNext] = useState(currentUser.renewalRateNext ?? '');
   const [renewalCurrency, setRenewalCurrency] = useState(currentUser.currency || 'GBP');
   const [subscriptionRate, setSubscriptionRate] = useState(currentUser.subscriptionRate ?? '');
@@ -228,6 +237,12 @@ export default function ProfilePage() {
     navigate('/profile', { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTrainer, location.search]);
+
+  // The dashboard's setup checklist sends a coach here to set their price (B39).
+  useEffect(() => {
+    if (location.state?.focus !== 'pricing') return;
+    document.getElementById('profile-pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.state]);
 
   const handleGcConnect = async () => {
     setGcConnecting(true);
@@ -423,9 +438,11 @@ export default function ProfilePage() {
 
   const handleSaveRenewalRates = async () => {
     const rate = Number(renewalRate);
-    const rateNext = Number(renewalRateNext);
-    if (!rate || rate <= 0 || !rateNext || rateNext <= 0) {
-      toast(t('profile.toast_rates_invalid'), 'error');
+    // Blank second price = the same price before and after a client runs out (B39).
+    const nextBlank = !showLockIn || String(renewalRateNext).trim() === '';
+    const rateNext = nextBlank ? null : Number(renewalRateNext);
+    if (!rate || rate <= 0 || (!nextBlank && !(rateNext > 0))) {
+      toast(t('profile.toast_price_invalid'), 'error');
       return;
     }
     setRenewalSaving(true);
@@ -701,27 +718,33 @@ export default function ProfilePage() {
 
       {/* Trainer: Renewal Pricing */}
       {isTrainer && (
-        <div className="card mb-16">
-          <h3 className="card-title mb-8">{t('profile.renewal_pricing')}</h3>
-          <p className="invite-desc">{t('profile.renewal_desc')}</p>
+        <div className="card mb-16" id="profile-pricing">
+          <h3 className="card-title mb-8">{t('profile.price_title')}</h3>
+          <p className="invite-desc">{t('profile.price_desc')}</p>
           <div className="form-row mt-8">
             <div className="form-group">
-              <label className="form-label">{t('profile.current_rate')}</label>
-              <input type="number" min="0" inputMode="decimal" className="form-input" placeholder="65"
+              <label className="form-label" htmlFor="profile-price">{t('profile.price_label')}</label>
+              <input id="profile-price" type="number" min="0" inputMode="decimal" className="form-input" placeholder="65"
                 value={renewalRate} onChange={e => setRenewalRate(e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">{t('profile.rate_after')}</label>
-              <input type="number" min="0" inputMode="decimal" className="form-input" placeholder="70"
-                value={renewalRateNext} onChange={e => setRenewalRateNext(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('profile.currency')}</label>
-              <select className="form-select" value={renewalCurrency} onChange={e => setRenewalCurrency(e.target.value)}>
+              <label className="form-label" htmlFor="profile-currency">{t('profile.currency')}</label>
+              <select id="profile-currency" className="form-select" value={renewalCurrency} onChange={e => setRenewalCurrency(e.target.value)}>
                 {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
+          <button type="button" className="btn-link mt-8" aria-expanded={showLockIn} onClick={() => setShowLockIn(v => !v)}>
+            {t('profile.lockin_toggle')}
+          </button>
+          {showLockIn && (
+            <div className="form-group mt-8">
+              <p className="text-sm text-muted mb-8">{t('profile.lockin_desc')}</p>
+              <label className="form-label" htmlFor="profile-price-next">{t('profile.rate_after')}</label>
+              <input id="profile-price-next" type="number" min="0" inputMode="decimal" className="form-input" placeholder="70"
+                value={renewalRateNext} onChange={e => setRenewalRateNext(e.target.value)} />
+            </div>
+          )}
           <button className="btn btn-primary mt-8" onClick={handleSaveRenewalRates} disabled={renewalSaving}>
             <Save size={16} /> {renewalSaving ? t('profile.saving_dots') : t('profile.save_rates')}
           </button>
@@ -784,6 +807,7 @@ export default function ProfilePage() {
                 <input type="number" min="0" step="0.01" inputMode="decimal" className="form-input" placeholder="65"
                   value={subscriptionRate} onChange={e => setSubscriptionRate(e.target.value)} />
                 <p className="text-sm text-muted mt-8">{t('sub.rate_hint')}</p>
+                <p className="text-sm text-muted mt-8">{t('sub.rollover_note_coach')}</p>
                 {monthlyAmount(subscriptionRate, 4) !== null && (currentUser.currency || 'GBP') === 'GBP' && (
                   <ul className="text-sm mt-8" style={{ paddingLeft: 18 }}>
                     {SUBSCRIPTION_TIERS.map(n => (
@@ -804,11 +828,11 @@ export default function ProfilePage() {
                 {t('profile.disconnect')}
               </button>
             </div>
-          ) : (
+          ) : GC_PARTNER_OPEN ? (
             <button className="btn btn-primary mt-8" onClick={handleGcConnect} disabled={gcConnecting} style={{ width: '100%' }}>
               <CreditCard size={16} /> {gcConnecting ? t('profile.connecting_dots') : t('profile.connect_gc')}
             </button>
-          )}
+          ) : null}
 
           {/* B36: the trainer's own account — offered until one is connected, including
               while a sandbox partner connection is in place, so it can be switched to live. */}

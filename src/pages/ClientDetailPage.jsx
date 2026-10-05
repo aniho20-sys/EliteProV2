@@ -21,6 +21,7 @@ import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { hasAppAccount } from '../utils/managedClient';
 import { contactLinks } from '../utils/contactLinks';
+import { renewalRates } from '../utils/renewalRates';
 
 
 
@@ -138,7 +139,7 @@ export default function ClientDetailPage() {
   const [savingSessions, setSavingSessions] = useState(false);
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('');
-  const [topUpRate, setTopUpRate] = useState(null);
+  const [topUpPrice, setTopUpPrice] = useState('');
   const [savingTopUp, setSavingTopUp] = useState(false);
   const [editingNoteLogId, setEditingNoteLogId] = useState(null);
   const [noteText, setNoteText] = useState('');
@@ -238,15 +239,37 @@ export default function ClientDetailPage() {
     }
   };
 
+  // B39: one way to add sessions. It used to be "Set Total" for a client with none yet
+  // (two raw numbers, nothing recorded in the ledger, no price) and "+ Top Up" only after
+  // that. The price is the coach's own, filled in, and goes into the ledger with the sessions.
+  const openAddSessions = () => {
+    const rates = renewalRates(currentUser);
+    const price = sessRemaining === null || sessRemaining > 0 ? rates.now : rates.next;
+    setTopUpAmount('');
+    setTopUpPrice(price === null ? '' : String(price));
+    setTopUpOpen(true);
+  };
+  const closeAddSessions = () => {
+    if (savingTopUp) return;
+    setTopUpOpen(false);
+    setTopUpAmount('');
+    setTopUpPrice('');
+  };
+  const topUpQty = Number(topUpAmount);
+  const topUpPriceValid = topUpPrice === '' || Number(topUpPrice) >= 0;
+  // Sessions booked before any were added still count as used, so the balance after this
+  // is total + new − already used — not "remaining + new", which is unknown while unset.
+  const remainingAfterTopUp = (sessTotal ?? 0) + topUpQty - (client?.sessionOffset ?? 0);
+
   const handleTopUp = async () => {
     const qty = Number(topUpAmount);
-    if (!qty || qty <= 0) return;
+    if (!qty || qty <= 0 || !topUpPriceValid) return;
     setSavingTopUp(true);
     try {
-      await addCreditLedgerEntry(clientId, { qty, rate: topUpRate });
+      await addCreditLedgerEntry(clientId, { qty, rate: topUpPrice === '' ? null : Number(topUpPrice) });
       setTopUpOpen(false);
       setTopUpAmount('');
-      setTopUpRate(null);
+      setTopUpPrice('');
       toast(t('cdetail.toast_topped_up', { count: qty }));
     } catch (err) {
       toast(t('cdetail.toast_topup_failed', { reason: err?.code || err?.message || t('wlog.unknown_error') }), 'error');
@@ -493,17 +516,12 @@ export default function ClientDetailPage() {
                 <span className="text-sm fw-bold">{t('cdetail.sessions')}</span>
                 {!editingSessions && (
                   <div className="flex gap-8">
-                    {sessTotal !== null && (
-                      <button className="btn btn-primary btn-sm" onClick={() => {
-                        setTopUpAmount('');
-                        setTopUpRate(sessRemaining > 0 ? currentUser.renewalRate ?? null : currentUser.renewalRateNext ?? null);
-                        setTopUpOpen(true);
-                      }}>
-                        {t('cdetail.top_up')}
-                      </button>
-                    )}
+                    <button className="btn btn-primary btn-sm" onClick={openAddSessions}>
+                      {t('cdetail.add_sessions')}
+                    </button>
+                    {/* Hand-correcting the raw numbers — rarely needed, so not the first thing on offer. */}
                     <button className="btn btn-outline btn-sm" onClick={() => { setSessionsInput(sessTotal ?? ''); setOffsetInput(client?.sessionOffset ?? ''); setEditingSessions(true); }}>
-                      {sessTotal === null ? t('cdetail.set_total') : t('common.edit')}
+                      {t('cdetail.correct_balance')}
                     </button>
                   </div>
                 )}
@@ -537,7 +555,7 @@ export default function ClientDetailPage() {
                   <div className="text-sm mt-6" style={{ color: sessColor, fontWeight: 600 }}>{t('cdetail.n_remaining', { count: sessRemaining })}</div>
                 </>
               ) : (
-                <p className="text-sm text-muted">{t('cdetail.not_set')}</p>
+                <p className="text-sm text-muted">{t('cdetail.no_sessions_yet')}</p>
               )}
             </div>
 
@@ -857,20 +875,23 @@ export default function ClientDetailPage() {
       )}
 
       {topUpOpen && (
-        <div className="modal-overlay" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }}>
+        <div className="modal-overlay" onClick={closeAddSessions}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
-            <h3 className="modal-title">{t('cdetail.top_up_title')}</h3>
-            <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
-              {t('cdetail.currently')} <strong>{t('cdetail.n_used', { count: sessUsed })}</strong> / <strong>{t('cdetail.n_total', { count: sessTotal })}</strong> — <span style={{ color: sessColor, fontWeight: 600 }}>{t('cdetail.n_remaining', { count: sessRemaining })}</span>
-            </p>
+            <h3 className="modal-title">{t('cdetail.add_sessions')}</h3>
+            {sessTotal !== null && (
+              <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
+                {t('cdetail.currently')} <strong>{t('cdetail.n_used', { count: sessUsed })}</strong> / <strong>{t('cdetail.n_total', { count: sessTotal })}</strong> — <span style={{ color: sessColor, fontWeight: 600 }}>{t('cdetail.n_remaining', { count: sessRemaining })}</span>
+              </p>
+            )}
             <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
               {[5, 10, 20].map(n => (
                 <button key={n} className={`btn btn-sm ${topUpAmount === String(n) ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpAmount(String(n))}>+{n}</button>
               ))}
             </div>
             <div className="flex gap-8 mb-12" style={{ alignItems: 'center' }}>
-              <span className="text-sm text-muted">{t('cdetail.custom_amount')}</span>
+              <label className="text-sm text-muted" htmlFor="add-sessions-qty">{t('cdetail.custom_amount')}</label>
               <input
+                id="add-sessions-qty"
                 className="form-input"
                 style={{ width: 72, padding: '4px 8px' }}
                 type="number" min="1" inputMode="numeric"
@@ -880,31 +901,25 @@ export default function ClientDetailPage() {
               />
               <span className="text-sm text-muted">{t('cdetail.sessions_unit')}</span>
             </div>
-            {(currentUser.renewalRate || currentUser.renewalRateNext) && (
-              <div className="mb-12">
-                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 6 }}>{t('cdetail.topup_rate')}</span>
-                <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
-                  {currentUser.renewalRate && (
-                    <button className={`btn btn-sm ${topUpRate === currentUser.renewalRate ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRate)}>
-                      {formatCurrency(currentUser.renewalRate, currentUser.currency)} {t('cdetail.rate_current')}
-                    </button>
-                  )}
-                  {currentUser.renewalRateNext && (
-                    <button className={`btn btn-sm ${topUpRate === currentUser.renewalRateNext ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTopUpRate(currentUser.renewalRateNext)}>
-                      {formatCurrency(currentUser.renewalRateNext, currentUser.currency)} {t('cdetail.rate_next')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {Number(topUpAmount) > 0 && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="add-sessions-price">{t('cdetail.price_each', { currency: currentUser.currency || 'GBP' })}</label>
+              <input
+                id="add-sessions-price"
+                className="form-input"
+                type="number" min="0" step="0.01" inputMode="decimal"
+                value={topUpPrice}
+                onChange={e => setTopUpPrice(e.target.value)}
+              />
+            </div>
+            {topUpQty > 0 && (
               <p className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>
-                {t('cdetail.after_topup', { count: (sessRemaining ?? 0) + Number(topUpAmount) })}
+                {topUpPrice !== '' && topUpPriceValid && <>{t('cdetail.total_amount', { amount: formatCurrency(topUpQty * Number(topUpPrice), currentUser.currency) })}<br /></>}
+                {t('cdetail.after_topup', { count: remainingAfterTopUp })}
               </p>
             )}
             <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => { setTopUpOpen(false); setTopUpAmount(''); setTopUpRate(null); }} disabled={savingTopUp}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={handleTopUp} disabled={savingTopUp || !Number(topUpAmount) || Number(topUpAmount) <= 0}>
+              <button className="btn btn-outline" onClick={closeAddSessions} disabled={savingTopUp}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleTopUp} disabled={savingTopUp || !(topUpQty > 0) || !topUpPriceValid}>
                 {savingTopUp ? t('common.saving') : t('cdetail.confirm')}
               </button>
             </div>

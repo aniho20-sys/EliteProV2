@@ -6,11 +6,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import TrialRequestsCard from '../components/TrialRequestsCard';
+import SetupChecklist from '../components/SetupChecklist';
 import { hasAppAccount } from '../utils/managedClient';
 import { localToday, localDateAdd, formatDayDate, getGreeting } from '../utils/dateUtils';
 import { getLastActivity, getClientActivityDates } from '../utils/activityUtils';
 import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
+import { renewalRates } from '../utils/renewalRates';
 import { formatShortDate } from '../i18n/format';
 
 // t() only ever takes a literal key (#39), so the weekday labels are looked up by
@@ -127,8 +129,9 @@ function buildDefaultMsg(client, reasons) {
 function buildRenewalMsg(client, remaining, trainer) {
   const first = (client.name || 'there').split(' ')[0];
   const n = remaining;
-  if (trainer?.renewalRate && trainer?.renewalRateNext) {
-    return `Hey ${first}, you've got ${n} session${n === 1 ? '' : 's'} left — renew now to keep your current rate (${formatCurrency(trainer.renewalRate, trainer.currency)}/session)! After that, renewal moves to ${formatCurrency(trainer.renewalRateNext, trainer.currency)}/session.`;
+  const rates = renewalRates(trainer);
+  if (rates.lockIn) {
+    return `Hey ${first}, you've got ${n} session${n === 1 ? '' : 's'} left — renew now to keep your current rate (${formatCurrency(rates.now, trainer.currency)}/session)! After that, renewal moves to ${formatCurrency(rates.next, trainer.currency)}/session.`;
   }
   return `Hey ${first}, just a heads-up — you've got ${n} session${n === 1 ? '' : 's'} remaining. Ready to top up? 💪`;
 }
@@ -360,40 +363,7 @@ export default function TrainerDashboard() {
 
       <TrialRequestsCard />
 
-      {clients.length === 0 && (
-        <div className="card onboarding-card mb-16">
-          <h3 className="card-title">{t('tdash.get_started')}</h3>
-          <p className="text-sm text-secondary mt-8">{t('tdash.onboarding_sub')}</p>
-          {currentUser.inviteCode && (
-            <div className="onboarding-invite-block">
-              <span className="text-sm text-muted">{t('tdash.share_invite')}</span>
-              <div className="onboarding-invite-row">
-                <span className="invite-code-badge">{currentUser.inviteCode}</span>
-                <button className="btn btn-sm btn-outline" onClick={() => {
-                  navigator.clipboard.writeText(currentUser.inviteCode).catch(() => {});
-                  toast(t('tdash.toast_code_copied'));
-                }}>
-                  <Copy size={13} /> {t('common.copy')}
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="onboarding-steps">
-            <Link to="/clients" className="onboarding-step">
-              <span className="onboarding-num">1</span>
-              <span>{t('tdash.step_add_client')}</span>
-            </Link>
-            <Link to="/plans" className="onboarding-step">
-              <span className="onboarding-num">2</span>
-              <span>{t('tdash.step_plan')}</span>
-            </Link>
-            <Link to="/schedule" className="onboarding-step">
-              <span className="onboarding-num">3</span>
-              <span>{t('tdash.step_book')}</span>
-            </Link>
-          </div>
-        </div>
-      )}
+      <SetupChecklist />
 
       {/* Compact stat strip */}
       <div className="stat-strip mb-16">
@@ -482,8 +452,8 @@ export default function TrainerDashboard() {
                         <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
                           {t('tdash.owes', { count: owed })}
                         </span>
-                        {currentUser.renewalRateNext && (
-                          <span className="text-muted"> · {formatCurrency(currentUser.renewalRateNext, currentUser.currency)}{t('common.per_session')}</span>
+                        {renewalRates(currentUser).next && (
+                          <span className="text-muted"> · {formatCurrency(renewalRates(currentUser).next, currentUser.currency)}{t('common.per_session')}</span>
                         )}
                       </div>
                     </Link>

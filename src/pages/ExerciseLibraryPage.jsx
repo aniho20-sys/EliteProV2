@@ -51,6 +51,7 @@ export default function ExerciseLibraryPage() {
   const [mergeSearch, setMergeSearch] = useState('');
   const [mergeSaving, setMergeSaving] = useState(false);
   const [patternTouched, setPatternTouched] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const nameInputRef = useRef(null);
   const pillOuterRef = useRef(null);
 
@@ -85,6 +86,7 @@ export default function ExerciseLibraryPage() {
   const openAdd = () => {
     setEditingEx(null);
     setForm({ ...EMPTY_FORM, equipment: equipmentTypes[0] });
+    setShowMore(false);
     setAliasInput('');
     setPatternTouched(false);
     setShowModal(true);
@@ -107,6 +109,10 @@ export default function ExerciseLibraryPage() {
     // An exercise that already carries a pattern keeps it; one that never got classified
     // is still open to a suggestion while the name is being edited.
     setPatternTouched(!!ex.movementPattern);
+    // Open the extra fields when the exercise already uses any of them, so nothing it holds
+    // is hidden from the person editing it.
+    setShowMore(!!(ex.movementPattern || (ex.aliases || []).length || (ex.unit && ex.unit !== 'weight_reps')
+      || ex.videoUrl || ex.description || ex.instructions || ex.commonMistakes));
     setAliasInput('');
     setDetailExercise(null);
     setShowModal(true);
@@ -374,7 +380,9 @@ export default function ExerciseLibraryPage() {
                       name,
                       // Keep suggesting from the name until the trainer picks a pattern by
                       // hand — from then on their choice stands, even if they keep typing.
-                      movementPattern: patternTouched ? f.movementPattern : inferMovementPattern(name),
+                      // A suggestion is only made where the trainer can see it (#35): with the
+                      // pattern field folded away, a guess would be saved without anyone reading it.
+                      movementPattern: patternTouched ? f.movementPattern : (showMore ? inferMovementPattern(name) : ''),
                     }));
                   }}
                   placeholder={t('exlib.ph_name')}
@@ -410,6 +418,19 @@ export default function ExerciseLibraryPage() {
                   {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
                 </select>
               </div>
+              {/* B39: name, muscles and equipment are all an exercise needs. Everything else
+                  waits behind "More options" — a long form for a basic exercise is the
+                  complaint new coaches have about other apps. */}
+              <button type="button" className="btn-link mb-12" aria-expanded={showMore} onClick={() => {
+                const opening = !showMore;
+                setShowMore(opening);
+                // Opening the fields shows the suggestion for the name typed so far; closing
+                // them drops an unconfirmed one, so it is never saved unseen.
+                if (!patternTouched) setForm(f => ({ ...f, movementPattern: opening ? inferMovementPattern(f.name) : '' }));
+              }}>
+                {showMore ? t('exlib.fewer_options') : t('exlib.more_options')}
+              </button>
+              {showMore && (<>
               <div className="form-group">
                 <label className="form-label">{t('exlib.movement_pattern')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional')}</span></label>
                 <select
@@ -492,6 +513,7 @@ export default function ExerciseLibraryPage() {
                 <label className="form-label">{t('exlib.mistakes')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional')}</span></label>
                 <textarea className="form-textarea" value={form.commonMistakes} onChange={e => setForm({ ...form, commonMistakes: e.target.value })} placeholder={t('exlib.ph_mistakes')} />
               </div>
+              </>)}
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('common.saving') : editingEx ? t('progress.save_changes') : t('exlib.add_exercise')}</button>

@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { Plus, Check, X, CalendarOff, Trash2, Clock, CheckCircle, Send, ChevronLeft, ChevronRight, Lock, RotateCcw } from 'lucide-react';
 import { getSessionColor, SESSION_DANGER_THRESHOLD, OVERDRAFT_LIMIT } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
+import { renewalRates } from '../utils/renewalRates';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { hasAppAccount } from '../utils/managedClient';
@@ -37,7 +38,9 @@ export default function SchedulePage() {
   // Status is a stored value ('pending'/'confirmed'/…), so it cannot be handed to t()
   // directly — t() refuses a variable key. One literal call per status instead.
   const statusLabel = (status) => ({
-    pending: t('sched.status_pending'),
+    // A pending session is always a client's request (B39: the coach's own bookings are
+    // confirmed as they are made), so the coach reads it as something to answer.
+    pending: isTrainer ? t('sched.status_pending_coach') : t('sched.status_pending'),
     confirmed: t('sched.status_confirmed'),
     completed: t('sched.status_completed'),
     cancelled: t('sched.status_cancelled'),
@@ -266,6 +269,10 @@ export default function SchedulePage() {
         ...form,
         trainerId,
         clientId: isTrainer ? form.clientId : currentUser.id,
+        // The coach booking it is the confirmation (B39). It used to land as 'pending' and
+        // need a second tap on their own booking. A client's booking stays a request —
+        // firestore.rules only lets a client create 'pending'.
+        ...(isTrainer ? { status: 'confirmed' } : {}),
       });
       setForm({ clientId: '', date: '', time: '', duration: 60, type: 'PT Session', label: '' });
       setShowAdd(false);
@@ -543,7 +550,7 @@ export default function SchedulePage() {
       {overdraftModal && (() => {
         // Named `coach`, not `t` — `t` is the translation function in this scope.
         const coach = getClient(trainerId);
-        const rate = coach?.renewalRateNext;
+        const rate = renewalRates(coach).next;
         return (
           <div className="modal-overlay" onClick={() => { setOverdraftModal(false); setShowAdd(true); }}>
             <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -816,6 +823,13 @@ export default function SchedulePage() {
                   <label className="form-label">{t('sched.label')} <span className="text-muted" style={{ fontWeight: 400 }}>{t('common.optional')}</span></label>
                   <input className="form-input" placeholder={t('sched.label_placeholder')} value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} />
                 </div>
+              )}
+              {/* The cancellation rule onScheduleCreditUpdate applies, said where a booking is
+                  made (B39) — the monthly cap of 2 free early cancels was never shown anywhere. */}
+              {bookMode === 'session' && (
+                <p className="text-sm text-muted mb-12">
+                  {isTrainer ? t('sched.cancel_policy_coach') : t('sched.cancel_policy_client')}
+                </p>
               )}
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => { setShowAdd(false); setBookMode('session'); setBlockTimes(new Set()); }} disabled={saving}>{t('common.cancel')}</button>
