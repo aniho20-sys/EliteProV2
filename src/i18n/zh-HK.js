@@ -1495,7 +1495,7 @@ const zhHK = {
   'tdash.step_sessions': '為學生增加堂數',
   'tdash.step_done': '已完成',
 
-  // ── 小組課堂（B40）—— 待 Ani 批核 ──
+  // ── 小組課堂（B40）—— Ani 2026-10-05 全部批核 ──
   'book.kind_label': '你想預約甚麼？',
   'book.kind_trial': '一對一體驗堂',
   'book.kind_group': '小組課堂',
