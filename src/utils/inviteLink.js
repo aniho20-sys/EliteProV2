@@ -19,5 +19,7 @@ export function opensAsSignUp(search, storage = sessionStorage) {
 // needed. The slug is issued by savePublicBooking and is not the invite code — the invite
 // code makes an account the coach's client, which a published link must not do.
 export function bookingUrl(slug) {
-  return `${APP_URL}/#/book/${slug}`;
+  // No # — so the link preview names the coach (functions/bookingPreview.js), which then
+  // forwards to /#/book/<slug>. Old /#/book/ links still open the page.
+  return `${APP_URL}/book/${slug}`;
 }

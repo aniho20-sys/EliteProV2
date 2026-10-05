@@ -36,3 +36,23 @@ describe('hosting cache headers', () => {
     expect(longLived.sort()).toEqual(['/assets/**', '/workbox-*.js']);
   });
 });
+
+// Shared booking links (/book/<slug>) go to the bookingPreview function so the link preview
+// names the coach. Hosting applies the first matching rewrite, so it must come before the
+// catch-all that serves the app — after it, the function would never be reached.
+describe('booking link previews', () => {
+  const rewrites = JSON.parse(readFileSync(join(cwd(), 'firebase.json'), 'utf8')).hosting.rewrites;
+  test('/book/** reaches the preview function, ahead of the app catch-all', () => {
+    const book = rewrites.findIndex(r => r.source === '/book/**' && r.function === 'bookingPreview');
+    const all = rewrites.findIndex(r => r.source === '**');
+    expect(book).toBeGreaterThanOrEqual(0);
+    expect(book).toBeLessThan(all);
+  });
+  test('the function is one the server exports', () => {
+    const server = readFileSync(join(cwd(), 'functions/index.js'), 'utf8');
+    expect(server).toMatch(/^exports\.bookingPreview = functions\.https\.onRequest/m);
+  });
+  test('an installed app does not answer /book/ links from its cache', () => {
+    expect(readFileSync(join(cwd(), 'vite.config.js'), 'utf8')).toContain('/^\\/book\\//');
+  });
+});

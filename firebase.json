@@ -18,6 +18,10 @@
     ],
     "rewrites": [
       {
+        "source": "/book/**",
+        "function": "bookingPreview"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

@@ -146,6 +146,7 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # requestTrialSession (OPEN to signed-out visitors — free hours only, bounded fields, honeypot,
 │                              # per-visitor/per-coach daily budgets by hashed IP), respondTrialRequest (confirm = no-app client +
 │                              # trial session; decline = delete), cleanupTrialRequests (daily)
+├── bookingPreview.js          # bookingPreview (public onRequest, firebase.json rewrite /book/**): link-preview page naming the coach, forwards to /#/book/<slug>
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
 ├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
 │                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)

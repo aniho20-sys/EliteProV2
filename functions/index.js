@@ -20,6 +20,7 @@ const { trainerAvailability } = require('./availability');
 const { verifyWebhookSignature, handleWebhook, webhookRoute } = require('./gcWebhooks');
 const { connectDirect, refreshDirectStatus, DirectConnectError } = require('./gcDirect');
 const publicBooking = require('./publicBooking');
+const bookingPreview = require('./bookingPreview');
 
 initializeApp();
 const db = getFirestore();
@@ -1042,6 +1043,14 @@ exports.respondTrialRequest = functions.https.onCall(async (data, context) => {
       db, trainerId: context.auth.uid, requestId: data && data.requestId, action: data && data.action,
     });
   } catch (err) { throw bookingError(err); }
+});
+
+// Shared booking links (/book/<slug>, routed here by firebase.json): a page whose link
+// preview names the coach, forwarding to the app (functions/bookingPreview.js).
+exports.bookingPreview = functions.https.onRequest(async (req, res) => {
+  const html = await bookingPreview.handlePreview({ db, path: req.path, coachForSlug: publicBooking.coachForSlug });
+  res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+  res.status(200).type('html').send(html);
 });
 
 // Group classes on the public page (B40): the coach puts one on, or cancels it.

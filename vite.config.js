@@ -27,7 +27,9 @@ export default defineConfig({
         globIgnores: ['**/fontkit*.js'],
         // Don't cache Firebase SDK network requests
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/],
+        // /book/<slug> is a shared booking link: it must reach Hosting (and the bookingPreview
+        // function), not be answered from cache with the app shell.
+        navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/, /^\/book\//],
         runtimeCaching: [
           {
             // The CJK PDF font and the fontkit chunk that parses it. Neither is

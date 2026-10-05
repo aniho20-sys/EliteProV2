@@ -217,10 +217,11 @@ describe('the coach turns the page on (Profile)', () => {
 
   test('the link appears once the page is on, and only then', () => {
     renderWith(<PublicBookingCard />, { currentUser: coach({ enabled: true, price: 0, days: [1], slug: 'abcdefgh23' }), savePublicBooking: vi.fn() }, '/profile');
-    expect(screen.getByText('https://elitepro-16718.web.app/#/book/abcdefgh23')).toBeTruthy();
+    // No # in the shared link: its preview names the coach (functions/bookingPreview.js).
+    expect(screen.getByText('https://elitepro-16718.web.app/book/abcdefgh23')).toBeTruthy();
     cleanup();
     renderWith(<PublicBookingCard />, { currentUser: coach({ enabled: false, price: 0, days: [1], slug: 'abcdefgh23' }), savePublicBooking: vi.fn() }, '/profile');
-    expect(screen.queryByText(/#\/book\//)).toBeNull();
+    expect(screen.queryByText(/\/book\//)).toBeNull();
   });
 
   test('a failed save says so', async () => {
