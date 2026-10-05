@@ -1535,7 +1535,7 @@ const zhHK = {
   'gclass.tell_title': '請通知以下各人',
   'gclass.tell_desc': '以下各人已報名或曾申請 {when} 的課堂。對於沒有使用 app 的人，系統無法代為通知。',
 
-  // ── 小組課堂地址 —— 待 Ani 批核 ──
+  // ── 小組課堂地址、預約頁原價 —— Ani 2026-10-05 批核 ──
   'gclass.address': '地址（可選）',
   'gclass.address_ph': '例如：12 High Street, London E1 6AN',
   'gclass.address_hint': '會在預約頁顯示，任何有連結的人都看得到。',

@@ -86,7 +86,7 @@ describe('the page a stranger opens', () => {
       name: 'Jo Bloggs', contact: '07700 900123', message: '', consent: true, website: '',
     });
     expect(await screen.findByText('Request sent')).toBeTruthy();
-    expect(screen.getByText(/Ani Ho Fitness will contact you to confirm/)).toBeTruthy();
+    expect(screen.getByText('Ani Ho Fitness will contact you to confirm Monday, October 5, 2026 10:00.')).toBeTruthy();
   });
 
   test('another day shows that day\'s times', async () => {

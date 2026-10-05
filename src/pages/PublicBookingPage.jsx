@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CalendarX, CheckCircle2, Send, MapPin } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
-import { formatDayDate } from '../i18n/format';
+import { formatDayDate, formatFullDate } from '../i18n/format';
 import { formatCurrency } from '../utils/currencyUtils';
 import EmptyState from '../components/EmptyState';
 import { LanguageToggle } from '../components/LanguagePicker';
@@ -110,10 +110,11 @@ export default function PublicBookingPage() {
           <div className="card public-book-done">
             <CheckCircle2 size={40} strokeWidth={1.5} />
             <h1 className="legal-title">{t('book.sent_title')}</h1>
+            {/* The full date with the year (Ani 2026-10-05): this is the line people screenshot. */}
             <p>
               {sent.groupClassId
-                ? t('book.sent_desc_group', { coach: page.coachName, when: `${formatDayDate(sent.date, lang)} ${sent.time}` })
-                : t('book.sent_desc', { coach: page.coachName, when: `${formatDayDate(sent.date, lang)} ${sent.time}` })}
+                ? t('book.sent_desc_group', { coach: page.coachName, when: `${formatFullDate(sent.date, lang)} ${sent.time}` })
+                : t('book.sent_desc', { coach: page.coachName, when: `${formatFullDate(sent.date, lang)} ${sent.time}` })}
             </p>
           </div>
         ) : (

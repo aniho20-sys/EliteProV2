@@ -67,7 +67,7 @@ describe('joining a class from the public page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Send request/ }));
     await waitFor(() => expect(app.requestTrialSession).toHaveBeenCalledTimes(1));
     expect(app.requestTrialSession.mock.calls[0][0]).toMatchObject({ slug: 'abcdefgh23', groupClassId: 'gc1' });
-    expect(await screen.findByText(/confirm your place on/)).toBeTruthy();
+    expect(await screen.findByText(/confirm your place on [A-Za-z]+, [A-Za-z]+ \d+, 20\d\d /)).toBeTruthy();
   });
 
   // Ani 2026-10-05: a class says where it is; the chosen one's address opens the map.
