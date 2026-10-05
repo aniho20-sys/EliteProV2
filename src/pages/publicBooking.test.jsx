@@ -6,7 +6,7 @@
 // functions/test/publicBooking.test.js. Firebase is replaced (#38).
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, within, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -97,6 +97,18 @@ describe('the page a stranger opens', () => {
     fireEvent.click(dayButtons[1]);
     expect(screen.getByRole('button', { name: '14:00' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '09:00' })).toBeNull();
+  });
+
+  // Ani 2026-10-05: her request said "sent" and never arrived. The hidden bot trap was named
+  // "website", which phone AutoFill fills from the contact card — so a person was taken for
+  // a bot and their request silently dropped. The trap must carry no name AutoFill knows.
+  test('the hidden bot trap has a name no AutoFill recognises, and AutoFill is off', async () => {
+    renderWith(<PublicBookingPage />, pageApp());
+    fireEvent.click(await screen.findByRole('button', { name: '09:00' }));
+    const trap = document.querySelector('.public-book-trap input');
+    expect(trap.getAttribute('autocomplete')).toBe('off');
+    expect(trap.getAttribute('name')).not.toMatch(/web|url|site|homepage|company|org|name|mail|phone|tel|address|city|zip|post/i);
+    expect(trap.id || '').not.toMatch(/web|url|site/i);
   });
 
   test('no agreement, no request', async () => {
@@ -224,9 +236,12 @@ describe('trial requests on the coach\'s dashboard', () => {
     { id: 'r2', name: 'Sam Lee', contact: 'sam@example.test', message: '', date: '2026-10-06', time: '14:00' },
   ];
   const item = (name) => screen.getByText(name).closest('.trial-request');
+  // What AppContext.subscribeTrialRequests does: report the list now, and again on change.
+  let push;
+  const live = (list) => vi.fn((onChange) => { push = onChange; onChange(list); return () => {}; });
 
   test('each request: who, when, how to reach them', async () => {
-    renderWith(<TrialRequestsCard />, { getTrialRequests: vi.fn(async () => REQUESTS), respondTrialRequest: vi.fn() }, '/');
+    renderWith(<TrialRequestsCard />, { subscribeTrialRequests: live(REQUESTS), respondTrialRequest: vi.fn() }, '/');
     await screen.findByText('Jo Bloggs');
     expect(within(item('Jo Bloggs')).getByText('Call').closest('a').getAttribute('href')).toBe('tel:07700900123');
     expect(within(item('Jo Bloggs')).getByText('Text').closest('a').getAttribute('href')).toBe('sms:07700900123');
@@ -237,7 +252,7 @@ describe('trial requests on the coach\'s dashboard', () => {
 
   test('confirm: answered on the server, gone from the list', async () => {
     const respondTrialRequest = vi.fn(async () => ({ confirmed: true }));
-    renderWith(<TrialRequestsCard />, { getTrialRequests: vi.fn(async () => REQUESTS), respondTrialRequest }, '/');
+    renderWith(<TrialRequestsCard />, { subscribeTrialRequests: live(REQUESTS), respondTrialRequest }, '/');
     await screen.findByText('Jo Bloggs');
     fireEvent.click(within(item('Jo Bloggs')).getByRole('button', { name: /Confirm & add client/ }));
     await waitFor(() => expect(respondTrialRequest).toHaveBeenCalledWith('r1', 'confirm'));
@@ -248,7 +263,7 @@ describe('trial requests on the coach\'s dashboard', () => {
 
   test('decline asks once more, because it deletes the request', async () => {
     const respondTrialRequest = vi.fn(async () => ({ declined: true }));
-    renderWith(<TrialRequestsCard />, { getTrialRequests: vi.fn(async () => REQUESTS), respondTrialRequest }, '/');
+    renderWith(<TrialRequestsCard />, { subscribeTrialRequests: live(REQUESTS), respondTrialRequest }, '/');
     await screen.findByText('Sam Lee');
     fireEvent.click(within(item('Sam Lee')).getByRole('button', { name: /Decline/ }));
     expect(respondTrialRequest).not.toHaveBeenCalled();
@@ -261,7 +276,7 @@ describe('trial requests on the coach\'s dashboard', () => {
 
   test('a failure keeps the request and says so', async () => {
     renderWith(<TrialRequestsCard />, {
-      getTrialRequests: vi.fn(async () => REQUESTS),
+      subscribeTrialRequests: live(REQUESTS),
       respondTrialRequest: vi.fn(async () => { throw new Error('offline'); }),
     }, '/');
     await screen.findByText('Jo Bloggs');
@@ -271,15 +286,30 @@ describe('trial requests on the coach\'s dashboard', () => {
   });
 
   test('nothing to answer, or nothing loadable: no card at all', async () => {
-    const empty = vi.fn(async () => []);
-    const { container } = renderWith(<TrialRequestsCard />, { getTrialRequests: empty, respondTrialRequest: vi.fn() }, '/');
+    const empty = live([]);
+    const { container } = renderWith(<TrialRequestsCard />, { subscribeTrialRequests: empty, respondTrialRequest: vi.fn() }, '/');
     await waitFor(() => expect(empty).toHaveBeenCalled());
     expect(container.querySelector('.card')).toBeNull();
     cleanup();
-    const failing = vi.fn(async () => { throw new Error('offline'); });
-    const second = renderWith(<TrialRequestsCard />, { getTrialRequests: failing, respondTrialRequest: vi.fn() }, '/');
+    const failing = vi.fn((_onChange, onError) => { onError(new Error('permission-denied')); return () => {}; });
+    const second = renderWith(<TrialRequestsCard />, { subscribeTrialRequests: failing, respondTrialRequest: vi.fn() }, '/');
     await waitFor(() => expect(failing).toHaveBeenCalled());
     expect(second.container.querySelector('.card')).toBeNull();
+  });
+
+  // Ani 2026-10-05: sent a request from a student account, the coach side showed nothing.
+  // The card read the list once, when the dashboard opened; an installed app keeps its
+  // screen, so a request sent afterwards never appeared.
+  test('a request sent while the dashboard is open appears without reloading', async () => {
+    const unsubscribe = vi.fn();
+    const subscribe = vi.fn((onChange) => { push = onChange; onChange([]); return unsubscribe; });
+    const { unmount } = renderWith(<TrialRequestsCard />, { subscribeTrialRequests: subscribe, respondTrialRequest: vi.fn() }, '/');
+    expect(screen.queryByText('Trial requests')).toBeNull();
+    act(() => push([REQUESTS[0]]));
+    expect(await screen.findByText('Jo Bloggs')).toBeTruthy();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(unsubscribe).toHaveBeenCalled();
   });
 });
 

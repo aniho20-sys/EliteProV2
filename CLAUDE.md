@@ -540,7 +540,7 @@ getTrainerSubscriptions(trainerId)  // coach: all clients' plans, for the dashbo
 
 // Public booking page (B38)
 savePublicBooking({ enabled, price, days })  // trainer: server validates, issues the link, writes users.publicBooking
-getTrialRequests()                // trainer: one-off fetch of their unanswered trial requests
+subscribeTrialRequests(onChange, onError?)  // trainer: live list of their unanswered trial requests; returns unsubscribe
 respondTrialRequest(requestId, 'confirm' | 'decline')
 getPublicBookingPage(slug)        // no auth: { coachName, price, currency, minutes, timeZone, slots: [{date,time}] }
 requestTrialSession({ slug, date, time, name, contact, message, consent, website })  // no auth; website = honeypot

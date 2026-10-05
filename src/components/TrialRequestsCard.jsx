@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarPlus, Phone, MessageSquare, Mail, Check, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -13,20 +13,19 @@ import { contactLinks } from '../utils/contactLinks';
 export default function TrialRequestsCard() {
   const { t, lang } = useLanguage();
   const toast = useToast();
-  const { getTrialRequests, respondTrialRequest } = useApp();
+  const { subscribeTrialRequests, respondTrialRequest } = useApp();
   const [requests, setRequests] = useState([]);
   const [busy, setBusy] = useState(null);           // request id being answered
   const [confirmDecline, setConfirmDecline] = useState(null);
 
-  const load = useCallback(async () => {
-    try {
-      setRequests(await getTrialRequests());
-    } catch {
-      setRequests([]); // the dashboard still shows; the push brought them here and will again
-    }
-  }, [getTrialRequests]);
-
-  useEffect(() => { load(); }, [load]);
+  // Live, so a request appears while the dashboard is already open. If the listener cannot
+  // start the dashboard still shows, without this card.
+  useEffect(() => {
+    if (!subscribeTrialRequests) return undefined;
+    return subscribeTrialRequests(setRequests, () => setRequests([]));
+    // Subscribed once per mount: the function is recreated on every AppContext render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (requests.length === 0) return null;
 

@@ -201,7 +201,11 @@ function visitorKey(ip, day) {
 async function requestTrial({ db, input, ip, now = new Date() }) {
   const data = input || {};
   // Filled in only by something that fills in every field. Looks like success, stores nothing.
-  if (clean(data.website, 200)) return { ok: true, stored: false };
+  if (clean(data.website, 200)) {
+    // Logged (no personal data) so a dropped request can be told apart from one never sent.
+    console.warn(`[requestTrial] honeypot filled — dropped (slug ${String(data.slug).slice(0, 12)})`);
+    return { ok: true, stored: false };
+  }
 
   const name = clean(data.name, LIMITS.name);
   const contact = clean(data.contact, LIMITS.contact);
@@ -242,6 +246,7 @@ async function requestTrial({ db, input, ip, now = new Date() }) {
       date: data.date, time: data.time, createdAt: now.toISOString(),
     });
   });
+  console.log(`[requestTrial] stored ${requestRef.id} for ${coach.id}`);
   return { ok: true, stored: true, requestId: requestRef.id, trainerId: coach.id, name, date: data.date, time: data.time };
 }
 

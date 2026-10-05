@@ -910,12 +910,15 @@ export function AppProvider({ children }) {
     const { data } = await httpsCallable(functions, 'savePublicBooking')(settings);
     return data;
   };
-  // Strangers' requests for a trial session. Read once when the dashboard opens; a push
-  // tells the coach a new one has arrived.
-  const getTrialRequests = async () => {
-    const snap = await getDocs(query(collection(db, 'trialRequests'), where('trainerId', '==', firebaseUser.uid)));
-    return snap.docs.map(d => d.data()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-  };
+  // Strangers' requests for a trial session, live. It used to be read once when the dashboard
+  // opened, so a request sent while the app sat open (the usual case — an installed app keeps
+  // its screen) never appeared until the coach happened to reload. Not one of the collections
+  // `loading` waits for: the dashboard shows without it. Returns the unsubscribe.
+  const subscribeTrialRequests = (onChange, onError) => onSnapshot(
+    query(collection(db, 'trialRequests'), where('trainerId', '==', firebaseUser.uid)),
+    snap => onChange(snap.docs.map(d => d.data()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))),
+    err => { console.error('[trialRequests] listener failed', err); if (onError) onError(err); },
+  );
   // 'confirm' adds them as a client without the app and books the trial session; 'decline'
   // deletes the request. Either way the request is gone afterwards.
   const respondTrialRequest = async (requestId, action) => {
@@ -1175,7 +1178,7 @@ export function AppProvider({ children }) {
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
     getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
-    savePublicBooking, getTrialRequests, respondTrialRequest, getPublicBookingPage, requestTrialSession,
+    savePublicBooking, subscribeTrialRequests, respondTrialRequest, getPublicBookingPage, requestTrialSession,
     checkAndAwardBadges,
     saveIntakeForm, getIntakeForm,
     getStudios, addStudio, updateStudio,

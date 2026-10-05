@@ -159,9 +159,12 @@ export default function PublicBookingPage() {
                   <textarea id="book-message" className="form-textarea" rows={3} maxLength={500}
                     placeholder={t('book.message_hint')} value={form.message} onChange={set('message')} />
                 </div>
-                {/* Hidden from people; a bot that fills every field fills this one too. */}
+                {/* Hidden from people; a bot that fills every field fills this one too. Its name
+                    must not be one a phone's AutoFill recognises: it was "website", which
+                    iPhone fills from the contact card — so a real person's request was
+                    dropped as a bot's, while their screen said it had been sent. */}
                 <div className="public-book-trap" aria-hidden="true">
-                  <input name="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={set('website')} />
+                  <input name="bk_extra_7" tabIndex={-1} autoComplete="off" value={form.website} onChange={set('website')} />
                 </div>
                 <label className="public-book-consent">
                   <input type="checkbox" checked={form.consent} onChange={set('consent')} />
