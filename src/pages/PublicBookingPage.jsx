@@ -6,6 +6,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { formatDayDate } from '../i18n/format';
 import { formatCurrency } from '../utils/currencyUtils';
 import EmptyState from '../components/EmptyState';
+import { LanguageToggle } from '../components/LanguagePicker';
 import { SkeletonCard } from '../components/Skeleton';
 
 // A coach's public booking page (B38): someone with no account picks a free hour and asks
@@ -94,7 +95,10 @@ export default function PublicBookingPage() {
   return (
     <div className="legal-page">
       <div className="legal-container public-book">
-        <div className="public-book-brand">Elite<span>Pro</span></div>
+        <div className="public-book-top">
+          <div className="public-book-brand">Elite<span>Pro</span></div>
+          <LanguageToggle />
+        </div>
 
         {missing ? (
           <EmptyState icon={CalendarX} title={t('book.missing_title')} description={t('book.missing_desc')} />
@@ -119,6 +123,10 @@ export default function PublicBookingPage() {
             </h1>
             <p className="legal-meta">
               {shownKind === 'trial' && t('book.meta', { price, minutes: page.minutes })}
+              {/* The coach's usual price beside a cheaper trial (Ani 2026-10-05). */}
+              {shownKind === 'trial' && page.usualPrice > page.price && (
+                <>{' · '}<span className="public-book-usual">{t('book.usual_price', { price: formatCurrency(page.usualPrice, page.currency) })}</span></>
+              )}
               {page.timeZone && <>{shownKind === 'trial' && <br />}{t('book.times_in', { zone: page.timeZone })}</>}
             </p>
 

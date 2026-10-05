@@ -5702,3 +5702,10 @@ tr:hover { background: var(--bg-card-hover); }
 
 .public-book-class-where { font-size: 0.9rem; margin: -8px 0 20px; display: flex; align-items: center; gap: 4px; }
 .public-book-class-where a { color: var(--primary); font-weight: 600; }
+
+/* Public booking page: language toggle beside the wordmark; the usual price beside a trial. */
+.public-book-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; }
+.public-book-top .public-book-brand { margin-bottom: 0; }
+.lang-toggle { display: flex; gap: 6px; }
+.lang-toggle .btn { box-shadow: none; }
+.public-book-usual { text-decoration: line-through; }

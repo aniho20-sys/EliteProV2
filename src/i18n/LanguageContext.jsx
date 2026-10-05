@@ -29,7 +29,10 @@ async function dictionaryFor(lang) {
 
 export function LanguageProvider({ children }) {
   const { currentUser, setLanguage } = useApp();
-  const lang = resolveLanguage(currentUser, typeof navigator !== 'undefined' ? navigator.language : '');
+  // A choice made on a page for visitors (the public booking page's English / 繁體中文
+  // toggle) — for this tab only, never written anywhere, ahead of everything else.
+  const [viewLanguage, setViewLanguage] = useState(null);
+  const lang = viewLanguage || resolveLanguage(currentUser, typeof navigator !== 'undefined' ? navigator.language : '');
   const [zh, setZh] = useState(null);
 
   useEffect(() => {
@@ -67,6 +70,7 @@ export function LanguageProvider({ children }) {
   const value = useMemo(() => ({
     lang,
     setLanguage,
+    setViewLanguage,
     translatorFor,
     t: (key, vars) => translate(
       { en, zh: lang === 'zh-HK' ? zh : null },

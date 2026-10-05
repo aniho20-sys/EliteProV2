@@ -1540,6 +1540,7 @@ const zhHK = {
   'gclass.address_ph': '例如：12 High Street, London E1 6AN',
   'gclass.address_hint': '會在預約頁顯示，任何有連結的人都看得到。',
   'book.open_map': '在地圖中打開',
+  'book.usual_price': '原價 {price}',
 };
 
 export default zhHK;

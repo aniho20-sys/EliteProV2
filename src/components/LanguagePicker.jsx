@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Languages } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -27,6 +27,26 @@ const OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'zh-HK', label: '繁體中文' },
 ];
+
+// The same two options for a visitor with no account — the public booking page (Ani
+// 2026-10-05). The choice lasts while this page is open (setViewLanguage); nothing is saved,
+// and leaving the page drops it — a signed-in coach previewing their own page must not
+// carry it back into the app over their saved language.
+export function LanguageToggle() {
+  const { lang, setViewLanguage, t } = useLanguage();
+  useEffect(() => () => setViewLanguage(null), [setViewLanguage]);
+  return (
+    <div className="lang-toggle" role="group" aria-label={t('profile.language')}>
+      {OPTIONS.filter(o => SUPPORTED_LANGUAGES.includes(o.value)).map(o => (
+        <button key={o.value} type="button" lang={o.value} aria-pressed={lang === o.value}
+          className={`btn btn-sm ${lang === o.value ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setViewLanguage(o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function LanguagePicker() {
   const { currentUser } = useApp();

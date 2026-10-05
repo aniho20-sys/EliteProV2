@@ -7,6 +7,7 @@
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup, within, act } from '@testing-library/react';
+import { useState } from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -179,6 +180,47 @@ describe('the page a stranger opens', () => {
     renderWith(<PublicBookingPage />, app);
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('Book a trial session with Ani Ho Fitness')).toBeTruthy();
+  });
+});
+
+describe('English or 繁體中文, and the usual price (Ani 2026-10-05)', () => {
+  const pageApp = (over = {}) => ({ getPublicBookingPage: vi.fn(async () => PAGE), requestTrialSession: vi.fn(), ...over });
+
+  test('a visitor switches the page to 繁體中文 and back; nothing is saved', async () => {
+    const app = pageApp({ setLanguage: vi.fn() });
+    renderWith(<PublicBookingPage />, app);
+    expect(await screen.findByText('Book a trial session with Ani Ho Fitness')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '繁體中文' }));
+    expect(await screen.findByText('預約與Ani Ho Fitness的體驗堂')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '繁體中文' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    expect(await screen.findByText('Book a trial session with Ani Ho Fitness')).toBeTruthy();
+    expect(app.setLanguage).not.toHaveBeenCalled();
+  });
+
+  test('leaving the page drops the choice, so a signed-in coach is back in their own language', async () => {
+    const { useLanguage } = await import('../i18n/LanguageContext');
+    function Probe() { const { lang } = useLanguage(); return <div>lang={lang}</div>; }
+    function Harness() {
+      const [onPage, setOnPage] = useState(true);
+      return <><button type="button" onClick={() => setOnPage(false)}>leave</button>{onPage ? <PublicBookingPage /> : <Probe />}</>;
+    }
+    renderWith(<Harness />, pageApp());
+    await screen.findByText('Book a trial session with Ani Ho Fitness');
+    fireEvent.click(screen.getByRole('button', { name: '繁體中文' }));
+    await screen.findByText('預約與Ani Ho Fitness的體驗堂');
+    fireEvent.click(screen.getByRole('button', { name: 'leave' }));
+    expect(await screen.findByText('lang=en')).toBeTruthy();
+  });
+
+  test('the usual price beside a cheaper trial, and only then', async () => {
+    renderWith(<PublicBookingPage />, pageApp({ getPublicBookingPage: vi.fn(async () => ({ ...PAGE, price: 25, usualPrice: 65 })) }));
+    expect(await screen.findByText('Usually GBP 65.00')).toBeTruthy();
+    cleanup();
+
+    renderWith(<PublicBookingPage />, pageApp({ getPublicBookingPage: vi.fn(async () => ({ ...PAGE, usualPrice: null })) }));
+    await screen.findByText('Book a trial session with Ani Ho Fitness');
+    expect(screen.queryByText(/Usually/)).toBeNull();
   });
 });
 

@@ -117,7 +117,8 @@ describe('what a stranger sees', () => {
     await db.doc('schedule/s1').set({ trainerId: COACH, clientId: 'c1', date: '2026-10-02', time: '09:00', duration: 60, status: 'confirmed', notes: 'knee', type: 'PT' });
     const page = await pb.getPage({ db, slug: SLUG, now: NOW });
     // groupClasses (B40) carries class times, titles and places left — pinned in 'group classes' below.
-    expect(Object.keys(page).sort()).toEqual(['coachName', 'currency', 'groupClasses', 'minutes', 'price', 'slots', 'timeZone']);
+    // usualPrice (Ani 2026-10-05): the coach's own per-session price, already shown to their clients.
+    expect(Object.keys(page).sort()).toEqual(['coachName', 'currency', 'groupClasses', 'minutes', 'price', 'slots', 'timeZone', 'usualPrice']);
     expect(page).toMatchObject({ coachName: 'Ani Ho', price: 20, currency: 'GBP', minutes: 60, timeZone: TZ });
     expect(page.slots.filter(s => s.date === '2026-10-02').map(s => s.time)).toEqual(['10:00', '11:00']);
     expect(page.slots.every(s => Object.keys(s).sort().join() === 'date,time')).toBe(true);
@@ -127,6 +128,15 @@ describe('what a stranger sees', () => {
 
   // Ani 2026-10-05: people book a person — the page shows the coach's own name even when a
   // business name is set (that one is for invoices).
+  test('the usual price, only when it is above the trial price', async () => {
+    await seedCoach({ price: 20 }, { renewalRate: 65 });
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).usualPrice).toBe(65);
+    await seedCoach({ price: 70 }, { renewalRate: 65 });
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).usualPrice).toBeNull();
+    await seedCoach({ price: 0 }, {});
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).usualPrice).toBeNull();
+  });
+
   test('the coach\'s own name, even when they have a business name', async () => {
     await seedCoach({}, { businessName: 'Ani Ho Fitness' });
     expect((await pb.getPage({ db, slug: SLUG, now: NOW })).coachName).toBe('Ani Ho');

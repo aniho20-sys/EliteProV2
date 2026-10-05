@@ -192,6 +192,9 @@ async function getPage({ db, slug, now = new Date() }) {
     // person. The business name stays on invoices.
     coachName: clean(data.name || 'Coach', LIMITS.name),
     price: data.publicBooking.price,
+    // The coach's usual price per session, so a cheaper trial reads as an offer (Ani
+    // 2026-10-05). Only when it really is higher; otherwise nothing extra is said.
+    usualPrice: Number(data.renewalRate) > data.publicBooking.price ? Number(data.renewalRate) : null,
     currency: data.currency || 'GBP',
     minutes: SLOT_MINUTES,
     timeZone: data.timeZone || null,

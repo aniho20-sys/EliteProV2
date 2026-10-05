@@ -1530,6 +1530,7 @@ const en = {
   'gclass.address_ph': 'e.g. 12 High Street, London E1 6AN',
   'gclass.address_hint': 'Shown on your booking page to anyone who has the link.',
   'book.open_map': 'Open in Maps',
+  'book.usual_price': 'Usually {price}',
 };
 
 export default en;
