@@ -1397,6 +1397,7 @@ const en = {
   'book.meta': '{price} · {minutes} minutes',
   'book.free': 'Free',
   'book.times_in': 'All times are local time ({zone}).',
+  'book.times_uk': 'All times are UK time.',
   'book.pick_day': 'Choose a day',
   'book.pick_time': 'Choose a time',
   'book.no_times': 'No free times in the next two weeks',

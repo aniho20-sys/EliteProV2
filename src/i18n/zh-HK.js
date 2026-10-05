@@ -1408,6 +1408,7 @@ const zhHK = {
   'book.meta': '{price} · {minutes} 分鐘',
   'book.free': '免費',
   'book.times_in': '所有時間均為當地時間（{zone}）。',
+  'book.times_uk': '所有時間均為英國時間。',
   'book.pick_day': '選擇日子',
   'book.pick_time': '選擇時間',
   'book.no_times': '未來兩星期暫無空檔',

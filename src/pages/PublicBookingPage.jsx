@@ -13,6 +13,9 @@ import { SkeletonCard } from '../components/Skeleton';
 // for a trial session. Nothing is booked here — the coach confirms, by contacting them.
 // Free hours, bounds and spam limits all come from the server (functions/publicBooking.js);
 // this page never sees the coach's id or schedule.
+// A UK coach's page says "UK time" rather than the zone's computer name (Ani 2026-10-05).
+const UK_ZONES = ['Europe/London', 'Europe/Belfast', 'GB', 'GB-Eire'];
+
 export default function PublicBookingPage() {
   const { t, lang } = useLanguage();
   const { slug } = useParams();
@@ -128,7 +131,7 @@ export default function PublicBookingPage() {
               {shownKind === 'trial' && page.usualPrice > page.price && (
                 <>{' · '}<span className="public-book-usual">{t('book.usual_price', { price: formatCurrency(page.usualPrice, page.currency) })}</span></>
               )}
-              {page.timeZone && <>{shownKind === 'trial' && <br />}{t('book.times_in', { zone: page.timeZone })}</>}
+              {page.timeZone && <>{shownKind === 'trial' && <br />}{UK_ZONES.includes(page.timeZone) ? t('book.times_uk') : t('book.times_in', { zone: page.timeZone })}</>}
             </p>
 
             {classes.length > 0 && (

@@ -213,6 +213,16 @@ describe('English or 繁體中文, and the usual price (Ani 2026-10-05)', () => 
     expect(await screen.findByText('lang=en')).toBeTruthy();
   });
 
+  test('a UK coach\'s times say "UK time"; elsewhere the zone is named', async () => {
+    renderWith(<PublicBookingPage />, pageApp());
+    expect(await screen.findByText(/All times are UK time\./)).toBeTruthy();
+    expect(screen.queryByText(/Europe\/London/)).toBeNull();
+    cleanup();
+
+    renderWith(<PublicBookingPage />, pageApp({ getPublicBookingPage: vi.fn(async () => ({ ...PAGE, timeZone: 'Asia/Hong_Kong' })) }));
+    expect(await screen.findByText(/All times are local time \(Asia\/Hong_Kong\)\./)).toBeTruthy();
+  });
+
   test('the usual price beside a cheaper trial, and only then', async () => {
     renderWith(<PublicBookingPage />, pageApp({ getPublicBookingPage: vi.fn(async () => ({ ...PAGE, price: 25, usualPrice: 65 })) }));
     expect(await screen.findByText('Usually GBP 65.00')).toBeTruthy();
