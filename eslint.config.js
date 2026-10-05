@@ -119,6 +119,8 @@ export default defineConfig([
           'PR', 'PRs',
           // The wordmark, rendered as two spans for the gradient.
           'Elite', 'Pro',
+          // Another company's product name — the same in every language (zh-HK.js rule 3).
+          'WhatsApp',
           // The word the user must type to confirm account deletion. It is compared
           // literally against 'DELETE', so translating it would make the confirmation
           // impossible to satisfy in that language.

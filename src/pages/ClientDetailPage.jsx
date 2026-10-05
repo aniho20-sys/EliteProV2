@@ -177,6 +177,7 @@ export default function ClientDetailPage() {
       />
     );
   }
+  const reach = contactLinks(client.contact, { timeZone: currentUser.timeZone });
 
   const latestStat = stats[stats.length - 1];
 
@@ -451,9 +452,8 @@ export default function ClientDetailPage() {
         {/* Given on the public booking page (B38) — the only way to reach a client without the app. */}
         {client.contact && (
           <p className="text-sm mt-8">
-            <a href={contactLinks(client.contact).href}>
-              {client.contact}
-            </a>
+            <a href={reach.href}>{client.contact}</a>
+            {reach.whatsapp && <>{' · '}<a href={reach.whatsapp} target="_blank" rel="noreferrer">WhatsApp</a></>}
           </p>
         )}
         {(client.age || client.height || client.goals) && (

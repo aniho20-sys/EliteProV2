@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarPlus, Phone, MessageSquare, Mail, Check, X } from 'lucide-react';
+import { CalendarPlus, Phone, MessageSquare, MessageCircle, Mail, Check, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -13,7 +13,7 @@ import { contactLinks } from '../utils/contactLinks';
 export default function TrialRequestsCard() {
   const { t, lang } = useLanguage();
   const toast = useToast();
-  const { subscribeTrialRequests, respondTrialRequest } = useApp();
+  const { currentUser, subscribeTrialRequests, respondTrialRequest } = useApp();
   const [requests, setRequests] = useState([]);
   const [busy, setBusy] = useState(null);           // request id being answered
   const [confirmDecline, setConfirmDecline] = useState(null);
@@ -59,7 +59,7 @@ export default function TrialRequestsCard() {
       </h3>
       <p className="text-sm text-secondary">{t('trial.desc')}</p>
       {requests.map(r => {
-        const links = contactLinks(r.contact);
+        const links = contactLinks(r.contact, { timeZone: currentUser?.timeZone });
         return (
           <div key={r.id} className="trial-request">
             <div className="trial-request-head">
@@ -73,6 +73,9 @@ export default function TrialRequestsCard() {
                 <>
                   <a className="btn btn-sm btn-outline" href={links.call}><Phone size={14} /> {t('trial.call')}</a>
                   <a className="btn btn-sm btn-outline" href={links.text}><MessageSquare size={14} /> {t('trial.text')}</a>
+                  {links.whatsapp && (
+                    <a className="btn btn-sm btn-outline" href={links.whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={14} /> WhatsApp</a>
+                  )}
                 </>
               )}
               {links?.kind === 'email' && (

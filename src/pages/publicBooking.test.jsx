@@ -250,6 +250,17 @@ describe('trial requests on the coach\'s dashboard', () => {
     expect(within(item('Sam Lee')).queryByText('Call')).toBeNull();
   });
 
+  test('WhatsApp for a UK mobile when the coach is in the UK; none when the country is unsure', async () => {
+    renderWith(<TrialRequestsCard />, { currentUser: { id: 'c', timeZone: 'Europe/London' }, subscribeTrialRequests: live(REQUESTS), respondTrialRequest: vi.fn() }, '/');
+    await screen.findByText('Jo Bloggs');
+    expect(within(item('Jo Bloggs')).getByText('WhatsApp').closest('a').getAttribute('href')).toBe('https://wa.me/447700900123');
+    expect(within(item('Sam Lee')).queryByText('WhatsApp')).toBeNull(); // an email
+    cleanup();
+    renderWith(<TrialRequestsCard />, { currentUser: { id: 'c' }, subscribeTrialRequests: live(REQUESTS), respondTrialRequest: vi.fn() }, '/');
+    await screen.findByText('Jo Bloggs');
+    expect(within(item('Jo Bloggs')).queryByText('WhatsApp')).toBeNull();
+  });
+
   test('confirm: answered on the server, gone from the list', async () => {
     const respondTrialRequest = vi.fn(async () => ({ confirmed: true }));
     renderWith(<TrialRequestsCard />, { subscribeTrialRequests: live(REQUESTS), respondTrialRequest }, '/');
