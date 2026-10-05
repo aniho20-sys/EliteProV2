@@ -1466,7 +1466,7 @@ const zhHK = {
   'trial.toast_declined': '已拒絕{name}的申請',
   'trial.toast_failed': '未能更新申請，請再試一次。',
 
-  // ── 新教練上手（B39）—— 待 Ani 批核 ──
+  // ── 新教練上手（B39）—— Ani 2026-10-05 全部批核 ──
   'sched.status_pending_coach': '待你確認',
   'sched.cancel_policy_coach': '學生在課堂前 24 小時或以上取消，可取回該堂（每月最多 2 次）。較遲取消則照扣堂數。',
   'sched.cancel_policy_client': '請在課堂前最少 24 小時取消，即可取回該堂（每月最多 2 次）。較遲取消則照扣堂數。',
