@@ -19,7 +19,7 @@ const { default: PublicBookingPage } = await import('./PublicBookingPage');
 const { default: GroupClassesCard } = await import('../components/GroupClassesCard');
 const { default: TrialRequestsCard } = await import('../components/TrialRequestsCard');
 
-const CLASS = { id: 'gc1', date: '2099-01-06', time: '18:00', minutes: 60, title: 'Strength circuit', price: 15, spotsLeft: 2 };
+const CLASS = { id: 'gc1', date: '2099-01-06', time: '18:00', minutes: 60, title: 'Strength circuit', address: 'Victoria Park, London E9', price: 15, spotsLeft: 2 };
 const PAGE = {
   coachName: 'Ani Ho Fitness', price: 25, currency: 'GBP', minutes: 60, timeZone: 'Europe/London',
   slots: [{ date: '2099-01-05', time: '09:00' }], groupClasses: [CLASS],
@@ -68,6 +68,27 @@ describe('joining a class from the public page', () => {
     await waitFor(() => expect(app.requestTrialSession).toHaveBeenCalledTimes(1));
     expect(app.requestTrialSession.mock.calls[0][0]).toMatchObject({ slug: 'abcdefgh23', groupClassId: 'gc1' });
     expect(await screen.findByText(/confirm your place on/)).toBeTruthy();
+  });
+
+  // Ani 2026-10-05: a class says where it is; the chosen one's address opens the map.
+  test('the class shows its address, and the chosen class links it to a map', async () => {
+    renderWith(<PublicBookingPage />, pageApp());
+    await screen.findByText('Book a trial session with Ani Ho Fitness');
+    fireEvent.click(screen.getByRole('button', { name: 'Group class' }));
+    const option = screen.getByRole('button', { name: /Strength circuit/ });
+    expect(within(option).getByText('Victoria Park, London E9')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Victoria Park, London E9' })).toBeNull();
+    fireEvent.click(option);
+    expect(screen.getByRole('link', { name: 'Victoria Park, London E9' }).getAttribute('href'))
+      .toBe('https://www.google.com/maps/search/?api=1&query=Victoria%20Park%2C%20London%20E9');
+  });
+
+  test('a class with no address shows no address line', async () => {
+    renderWith(<PublicBookingPage />, pageApp({ getPublicBookingPage: vi.fn(async () => ({ ...PAGE, groupClasses: [{ ...CLASS, address: '' }] })) }));
+    await screen.findByText('Book a trial session with Ani Ho Fitness');
+    fireEvent.click(screen.getByRole('button', { name: 'Group class' }));
+    fireEvent.click(screen.getByRole('button', { name: /Strength circuit/ }));
+    expect(screen.queryByRole('link', { name: /Maps|London/ })).toBeNull();
   });
 
   test('switching back to 1-to-1 shows the trial times again, with nothing chosen', async () => {
@@ -139,9 +160,10 @@ describe('the coach\'s Group classes card', () => {
     fireEvent.change(screen.getByLabelText('Places'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Price per person (GBP)'), { target: { value: '12.5' } });
     fireEvent.change(screen.getByLabelText('Class name (optional)'), { target: { value: 'Mobility' } });
+    fireEvent.change(screen.getByLabelText('Address (optional)'), { target: { value: '12 High Street, London E1 6AN' } });
     fireEvent.submit(screen.getByLabelText('Date').closest('form'));
     await waitFor(() => expect(app.saveGroupClass).toHaveBeenCalledWith({
-      date: '2099-02-01', time: '07:30', title: 'Mobility', capacity: 4, minPeople: 2, price: 12.5,
+      date: '2099-02-01', time: '07:30', title: 'Mobility', address: '12 High Street, London E1 6AN', capacity: 4, minPeople: 2, price: 12.5,
     }));
   });
 

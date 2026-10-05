@@ -35,7 +35,7 @@ const GROUP_TYPE = 'Group class';
 // Group classes (B40, 2026-10-05): a coach puts a class on at a set time; strangers on the
 // public page ask for a place. A class can be joined until shortly before it starts.
 const GROUP_LEAD_HOURS = 2;
-const GROUP_LIMITS = { capacity: [2, 20], title: 60 };
+const GROUP_LIMITS = { capacity: [2, 20], title: 60, address: 150 };
 const GROUP_KEEP_DAYS = 30;          // finished or cancelled classes are deleted this long after
 
 class PublicBookingError extends Error {
@@ -202,7 +202,8 @@ async function getPage({ db, slug, now = new Date() }) {
     // Only what a stranger needs to choose one: never who else is coming.
     groupClasses: classes
       .filter(c => c.spotsLeft > 0)
-      .map(c => ({ id: c.id, date: c.date, time: c.time, minutes: c.duration, title: c.title, price: c.price, spotsLeft: c.spotsLeft })),
+      // address: where the class is, as the coach typed it (Ani 2026-10-05) — public by choice.
+      .map(c => ({ id: c.id, date: c.date, time: c.time, minutes: c.duration, title: c.title, address: c.address || '', price: c.price, spotsLeft: c.spotsLeft })),
   };
 }
 
@@ -246,7 +247,7 @@ function validateGroupClass(input, now, timeZone) {
   if (!Number.isInteger(capacity) || capacity < lo || capacity > hi) throw new PublicBookingError('invalid-argument', 'capacity');
   if (!Number.isInteger(minPeople) || minPeople < 1 || minPeople > capacity) throw new PublicBookingError('invalid-argument', 'minPeople');
   if (!Number.isFinite(price) || price < 0 || price > MAX_PRICE) throw new PublicBookingError('invalid-argument', 'price');
-  return { date: d.date, time: d.time, capacity, minPeople, price: Math.round(price * 100) / 100, title: clean(d.title, GROUP_LIMITS.title) };
+  return { date: d.date, time: d.time, capacity, minPeople, price: Math.round(price * 100) / 100, title: clean(d.title, GROUP_LIMITS.title), address: clean(d.address, GROUP_LIMITS.address) };
 }
 
 // A class is the coach's time, so it goes in their calendar as blocked time — which also

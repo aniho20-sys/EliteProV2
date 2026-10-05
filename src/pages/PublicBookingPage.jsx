@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalendarX, CheckCircle2, Send } from 'lucide-react';
+import { CalendarX, CheckCircle2, Send, MapPin } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatDayDate } from '../i18n/format';
@@ -143,6 +143,7 @@ export default function PublicBookingPage() {
                         onClick={() => { setSlot({ groupClassId: c.id, date: c.date, time: c.time }); setError(''); }}>
                         <span className="public-book-class-when">{formatDayDate(c.date, lang)} {c.time}</span>
                         {c.title && <span className="public-book-class-title">{c.title}</span>}
+                        {c.address && <span className="public-book-class-meta">{c.address}</span>}
                         <span className="public-book-class-meta">
                           {t('book.class_price', { price: money(c.price) })}{' · '}{t('book.places_left', { count: c.spotsLeft })}
                         </span>
@@ -150,6 +151,19 @@ export default function PublicBookingPage() {
                     );
                   })}
                 </div>
+                {/* A link cannot sit inside the class's button, so the chosen class's
+                    address gets its own line that opens the map. */}
+                {(() => {
+                  const chosen = classes.find(c => c.id === slot?.groupClassId);
+                  if (!chosen?.address) return null;
+                  return (
+                    <p className="public-book-class-where">
+                      <MapPin size={14} />{' '}
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(chosen.address)}`}
+                        target="_blank" rel="noreferrer" title={t('book.open_map')}>{chosen.address}</a>
+                    </p>
+                  );
+                })()}
               </>
             ) : (<>
             <h2 className="public-book-step">{t('book.pick_time')}</h2>

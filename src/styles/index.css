@@ -5699,3 +5699,6 @@ tr:hover { background: var(--bg-card-hover); }
 .public-book-class-when { font-weight: 700; }
 .public-book-class-title { font-size: 0.9rem; }
 .public-book-class-meta { font-size: 0.8rem; opacity: 0.85; }
+
+.public-book-class-where { font-size: 0.9rem; margin: -8px 0 20px; display: flex; align-items: center; gap: 4px; }
+.public-book-class-where a { color: var(--primary); font-weight: 600; }

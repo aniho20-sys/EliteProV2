@@ -1524,6 +1524,12 @@ const en = {
   'gclass.err_failed': 'Couldn\'t save. Please try again.',
   'gclass.tell_title': 'Let them know',
   'gclass.tell_desc': 'These people had a place or had asked for one on {when}. The app cannot tell people who don\'t use it.',
+
+  // ── Group class address (Ani 2026-10-05) ──
+  'gclass.address': 'Address (optional)',
+  'gclass.address_ph': 'e.g. 12 High Street, London E1 6AN',
+  'gclass.address_hint': 'Shown on your booking page to anyone who has the link.',
+  'book.open_map': 'Open in Maps',
 };
 
 export default en;

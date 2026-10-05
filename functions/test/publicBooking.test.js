@@ -274,7 +274,7 @@ describe('daily cleanup', () => {
 // ── B40: group classes ──
 describe('group classes', () => {
   beforeEach(() => seedCoach());
-  const CLASS = { date: '2026-10-05', time: '18:00', capacity: 3, minPeople: 2, price: 15, title: 'Strength circuit' };
+  const CLASS = { date: '2026-10-05', time: '18:00', capacity: 3, minPeople: 2, price: 15, title: 'Strength circuit', address: 'Victoria Park, London E9' };
   const put = (over = {}) => pb.saveGroupClass({ db, trainerId: COACH, input: { ...CLASS, ...over }, now: NOW });
   const join = (classId, over = {}, ip = '203.0.113.7') => ask({ groupClassId: classId, date: undefined, time: undefined, ...over }, ip);
 
@@ -284,8 +284,16 @@ describe('group classes', () => {
     expect((await db.doc(`schedule/gc-${id}`).get()).data()).toMatchObject({ isBlocked: true, clientId: '', date: CLASS.date, time: CLASS.time, groupClassId: id });
     await join(id);
     const page = await pb.getPage({ db, slug: SLUG, now: NOW });
-    expect(page.groupClasses).toEqual([{ id, date: CLASS.date, time: CLASS.time, minutes: 60, title: 'Strength circuit', price: 15, spotsLeft: 2 }]);
+    expect(page.groupClasses).toEqual([{ id, date: CLASS.date, time: CLASS.time, minutes: 60, title: 'Strength circuit', address: 'Victoria Park, London E9', price: 15, spotsLeft: 2 }]);
     expect(JSON.stringify(page)).not.toContain('Jo Bloggs');
+  });
+
+  // Ani 2026-10-05: a class needs to say where it is.
+  test('an address is optional, trimmed and bounded', async () => {
+    const none = await put({ address: undefined, time: '19:00' });
+    expect((await db.doc(`groupClasses/${none.id}`).get()).data().address).toBe('');
+    const long = await put({ address: `  ${'x'.repeat(400)}  `, time: '20:00' });
+    expect((await db.doc(`groupClasses/${long.id}`).get()).data().address).toHaveLength(150);
   });
 
   test('refused over a session already in the calendar, in the past, or with nonsense numbers', async () => {

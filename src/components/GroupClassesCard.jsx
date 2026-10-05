@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Plus, X } from 'lucide-react';
+import { Users, Plus, X, MapPin } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -13,7 +13,7 @@ import { localToday } from '../utils/dateUtils';
 // public page and the coach confirms each one from the dashboard. Putting a class on blocks
 // that hour in the calendar (server-side, functions/publicBooking.js). Everything a class
 // needs is set per class here — nothing is assumed about how the coach runs them.
-const EMPTY = { date: '', time: '', capacity: '3', minPeople: '2', price: '', title: '' };
+const EMPTY = { date: '', time: '', capacity: '3', minPeople: '2', price: '', title: '', address: '' };
 
 export default function GroupClassesCard() {
   const { t, lang } = useLanguage();
@@ -56,7 +56,7 @@ export default function GroupClassesCard() {
     setSaving(true);
     try {
       await saveGroupClass({
-        date: form.date, time: form.time, title: form.title,
+        date: form.date, time: form.time, title: form.title, address: form.address,
         capacity: Number(form.capacity), minPeople: Number(form.minPeople), price: Number(form.price),
       });
       toast(t('gclass.toast_added'));
@@ -102,6 +102,7 @@ export default function GroupClassesCard() {
             <span className="trial-request-when">{t('gclass.price_each', { price: formatCurrency(c.price, currency) })}</span>
           </div>
           {c.title && <div className="text-sm">{c.title}</div>}
+          {c.address && <div className="text-sm text-muted"><MapPin size={12} /> {c.address}</div>}
           <div className="text-sm text-muted mt-4">
             {t('gclass.booked', { booked: booked(c.id), capacity: c.capacity, min: c.minPeople })}
             {waiting(c.id) > 0 && <>{' · '}{t('gclass.waiting', { count: waiting(c.id) })}</>}
@@ -154,6 +155,11 @@ export default function GroupClassesCard() {
           <div className="form-group">
             <label className="form-label" htmlFor="gc-title">{t('gclass.class_title')}</label>
             <input id="gc-title" className="form-input" maxLength={60} value={form.title} onChange={set('title')} placeholder={t('gclass.title_ph')} />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="gc-address">{t('gclass.address')}</label>
+            <input id="gc-address" className="form-input" maxLength={150} autoComplete="street-address" value={form.address} onChange={set('address')} placeholder={t('gclass.address_ph')} />
+            <p className="text-xs text-muted mt-4">{t('gclass.address_hint')}</p>
           </div>
           <div className="flex gap-8">
             <button type="button" className="btn btn-outline" disabled={saving} onClick={() => { setAdding(false); setForm(EMPTY); }}>{t('common.cancel')}</button>
