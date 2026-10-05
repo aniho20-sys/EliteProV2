@@ -188,7 +188,9 @@ async function getPage({ db, slug, now = new Date() }) {
   const { busy, openRequests } = await busyFor(db, coach.id, now);
   const classes = openRequests >= MAX_OPEN_PER_COACH ? [] : await openGroupClasses(db, coach.id, data.timeZone, now);
   return {
-    coachName: clean(data.businessName || data.name || 'Coach', LIMITS.name),
+    // The coach's own name, never the business name (Ani 2026-10-05): a stranger books a
+    // person. The business name stays on invoices.
+    coachName: clean(data.name || 'Coach', LIMITS.name),
     price: data.publicBooking.price,
     currency: data.currency || 'GBP',
     minutes: SLOT_MINUTES,

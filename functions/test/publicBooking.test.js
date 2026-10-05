@@ -125,9 +125,11 @@ describe('what a stranger sees', () => {
     for (const secret of [COACH, 'ANI123', '12345678', 'ani@example.test', 'knee', 'c1']) expect(text).not.toContain(secret);
   });
 
-  test('the business name, when the coach has one', async () => {
+  // Ani 2026-10-05: people book a person — the page shows the coach's own name even when a
+  // business name is set (that one is for invoices).
+  test('the coach\'s own name, even when they have a business name', async () => {
     await seedCoach({}, { businessName: 'Ani Ho Fitness' });
-    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).coachName).toBe('Ani Ho Fitness');
+    expect((await pb.getPage({ db, slug: SLUG, now: NOW })).coachName).toBe('Ani Ho');
   });
 
   test('a page that is off, unknown, malformed, or whose link the coach no longer holds is not found', async () => {
