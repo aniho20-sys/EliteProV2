@@ -1417,7 +1417,7 @@ const zhHK = {
   'sub.tester_off': '標記為測試者',
   'sub.tester_failed': '未能更新測試者設定',
 
-  // ── 公開預約頁（B38）—— 待 Ani 批核 ──
+  // ── 公開預約頁（B38）—— Ani 2026-10-05 全部批核 ──
   'book.title': '預約與{coach}的體驗堂',
   'book.meta': '{price} · {minutes} 分鐘',
   'book.free': '免費',
