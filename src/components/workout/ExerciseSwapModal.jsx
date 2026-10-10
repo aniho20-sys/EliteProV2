@@ -13,7 +13,10 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
 
   const filtered = sortExercisesByName(liveExercises(exerciseLibrary).filter(e => {
     if (!e || !e.name) return false;
-    const matchName = !search || e.name.toLowerCase().includes(search.toLowerCase());
+    // Aliases too: a renamed starter exercise ("Barbell Curl" is now "Bicep Curl (Barbell)")
+    // must still turn up for the name people know it by.
+    const q = search.toLowerCase();
+    const matchName = !q || e.name.toLowerCase().includes(q) || (e.aliases || []).some(a => a.toLowerCase().includes(q));
     const matchMuscle = !muscle || e.muscle === muscle || (Array.isArray(e.muscles) && e.muscles.includes(muscle));
     return matchName && matchMuscle;
   })).slice(0, 60);
