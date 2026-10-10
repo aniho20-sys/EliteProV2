@@ -917,6 +917,7 @@ const zhHK = {
   'swap.tab_library': '動作庫',
   'swap.tab_custom': '自訂',
   'swap.custom_hint': '輸入任何動作名稱 —— 適用於動作庫未有的動作。',
+  'swap.custom_saves': '會儲存到你的動作庫，下次可直接選用。',
   'swap.ph_custom_name': '例如：Sled Push、Band Pull-Apart…',
   'swap.dupe_single': '這個動作已經存在 —— 請直接使用，不用另建一個。',
   'swap.dupe_variants': '這個動作已經有 {count} 個版本 —— 請直接使用，不用另建一個。',

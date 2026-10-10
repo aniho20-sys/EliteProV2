@@ -1,11 +1,23 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { X, Search } from 'lucide-react';
-import { sortExercisesByName, liveExercises } from '../../utils/exerciseUtils';
-import { findByExerciseName } from '../../utils/exerciseDuplicates';
+import { sortExercisesByName, liveExercises, exerciseFieldsValid } from '../../utils/exerciseUtils';
+import { findByExerciseName, findDuplicateExercise } from '../../utils/exerciseDuplicates';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useApp } from '../../context/AppContext';
+import { useToast } from '../../context/ToastContext';
+import MuscleSelector from '../MuscleSelector';
 
 export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, currentId, currentName, onSwap, onClose, mode = 'swap' }) {
   const { t } = useLanguage();
+  const { currentUser, addExercise, equipmentTypes } = useApp();
+  const toast = useToast();
+  // A coach's custom exercise is saved to their library, so it is there next time (Ani
+  // 2026-10-10: "每次都要再整"). A client's stays a one-off on the log — saving it would
+  // put it in their coach's library, which is the coach's to decide.
+  const savesToLibrary = currentUser?.role === 'trainer';
+  const [equipment, setEquipment] = useState('');
+  const [muscles, setMuscles] = useState([]);
+  const savingRef = useRef(false);
   const [search, setSearch] = useState('');
   const [muscle, setMuscle] = useState('');
   const [tab, setTab] = useState('library'); // 'library' | 'custom'
@@ -30,10 +42,37 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
     [exerciseLibrary, customName],
   );
 
-  const handleAddCustom = () => {
+  // Saving: the same name on the SAME equipment is a duplicate (use that one); on other
+  // equipment it is a new variant and may be created (utils/exerciseDuplicates.js).
+  const sameEquipment = savesToLibrary && equipment
+    ? findDuplicateExercise(exerciseLibrary, { name: customName, equipment })
+    : null;
+  const blocked = savesToLibrary ? !!sameEquipment : existingMatches.length > 0;
+  const canAdd = !!customName.trim() && !blocked
+    && (!savesToLibrary || exerciseFieldsValid({ muscle: muscles.join(', '), equipment }));
+
+  const handleAddCustom = async () => {
     const name = customName.trim();
-    if (!name || existingMatches.length > 0) return;
-    onSwap({ id: `custom-${Date.now()}`, name, unit: 'weight_reps', custom: true });
+    if (!canAdd) return;
+    if (!savesToLibrary) {
+      onSwap({ id: `custom-${Date.now()}`, name, unit: 'weight_reps', custom: true });
+      return;
+    }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    const exercise = { id: `ex-${Date.now()}`, name, muscle: muscles.join(', '), equipment, description: '' };
+    // The set goes on the log at once — a gym with no signal must not hold up the workout
+    // while the library write waits for the server. The write is still awaited and a
+    // failure said out loud; the log entry keeps its name either way.
+    onSwap({ ...exercise, unit: 'weight_reps' });
+    try {
+      await addExercise(exercise);
+      toast(t('exlib.toast_added'));
+    } catch {
+      toast(t('exlib.toast_save_failed'), 'error');
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   return (
@@ -55,8 +94,8 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
         )}
 
         {tab === 'custom' ? (
-          <div style={{ padding: '16px' }}>
-            <p className="text-sm text-muted mb-8">{t('swap.custom_hint')}</p>
+          <div className="swap-custom-body">
+            <p className="text-sm text-muted mb-8">{savesToLibrary ? t('swap.custom_saves') : t('swap.custom_hint')}</p>
             <input
               className="form-input"
               placeholder={t('swap.ph_custom_name')}
@@ -66,6 +105,21 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
               autoFocus
               style={{ marginBottom: 12 }}
             />
+            {savesToLibrary && (
+              <>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="swap-custom-equipment">{t('exlib.equipment')}</label>
+                  <select id="swap-custom-equipment" className="form-select" value={equipment} onChange={e => setEquipment(e.target.value)}>
+                    <option value="">{t('exlib.select_equipment')}</option>
+                    {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <span className="form-label">{t('exlib.muscle_groups')}</span>
+                  <MuscleSelector selected={muscles} onChange={setMuscles} />
+                </div>
+              </>
+            )}
             {existingMatches.length > 0 && (
               <div className="ex-dupe-warn" style={{ marginBottom: 12 }}>
                 <span>
@@ -86,7 +140,7 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
               className="btn btn-accent"
               style={{ width: '100%' }}
               onClick={handleAddCustom}
-              disabled={!customName.trim() || existingMatches.length > 0}
+              disabled={!canAdd}
             >
               {t('swap.add_named', { name: customName.trim() || '…' })}
             </button>

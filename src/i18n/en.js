@@ -899,6 +899,7 @@ const en = {
   'swap.tab_library': 'Library',
   'swap.tab_custom': 'Custom',
   'swap.custom_hint': 'Enter any exercise name — useful for movements not in the library.',
+  'swap.custom_saves': 'Saved to your exercise library, so it is there next time.',
   'swap.ph_custom_name': 'e.g. Sled Push, Band Pull-Apart…',
   'swap.dupe_single': 'This exercise already exists — use it instead of creating a copy:',
   'swap.dupe_variants': 'This exercise already exists in {count} variants — use it instead of creating a copy:',

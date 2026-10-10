@@ -4682,6 +4682,14 @@ tr:hover { background: var(--bg-card-hover); }
   max-width: 140px;
   font-size: 0.82rem;
 }
+/* The Custom tab scrolls inside the 80vh modal: a coach's version carries equipment and
+   muscle chips, which on a phone run past the bottom and would hide the Add button. */
+.swap-custom-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
 .swap-exercise-list {
   overflow-y: auto;
   flex: 1;
