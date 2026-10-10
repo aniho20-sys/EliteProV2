@@ -43,6 +43,11 @@ describe('the starter exercise library', () => {
     for (const id of UNCHANGED) expect(byId(id), id).toBeDefined();
   });
 
+  test('Leg Curl and Calf Raise stay unclassified — neither is one of the eight patterns (#35)', () => {
+    expect(byId('leg-curl').movementPattern).toBeUndefined();
+    expect(byId('calf-raise').movementPattern).toBeUndefined();
+  });
+
   test('a variant is named "Movement (Equipment)" with its own equipment', () => {
     for (const e of exerciseLibrary.filter(x => / \((Barbell|Dumbbell|Cable|Machine)\)$/.test(x.name))) {
       expect(e.name.endsWith(`(${e.equipment})`), e.id).toBe(true);

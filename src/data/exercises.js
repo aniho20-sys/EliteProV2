@@ -20,7 +20,8 @@ export const exerciseLibrary = [
   { id: 'squat', name: 'Squat (Barbell)', aliases: ['Barbell Squat', 'Back Squat', 'Squat'], muscle: 'Quadriceps', equipment: 'Barbell', movementPattern: 'Squat', description: 'Bar on upper back, squat down until thighs are parallel, stand back up.', videoUrl: 'https://www.youtube.com/watch?v=ultWZbUMPL8' },
   { id: 'leg-press', name: 'Leg Press', muscle: 'Quadriceps', equipment: 'Machine', movementPattern: 'Squat', description: 'Sit in leg press machine, press platform away by extending legs.', videoUrl: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ' },
   { id: 'romanian-deadlift', name: 'Romanian Deadlift (Barbell)', aliases: ['Romanian Deadlift', 'RDL'], muscle: 'Hamstrings', equipment: 'Barbell', movementPattern: 'Hinge', description: 'Hinge at hips with slight knee bend, lower bar along legs.', videoUrl: 'https://www.youtube.com/watch?v=jEy_czb3RKA' },
-  { id: 'leg-curl', name: 'Leg Curl', muscle: 'Hamstrings', equipment: 'Machine', movementPattern: 'Hinge', description: 'Lie face down, curl weight towards glutes.', videoUrl: 'https://www.youtube.com/watch?v=1Tq3QdYUuHs' },
+  // Leg Curl is knee flexion, not a hinge (#35); left unclassified like Calf Raise (Ani 2026-10-10).
+  { id: 'leg-curl', name: 'Leg Curl', muscle: 'Hamstrings', equipment: 'Machine', description: 'Lie face down, curl weight towards glutes.', videoUrl: 'https://www.youtube.com/watch?v=1Tq3QdYUuHs' },
   // Calf Raise stays unclassified on purpose — the ankle is not one of the eight patterns
   // and Ani's call was that leaving it blank beats forcing it into the nearest wrong one.
   { id: 'calf-raise', name: 'Calf Raise (Machine)', aliases: ['Calf Raise'], muscle: 'Calves', equipment: 'Machine', description: 'Stand on platform edge, raise heels as high as possible.', videoUrl: 'https://www.youtube.com/watch?v=gwLzBJYoWlI' },
