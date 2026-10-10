@@ -5,6 +5,7 @@
 // unless the page asks for the 'playback' audio session.
 
 import { describe, test, expect, vi, afterEach } from 'vitest';
+import { useEffect } from 'react';
 import { render, act, cleanup } from '@testing-library/react';
 import { useRestTimer } from './useRestTimer';
 
@@ -17,8 +18,12 @@ class FakeAudioContext {
 }
 FakeAudioContext.created = [];
 
-let timer;
-function Harness() { timer = useRestTimer({}); return null; }
+const latest = { timer: null };
+function Harness() {
+  const timerState = useRestTimer({});
+  useEffect(() => { latest.timer = timerState; });
+  return null;
+}
 
 afterEach(() => { cleanup(); delete navigator.audioSession; FakeAudioContext.created = []; });
 
@@ -28,7 +33,7 @@ describe('the rest timer and the silent switch', () => {
     globalThis.fetch = vi.fn(() => new Promise(() => {}));
     navigator.audioSession = { type: 'auto' };
     render(<Harness />);
-    act(() => timer.startTimer(60));
+    act(() => latest.timer.startTimer(60));
     expect(navigator.audioSession.type).toBe('playback');
     expect(FakeAudioContext.created).toEqual(['playback']); // set first, then the context
   });
@@ -37,7 +42,7 @@ describe('the rest timer and the silent switch', () => {
     window.AudioContext = FakeAudioContext;
     globalThis.fetch = vi.fn(() => new Promise(() => {}));
     render(<Harness />);
-    act(() => timer.startTimer(60));
-    expect(timer.timerActive).toBe(true);
+    act(() => latest.timer.startTimer(60));
+    expect(latest.timer.timerActive).toBe(true);
   });
 });
