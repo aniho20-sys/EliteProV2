@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
 import { normalizeSets, emptySet, UNIT_OPTIONS } from '../utils/workoutUtils';
 import { resolveExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises } from '../utils/exerciseUtils';
+import { matchesExerciseQuery } from '../utils/exerciseSearch';
 import { findDuplicateExercise } from '../utils/exerciseDuplicates';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
@@ -363,8 +364,7 @@ export default function WorkoutPlansPage() {
   };
 
   const filteredExercises = sortExercisesByName(liveExercises(exerciseLibrary).filter(e => {
-    const q = exFilter.toLowerCase();
-    const matchesText = !q || e.name.toLowerCase().includes(q) || e.muscle.toLowerCase().includes(q);
+    const matchesText = matchesExerciseQuery(e, exFilter);
     const matchesEquip = !exEquipFilter || e.equipment === exEquipFilter;
     return matchesText && matchesEquip;
   }));

@@ -2171,8 +2171,8 @@ tr:hover { background: var(--bg-card-hover); }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  height: 56px;
-  padding: 0 16px;
+  min-height: 56px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   transition: background 0.1s;
@@ -2183,6 +2183,9 @@ tr:hover { background: var(--bg-card-hover); }
 .exercise-row-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .exercise-row-meta { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .exercise-row-video-icon { flex-shrink: 0; color: var(--primary); }
+/* A coach's own exercise that duplicates another (B45): a third line, in the warning
+   colour, so it reads as something to tidy rather than as more metadata. */
+.exercise-row-dupe { font-size: 0.72rem; font-weight: 600; color: var(--warning-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Duplicate-exercise feedback. The warn block is a hard stop (same movement + same
    equipment); the hint is informational (same movement, different equipment = a
@@ -2242,6 +2245,8 @@ tr:hover { background: var(--bg-card-hover); }
 .merge-candidate:active { transform: scale(0.99); }
 .merge-candidate:disabled { opacity: 0.5; }
 .merge-candidate-name { font-weight: 600; font-size: 0.9rem; }
+.merge-candidate-likely { display: block; font-size: 0.75rem; font-weight: 600; color: var(--warning-dark); }
+.merge-candidate:first-child:has(.merge-candidate-likely) { border-color: var(--warning-dark); }
 .merge-candidate-meta { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
 
 .ex-form-video-preview { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }

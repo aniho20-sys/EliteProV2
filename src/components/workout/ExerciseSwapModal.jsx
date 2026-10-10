@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { X, Search } from 'lucide-react';
 import { sortExercisesByName, liveExercises, exerciseFieldsValid } from '../../utils/exerciseUtils';
 import { findByExerciseName, findDuplicateExercise } from '../../utils/exerciseDuplicates';
+import { matchesExerciseQuery } from '../../utils/exerciseSearch';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../context/ToastContext';
@@ -25,10 +26,9 @@ export default function ExerciseSwapModal({ exerciseLibrary, muscleGroups, curre
 
   const filtered = sortExercisesByName(liveExercises(exerciseLibrary).filter(e => {
     if (!e || !e.name) return false;
-    // Aliases too: a renamed starter exercise ("Barbell Curl" is now "Bicep Curl (Barbell)")
-    // must still turn up for the name people know it by.
-    const q = search.toLowerCase();
-    const matchName = !q || e.name.toLowerCase().includes(q) || (e.aliases || []).some(a => a.toLowerCase().includes(q));
+    // Aliases, muscles and gym shorthand too (utils/exerciseSearch.js): a renamed starter
+    // exercise ("Barbell Curl" is now "Bicep Curl (Barbell)") still turns up by its old name.
+    const matchName = matchesExerciseQuery(e, search);
     const matchMuscle = !muscle || e.muscle === muscle || (Array.isArray(e.muscles) && e.muscles.includes(muscle));
     return matchName && matchMuscle;
   })).slice(0, 60);

@@ -7,7 +7,8 @@ import MuscleSelector from '../components/MuscleSelector';
 import ExerciseDetailModal from '../components/ExerciseDetailModal';
 import { isSafeUrl, isYouTube, getYouTubeId } from '../utils/urlUtils';
 import { titleCaseExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises, inferMovementPattern } from '../utils/exerciseUtils';
-import { findDuplicateExercise, findFamilyVariants } from '../utils/exerciseDuplicates';
+import { findDuplicateExercise, findFamilyVariants, equipmentInName } from '../utils/exerciseDuplicates';
+import { matchesExerciseQuery } from '../utils/exerciseSearch';
 import { movementPatterns, exerciseLibrary as seedExercises } from '../data/exercises';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -51,6 +52,8 @@ export default function ExerciseLibraryPage() {
   const [mergeSearch, setMergeSearch] = useState('');
   const [mergeSaving, setMergeSaving] = useState(false);
   const [patternTouched, setPatternTouched] = useState(false);
+  // Equipment follows the name ("Cable …" → Cable) until the trainer picks one by hand.
+  const [equipTouched, setEquipTouched] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const nameInputRef = useRef(null);
   const pillOuterRef = useRef(null);
@@ -73,10 +76,9 @@ export default function ExerciseLibraryPage() {
     }
   }, [showModal]);
 
-  const filtered = sortExercisesByName(liveExercises(exercises).filter(e => {
-    const q = search.toLowerCase();
-    const matchesText = !q || e.name.toLowerCase().includes(q) || (e.aliases || []).some(a => a.toLowerCase().includes(q));
-    if (!matchesText) return false;
+  const live = useMemo(() => liveExercises(exercises), [exercises]);
+  const filtered = sortExercisesByName(live.filter(e => {
+    if (!matchesExerciseQuery(e, search)) return false;
     if (muscleFilter && !parseMuscles(e.muscle).includes(muscleFilter)) return false;
     if (equipFilter && e.equipment !== equipFilter) return false;
     if (patternFilter && e.movementPattern !== patternFilter) return false;
@@ -85,10 +87,13 @@ export default function ExerciseLibraryPage() {
 
   const openAdd = () => {
     setEditingEx(null);
-    setForm({ ...EMPTY_FORM, equipment: equipmentTypes[0] });
+    // No default equipment: a preset Barbell let "Cable Bicep Curl" be saved as a barbell
+    // exercise, with the variant hint calling it fine (critique 2026-10-10, B45).
+    setForm({ ...EMPTY_FORM });
     setShowMore(false);
     setAliasInput('');
     setPatternTouched(false);
+    setEquipTouched(false);
     setShowModal(true);
   };
 
@@ -109,6 +114,7 @@ export default function ExerciseLibraryPage() {
     // An exercise that already carries a pattern keeps it; one that never got classified
     // is still open to a suggestion while the name is being edited.
     setPatternTouched(!!ex.movementPattern);
+    setEquipTouched(true);
     // Open the extra fields when the exercise already uses any of them, so nothing it holds
     // is hidden from the person editing it.
     setShowMore(!!(ex.movementPattern || (ex.aliases || []).length || (ex.unit && ex.unit !== 'weight_reps')
@@ -180,13 +186,20 @@ export default function ExerciseLibraryPage() {
   // are included — they have no document of their own, but they DO live in the same
   // merged array canonicalExercise() searches, so a pointer at a seed id resolves fine
   // (covered by src/utils/exerciseUtils.test.js).
+  // The likely match — same movement on the same equipment — is offered first, so the
+  // trainer does not have to find their duplicate's twin in an alphabetical list.
+  const likelyMerge = useMemo(
+    () => (mergingEx ? findDuplicateExercise(exercises, mergingEx, mergingEx.id) : null),
+    [exercises, mergingEx],
+  );
   const mergeCandidates = useMemo(() => {
     if (!mergingEx) return [];
-    const q = mergeSearch.trim().toLowerCase();
-    return sortExercisesByName(
-      liveExercises(exercises).filter(e => e.id !== mergingEx.id && (!q || e.name.toLowerCase().includes(q))),
-    ).slice(0, 40);
-  }, [exercises, mergingEx, mergeSearch]);
+    const others = sortExercisesByName(
+      liveExercises(exercises).filter(e => e.id !== mergingEx.id && e.id !== likelyMerge?.id && matchesExerciseQuery(e, mergeSearch)),
+    );
+    const first = likelyMerge && matchesExerciseQuery(likelyMerge, mergeSearch) ? [likelyMerge] : [];
+    return [...first, ...others].slice(0, 40);
+  }, [exercises, mergingEx, mergeSearch, likelyMerge]);
 
   const handleMerge = async (survivor) => {
     if (!window.confirm(t('exlib.confirm_merge', { from: mergingEx.name, to: survivor.name }))) return;
@@ -255,6 +268,24 @@ export default function ExerciseLibraryPage() {
     [exercises, form.name, form.equipment, form.aliases, editingEx],
   );
 
+  const namedEquipment = equipmentInName(form.name);
+  const equipMismatch = !!(namedEquipment && form.equipment && namedEquipment !== form.equipment);
+
+  // A trainer's own exercise that is the same movement on the same equipment as another one
+  // (a starter it predates, or a second copy) — flagged on the row so it can be merged.
+  const duplicateOf = useMemo(() => {
+    const map = new Map();
+    if (!isTrainer) return map;
+    for (const ex of live) {
+      if (!ex.trainerId) continue;
+      const twin = findDuplicateExercise(live, ex, ex.id);
+      if (twin) map.set(ex.id, twin);
+    }
+    return map;
+  }, [live, isTrainer]);
+
+  const filtering = !!(search.trim() || muscleFilter || equipFilter || patternFilter);
+
   const filterGroups = [
     { key: 'muscle', label: t('exlib.filter_muscle'), options: muscleGroups, value: muscleFilter, setValue: setMuscleFilter },
     { key: 'equipment', label: t('exlib.equipment'), options: equipmentTypes, value: equipFilter, setValue: setEquipFilter },
@@ -266,7 +297,11 @@ export default function ExerciseLibraryPage() {
       <div className="page-header flex-between">
         <div>
           <h1 className="page-title">{t('exlib.title')}</h1>
-          <p className="page-subtitle">{t('exlib.n_available', { count: exercises.length })}</p>
+          <p className="page-subtitle" aria-live="polite">
+            {filtering
+              ? t('exlib.n_shown', { shown: filtered.length, count: live.length })
+              : t('exlib.n_available', { count: live.length })}
+          </p>
         </div>
         {isTrainer && (
           <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {t('exlib.add_exercise')}</button>
@@ -337,6 +372,9 @@ export default function ExerciseLibraryPage() {
               <div className="exercise-row-text">
                 <span className="exercise-row-name">{ex.name}</span>
                 {metaParts.length > 0 && <span className="exercise-row-meta">{metaParts.join(' · ')}</span>}
+                {duplicateOf.has(ex.id) && (
+                  <span className="exercise-row-dupe">{t('exlib.same_as', { name: duplicateOf.get(ex.id).name })}</span>
+                )}
               </div>
               {hasVideo && <Play size={14} className="exercise-row-video-icon" fill="currentColor" aria-label={t('exlib.has_video')} />}
             </div>
@@ -378,6 +416,7 @@ export default function ExerciseLibraryPage() {
                     setForm(f => ({
                       ...f,
                       name,
+                      equipment: equipTouched ? f.equipment : equipmentInName(name),
                       // Keep suggesting from the name until the trainer picks a pattern by
                       // hand — from then on their choice stands, even if they keep typing.
                       // A suggestion is only made where the trainer can see it (#35): with the
@@ -387,6 +426,11 @@ export default function ExerciseLibraryPage() {
                   }}
                   placeholder={t('exlib.ph_name')}
                 />
+                {namedEquipment && form.equipment && namedEquipment !== form.equipment && (
+                  <div className="ex-dupe-warn" role="alert">
+                    <span>{t('exlib.equip_mismatch', { named: namedEquipment, equipment: form.equipment })}</span>
+                  </div>
+                )}
                 {liveDuplicate && (
                   <div className="ex-dupe-warn">
                     <span>{t('exlib.dupe_exists', { equipment: liveDuplicate.equipment })}</span>
@@ -395,10 +439,10 @@ export default function ExerciseLibraryPage() {
                     </button>
                   </div>
                 )}
-                {!liveDuplicate && familyVariants.length > 0 && (
+                {!liveDuplicate && !equipMismatch && familyVariants.length > 0 && (
                   <p className="ex-dupe-hint">
                     {t('exlib.variant_hint', {
-                      existing: familyVariants.map(v => v.equipment).join(', '),
+                      existing: [...new Set(familyVariants.map(v => v.equipment))].join(', '),
                       equipment: form.equipment,
                     })}
                   </p>
@@ -413,7 +457,7 @@ export default function ExerciseLibraryPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">{t('exlib.equipment')}</label>
-                <select className="form-select" required value={form.equipment} onChange={e => setForm({ ...form, equipment: e.target.value })}>
+                <select className="form-select" required value={form.equipment} onChange={e => { setEquipTouched(true); setForm({ ...form, equipment: e.target.value }); }}>
                   <option value="" disabled>{t('exlib.select_equipment')}</option>
                   {equipmentTypes.map(eq => <option key={eq} value={eq}>{eq}</option>)}
                 </select>
@@ -550,7 +594,10 @@ export default function ExerciseLibraryPage() {
                   onClick={() => handleMerge(ex)}
                   disabled={mergeSaving}
                 >
-                  <span className="merge-candidate-name">{ex.name}</span>
+                  <span className="merge-candidate-name">
+                    {ex.name}
+                    {ex.id === likelyMerge?.id && <span className="merge-candidate-likely">{t('exlib.likely_match')}</span>}
+                  </span>
                   <span className="merge-candidate-meta">{ex.equipment}{ex.trainerId ? '' : t('exlib.default_suffix')}</span>
                 </button>
               ))}

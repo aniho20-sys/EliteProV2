@@ -1140,6 +1140,10 @@ const zhHK = {
   // ── 動作庫 ──
   'exlib.title': '動作庫',
   'exlib.n_available_other': '共 {count} 個動作',
+  'exlib.n_shown': '共 {count} 個動作，顯示 {shown} 個',
+  'exlib.equip_mismatch': '名稱寫的是 {named}，但器材選了 {equipment}。',
+  'exlib.same_as': '與 {name} 相同',
+  'exlib.likely_match': '可能是同一個動作',
   'exlib.add_exercise': '新增動作',
   'exlib.edit_exercise': '編輯動作',
   'exlib.filter_muscle': '肌群',

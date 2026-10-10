@@ -9,10 +9,36 @@
 // Everything here keys off that: `familyKey` ignores equipment (so variants group
 // together), `duplicateKey` includes it (so only true duplicates collide).
 
-// Case/punctuation/spacing-insensitive. "Bulgarian Split-Squat", "bulgarian split squat"
-// and "Bulgarian  Split Squat" are the same movement typed three ways.
-export const normalizeExerciseName = (name) =>
-  String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+import { searchWords, singularWord } from './exerciseSearch';
+
+// Words that name the equipment rather than the movement. The equipment has its own field,
+// so in a NAME they only get in the way of matching: "Cable Bicep Curls" (Cable) and
+// "Bicep Curl (Cable)" are the same exercise typed two ways (critique 2026-10-10, B45).
+const EQUIPMENT_WORDS = {
+  barbell: 'Barbell', bb: 'Barbell',
+  dumbbell: 'Dumbbell', db: 'Dumbbell',
+  cable: 'Cable',
+  machine: 'Machine', smith: 'Machine', lever: 'Machine',
+  kettlebell: 'Kettlebell', kb: 'Kettlebell',
+  bodyweight: 'Bodyweight',
+};
+
+// Case/punctuation/spacing-insensitive, plural-insensitive, and blind to equipment words.
+// "Bulgarian Split-Squat", "bulgarian split squats" and "Bulgarian  Split Squat" are the
+// same movement typed three ways. A name that is nothing BUT equipment words keeps them,
+// so it never collapses to an empty key.
+export const normalizeExerciseName = (name) => {
+  const words = searchWords(name).map(singularWord);
+  const movement = words.filter(w => !EQUIPMENT_WORDS[w]);
+  return (movement.length ? movement : words).join(' ');
+};
+
+// The equipment a name spells out ("Cable Bicep Curl" → 'Cable'), or '' when it names none
+// — or names two different ones, where guessing would be confidently wrong (#35).
+export const equipmentInName = (name) => {
+  const found = new Set(searchWords(name).map(singularWord).map(w => EQUIPMENT_WORDS[w]).filter(Boolean));
+  return found.size === 1 ? [...found][0] : '';
+};
 
 export const normalizeEquipment = (equipment) =>
   String(equipment || '').toLowerCase().trim();

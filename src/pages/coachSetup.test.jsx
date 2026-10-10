@@ -269,6 +269,8 @@ describe('out of the way, and one price is enough', () => {
     const modal = document.querySelector('.modal');
     fireEvent.change(within(modal).getAllByRole('textbox')[0], { target: { value: 'Romanian Deadlift' } });
     fireEvent.click(within(modal).getByRole('button', { name: 'Lower Back' }));
+    // No equipment is preset any more (B45) — the coach picks it.
+    fireEvent.change(within(modal).getByRole('combobox'), { target: { value: 'Dumbbell' } });
     fireEvent.submit(modal.querySelector('form'));
     await waitFor(() => expect(app.addExercise).toHaveBeenCalled());
     expect(app.addExercise.mock.calls[0][0].movementPattern).toBe('');

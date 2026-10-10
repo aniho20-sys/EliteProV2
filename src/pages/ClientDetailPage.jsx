@@ -7,7 +7,8 @@ import { getSessionColor } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { normalizeSets, applySetUpdate, serializeEntries, UNIT_OPTIONS, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
-import { resolveExerciseName } from '../utils/exerciseUtils';
+import { resolveExerciseName, liveExercises } from '../utils/exerciseUtils';
+import { matchesExerciseQuery } from '../utils/exerciseSearch';
 import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import { parseLocalDate } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
@@ -1008,8 +1009,8 @@ export default function ClientDetailPage() {
               />
               {editLogExSearch.trim() && (
                 <div className="ex-search-results">
-                  {exerciseLibrary
-                    .filter(e => e.name.toLowerCase().includes(editLogExSearch.toLowerCase()))
+                  {liveExercises(exerciseLibrary)
+                    .filter(e => matchesExerciseQuery(e, editLogExSearch))
                     .slice(0, 8)
                     .map(ex => (
                       <div key={ex.id} className="contact-item" onClick={() => addEditLogExercise(ex)}>
@@ -1017,7 +1018,7 @@ export default function ClientDetailPage() {
                         <span className="tag tag-primary" style={{ marginLeft: 'auto' }}>{ex.muscle}</span>
                       </div>
                     ))}
-                  {exerciseLibrary.filter(e => e.name.toLowerCase().includes(editLogExSearch.toLowerCase())).length === 0 && (
+                  {!liveExercises(exerciseLibrary).some(e => matchesExerciseQuery(e, editLogExSearch)) && (
                     <div className="plan-ex-no-results">{t('cdetail.no_matches')}</div>
                   )}
                 </div>
