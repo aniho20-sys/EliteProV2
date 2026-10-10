@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import restBeep from '../data/restBeep.json';
 
 const STORAGE_KEY = 'elitepro_rest_timer';
 
@@ -93,14 +94,9 @@ export function useRestTimer({ stopWhen = false } = {}) {
     return () => clearInterval(keepAlive);
   }, [timerActive]);
 
+  // Same two beeps as the WAV (both come from data/restBeep.json).
   const playSynthesised = useCallback((ctx) => {
-    const pattern = [
-      { t: 0,    freq: 800,  dur: 0.13, gain: 0.6 },
-      { t: 0.21, freq: 950,  dur: 0.13, gain: 0.65 },
-      { t: 0.42, freq: 1150, dur: 0.13, gain: 0.7 },
-      { t: 0.65, freq: 880,  dur: 0.4,  gain: 0.6 },
-    ];
-    pattern.forEach(({ t, freq, dur, gain }) => {
+    restBeep.tones.forEach(({ t, freq, dur, gain }) => {
       const osc = ctx.createOscillator();
       const g   = ctx.createGain();
       osc.connect(g); g.connect(ctx.destination);
@@ -141,7 +137,7 @@ export function useRestTimer({ stopWhen = false } = {}) {
     setTimerActive(false);
     setTimeLeft(0);
     playBeep();
-    if ('vibrate' in navigator) navigator.vibrate([100, 80, 100, 80, 100, 150, 400]);
+    if ('vibrate' in navigator) navigator.vibrate(restBeep.vibrate);
   }, [playBeep]);
 
   // Restore timer from sessionStorage on mount (survives app kill + reopen)

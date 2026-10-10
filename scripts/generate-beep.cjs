@@ -1,22 +1,18 @@
 #!/usr/bin/env node
-// Generates public/sounds/timer-done.wav
-// Pattern: 3 ascending beeps (800→950→1150 Hz) + sustained fade-out tone
-// Optimised to cut through gym ambient noise
+// Generates public/sounds/timer-done.wav from src/data/restBeep.json — the same tones the
+// rest timer synthesises when the WAV is not available (hooks/useRestTimer.js).
+// Pattern since 2026-10-10 (Ani): two short beeps at the same pitch.
 
 const fs = require('fs');
 const path = require('path');
+const { tones } = require('../src/data/restBeep.json');
 
 const SAMPLE_RATE = 44100;
 
 // [startSec, durationSec, freqHz, peakGain]
-const TONES = [
-  [0.00, 0.13, 800,  0.75],
-  [0.21, 0.13, 950,  0.80],
-  [0.42, 0.13, 1150, 0.85],
-  [0.65, 0.40, 880,  0.70],  // sustained finish tone
-];
+const TONES = tones.map(({ t, dur, freq, gain }) => [t, dur, freq, gain]);
 
-const totalDuration = 1.1; // seconds
+const totalDuration = Math.max(...TONES.map(([start, dur]) => start + dur)) + 0.05; // seconds
 const numSamples = Math.floor(SAMPLE_RATE * totalDuration);
 
 function envelope(t, start, dur) {
@@ -26,26 +22,15 @@ function envelope(t, start, dur) {
   if (pos < 0 || pos >= dur) return 0;
   if (pos < attack) return pos / attack;
   if (pos > dur - release) return (dur - pos) / release;
-  // last tone: fade out over second half
   return 1;
-}
-
-function fadedEnvelope(t, start, dur) {
-  const raw = envelope(t, start, dur);
-  if (raw === 0) return 0;
-  const pos = t - start;
-  // linear fade out over full duration of the last tone
-  return raw * (1 - (pos / dur) * 0.7);
 }
 
 const samples = new Int16Array(numSamples);
 for (let i = 0; i < numSamples; i++) {
   const t = i / SAMPLE_RATE;
   let amp = 0;
-  TONES.forEach(([start, dur, freq, gain], idx) => {
-    const env = idx === TONES.length - 1
-      ? fadedEnvelope(t, start, dur)
-      : envelope(t, start, dur);
+  TONES.forEach(([start, dur, freq, gain]) => {
+    const env = envelope(t, start, dur);
     amp += gain * env * Math.sin(2 * Math.PI * freq * t);
   });
   samples[i] = Math.max(-32767, Math.min(32767, Math.round(amp * 32767)));

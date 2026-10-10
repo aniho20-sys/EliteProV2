@@ -1,0 +1,8 @@
+{
+  "_comment": "The rest-timer finish sound (Ani 2026-10-10: two beeps). One source for both the WAV that scripts/generate-beep.cjs writes to public/sounds/timer-done.wav and the synthesised fallback in hooks/useRestTimer.js. t = start (s), dur = length (s), freq = Hz, gain = 0-1.",
+  "tones": [
+    { "t": 0.00, "dur": 0.16, "freq": 1000, "gain": 0.85 },
+    { "t": 0.30, "dur": 0.16, "freq": 1000, "gain": 0.85 }
+  ],
+  "vibrate": [180, 140, 180]
+}
