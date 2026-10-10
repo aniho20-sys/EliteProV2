@@ -276,6 +276,22 @@ describe('out of the way, and one price is enough', () => {
     expect(app.addExercise.mock.calls[0][0].movementPattern).toBe('');
   });
 
+  test('the PR card shows only the last 30 days, newest first (Ani 2026-10-10)', async () => {
+    const { localDateAdd } = await import('../utils/dateUtils');
+    renderAt('/', <Route path="/" element={<ClientDashboard />} />, base({
+      currentUser: { ...CLIENT, intakeCompleted: true },
+      coach: READY_COACH,
+      getPersonalRecords: () => ({
+        old: { weight: 60, date: localDateAdd(-45), name: 'Old Press' },
+        recent: { weight: 100, date: localDateAdd(-2), name: 'Recent Squat' },
+        newest: { weight: 40, date: localDateAdd(0), name: 'Newest Curl' },
+      }),
+    }));
+    const card = screen.getByText('Last 30 days').closest('.card');
+    expect([...card.querySelectorAll('.pr-exercise')].map(e => e.textContent)).toEqual(['Newest Curl', 'Recent Squat']);
+    expect(within(card).getByText('2 PRs')).toBeTruthy();
+  });
+
   test('a client of a one-price coach is asked to top up, without a "price goes up" warning', () => {
     const coach = { ...READY_COACH, renewalRate: 50 };
     renderAt('/', <Route path="/" element={<ClientDashboard />} />, base({

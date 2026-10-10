@@ -45,6 +45,7 @@ const zhHK = {
   'common.optional': '（可選）',
   'common.save': '儲存',
   'common.saving': '儲存中…',
+  'common.last_30_days': '最近 30 日',
   'common.copy_failed': '複製失敗',
   'common.copy_x': '複製{label}',
   'common.view_all': '查看全部',

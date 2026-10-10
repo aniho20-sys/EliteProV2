@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Dumbbell, Flame, Scale, Trophy, CalendarOff, ClipboardList, Play, ChevronRight, X } from 'lucide-react';
 import { localToday, localDateAdd, getGreetingPart } from '../utils/dateUtils';
+import { recentPersonalRecords } from '../utils/personalRecords';
 import { formatDayDate } from '../i18n/format';
 import { useLanguage } from '../i18n/LanguageContext';
 import { resolveExerciseName } from '../utils/exerciseUtils';
@@ -20,6 +21,7 @@ export default function ClientDashboard() {
   const { currentUser, getWorkoutPlans, getWorkoutLogs, getBodyStats, getSchedule, getExercises, getPersonalRecords, getSessionStats, getClient } = useApp();
   const exerciseLibrary = getExercises();
   const prs = getPersonalRecords(currentUser.id);
+  const recentPrs = recentPersonalRecords(prs, localToday());
   const getExerciseName = (id, fallback) => resolveExerciseName(exerciseLibrary, id, fallback);
   const plans = getWorkoutPlans({ clientId: currentUser.id });
   const logs = getWorkoutLogs(currentUser.id);
@@ -325,16 +327,17 @@ export default function ClientDashboard() {
           </div>
         )}
 
-        {Object.keys(prs).length > 0 && (
+        {recentPrs.length > 0 && (
           <div className="card">
             <div className="card-header">
               <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
                 <Trophy size={18} style={{ color: 'var(--warning)' }} /> {t('dash.personal_records')}
+                <span className="pr-window">{t('common.last_30_days')}</span>
               </h3>
-              <span className="tag tag-warning">{t('dash.pr_count', { count: Object.keys(prs).length })}</span>
+              <span className="tag tag-warning">{t('dash.pr_count', { count: recentPrs.length })}</span>
             </div>
             <div className="pr-grid">
-              {Object.entries(prs).slice(0, 6).map(([exId, pr]) => (
+              {recentPrs.slice(0, 6).map(([exId, pr]) => (
                 <div key={exId} className="pr-item">
                   <div className="pr-exercise">{getExerciseName(exId, pr.name || t('dash.custom_exercise'))}</div>
                   <div className="pr-weight">{pr.weight}kg</div>

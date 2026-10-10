@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, emptySet, hasValue, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { localToday } from '../utils/dateUtils';
+import { recentPersonalRecords } from '../utils/personalRecords';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { pickClosingKey, closingMessage, buildWorkoutShareText } from '../utils/workoutShareUtils';
 import { useRestTimer } from '../hooks/useRestTimer';
@@ -267,7 +268,8 @@ export default function WorkoutLogPage() {
     return maxWeight > priorMax;
   };
 
-  const prCount = Object.keys(prs).length;
+  const recentPrs = recentPersonalRecords(prs, localToday());
+  const prCount = recentPrs.length;
 
   const handleShareLog = async (log, shareData) => {
     const text = buildWorkoutShareText(t, shareData, closingMessage(t, pickClosingKey()));
@@ -368,11 +370,12 @@ export default function WorkoutLogPage() {
           <div className="card-header">
             <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
               <Trophy size={20} style={{ color: 'var(--warning)' }} /> {t('wlog.personal_records')}
+              <span className="pr-window">{t('common.last_30_days')}</span>
             </h3>
             <span className="tag tag-warning">{prCount} PRs</span>
           </div>
           <div className="pr-grid">
-            {Object.entries(prs).map(([exId, pr]) => (
+            {recentPrs.map(([exId, pr]) => (
               <div key={exId} className="pr-item">
                 <div className="pr-exercise">{getExerciseName(exId, pr.name || t('wlog.custom_exercise'))}</div>
                 <div className="pr-weight">{pr.weight}kg</div>

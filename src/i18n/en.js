@@ -26,6 +26,7 @@ const en = {
   'common.copy_x': 'Copy {label}',
   'common.view_all': 'View All',
   'common.saving': 'Saving…',
+  'common.last_30_days': 'Last 30 days',
 
   // ── Client dashboard ──
   'dash.greeting_morning': 'Morning',
