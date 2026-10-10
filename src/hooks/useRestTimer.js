@@ -49,6 +49,14 @@ export function useRestTimer({ stopWhen = false } = {}) {
   // Hard-unlocks iOS AudioContext by playing a 1-sample silent buffer in the
   // same synchronous call stack as the gesture — the only 100% reliable unlock.
   const ensureAudioReady = useCallback(() => {
+    // iPhone mutes web audio when the ring/silent switch is on — and coaches train with it
+    // on, so the timer had never been heard (Ani 2026-10-10). 'playback' makes the beep
+    // sound regardless, like a video would. The cost, accepted by Ani: on iPhone it pauses
+    // music another app is playing. Audio Session API: Safari 17 / iOS 17 and later; any
+    // other browser simply carries on as before. Set before the AudioContext is created.
+    try {
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+    } catch { /* not supported */ }
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
