@@ -373,10 +373,10 @@ A stranger's request for a trial session. Written only by `requestTrialSession`,
   videoUrl: string,      // YouTube link plays in-app via iframe embed in ExerciseDetailModal; non-YouTube links open in a new tab
 }
 ```
-**Shared default exercises (intentional) — corrected 2026-07-14:** the 22 exercises in `data/exercises.js` (`bench-press`, `squat`, etc.) are **static frontend data, not Firestore documents at all**. `AppContext.jsx`'s exercises listener queries `where('trainerId','==',targetTrainerId)` and appends the imported `defaultExercises` array in-memory to every result (`[...snap.docs..., ...defaultExercises]`) — the 22 never round-trip through Firestore, so there is no document for any trainer to edit or delete. (An earlier version of this note wrongly attributed this to a `firestore.rules` `null == null` loophole — there's no Firestore doc involved at all, so no rule is even evaluated.) Attempting `updateExercise`/`deleteExercise` on one of these 22 ids fails because the target document doesn't exist. This is by design — new trainers get a shared starter library that can't be individually edited — but as of Session 34 trainers can layer personal video/instructions content on top via `exerciseOverrides` (below), without touching the shared base.
+**Shared default exercises (intentional) — corrected 2026-07-14:** the starter exercises in `data/exercises.js` (`bench-press`, `squat`, etc. — 100 since B43 on 2026-10-10: 30 movements in their Barbell/Dumbbell/Cable/Machine versions, named `Movement (Equipment)` with the old and equipment-first names as `aliases`; ids never change, see `src/data/exercises.test.js`) are **static frontend data, not Firestore documents at all**. `AppContext.jsx`'s exercises listener queries `where('trainerId','==',targetTrainerId)` and appends the imported `defaultExercises` array in-memory to every result (`[...snap.docs..., ...defaultExercises]`) — they never round-trip through Firestore, so there is no document for any trainer to edit or delete. (An earlier version of this note wrongly attributed this to a `firestore.rules` `null == null` loophole — there's no Firestore doc involved at all, so no rule is even evaluated.) Attempting `updateExercise`/`deleteExercise` on one of these ids fails because the target document doesn't exist. This is by design — new trainers get a shared starter library that can't be individually edited — but as of Session 34 trainers can layer personal video/instructions content on top via `exerciseOverrides` (below), without touching the shared base.
 
 #### `exerciseOverrides/{overrideId}`
-Lets a trainer customize video/instructions for one of the 22 static seed exercises without a base document to edit directly. Doc ID convention: `${trainerId}_${exerciseId}`. No document exists for an exercise a trainer hasn't customized. Only applies to seed exercises — trainer-created exercises (which have a real `exercises` doc) are edited directly instead.
+Lets a trainer customize video/instructions for one of the static seed exercises without a base document to edit directly. Doc ID convention: `${trainerId}_${exerciseId}`. No document exists for an exercise a trainer hasn't customized. Only applies to seed exercises — trainer-created exercises (which have a real `exercises` doc) are edited directly instead.
 ```js
 {
   id: string,
@@ -388,7 +388,7 @@ Lets a trainer customize video/instructions for one of the 22 static seed exerci
   instructions: string,      // only meaningful when instructionsMode === 'custom'
 }
 ```
-`AppContext.getExercises()` merges the current trainer's (or client's own trainer's) overrides onto the 22 seed exercises at read time, so every page that lists exercises via `getExercises()` picks up the customization automatically — no per-page changes needed.
+`AppContext.getExercises()` merges the current trainer's (or client's own trainer's) overrides onto the seed exercises at read time, so every page that lists exercises via `getExercises()` picks up the customization automatically — no per-page changes needed.
 
 #### `invoices/{invoiceId}`
 ```js
@@ -599,7 +599,7 @@ getExercises()               // returns Firestore + static exercises, merged wit
 addExercise(exercise)
 updateExercise(exerciseId, updates)
 deleteExercise(exerciseId)
-upsertExerciseOverride(exerciseId, { videoMode?, videoUrl?, instructionsMode?, instructions? })  // trainer-only; only applies to the 22 static seed exercises
+upsertExerciseOverride(exerciseId, { videoMode?, videoUrl?, instructionsMode?, instructions? })  // trainer-only; only applies to the static seed exercises
 deleteExerciseOverride(exerciseId)  // "reset to default" — removes the override doc entirely
 muscleGroups                 // string[] constant
 equipmentTypes               // string[] constant

@@ -8,7 +8,7 @@ import { exerciseLibrary as seedExercises } from '../data/exercises';
 //
 // The case these tests exist for: on 2026-08-11 Ani approved merging the trainer-created
 // "Military press" into the SEED exercise "Overhead Press". A seed exercise has no
-// Firestore document of its own — the 24 entries in data/exercises.js are static frontend
+// Firestore document of its own — the entries in data/exercises.js are static frontend
 // data appended in-memory by AppContext's exercises listener. So the survivor of this
 // merge is not a real document, and the question was whether a tombstone pointing at a
 // seed id still resolves. It does, because getExercises() returns one merged array
@@ -44,7 +44,7 @@ describe('canonicalExercise — tombstone pointing at a SEED exercise', () => {
   test('a historical log/plan entry displays the survivor name', () => {
     const lib = mergedLibrary([militaryPressTombstone]);
     // What every page calls: resolveExerciseName(library, entry.exerciseId, fallback)
-    expect(resolveExerciseName(lib, 'custom-military-press', 'Exercise')).toBe('Overhead Press');
+    expect(resolveExerciseName(lib, 'custom-military-press', 'Exercise')).toBe(OVERHEAD_PRESS.name);
   });
 
   test('the survivor itself still resolves to itself', () => {
