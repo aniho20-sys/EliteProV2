@@ -37,7 +37,7 @@ src/
 │   ├── ExerciseProgress.jsx  # Per-exercise strength progression chart (auto-selects most-logged exercise; dropdown sorted by session count; Recharts AreaChart + PR badges in history table)
 │   ├── GlobalSearch.jsx      # Search bar: clients, exercises, plans
 │   ├── InstallPrompt.jsx     # PWA install prompt banner (beforeinstallprompt + iOS fallback)
-│   ├── MovementPatternScanner.jsx # Trainer (Profile): runs inferMovementPattern() over the trainer's own unclassified exercises, groups by confidence, writes only the rows they tick
+│   ├── MovementPatternScanner.jsx # Ani only (Profile, owner-gated 2026-10-11): runs inferMovementPattern() over the trainer's own unclassified exercises, groups by confidence, writes only the rows they tick
 │   ├── MonthlyReportModal.jsx # Trainer: generate monthly progress report (sessions, volume, PRs, body comp, optional fee summary) → browser print to PDF
 │   ├── MuscleSelector.jsx    # Muscle group chip selector for exercise targeting
 │   ├── Navigation.jsx        # Desktop sidebar (primary + collapsible More with secondary) + mobile top header + bottom nav (primary + More sheet); driven by LINK_DEFS/NAV_CONFIG

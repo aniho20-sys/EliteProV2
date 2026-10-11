@@ -229,6 +229,16 @@ describe('booking a session', () => {
 describe('out of the way, and one price is enough', () => {
   const profile = (app) => renderAt('/profile', <Route path="/profile" element={<ProfilePage />} />, app);
 
+  test('the auto-classify tool is Ani\'s alone — another coach never sees it (Ani 2026-10-11)', () => {
+    const ownExercise = (coach) => [{ id: 'ex-own', name: 'Sled Thing', trainerId: coach.id, equipment: 'Other', muscle: 'Legs' }];
+    profile(base({ getExercises: () => ownExercise(NEW_COACH) }));
+    expect(screen.queryByText('Movement Pattern Auto-Classify')).toBeNull();
+    cleanup();
+    const ani = { ...NEW_COACH, email: 'aniho20@gmail.com' };
+    profile(base({ currentUser: ani, getExercises: () => ownExercise(ani) }));
+    expect(screen.getByText('Movement Pattern Auto-Classify')).toBeTruthy();
+  });
+
   test('one price saves on its own; the second is optional and folded away', async () => {
     const app = base();
     profile(app);

@@ -901,7 +901,9 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {isTrainer && <MovementPatternScanner />}
+      {/* Owner only (Ani 2026-10-11: these tools are hers, no other coach should have them).
+          Same reasoning as the backup card above — it reads only her own exercises. */}
+      {isTrainer && isOwner && <MovementPatternScanner />}
 
       {/* Renders only for the owner — the component hides itself when the Cloud Function
           refuses the call, so no role list needs maintaining here. */}
