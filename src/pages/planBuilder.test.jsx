@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 //
 // Building a plan faster (Ani 2026-10-11, from the coach walkthrough: ~30 taps for five
-// exercises, every set typed by hand, no load, no rest, "squat" listing Squat 7th).
+// exercises, every set typed by hand, no rest, "squat" listing Squat 7th). A plan sets reps,
+// never a weight — Ani: "計劃係固定，重量係流動".
 // Driven through the real Plans page. Firebase is replaced (#38).
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -71,7 +72,7 @@ describe('search puts the closest name first', () => {
 });
 
 describe('building a plan on the Plans page', () => {
-  test('reps typed once, a target load, a rest time — all saved', async () => {
+  test('reps typed once and a rest time are saved; there is no weight to set', async () => {
     const app = renderPlans();
     const modal = openNewPlan();
     fireEvent.change(within(modal).getAllByRole('textbox')[0], { target: { value: 'Strength A' } });
@@ -80,16 +81,26 @@ describe('building a plan on the Plans page', () => {
     expect(within(modal).getAllByRole('textbox', { name: /Set \d reps/ })).toHaveLength(3);
 
     fireEvent.change(within(modal).getByRole('textbox', { name: 'Set 1 reps' }), { target: { value: '5' } });
-    fireEvent.change(within(modal).getByRole('spinbutton', { name: 'Set 1 kg' }), { target: { value: '80' } });
     fireEvent.change(within(modal).getByRole('combobox', { name: 'Rest Timer' }), { target: { value: '180' } });
     expect(within(modal).getByRole('textbox', { name: 'Set 3 reps' }).value).toBe('5');
-    expect(within(modal).getByRole('spinbutton', { name: 'Set 3 kg' }).value).toBe('80');
+    expect(within(modal).queryByRole('spinbutton', { name: /kg/ })).toBeNull();
 
     fireEvent.submit(modal.querySelector('form'));
     await waitFor(() => expect(app.addWorkoutPlan).toHaveBeenCalled());
     const [ex] = app.addWorkoutPlan.mock.calls[0][0].exercises;
     expect(ex).toMatchObject({ exerciseId: 'squat', rest: 180 });
-    expect(ex.sets.map(s => [s.reps, s.weight])).toEqual([['5', '80'], ['5', '80'], ['5', '80']]);
+    expect(ex.sets.map(s => [s.reps, s.weight])).toEqual([['5', ''], ['5', ''], ['5', '']]);
+  });
+
+  test('a plan saved earlier with a weight loses it when saved again', async () => {
+    const app = renderPlans({ plans: [{ id: 'p1', name: 'Strength A', clientId: 'amy', trainerId: 'coach-1',
+      exercises: [{ exerciseId: 'squat', unit: 'weight_reps', rest: 180, sets: [{ reps: '5', weight: '80' }, { reps: '5', weight: '80' }] }] }] });
+    fireEvent.click(screen.getByText('Strength A'));
+    fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+    fireEvent.submit(document.querySelector('.modal form'));
+    await waitFor(() => expect(app.updateWorkoutPlan).toHaveBeenCalled());
+    const [ex] = app.updateWorkoutPlan.mock.calls[0][1].exercises;
+    expect(ex.sets.map(s => [s.reps, s.weight])).toEqual([['5', ''], ['5', '']]);
   });
 
   test('the picker on the page lists the Squats first for "squat"', () => {
@@ -107,10 +118,11 @@ describe('building a plan on the Plans page', () => {
     expect(within(modal).getByRole('button', { name: 'Time' }).className).toContain('active');
   });
 
-  test('the plan list shows the target load', () => {
+  test('the plan list shows sets and reps, no weight', () => {
     renderPlans({ plans: [{ id: 'p1', name: 'Strength A', clientId: 'amy', trainerId: 'coach-1',
       exercises: [{ exerciseId: 'squat', unit: 'weight_reps', rest: 180, sets: [{ reps: '5', weight: '80' }, { reps: '5', weight: '80' }] }] }] });
     fireEvent.click(screen.getByText('Strength A'));
-    expect(screen.getByText(/2 × 5 reps @ 80kg/)).toBeTruthy();
+    expect(screen.getByText(/2 × 5 reps/)).toBeTruthy();
+    expect(screen.queryByText(/80kg/)).toBeNull();
   });
 });

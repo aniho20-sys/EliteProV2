@@ -91,6 +91,15 @@ export function applyPlanSetChange(sets, setIdx, field, value) {
   return sets.map((s, j) => (j === setIdx || (setIdx === 0 && followsFirst(s)) ? { ...s, [field]: value } : s));
 }
 
+// A plan sets reps, never a load (Ani 2026-10-11: "計劃係固定，重量係流動" — the plan is
+// fixed, the weight moves session to session; the log's last-session hint carries it).
+// Clears any weight a set still holds — from a plan built while the builder had a kg box.
+export function withoutPlanLoad(exercises) {
+  return exercises.map(ex => (Array.isArray(ex.sets) && ex.sets.some(s => s && 'weight' in s && s.weight !== '')
+    ? { ...ex, sets: ex.sets.map(s => ('weight' in s ? { ...s, weight: '' } : s)) }
+    : ex));
+}
+
 // Serialize display entries to storage format (filter incomplete sets, coerce to numbers)
 export function serializeEntries(entries) {
   return entries.map(e => {

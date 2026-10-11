@@ -5,7 +5,7 @@ import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbel
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
-import { normalizeSets, emptySet, UNIT_OPTIONS, applyPlanSetChange } from '../utils/workoutUtils';
+import { normalizeSets, emptySet, UNIT_OPTIONS, applyPlanSetChange, withoutPlanLoad } from '../utils/workoutUtils';
 import { resolveExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises } from '../utils/exerciseUtils';
 import { matchesExerciseQuery, rankExerciseMatches } from '../utils/exerciseSearch';
 import { findDuplicateExercise } from '../utils/exerciseDuplicates';
@@ -263,7 +263,7 @@ export default function WorkoutPlansPage() {
 
     try {
       await Promise.all(
-        targetClientIds.map(clientId => addWorkoutPlan({ ...form, clientId, exercises, trainerId: currentUser.id }))
+        targetClientIds.map(clientId => addWorkoutPlan({ ...form, clientId, exercises: withoutPlanLoad(exercises), trainerId: currentUser.id }))
       );
       setForm({ name: '', clientId: '', day: '', exercises: [] });
       setBulkClientIds([]);
@@ -300,7 +300,7 @@ export default function WorkoutPlansPage() {
     if (exercises.length === 0) { toast('Please add at least one exercise', 'error'); return; }
 
     try {
-      await updateWorkoutPlan(editPlanId, { name: form.name, exercises });
+      await updateWorkoutPlan(editPlanId, { name: form.name, exercises: withoutPlanLoad(exercises) });
       setShowCreate(false);
       setEditPlanId(null);
       setForm({ name: '', clientId: '', day: '', exercises: [] });
@@ -330,10 +330,7 @@ export default function WorkoutPlansPage() {
     const reps = sets.map(s => s.reps);
     const allSameReps = reps.every(r => r === reps[0]);
     const repsText = allSameReps ? `${sets.length} × ${reps[0] || 0} reps` : reps.join('/') + ' reps';
-    // Target load, when the plan sets one: "3 × 5 reps @ 80kg" or "@ 60/70/80kg".
-    const weights = sets.map(s => Number(s.weight) || 0);
-    if (!weights.some(w => w > 0)) return repsText;
-    return `${repsText} @ ${weights.every(w => w === weights[0]) ? weights[0] : weights.join('/')}kg`;
+    return repsText;
   };
 
   const duplicatePlan = (plan) => {
@@ -641,9 +638,6 @@ export default function WorkoutPlansPage() {
                             {(ex.unit || 'weight_reps') === 'weight_reps' && (<>
                               <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" aria-label={`Set ${si + 1} reps`} />
                               <span className="text-xs text-muted">reps</span>
-                              {/* Optional target load: the log starts from it the first time (WorkoutLogPage buildPlanEntries). */}
-                              <input className="form-input log-set-input" type="number" inputMode="decimal" step="0.5" min="0" value={s.weight || ''} onChange={e => updateSet(i, si, 'weight', e.target.value)} placeholder="–" title="kg" aria-label={`Set ${si + 1} kg`} />
-                              <span className="text-xs text-muted">kg</span>
                             </>)}
                             {ex.unit === 'reps_only' && (<>
                               <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
