@@ -81,6 +81,16 @@ export function applySetUpdate(entries, exIdx, setIdx, field, value) {
   );
 }
 
+// Plan builder only (coach walkthrough 2026-10-11): a value typed in Set 1 carries down to
+// every set still empty or still equal to Set 1, so "5 reps" is typed once, not once per set.
+// A set changed by hand keeps its own value. Not used for logs — a log records what was
+// actually done, set by set, and must never be filled in for the client.
+export function applyPlanSetChange(sets, setIdx, field, value) {
+  const was = sets[setIdx]?.[field];
+  const followsFirst = (s) => s[field] === '' || s[field] === undefined || s[field] === null || s[field] === 0 || s[field] === was;
+  return sets.map((s, j) => (j === setIdx || (setIdx === 0 && followsFirst(s)) ? { ...s, [field]: value } : s));
+}
+
 // Serialize display entries to storage format (filter incomplete sets, coerce to numbers)
 export function serializeEntries(entries) {
   return entries.map(e => {

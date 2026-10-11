@@ -1,16 +1,21 @@
 import { useState, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useApp } from '../context/AppContext';
-import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
+import { Plus, Trash2, Play, Copy, GripVertical, ChevronDown, ChevronUp, Dumbbell, Link2, ExternalLink, ArrowUp, ArrowDown, Pencil, Timer } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
 import MuscleSelector from '../components/MuscleSelector';
-import { normalizeSets, emptySet, UNIT_OPTIONS } from '../utils/workoutUtils';
+import { normalizeSets, emptySet, UNIT_OPTIONS, applyPlanSetChange } from '../utils/workoutUtils';
 import { resolveExerciseName, exerciseFieldsValid, sortExercisesByName, liveExercises } from '../utils/exerciseUtils';
-import { matchesExerciseQuery } from '../utils/exerciseSearch';
+import { matchesExerciseQuery, rankExerciseMatches } from '../utils/exerciseSearch';
 import { findDuplicateExercise } from '../utils/exerciseDuplicates';
 import { isSafeUrl, isYouTube } from '../utils/urlUtils';
 
+// Rest between sets, per exercise in a plan; the log's rest timer starts from it.
+const REST_OPTIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
+const formatRest = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+// A plan saved with some other rest keeps it on offer rather than snapping to the list.
+const restOptionsFor = (rest) => (rest && !REST_OPTIONS.includes(rest) ? [...REST_OPTIONS, rest].sort((a, b) => a - b) : REST_OPTIONS);
 const EMPTY_CUSTOM = { name: '', muscles: [], equipment: '', saveToLibrary: false };
 
 export default function WorkoutPlansPage() {
@@ -133,13 +138,18 @@ export default function WorkoutPlansPage() {
     }));
   };
 
+  // Set 1 carries down to the sets still following it (applyPlanSetChange).
   const updateSet = (exIndex, setIndex, field, value) => {
     setForm(prev => ({
       ...prev,
-      exercises: prev.exercises.map((ex, i) => {
-        if (i !== exIndex) return ex;
-        return { ...ex, sets: ex.sets.map((s, j) => j === setIndex ? { ...s, [field]: value } : s) };
-      }),
+      exercises: prev.exercises.map((ex, i) => (i !== exIndex ? ex : { ...ex, sets: applyPlanSetChange(ex.sets, setIndex, field, value) })),
+    }));
+  };
+
+  const setExRest = (exIndex, seconds) => {
+    setForm(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, i) => (i === exIndex ? { ...ex, rest: seconds } : ex)),
     }));
   };
 
@@ -319,7 +329,11 @@ export default function WorkoutPlansPage() {
     }
     const reps = sets.map(s => s.reps);
     const allSameReps = reps.every(r => r === reps[0]);
-    return allSameReps ? `${sets.length} × ${reps[0] || 0} reps` : reps.join('/') + ' reps';
+    const repsText = allSameReps ? `${sets.length} × ${reps[0] || 0} reps` : reps.join('/') + ' reps';
+    // Target load, when the plan sets one: "3 × 5 reps @ 80kg" or "@ 60/70/80kg".
+    const weights = sets.map(s => Number(s.weight) || 0);
+    if (!weights.some(w => w > 0)) return repsText;
+    return `${repsText} @ ${weights.every(w => w === weights[0]) ? weights[0] : weights.join('/')}kg`;
   };
 
   const duplicatePlan = (plan) => {
@@ -363,11 +377,11 @@ export default function WorkoutPlansPage() {
     }
   };
 
-  const filteredExercises = sortExercisesByName(liveExercises(exerciseLibrary).filter(e => {
+  const filteredExercises = rankExerciseMatches(sortExercisesByName(liveExercises(exerciseLibrary).filter(e => {
     const matchesText = matchesExerciseQuery(e, exFilter);
     const matchesEquip = !exEquipFilter || e.equipment === exEquipFilter;
     return matchesText && matchesEquip;
-  }));
+  })), exFilter);
 
   return (
     <div>
@@ -603,24 +617,33 @@ export default function WorkoutPlansPage() {
                             {ex.customMuscle.split(',')[0].trim()}{ex.customMuscle.includes(',') ? '…' : ''}
                           </span>
                         )}
-                        <span className="text-xs text-muted" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
+                        <span className="text-xs text-muted plan-ex-set-count" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
                         <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
                       </div>
                       <div className="log-unit-picker plan-unit-picker">
-                        {UNIT_OPTIONS.filter(o => o.value !== 'weight_reps').map(opt => (
+                        {UNIT_OPTIONS.filter(o => o.value !== 'weight_distance').map(opt => (
                           <button key={opt.value} type="button"
-                            className={`log-unit-pill${(ex.unit === 'weight_reps' ? 'reps_only' : (ex.unit || 'reps_only')) === opt.value ? ' active' : ''}`}
+                            className={`log-unit-pill${(ex.unit || 'weight_reps') === opt.value ? ' active' : ''}`}
                             onClick={() => changeExUnit(i, opt.value)}
                           >{opt.label}</button>
                         ))}
                       </div>
+                      <label className="plan-rest-select">
+                        <Timer size={13} aria-hidden="true" />
+                        <select className="form-select" value={ex.rest || 90} onChange={e => setExRest(i, Number(e.target.value))} aria-label={t('awork.rest_timer')}>
+                          {restOptionsFor(ex.rest).map(sec => <option key={sec} value={sec}>{formatRest(sec)}</option>)}
+                        </select>
+                      </label>
                       <div className="plan-sets-list">
                         {ex.sets.map((s, si) => (
                           <div key={si} className="plan-set-row">
                             <span className="plan-set-label">Set {si + 1}</span>
                             {(ex.unit || 'weight_reps') === 'weight_reps' && (<>
-                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />
+                              <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" aria-label={`Set ${si + 1} reps`} />
                               <span className="text-xs text-muted">reps</span>
+                              {/* Optional target load: the log starts from it the first time (WorkoutLogPage buildPlanEntries). */}
+                              <input className="form-input log-set-input" type="number" inputMode="decimal" step="0.5" min="0" value={s.weight || ''} onChange={e => updateSet(i, si, 'weight', e.target.value)} placeholder="–" title="kg" aria-label={`Set ${si + 1} kg`} />
+                              <span className="text-xs text-muted">kg</span>
                             </>)}
                             {ex.unit === 'reps_only' && (<>
                               <input className="form-input log-set-input" value={s.reps || ''} onChange={e => updateSet(i, si, 'reps', e.target.value)} placeholder="10" title="Reps" />

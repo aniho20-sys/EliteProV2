@@ -34,7 +34,7 @@ export const exerciseLibrary = [
   { id: 'skull-crusher', name: 'Skull Crusher (Barbell)', aliases: ['Skull Crusher', 'Lying Tricep Extension', 'EZ Bar Skull Crusher'], muscle: 'Triceps', equipment: 'Barbell', movementPattern: 'Push', description: 'Lie on bench, lower barbell to forehead then extend arms.', videoUrl: 'https://www.youtube.com/watch?v=d_KZxkY_0cM' },
 
   // Core
-  { id: 'plank', name: 'Plank', muscle: 'Core', equipment: 'Bodyweight', movementPattern: 'Core', description: 'Hold push-up position on forearms, keep body straight.', videoUrl: 'https://www.youtube.com/watch?v=ASdvN_XEl_c' },
+  { id: 'plank', name: 'Plank', muscle: 'Core', equipment: 'Bodyweight', movementPattern: 'Core', unit: 'time', description: 'Hold push-up position on forearms, keep body straight.', videoUrl: 'https://www.youtube.com/watch?v=ASdvN_XEl_c' },
   { id: 'cable-crunch', name: 'Crunch (Cable)', aliases: ['Cable Crunch', 'Crunch'], muscle: 'Core', equipment: 'Cable', movementPattern: 'Core', description: 'Kneel facing cable, crunch down bringing elbows to knees.', videoUrl: 'https://www.youtube.com/watch?v=AV5PmrFDEMg' },
   { id: 'hanging-leg-raise', name: 'Hanging Leg Raise', muscle: 'Core', equipment: 'Bodyweight', movementPattern: 'Core', description: 'Hang from bar, raise legs to parallel or higher.', videoUrl: 'https://www.youtube.com/watch?v=hdng3Nm1x_E' },
 

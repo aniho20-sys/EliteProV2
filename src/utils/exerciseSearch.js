@@ -33,3 +33,21 @@ export const matchesExerciseQuery = (ex, query) => {
   if (words.every(w => text.includes(w))) return true;
   return text.replace(/ /g, '').includes(words.join(''));
 };
+
+// Best matches first (coach walkthrough 2026-10-11: typing "squat" put "Squat (Barbell)"
+// 7th, below Leg Press and Lunge). A name that IS the query, then one that starts with it,
+// then one with a word starting with it, then the rest — each group alphabetical.
+const nameWithoutEquipment = (name) => String(name || '').replace(/\s*\([^)]*\)\s*$/, '');
+export const exerciseMatchRank = (ex, query) => {
+  const q = searchWords(query).map(singularWord).join(' ');
+  if (!q) return 0;
+  const name = searchWords(nameWithoutEquipment(ex?.name)).map(singularWord).join(' ');
+  if (name === q) return 0;
+  if (name.startsWith(q)) return 1;
+  if (name.split(' ').some(w => w.startsWith(q))) return 2;
+  return 3;
+};
+
+// `list` already sorted A–Z; a stable sort keeps that order inside each rank.
+export const rankExerciseMatches = (list, query) =>
+  [...list].sort((a, b) => exerciseMatchRank(a, query) - exerciseMatchRank(b, query));

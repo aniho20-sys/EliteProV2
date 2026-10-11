@@ -2364,6 +2364,9 @@ tr:hover { background: var(--bg-card-hover); }
 .plan-exercise-builder { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; background: var(--surface); }
 .plan-exercise-builder.dragging { opacity: 0.4; border-style: dashed; }
 .plan-exercise-builder .plan-exercise { border: none; padding: 0; margin: 0; border-radius: 0; }
+/* Rest between sets for one exercise in the plan builder (coach walkthrough 2026-10-11). */
+.plan-rest-select { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0; color: var(--text-muted); }
+.plan-rest-select .form-select { width: auto; min-height: 36px; padding: 4px 28px 4px 10px; }
 .plan-sets-list { padding: 8px 0 4px 28px; display: flex; flex-direction: column; gap: 6px; }
 .plan-set-row { display: flex; align-items: center; gap: 6px; }
 .plan-set-label { font-size: 0.75rem; color: var(--text-muted); min-width: 36px; font-weight: 600; }
@@ -2415,6 +2418,11 @@ tr:hover { background: var(--bg-card-hover); }
   .plan-header .btn { align-self: flex-start; }
   .plan-exercise { gap: 8px; padding: 10px 12px; }
   .plan-exercise-name { flex-basis: 100%; }
+  /* Builder header on one line: the 44px arrows side by side, name beside them, instead of
+     two arrows stacked ~90px tall with the name pushed onto its own row below. */
+  .plan-exercise-builder .reorder-btns { flex-direction: row; gap: 2px; }
+  .plan-exercise-builder .plan-exercise-name { flex: 1 1 0; }
+  .plan-exercise-builder .plan-ex-set-count { display: none; } /* the set rows below show it */
 }
 
 /* ===== WORKOUT LOG ===== */
