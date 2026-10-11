@@ -581,6 +581,7 @@ const zhHK = {
   'common.today': '今日',
   'tdash.stat_unread': '未讀',
   'tdash.up_next': '下一堂',
+  'tdash.start_session': '開始上堂',
   'common.min': '分鐘',
   'tdash.no_sessions_scheduled': '今日沒有安排課堂',
   'tdash.active_this_week': '本週活躍：',

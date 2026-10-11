@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import { normalizeSets, applySetUpdate, serializeEntries, stringifySet, emptySet, hasValue, formatSet, calcVolume, calcSetCount } from '../utils/workoutUtils';
 import { localToday } from '../utils/dateUtils';
 import { recentPersonalRecords } from '../utils/personalRecords';
+import { logDraftKey as draftKeyFor } from '../utils/startSession';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 import { pickClosingKey, closingMessage, buildWorkoutShareText } from '../utils/workoutShareUtils';
 import { useRestTimer } from '../hooks/useRestTimer';
@@ -52,7 +53,7 @@ export default function WorkoutLogPage() {
   const [copiedLogId, setCopiedLogId] = useState(null);
 
   const timer = useRestTimer({ stopWhen: !showLog });
-  const logDraftKey = `elitepro_active_log_${targetClientId}`;
+  const logDraftKey = draftKeyFor(targetClientId);
   // fallback is used only when the id has no library record at all (ad-hoc custom-*
   // entries). Passing a stored name as the fallback rather than checking it first is what
   // lets a soft-merged exercise resolve to its survivor in historical entries.

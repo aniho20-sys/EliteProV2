@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
-import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy, ClipboardList } from 'lucide-react';
+import { Users, Calendar, Dumbbell, TrendingUp, MailCheck, CalendarOff, CheckCircle, Send, AlertTriangle, MessageCircle, Clock, ChevronRight, ChevronDown, Copy, ClipboardList, Play } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -14,6 +14,7 @@ import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { renewalRates } from '../utils/renewalRates';
 import { formatShortDate } from '../i18n/format';
+import { startSessionState, hasLogDraft, canStartSession } from '../utils/startSession';
 
 // t() only ever takes a literal key (#39), so the weekday labels are looked up by
 // index from a fixed list rather than built from the day name.
@@ -265,6 +266,15 @@ export default function TrainerDashboard() {
   const upcomingToday = todaySchedule
     .filter(s => s.status !== 'cancelled' && s.status !== 'completed' && !s.isBlocked)
     .sort((a, b) => a.time.localeCompare(b.time));
+  // Into logging this session's workout (utils/startSession.js).
+  const startSession = (e, session) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const client = clients.find(c => c.id === session.clientId);
+    if (!client) return;
+    const clientPlans = allPlans.filter(p => p.clientId === client.id);
+    navigate('/log', { state: startSessionState(client, clientPlans, { hasDraft: hasLogDraft(client.id) }) });
+  };
   const nowStr = new Date().toTimeString().slice(0, 5);
   const nextSession = upcomingToday.find(s => s.time >= nowStr) || upcomingToday[0];
   const nextClient = nextSession ? clients.find(c => c.id === nextSession.clientId) : null;
@@ -398,16 +408,22 @@ export default function TrainerDashboard() {
               <span className="hero-card-time"><Clock size={12} /> {nextCountdown}</span>
             )}
           </div>
-          {nextSession ? (
+          {nextSession && (
             <div className="hero-card-body">
               <div className="hero-avatar">{nextClient?.name?.[0] || '?'}</div>
               <div className="hero-card-info">
                 <div className="hero-card-title">{nextClient?.name || t('common.unknown')} · {nextSession.time}</div>
                 <div className="hero-card-sub">{nextSession.type} · {nextSession.duration || 60}{t('common.min')}</div>
               </div>
-              <Link to={`/clients/${nextSession.clientId}`} className="btn-icon"><ChevronRight size={18} /></Link>
+              <Link to={`/clients/${nextSession.clientId}`} className="btn-icon" aria-label={nextClient?.name || t('common.unknown')}><ChevronRight size={18} /></Link>
             </div>
-          ) : (
+          )}
+          {nextSession && nextClient && (
+            <button type="button" className="btn btn-primary hero-card-start" onClick={(e) => startSession(e, nextSession)}>
+              <Play size={16} /> {t('tdash.start_session')}
+            </button>
+          )}
+          {!nextSession && (
             <div className="hero-card-empty">
               <span className="hero-card-empty-text">{t('tdash.no_sessions_scheduled')}</span>
               <Link to="/schedule" className="btn btn-sm btn-primary">{t('dash.book_a_session')}</Link>
@@ -684,6 +700,17 @@ export default function TrainerDashboard() {
                   </div>
                   <div className="flex gap-8" style={{ alignItems: 'center' }}>
                     <span className={`tag ${s.status === 'completed' ? 'tag-accent' : s.status === 'confirmed' ? 'tag-primary' : 'tag-warning'}`}>{s.status}</span>
+                    {canStartSession(s) && client && (
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={(e) => startSession(e, s)}
+                        title={t('tdash.start_session')}
+                        aria-label={t('tdash.start_session')}
+                      >
+                        <Play size={16} style={{ color: 'var(--primary)' }} />
+                      </button>
+                    )}
                     {s.status === 'confirmed' && (
                       <button
                         className="btn-icon"

@@ -560,6 +560,7 @@ const en = {
   'common.today': 'Today',
   'tdash.stat_unread': 'Unread',
   'tdash.up_next': 'Up next',
+  'tdash.start_session': 'Start session',
   'common.min': 'min',
   'tdash.no_sessions_scheduled': 'No sessions scheduled today',
   'tdash.active_this_week': 'Active this week:',

@@ -881,6 +881,9 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* "Start session" on Up Next (Ani 2026-10-11): full width and thumb-sized — it is the
+   one thing a coach taps with a client waiting. */
+.hero-card-start { width: 100%; min-height: 44px; margin-top: 12px; justify-content: center; }
 .hero-card-empty {
   display: flex;
   align-items: center;
