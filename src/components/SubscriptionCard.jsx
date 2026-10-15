@@ -9,15 +9,17 @@ import { SUBSCRIPTION_TIERS, monthlyAmount, currentSubscription } from '../utils
 import { SkeletonLine } from './Skeleton';
 
 // Client-facing monthly plan (Phase 3 Step 3). The client picks a tier; the server
-// prices it from the trainer's own rate, and the bank details are entered on
-// GoCardless's hosted page — never here. See functions/gcSubscriptions.js.
+// prices it from the trainer's own rate, and the card or bank details are entered on the
+// processor's own page — never here. A coach on Stripe (B49, functions/stripeSubscriptions.js)
+// takes plans through Stripe in their own currency; otherwise GoCardless (Bacs, GBP only,
+// functions/gcSubscriptions.js).
 //
 // While GoCardless is in sandbox this card appears only for clients their trainer has
 // marked `subscriptionTester`, and says plainly that it is a test. The server enforces
 // the same gate; hiding it here is only so a real client is never shown it at all.
 export default function SubscriptionCard() {
   const { t } = useLanguage();
-  const { currentUser, data, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription } = useApp();
+  const { currentUser, data, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, startStripeSubscription, refreshStripeSubscription } = useApp();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,14 +33,17 @@ export default function SubscriptionCard() {
 
   const trainer = (data.users || []).find(u => u.id === currentUser.trainerId);
   const rate = trainer?.subscriptionRate;
-  // The server writes gcEnvironment onto the coach's profile when they connect GoCardless.
-  // Anything but 'live' is the sandbox — including coaches who connected before it existed —
-  // and only then may the card say no real money is taken (B36).
-  const testMode = trainer?.gcEnvironment !== 'live';
+  // The server writes stripeEnvironment (B49) / gcEnvironment onto the coach's profile when
+  // they connect. Stripe wins once the coach has it. Anything but 'live' is test mode —
+  // including GoCardless coaches who connected before the field existed — and only then may
+  // the card say no real money is taken (B36).
+  const onStripe = !!trainer?.stripeEnvironment;
+  const testMode = onStripe ? trainer.stripeEnvironment !== 'live' : trainer?.gcEnvironment !== 'live';
+  const currency = onStripe ? (trainer.currency || 'GBP') : 'GBP';
   const offered = currentUser.role === 'client'
     && currentUser.subscriptionTester === true
     && !!trainer && monthlyAmount(rate, 4) !== null
-    && (trainer.currency || 'GBP') === 'GBP';
+    && (onStripe || (trainer.currency || 'GBP') === 'GBP');
 
   const load = useCallback(async () => {
     try {
@@ -55,8 +60,8 @@ export default function SubscriptionCard() {
   // whose Direct Debit GoCardless had refused that it was still being confirmed.
   const announce = (status) => {
     if (status === 'active') toast(t('sub.toast_active'));
-    else if (status === 'pending' || status === 'completing') toast(t('sub.toast_pending'), 'info');
-    else if (status === 'abandoned' || status === 'exit') toast(t('sub.toast_abandoned'), 'info');
+    else if (status === 'pending' || status === 'completing') toast(onStripe ? t('sub.toast_pending_stripe') : t('sub.toast_pending'), 'info');
+    else if (status === 'abandoned' || status === 'exit') toast(onStripe ? t('sub.toast_abandoned_stripe') : t('sub.toast_abandoned'), 'info');
     else if (status === 'cancelled') toast(t('sub.toast_cancelled'), 'info');
     else toast(t('sub.toast_failed'), 'error');
   };
@@ -75,11 +80,13 @@ export default function SubscriptionCard() {
   if (!offered) return null;
 
   const current = currentSubscription(subs);
+  // An existing plan keeps the processor it was made with, whatever the coach uses now.
+  const planOnStripe = current ? current.provider === 'stripe' : onStripe;
 
   const handleStart = async () => {
     setStarting(true);
     try {
-      const { url } = await startSubscription(tier);
+      const { url } = await (onStripe ? startStripeSubscription(tier) : startSubscription(tier));
       window.location.href = url;
     } catch (err) {
       const code = err?.code || '';
@@ -111,7 +118,7 @@ export default function SubscriptionCard() {
   const handleCheck = async () => {
     setChecking(true);
     try {
-      const { status } = await refreshSubscription(current.id);
+      const { status } = await (planOnStripe ? refreshStripeSubscription(current.id) : refreshSubscription(current.id));
       announce(status);
       await load();
     } catch {
@@ -136,14 +143,14 @@ export default function SubscriptionCard() {
             <>
               <span className="tag tag-danger">{t('sub.payment_failed_tag')}</span>
               <p className="text-sm mt-8" style={{ display: 'flex', gap: 6, color: 'var(--danger)' }}>
-                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {t('sub.payment_failed_desc')}
+                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {planOnStripe ? t('sub.payment_failed_desc_stripe') : t('sub.payment_failed_desc')}
               </p>
             </>
           ) : (
             <span className="tag tag-accent">{t('sub.active')}</span>
           )}
           <p className="text-sm mt-8">
-            {t('sub.your_plan', { n: current.tier, amount: formatCurrency(current.monthlyAmount, 'GBP') })}
+            {t('sub.your_plan', { n: current.tier, amount: formatCurrency(current.monthlyAmount, current.currency || 'GBP') })}
           </p>
           <button type="button" className="btn btn-outline btn-sm mt-8" onClick={() => setConfirmCancel(true)}>
             {t('sub.cancel')}
@@ -151,14 +158,14 @@ export default function SubscriptionCard() {
         </div>
       ) : current ? (
         <div className="mt-8">
-          <p className="text-sm text-muted" style={{ marginBottom: 12 }}>{t('sub.pending')}</p>
+          <p className="text-sm text-muted" style={{ marginBottom: 12 }}>{planOnStripe ? t('sub.pending_stripe') : t('sub.pending')}</p>
           <button className="btn btn-outline" onClick={handleCheck} disabled={checking} style={{ width: '100%' }}>
             <RefreshCw size={16} /> {checking ? t('sub.checking') : t('sub.check_again')}
           </button>
         </div>
       ) : (
         <>
-          <p className="invite-desc">{t('sub.intro')}</p>
+          <p className="invite-desc">{onStripe ? t('sub.intro_stripe') : t('sub.intro')}</p>
           <div className="mt-8" role="radiogroup" aria-label={t('sub.title')}>
             {SUBSCRIPTION_TIERS.map(n => (
               <button
@@ -171,7 +178,7 @@ export default function SubscriptionCard() {
                 onClick={() => setTier(n)}
               >
                 <span>{t('sub.tier_option', { n })}</span>
-                <span>{t('sub.per_month', { amount: formatCurrency(monthlyAmount(rate, n), 'GBP') })}</span>
+                <span>{t('sub.per_month', { amount: formatCurrency(monthlyAmount(rate, n), currency) })}</span>
               </button>
             ))}
           </div>
@@ -179,13 +186,15 @@ export default function SubscriptionCard() {
               half a month's worth end, and nothing on screen said so. */}
           <p className="text-sm text-muted">{t('sub.rollover_note', { n: Math.floor(tier / 2) })}</p>
           <button className="btn btn-accent mt-8" onClick={handleStart} disabled={starting} style={{ width: '100%' }}>
-            {starting ? t('sub.redirecting') : t('sub.subscribe')}
+            {starting
+              ? (onStripe ? t('sub.redirecting_stripe') : t('sub.redirecting'))
+              : (onStripe ? t('sub.subscribe_stripe') : t('sub.subscribe'))}
           </button>
         </>
       )}
 
       <p className="text-sm text-muted mt-16" style={{ display: 'flex', gap: 6 }}>
-        <ShieldCheck size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {t('sub.privacy')}
+        <ShieldCheck size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {planOnStripe ? t('sub.privacy_stripe') : t('sub.privacy')}
       </p>
 
       {confirmCancel && current && (

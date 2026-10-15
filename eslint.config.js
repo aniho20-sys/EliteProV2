@@ -59,6 +59,8 @@ const TRANSLATED_FILES = [
   'src/components/TrialRequestsCard.jsx',
   'src/components/SetupChecklist.jsx',
   'src/components/GroupClassesCard.jsx',
+  'src/components/StripeConnectCard.jsx',
+  'src/components/StripeKeysCard.jsx',
 ]
 
 export default defineConfig([

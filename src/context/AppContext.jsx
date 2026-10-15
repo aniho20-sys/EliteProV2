@@ -897,6 +897,42 @@ export function AppProvider({ children }) {
     return (await call({ subscriptionId })).data;
   };
 
+  // ========== Stripe (B49) — one processor for every country ==========
+  // Whether ElitePro's own Stripe is set up, and in which mode. Nothing secret comes back.
+  const getStripeStatus = async () => {
+    const call = httpsCallable(functions, 'stripeStatus');
+    return (await call()).data;
+  };
+
+  // Owner only (the server checks): the platform key + webhook secret go straight to
+  // Secret Manager. Returns { environment }.
+  const saveStripeKeys = async ({ secretKey, webhookSecret }) => {
+    const call = httpsCallable(functions, 'stripeSaveKeys');
+    return (await call({ secretKey, webhookSecret })).data;
+  };
+
+  // Coach: Stripe's own onboarding page for their account. Returns { url }.
+  const startStripeConnect = async (country) => {
+    const call = httpsCallable(functions, 'stripeConnectStart');
+    return (await call({ country })).data;
+  };
+
+  const refreshStripeConnection = async () => {
+    const call = httpsCallable(functions, 'stripeRefreshConnection');
+    return (await call()).data;
+  };
+
+  // Client: Stripe's checkout page for a plan. Returns { subscriptionId, url }.
+  const startStripeSubscription = async (tier) => {
+    const call = httpsCallable(functions, 'stripeStartSubscription');
+    return (await call({ tier })).data;
+  };
+
+  const refreshStripeSubscription = async (subscriptionId) => {
+    const call = httpsCallable(functions, 'stripeRefreshSubscription');
+    return (await call({ subscriptionId })).data;
+  };
+
   // Coach: every plan of every client, for the "payment failed" list. Single-field query (#34).
   const getTrainerSubscriptions = async (trainerId) => {
     const snap = await getDocs(query(collection(db, 'subscriptions'), where('trainerId', '==', trainerId)));
@@ -1186,7 +1222,8 @@ export function AppProvider({ children }) {
     getInvoices, addInvoice, updateInvoice, deleteInvoice,
     getTemplates, saveAsTemplate, deleteTemplate,
     getInviteCode, connectToTrainer, findTrainerByCodeRemote,
-    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
+    getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getClientErrors, getSubscriptions, startSubscription, refreshSubscription, cancelSubscription, getTrainerSubscriptions,
+    getStripeStatus, saveStripeKeys, startStripeConnect, refreshStripeConnection, startStripeSubscription, refreshStripeSubscription, getPlatformStats, getAccountAudit, previewTestAccountCleanup, deleteTestAccounts, lookupAccountByEmail, setSignupExcluded,
     setLanguage,
     savePublicBooking, subscribeTrialRequests, respondTrialRequest, subscribeGroupClasses, saveGroupClass, cancelGroupClass, getPublicBookingPage, requestTrialSession,
     checkAndAwardBadges,

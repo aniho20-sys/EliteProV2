@@ -36,7 +36,7 @@ function makeApp(over = {}) {
     currentUser: COACH, firebaseUser: { uid: COACH.id, providerData: [] }, setLanguage: vi.fn(),
     updateClient: vi.fn(), logout: vi.fn(), sendPasswordReset: vi.fn(), getInviteCode: vi.fn(async () => 'ANI123'),
     connectToTrainer: vi.fn(), getClient: () => undefined, deleteAccount: vi.fn(), getExercises: () => [],
-    getPaymentConnection: vi.fn(async () => ({ status: 'connected', environment: 'sandbox', connectedAt: '2026-09-23T10:00:00Z' })),
+    getStripeStatus: vi.fn(async () => ({ configured: false, environment: null })), getPaymentConnection: vi.fn(async () => ({ status: 'connected', environment: 'sandbox', connectedAt: '2026-09-23T10:00:00Z' })),
     startGcConnect: vi.fn(), disconnectGc: vi.fn(),
     connectGcDirect: vi.fn(async () => ({ environment: 'live', creditorName: "Ani's Studio", verificationStatus: 'successful' })),
     getClients: () => [], getSchedule: () => [], getSubscriptions: vi.fn(async () => []), getClientErrors: vi.fn(async () => []),

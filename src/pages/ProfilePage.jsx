@@ -18,6 +18,8 @@ import { gcFailureMessage } from '../utils/gcErrors';
 import SubscriptionCard from '../components/SubscriptionCard';
 import PublicBookingCard from '../components/PublicBookingCard';
 import GroupClassesCard from '../components/GroupClassesCard';
+import StripeConnectCard from '../components/StripeConnectCard';
+import StripeKeysCard from '../components/StripeKeysCard';
 import { inviteUrl } from '../utils/inviteLink';
 import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
@@ -87,7 +89,7 @@ function getAuthProvider(firebaseUser) {
 const GC_PARTNER_OPEN = false;
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection } = useApp();
+  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getStripeStatus } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -156,6 +158,8 @@ export default function ProfilePage() {
   const [renewalCurrency, setRenewalCurrency] = useState(currentUser.currency || 'GBP');
   const [subscriptionRate, setSubscriptionRate] = useState(currentUser.subscriptionRate ?? '');
   const [subRateSaving, setSubRateSaving] = useState(false);
+  // B49: once ElitePro's Stripe is set up, monthly plans go through Stripe for every coach.
+  const [stripeConfigured, setStripeConfigured] = useState(false);
   const [renewalSaving, setRenewalSaving] = useState(false);
 
   // Trainer: bank details (shown to clients in the renewal payment sheet)
@@ -198,6 +202,17 @@ export default function ProfilePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTrainer, currentUser.id]);
+
+  // B49: is ElitePro's Stripe set up? Then plans go through Stripe (StripeConnectCard).
+  useEffect(() => {
+    if (!isTrainer) return;
+    let cancelled = false;
+    getStripeStatus()
+      .then(st => { if (!cancelled) setStripeConfigured(!!st?.configured); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTrainer]);
 
   // Load GoCardless connection status
   useEffect(() => {
@@ -523,6 +538,40 @@ export default function ProfilePage() {
     }
   };
 
+  // Plan pricing (Phase 3 / B49): the coach's per-session rate for monthly plans, shown in
+  // whichever processor's card is active. GoCardless is Bacs, GBP only; Stripe charges in
+  // the coach's own currency.
+  const renderRateFields = ({ gbpOnly }) => {
+    const currency = gbpOnly ? 'GBP' : (currentUser.currency || 'GBP');
+    const wrongCurrency = gbpOnly && (currentUser.currency || 'GBP') !== 'GBP';
+    return (
+      <>
+        <div className="form-group mt-8">
+          <label className="form-label" htmlFor="profile-sub-rate">{t('sub.rate_label')}</label>
+          <input id="profile-sub-rate" type="number" min="0" step="0.01" inputMode="decimal" className="form-input" placeholder="65"
+            value={subscriptionRate} onChange={e => setSubscriptionRate(e.target.value)} />
+          <p className="text-sm text-muted mt-8">{t('sub.rate_hint')}</p>
+          <p className="text-sm text-muted mt-8">{t('sub.rollover_note_coach')}</p>
+          {monthlyAmount(subscriptionRate, 4) !== null && !wrongCurrency && (
+            <ul className="text-sm mt-8" style={{ paddingLeft: 18 }}>
+              {SUBSCRIPTION_TIERS.map(n => (
+                <li key={n}>
+                  {t('sub.tier_option', { n })} · {t('sub.per_month', { amount: formatCurrency(monthlyAmount(subscriptionRate, n), currency) })}
+                </li>
+              ))}
+            </ul>
+          )}
+          {wrongCurrency && (
+            <p className="text-sm mt-8" style={{ color: 'var(--danger)' }}>{t('sub.gbp_only')}</p>
+          )}
+        </div>
+        <button className="btn btn-primary mb-16" onClick={handleSaveSubscriptionRate} disabled={subRateSaving} style={{ width: '100%' }}>
+          {subRateSaving ? t('profile.saving_dots') : t('sub.rate_save')}
+        </button>
+      </>
+    );
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -781,8 +830,14 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Trainer: GoCardless Connection (Phase 3) */}
-      {isTrainer && (
+      {/* Trainer: monthly plans through Stripe (B49) once ElitePro's Stripe is set up */}
+      {isTrainer && stripeConfigured && (
+        <StripeConnectCard>{renderRateFields({ gbpOnly: false })}</StripeConnectCard>
+      )}
+
+      {/* Trainer: GoCardless Connection (Phase 3). After the switch to Stripe (B49) it stays
+          only for a coach still connected to GoCardless, so they can disconnect. */}
+      {isTrainer && (!stripeConfigured || gcConnection?.status === 'connected') && (
         <div className="card mb-16">
           <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CreditCard size={18} /> {t('profile.gc_title')}
@@ -804,28 +859,7 @@ export default function ProfilePage() {
                   ? new Date(gcConnection.connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                   : '—' })}
               </p>
-              <div className="form-group mt-8">
-                <label className="form-label">{t('sub.rate_label')}</label>
-                <input type="number" min="0" step="0.01" inputMode="decimal" className="form-input" placeholder="65"
-                  value={subscriptionRate} onChange={e => setSubscriptionRate(e.target.value)} />
-                <p className="text-sm text-muted mt-8">{t('sub.rate_hint')}</p>
-                <p className="text-sm text-muted mt-8">{t('sub.rollover_note_coach')}</p>
-                {monthlyAmount(subscriptionRate, 4) !== null && (currentUser.currency || 'GBP') === 'GBP' && (
-                  <ul className="text-sm mt-8" style={{ paddingLeft: 18 }}>
-                    {SUBSCRIPTION_TIERS.map(n => (
-                      <li key={n}>
-                        {t('sub.tier_option', { n })} · {t('sub.per_month', { amount: formatCurrency(monthlyAmount(subscriptionRate, n), 'GBP') })}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {(currentUser.currency || 'GBP') !== 'GBP' && (
-                  <p className="text-sm mt-8" style={{ color: 'var(--danger)' }}>{t('sub.gbp_only')}</p>
-                )}
-              </div>
-              <button className="btn btn-primary mb-16" onClick={handleSaveSubscriptionRate} disabled={subRateSaving} style={{ width: '100%' }}>
-                {subRateSaving ? t('profile.saving_dots') : t('sub.rate_save')}
-              </button>
+              {!stripeConfigured && renderRateFields({ gbpOnly: true })}
               <button className="btn btn-outline" onClick={() => setShowGcDisconnectConfirm(true)} style={{ width: '100%' }}>
                 {t('profile.disconnect')}
               </button>
@@ -911,6 +945,9 @@ export default function ProfilePage() {
 
       {/* Owner-only; firestore.rules is the real gate (clientErrors is owner-read). */}
       {isTrainer && isOwner && <ClientErrorsCard />}
+
+      {/* Owner only (B49): ElitePro's Stripe keys. stripeSaveKeys refuses anyone else. */}
+      {isTrainer && isOwner && <StripeKeysCard />}
 
       {/* Client: Connect to Coach */}
       {!isTrainer && !currentUser.trainerId && (

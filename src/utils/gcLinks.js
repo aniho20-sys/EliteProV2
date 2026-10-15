@@ -7,3 +7,7 @@ export const FUNCTIONS_BASE = 'https://us-central1-elitepro-16718.cloudfunctions
 export function gcWebhookUrl(trainerId) {
   return `${FUNCTIONS_BASE}/gcWebhook/${trainerId}`;
 }
+
+// B49: ElitePro's one Stripe webhook endpoint (functions/index.js stripeWebhook). Ani pastes
+// it into Stripe once, for events on connected accounts.
+export const STRIPE_WEBHOOK_URL = `${FUNCTIONS_BASE}/stripeWebhook`;

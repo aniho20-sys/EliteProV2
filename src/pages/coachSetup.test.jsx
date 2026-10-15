@@ -56,7 +56,7 @@ function base(over = {}) {
     getIntakeForm: vi.fn(async () => null), getPersonalRecords: () => ({}),
     getTrainerBusySlots: () => [], refreshTrainerBusySlots: vi.fn(async () => {}), markMessagesRead: vi.fn(),
     getUnreadCount: () => 0, getMessages: () => [], getTrainerSubscriptions: vi.fn(async () => []),
-    getSubscriptions: vi.fn(async () => []), getPaymentConnection: vi.fn(async () => null),
+    getSubscriptions: vi.fn(async () => []), getStripeStatus: vi.fn(async () => ({ configured: false, environment: null })), getPaymentConnection: vi.fn(async () => null),
     getClientErrors: vi.fn(async () => []), getPlatformStats: vi.fn(async () => null),
     updateClient: vi.fn(async () => {}), addCreditLedgerEntry: vi.fn(async () => {}),
     addScheduleItem: vi.fn(async (item) => ({ ...item, id: 'sched-1' })), updateScheduleItem: vi.fn(), deleteScheduleItem: vi.fn(),
