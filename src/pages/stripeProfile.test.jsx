@@ -85,14 +85,14 @@ describe('Ani’s Stripe keys', () => {
 });
 
 describe('a coach and Stripe', () => {
-  test('Stripe set up: the Stripe card replaces GoCardless; a Hong Kong coach starts in Hong Kong', async () => {
+  test('Stripe set up: the Stripe card replaces GoCardless; only the UK is offered while Hong Kong is parked', async () => {
     renderProfile();
     expect(await screen.findByText('Monthly plans')).toBeTruthy();
     expect(screen.queryByText(/GoCardless/)).toBeNull();
-    // The country picker appears once the coach's connection has loaded — wait for it.
-    expect((await screen.findByLabelText('Where your business is')).value).toBe('HK');
-    fireEvent.click(screen.getByRole('button', { name: /Set up with Stripe/ }));
-    await waitFor(() => expect(app.startStripeConnect).toHaveBeenCalledWith('HK'));
+    // Even a coach whose currency is HKD sets up in the UK — no country to pick (Ani 2026-10-15).
+    fireEvent.click(await screen.findByRole('button', { name: /Set up with Stripe/ }));
+    await waitFor(() => expect(app.startStripeConnect).toHaveBeenCalledWith('GB'));
+    expect(screen.queryByLabelText('Where your business is')).toBeNull();
   });
   test('Stripe not set up yet: the GoCardless card stays as it was', async () => {
     app = makeApp({ getStripeStatus: vi.fn(async () => ({ configured: false, environment: null })) });

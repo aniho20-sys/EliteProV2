@@ -13,8 +13,10 @@ import { SkeletonLine } from './Skeleton';
 //
 // `children` is the plan-pricing block, shared with the GoCardless card in ProfilePage.
 
-// Where a coach can be (functions/stripeConnect.js COUNTRIES); labels are dictionary keys.
-const COUNTRY_OPTIONS = ['GB', 'HK'];
+// Where a coach can set up. The server also supports HK (functions/stripeConnect.js
+// COUNTRIES), but Ani 2026-10-15 parked Hong Kong: card fees there come to ~4%, too much
+// for coaches to want. Add 'HK' back here when that changes. Labels are dictionary keys.
+const COUNTRY_OPTIONS = ['GB'];
 
 export default function StripeConnectCard({ children }) {
   const { t } = useLanguage();
@@ -24,7 +26,7 @@ export default function StripeConnectCard({ children }) {
   const location = useLocation();
 
   const [stripe, setStripe] = useState(undefined); // undefined = loading, null = none yet
-  const [country, setCountry] = useState((currentUser.currency || 'GBP') === 'HKD' ? 'HK' : 'GB');
+  const [country, setCountry] = useState(COUNTRY_OPTIONS[0]);
   const [starting, setStarting] = useState(false);
   const [checking, setChecking] = useState(false);
 
@@ -113,12 +115,14 @@ export default function StripeConnectCard({ children }) {
         </div>
       ) : (
         <div className="mt-8">
-          <div className="form-group">
-            <label className="form-label" htmlFor="stripe-country">{t('stripe.country')}</label>
-            <select id="stripe-country" className="form-select" value={country} onChange={e => setCountry(e.target.value)}>
-              {COUNTRY_OPTIONS.map(c => <option key={c} value={c}>{countryLabel(c)}</option>)}
-            </select>
-          </div>
+          {COUNTRY_OPTIONS.length > 1 && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="stripe-country">{t('stripe.country')}</label>
+              <select id="stripe-country" className="form-select" value={country} onChange={e => setCountry(e.target.value)}>
+                {COUNTRY_OPTIONS.map(c => <option key={c} value={c}>{countryLabel(c)}</option>)}
+              </select>
+            </div>
+          )}
           <p className="text-sm text-muted mb-8">{t('stripe.setup_note')}</p>
           <button type="button" className="btn btn-primary" onClick={handleStart} disabled={starting} style={{ width: '100%' }}>
             <CreditCard size={16} /> {starting ? t('profile.connecting_dots') : t('stripe.setup')}
