@@ -222,6 +222,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Stripe webhook events already processed, by event id (functions/stripeWebhooks.js, B49).
+    // Server-only.
+    match /stripeEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     // ── Public booking page (B38, functions/publicBooking.js) ──
     // A stranger's trial request: written only by requestTrialSession, answered (and
     // deleted) only by respondTrialRequest. The coach it was sent to can read it.

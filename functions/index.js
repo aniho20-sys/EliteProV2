@@ -4,7 +4,8 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
 const { writeGcAccessToken, deleteGcAccessToken, readGcAppCredentials, readGcAccessToken, readGcWebhookSecret,
-  writeTrainerWebhookSecret, readTrainerWebhookSecret, deleteTrainerWebhookSecret } = require('./gcSecrets');
+  writeTrainerWebhookSecret, readTrainerWebhookSecret, deleteTrainerWebhookSecret,
+  readStripeKeys, writeStripeKeys } = require('./gcSecrets');
 const { errorRedirectUrl, oauthErrorCode } = require('./gcOAuthErrors');
 const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gcOAuthNonce');
 const { normalizeInviteCode } = require('./inviteCode');
@@ -20,6 +21,10 @@ const { trainerAvailability } = require('./availability');
 const { verifyWebhookSignature, handleWebhook, webhookRoute } = require('./gcWebhooks');
 const { connectDirect, refreshDirectStatus, DirectConnectError } = require('./gcDirect');
 const publicBooking = require('./publicBooking');
+const { verifyStripeSignature, keyEnvironment } = require('./stripeApi');
+const stripeConnect = require('./stripeConnect');
+const stripeSubs = require('./stripeSubscriptions');
+const { handleStripeWebhook } = require('./stripeWebhooks');
 const bookingPreview = require('./bookingPreview');
 
 initializeApp();
@@ -90,8 +95,14 @@ exports.onAccountDelete = functions.auth.user().onDelete(async (user) => {
   const uid = user.uid;
   const deps = { db, readToken: readGcAccessToken, fetchImpl: fetch, now: () => new Date(), reason: 'account_deleted' };
 
-  const asClient = await cancelSubscriptionsFor({ ...deps, uid, field: 'clientId' });
-  const asTrainer = await cancelSubscriptionsFor({ ...deps, uid, field: 'trainerId' });
+  const gcAsClient = await cancelSubscriptionsFor({ ...deps, uid, field: 'clientId' });
+  const gcAsTrainer = await cancelSubscriptionsFor({ ...deps, uid, field: 'trainerId' });
+  // Stripe plans (B49): same rule — nobody is charged for an account that no longer exists.
+  const stripeDeps = { db, keys: await readStripeKeys(), fetchImpl: fetch, now: deps.now, reason: 'account_deleted' };
+  const stAsClient = await stripeSubs.cancelSubscriptionsFor({ ...stripeDeps, uid, field: 'clientId' });
+  const stAsTrainer = await stripeSubs.cancelSubscriptionsFor({ ...stripeDeps, uid, field: 'trainerId' });
+  const asClient = { cancelled: [...gcAsClient.cancelled, ...stAsClient.cancelled], failed: [...gcAsClient.failed, ...stAsClient.failed] };
+  const asTrainer = { cancelled: [...gcAsTrainer.cancelled, ...stAsTrainer.cancelled], failed: [...gcAsTrainer.failed, ...stAsTrainer.failed] };
   const failed = [...asClient.failed, ...asTrainer.failed];
 
   const summary = await deleteAccountData({ db, uid });
@@ -102,14 +113,14 @@ exports.onAccountDelete = functions.auth.user().onDelete(async (user) => {
   }
 
   if (failed.length > 0) {
-    console.error(`[GDPR] uid=${uid}: ${failed.length} GoCardless plan(s) NOT cancelled`, failed);
+    console.error(`[GDPR] uid=${uid}: ${failed.length} monthly plan(s) NOT cancelled`, failed);
     await db.collection('mail').add({
       to: OWNER_EMAIL,
       message: {
-        subject: `ACTION NEEDED: ${failed.length} GoCardless plan(s) still active for a deleted account`,
+        subject: `ACTION NEEDED: ${failed.length} monthly plan(s) still active for a deleted account`,
         text: [
           `An ElitePro account was deleted (uid ${uid}), but these monthly plans could not be`,
-          'cancelled automatically. Cancel each mandate in the GoCardless dashboard of the',
+          'cancelled automatically. Cancel each one in the GoCardless or Stripe dashboard of the',
           'trainer shown, or the client will keep being charged.',
           '',
           ...failed.map(f => `subscription ${f.id} · trainer ${f.trainerId} · ${f.error}`),
@@ -782,6 +793,14 @@ exports.gcSubscriptionReturn = functions.https.onRequest(async (req, res) => {
 exports.gcCancelSubscription = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
   try {
+    // One cancel button in the app, whichever processor holds the plan (B49).
+    const id = String((data && data.subscriptionId) || '');
+    const snap = /^[A-Za-z0-9]{10,40}$/.test(id) ? await db.doc(`subscriptions/${id}`).get() : null;
+    if (snap && snap.exists && snap.data().provider === 'stripe') {
+      return await stripeSubs.cancelSubscription({
+        db, uid: context.auth.uid, subscriptionId: id, keys: await readStripeKeys(), fetchImpl: fetch, now: () => new Date(),
+      });
+    }
     return await cancelSubscription({
       ...subscriptionDeps(), uid: context.auth.uid, subscriptionId: data && data.subscriptionId,
     });
@@ -978,6 +997,143 @@ exports.gcWebhook = functions.https.onRequest(async (req, res) => {
     notify: ({ userId, title, body: text }) => pushTo(userId, { title, body: text }),
   });
   res.status(failed ? 500 : 200).send(failed ? 'Retry' : 'OK');
+});
+
+// ─── Stripe (B49, reports/stripe-subscription-design.md) ───
+// One processor for every country: each coach takes plans on their OWN Stripe account
+// (direct charges), ElitePro holds one platform key. Keys live in Secret Manager only and
+// are read at call time — Stripe not set up yet is a "not configured" answer, never a
+// failed deploy (#29).
+const FN_BASE = 'https://us-central1-elitepro-16718.cloudfunctions.net';
+
+function stripeHttpsError(err) {
+  if (err instanceof stripeConnect.StripeSetupError || err instanceof SubscriptionError) {
+    return new functions.https.HttpsError(err.code, err.message);
+  }
+  console.error('[stripe] unexpected error', err && err.message);
+  return new functions.https.HttpsError('unavailable', 'Could not reach Stripe');
+}
+
+// Ani only: paste ElitePro's Stripe secret key and webhook signing secret from a phone
+// (#26). Checked against Stripe before anything is stored; never logged, never in Firestore.
+exports.stripeSaveKeys = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  if (!isOwnerToken(context.auth.token)) throw new functions.https.HttpsError('permission-denied', 'Owner only');
+  try {
+    return await stripeConnect.saveStripeKeys({
+      secretKey: data && data.secretKey, webhookSecret: data && data.webhookSecret,
+      fetchImpl: fetch, writeKeys: writeStripeKeys,
+    });
+  } catch (err) {
+    throw stripeHttpsError(err);
+  }
+});
+
+// Whether ElitePro's Stripe is set up, and in which mode. Nothing secret is returned.
+exports.stripeStatus = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  const keys = await readStripeKeys();
+  return { configured: !!keys, environment: keys ? keyEnvironment(keys.secretKey) : null };
+});
+
+// A coach: open (or continue) Stripe's own onboarding for their account.
+exports.stripeConnectStart = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await stripeConnect.startConnect({
+      db, trainerId: context.auth.uid, country: data && data.country,
+      keys: await readStripeKeys(), fetchImpl: fetch, now: () => new Date(),
+      returnUrl: `${PROFILE_URL}?stripe=return`, refreshUrl: `${PROFILE_URL}?stripe=refresh`,
+    });
+  } catch (err) {
+    throw stripeHttpsError(err);
+  }
+});
+
+exports.stripeRefreshConnection = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await stripeConnect.refreshConnection({
+      db, trainerId: context.auth.uid, keys: await readStripeKeys(), fetchImpl: fetch, now: () => new Date(),
+    });
+  } catch (err) {
+    throw stripeHttpsError(err);
+  }
+});
+
+function stripeSubDeps(keys) {
+  return { db, keys, fetchImpl: fetch, now: () => new Date() };
+}
+
+exports.stripeStartSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  try {
+    return await stripeSubs.startSubscription({
+      ...stripeSubDeps(await readStripeKeys()),
+      uid: context.auth.uid, tier: data && data.tier,
+      returnUrl: (id) => `${FN_BASE}/stripeSubscriptionReturn?sub=${encodeURIComponent(id)}`,
+      exitUrl: `${PROFILE_URL}?sub=exit`,
+    });
+  } catch (err) {
+    throw stripeHttpsError(err);
+  }
+});
+
+// Where Stripe sends the client after paying. Public; it can only ask Stripe whether this
+// plan's Checkout Session is complete — the id in the URL decides nothing.
+exports.stripeSubscriptionReturn = functions.https.onRequest(async (req, res) => {
+  let status = 'unknown';
+  try {
+    ({ status } = await stripeSubs.completeSubscription({
+      ...stripeSubDeps(await readStripeKeys()), subscriptionId: String(req.query.sub || ''),
+    }));
+  } catch (err) {
+    console.error('[stripeSubscriptionReturn] failed', err && err.message);
+    status = 'pending';
+  }
+  res.redirect(`${PROFILE_URL}?sub=${encodeURIComponent(status)}`);
+});
+
+// "Check again" — only the plan's own client or coach.
+exports.stripeRefreshSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  const subscriptionId = String((data && data.subscriptionId) || '');
+  if (!/^[A-Za-z0-9]{10,40}$/.test(subscriptionId)) throw new functions.https.HttpsError('invalid-argument', 'Bad subscription id');
+  const snap = await db.doc(`subscriptions/${subscriptionId}`).get();
+  if (!snap.exists) throw new functions.https.HttpsError('not-found', 'No such subscription');
+  const { clientId, trainerId } = snap.data();
+  if (context.auth.uid !== clientId && context.auth.uid !== trainerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Not your subscription');
+  }
+  try {
+    return await stripeSubs.completeSubscription({ ...stripeSubDeps(await readStripeKeys()), subscriptionId });
+  } catch (err) {
+    throw stripeHttpsError(err);
+  }
+});
+
+// Stripe's events for every coach's connected account (stripeWebhooks.js). 400 for a bad
+// signature, 503 when not set up, 500 to make Stripe retry, 200 once handled.
+exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') { res.status(405).send('POST only'); return; }
+  const keys = await readStripeKeys();
+  if (!keys) { res.status(503).send('Not configured'); return; }
+  if (!verifyStripeSignature(req.rawBody, req.get('Stripe-Signature'), keys.webhookSecret, Math.floor(Date.now() / 1000))) {
+    res.status(400).send('Invalid signature');
+    return;
+  }
+  let event;
+  try { event = JSON.parse(req.rawBody.toString('utf8')); } catch { res.status(400).send('Bad JSON'); return; }
+  try {
+    const { outcome } = await handleStripeWebhook({
+      db, event, keys, fetchImpl: fetch, now: () => new Date(),
+      notify: ({ userId, title, body: text }) => pushTo(userId, { title, body: text }),
+    });
+    res.status(200).send(outcome);
+  } catch (err) {
+    console.error(`[stripeWebhook] ${event && event.id} ${event && event.type} failed`, err && err.message);
+    res.status(500).send('Retry');
+  }
 });
 
 // ── A coach removing a client who has no app (B35, functions/accountDeletion.js) ──

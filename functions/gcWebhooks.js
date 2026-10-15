@@ -261,4 +261,9 @@ function webhookRoute(path) {
   return m ? { trainerId: m[1] } : { invalid: true };
 }
 
-module.exports = { webhookRoute, verifyWebhookSignature, periodEnd, rollover, processEvent, handleWebhook, SESSIONS_FORFEIT };
+// grantForPayment and subscriptionBy are shared with stripeWebhooks.js (B49): one rule for
+// "a month was paid", whichever processor collected it.
+module.exports = {
+  webhookRoute, verifyWebhookSignature, periodEnd, rollover, processEvent, handleWebhook, SESSIONS_FORFEIT,
+  grantForPayment, subscriptionBy,
+};

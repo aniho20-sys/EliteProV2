@@ -363,6 +363,7 @@ async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, no
   for (const d of snap.docs) {
     const sub = d.data();
     if (FINISHED_STATUSES.includes(sub.status)) continue;
+    if ((sub.provider || 'gocardless') !== 'gocardless') continue; // a Stripe plan: stripeSubscriptions.js
     try {
       await cancelAtGoCardless({ ref: d.ref, sub, readToken, fetchImpl, now, reason });
       result.cancelled.push(d.ref.id);
@@ -414,6 +415,9 @@ function describeError(err) {
 }
 
 exports.TIERS = TIERS;
+exports.LIVE_STATUSES = LIVE_STATUSES;
+exports.FINISHED_STATUSES = FINISHED_STATUSES;
+exports.CLAIM_TTL_MS = CLAIM_TTL_MS;
 exports.SubscriptionError = SubscriptionError;
 exports.GcApiError = GcApiError;
 exports.monthlyAmountPence = monthlyAmountPence;

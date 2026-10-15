@@ -194,6 +194,32 @@ async function deleteTrainerWebhookSecret(trainerId) {
   return deleteSecret(webhookSecretId(trainerId));
 }
 
+// ElitePro's ONE Stripe platform account (B49, reports/stripe-subscription-design.md).
+// Pasted by Ani into an owner-only form in the app (saveStripeKeys) — never typed into a
+// console, never written to Firestore. Same rules as everything above: read at call
+// time, null when absent, so a Stripe that is not set up yet can never fail a deploy (#29).
+const STRIPE_SECRET_NAMES = { secretKey: 'STRIPE_SECRET_KEY', webhookSecret: 'STRIPE_WEBHOOK_SECRET' };
+
+async function writeStripeKeys({ secretKey, webhookSecret }) {
+  await writeSecretWithRetry(STRIPE_SECRET_NAMES.secretKey, secretKey);
+  await writeSecretWithRetry(STRIPE_SECRET_NAMES.webhookSecret, webhookSecret);
+}
+
+async function readStripeKeys() {
+  try {
+    const [secretKey, webhookSecret] = await Promise.all([
+      readAppSecret(STRIPE_SECRET_NAMES.secretKey),
+      readAppSecret(STRIPE_SECRET_NAMES.webhookSecret),
+    ]);
+    return { secretKey, webhookSecret };
+  } catch (err) {
+    console.warn('[gcSecrets] Stripe keys not configured yet:', err.message);
+    return null;
+  }
+}
+
+exports.writeStripeKeys = writeStripeKeys;
+exports.readStripeKeys = readStripeKeys;
 exports.readGcWebhookSecret = readGcWebhookSecret;
 exports.writeTrainerWebhookSecret = writeTrainerWebhookSecret;
 exports.readTrainerWebhookSecret = readTrainerWebhookSecret;
