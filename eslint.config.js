@@ -61,6 +61,7 @@ const TRANSLATED_FILES = [
   'src/components/GroupClassesCard.jsx',
   'src/components/StripeConnectCard.jsx',
   'src/components/StripeKeysCard.jsx',
+  'src/pages/LandingPage.jsx',
 ]
 
 export default defineConfig([

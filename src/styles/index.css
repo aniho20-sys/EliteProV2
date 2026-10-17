@@ -5296,7 +5296,9 @@ tr:hover { background: var(--bg-card-hover); }
   width: 100%;
 }
 .lp h1, .lp h2, .lp h3 { font-family: var(--font-display); }
-.lp section { padding: 0 20px; }
+/* Sides only: `padding: 0 20px` here outranked .lp-hero / .lp-section (higher specificity)
+   and zeroed every section's top and bottom spacing. */
+.lp section { padding-left: 20px; padding-right: 20px; }
 
 .lp-bar {
   display: flex;

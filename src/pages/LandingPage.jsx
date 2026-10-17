@@ -1,47 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, X, Star } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
+import { LanguageToggle } from '../components/LanguagePicker';
 
 // The page is self-serve: every CTA goes straight to sign-up. Nobody has to message
 // anyone to get started, and the founding places are awarded by order of signup rather
 // than by application.
-const CTA_LABEL = 'Start free — no card required';
-
-const PAINS = [
-  {
-    title: 'Your programmes live in five places',
-    body: 'A plan in Notes, a spreadsheet of weights, a PDF you keep re-sending, and the rest in a WhatsApp thread you have to scroll back through mid-session.',
-  },
-  {
-    title: 'You lose track of who has sessions left',
-    body: 'You think someone has three left. They think they have five. Now you have to check your notes and have an awkward conversation about money.',
-  },
-  {
-    title: 'You find out someone quit after they have gone',
-    body: 'Nobody announces they are stopping. They just book less, then not at all — and by the time you notice, it has been a month.',
-  },
-];
-
-const SOLUTIONS = [
-  {
-    title: 'Write the plan once. They see it instantly.',
-    body: 'Build a plan from your exercise library, assign it, and it appears in your client’s app with your own coaching cues and demo videos. They log their sets against it — you see the numbers without asking.',
-    shot: '/screens/plan.png',
-    alt: 'A workout plan open in the ElitePro app',
-  },
-  {
-    title: 'Session credits count themselves.',
-    body: 'A booking takes one off the balance. Mark it complete and it stays off; cancel in time and it comes straight back. You and your client are always looking at the same number.',
-    shot: '/screens/sessions.png',
-    alt: 'Session credit balance and booking screen in the ElitePro app',
-  },
-  {
-    title: 'The dashboard tells you who to chase.',
-    body: 'Who has gone quiet, who is nearly out of sessions, who still owes you — surfaced the moment it is true, with a message button next to each one.',
-    shot: '/screens/dashboard.png',
-    alt: 'Trainer dashboard showing clients that need attention',
-  },
-];
+//
+// Every word goes through t() (B50, Ani 2026-10-17): a visitor whose phone is in Chinese
+// sees Chinese, and the English / 繁體中文 toggle in the bar switches for this visit only.
+// Product and company names, and the prices quoted from other companies' pages, are data.
 
 // Every figure below was read off each company's own pricing page on 2026-08-15. Nothing
 // here is taken from a comparison blog — the aggregators disagreed with the primary
@@ -52,59 +21,81 @@ const PRICING_SOURCES = [
   { name: 'PT Distinction', url: 'https://www.ptdistinction.com/pricing' },
 ];
 
+const VENDORS = ['ElitePro', 'Trainerize', 'TrueCoach', 'PT Distinction'];
+
+// A monthly price is { monthly: '$23' }; anything else is shown as written.
 const PRICING_ROWS = [
-  { label: 'Starting price', elite: 'Free', others: ['$23/mo', '$26.34/mo', '$19.90/mo'] },
-  { label: 'Setup / branded app fee', elite: '$0', others: ['$169 one-time', '$0', '$0'] },
-  { label: 'Extra charge to accept payments', elite: '$0', others: ['+$10/mo', '$0', '$0'] },
-  { label: 'Commission on money you collect', elite: '0%', others: ['—', '—', '—'] },
+  { label: 'landing.row_start', elite: { free: true }, others: [{ monthly: '$23' }, { monthly: '$26.34' }, { monthly: '$19.90' }] },
+  { label: 'landing.row_setup', elite: '$0', others: ['$169', '$0', '$0'] },
+  { label: 'landing.row_payments', elite: '$0', others: [{ monthly: '+$10' }, '$0', '$0'] },
+  { label: 'landing.row_commission', elite: '0%', others: ['—', '—', '—'] },
 ];
 
 function Screenshot({ src, alt }) {
+  const { t } = useLanguage();
   const [failed, setFailed] = useState(false);
   return (
     <div className="lp-shot">
       {failed
-        ? <div className="lp-shot-pending">Screenshot coming</div>
+        ? <div className="lp-shot-pending">{t('landing.screenshot_pending')}</div>
         : <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />}
     </div>
   );
 }
 
 function Cta({ block, onClick }) {
+  const { t } = useLanguage();
   return (
     <button type="button" className={`lp-cta${block ? ' lp-cta-block' : ''}`} onClick={onClick}>
-      {CTA_LABEL} <ArrowRight size={18} />
+      {t('landing.cta')} <ArrowRight size={18} />
     </button>
   );
 }
 
 export default function LandingPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const goSignUp = () => navigate('/login?signup=1');
+
+  const PAINS = [
+    { title: t('landing.pain1_title'), body: t('landing.pain1_body') },
+    { title: t('landing.pain2_title'), body: t('landing.pain2_body') },
+    { title: t('landing.pain3_title'), body: t('landing.pain3_body') },
+  ];
+  const SOLUTIONS = [
+    { title: t('landing.sol1_title'), body: t('landing.sol1_body'), shot: '/screens/plan.png', alt: t('landing.sol1_alt') },
+    { title: t('landing.sol2_title'), body: t('landing.sol2_body'), shot: '/screens/sessions.png', alt: t('landing.sol2_alt') },
+    { title: t('landing.sol3_title'), body: t('landing.sol3_body'), shot: '/screens/dashboard.png', alt: t('landing.sol3_alt') },
+  ];
+  const rowLabels = {
+    'landing.row_start': t('landing.row_start'),
+    'landing.row_setup': t('landing.row_setup'),
+    'landing.row_payments': t('landing.row_payments'),
+    'landing.row_commission': t('landing.row_commission'),
+  };
+  const cell = (v) => (v && v.free ? t('landing.free') : v && v.monthly ? t('landing.per_month', { amount: v.monthly }) : v);
 
   return (
     <div className="lp">
       <header className="lp-bar">
         <span className="lp-logo">Elite<span>Pro</span></span>
         <div className="lp-signin-wrap">
-          <span className="lp-signin-note">Already have an account?</span>
-          <button className="lp-signin" onClick={() => navigate('/login')}>Sign in</button>
+          <LanguageToggle />
+          <span className="lp-signin-note">{t('landing.have_account')}</span>
+          <button className="lp-signin" onClick={() => navigate('/login')}>{t('landing.sign_in')}</button>
         </div>
       </header>
 
       {/* 1 — Hero */}
       <section className="lp-hero">
-        <h1>Run your coaching from one app instead of six.</h1>
-        <p className="lp-lede">
-          Plans, bookings, session credits and payments for independent personal trainers.
-          Your clients get their own app. You stop keeping score in your head.
-        </p>
+        <h1>{t('landing.hero_title')}</h1>
+        <p className="lp-lede">{t('landing.hero_lede')}</p>
         <Cta onClick={goSignUp} />
       </section>
 
       {/* 2 — The problem */}
       <section className="lp-section">
-        <h2>If you coach on your own, you know all three of these</h2>
+        <h2>{t('landing.pains_title')}</h2>
         <div className="lp-pains">
           {PAINS.map(p => (
             <div key={p.title} className="lp-pain">
@@ -117,7 +108,7 @@ export default function LandingPage() {
 
       {/* 3 — What the app does about it */}
       <section className="lp-section">
-        <h2>What ElitePro does about it</h2>
+        <h2>{t('landing.solutions_title')}</h2>
         {SOLUTIONS.map((s, i) => (
           <div key={s.title} className={`lp-solution${i % 2 ? ' lp-solution-flip' : ''}`}>
             <div className="lp-solution-text">
@@ -131,76 +122,60 @@ export default function LandingPage() {
 
       {/* 4 — Price */}
       <section className="lp-section">
-        <h2>No setup fee. No cut of your income.</h2>
-        <p className="lp-section-sub">
-          Coaching software usually charges you before you have earned anything, then again
-          to switch payments on. Here is what each company says on its own pricing page.
-        </p>
+        <h2>{t('landing.price_title')}</h2>
+        <p className="lp-section-sub">{t('landing.price_sub')}</p>
         <div className="lp-table-scroll">
           <table className="lp-table">
             <thead>
               <tr>
                 <th scope="col"></th>
-                <th scope="col" className="lp-table-us">ElitePro</th>
-                <th scope="col">Trainerize</th>
-                <th scope="col">TrueCoach</th>
-                <th scope="col">PT Distinction</th>
+                {VENDORS.map((v, i) => <th key={v} scope="col" className={i === 0 ? 'lp-table-us' : undefined}>{v}</th>)}
               </tr>
             </thead>
             <tbody>
               {PRICING_ROWS.map(row => (
                 <tr key={row.label}>
-                  <th scope="row">{row.label}</th>
-                  <td className="lp-table-us">{row.elite}</td>
-                  {row.others.map((v, i) => <td key={i}>{v}</td>)}
+                  <th scope="row">{rowLabels[row.label]}</th>
+                  <td className="lp-table-us">{cell(row.elite)}</td>
+                  {row.others.map((v, i) => <td key={i}>{cell(v)}</td>)}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="lp-sources">
-          Entry plans compared at 5 clients. Checked 15 August 2026 —{' '}
+          {t('landing.sources')}{' '}
           {PRICING_SOURCES.map((s, i) => (
             <span key={s.url}>
               {i > 0 && ', '}
               <a href={s.url} target="_blank" rel="noopener noreferrer">{s.name}</a>
             </span>
-          ))}. Prices change; check before you decide.
+          ))}{t('landing.sources_sep')}{t('landing.sources_end')}
         </p>
       </section>
 
       {/* 5 — Founding members */}
       <section className="lp-founding">
-        <div className="lp-founding-badge"><Star size={13} /> Founding members</div>
-        <h2>First five trainers. Three months free.</h2>
-        <p>
-          The first five trainers to create an account get the founding rate automatically —
-          there is nothing to apply for and nobody to convince. I want five people using
-          ElitePro with real clients and telling me what is wrong with it, and the things
-          they ask for get built first.
-        </p>
+        <div className="lp-founding-badge"><Star size={13} /> {t('landing.founding_badge')}</div>
+        <h2>{t('landing.founding_title')}</h2>
+        <p>{t('landing.founding_body')}</p>
         <ul className="lp-founding-list">
-          <li><Check size={16} /> Three months free, applied the moment you sign up</li>
-          <li><Check size={16} /> No application, no waiting list, no interview</li>
-          <li><Check size={16} /> No setup fee and no commission, then or later</li>
-          <li><X size={16} /> Not for you if you do not want to be asked for feedback</li>
+          <li><Check size={16} /> {t('landing.founding_1')}</li>
+          <li><Check size={16} /> {t('landing.founding_2')}</li>
+          <li><Check size={16} /> {t('landing.founding_3')}</li>
+          <li><X size={16} /> {t('landing.founding_4')}</li>
         </ul>
       </section>
 
       {/* 6 — Close */}
       <section className="lp-close">
-        <h2>Want one of the five?</h2>
+        <h2>{t('landing.close_title')}</h2>
         <Cta block onClick={goSignUp} />
-        <p className="lp-cta-sub">Takes a minute. You can add your first client straight away.</p>
-        <p className="lp-note">
-          I am a personal trainer. I built ElitePro because I was running my own clients out
-          of a notes app and a spreadsheet, and I could never answer &ldquo;how many sessions
-          do I have left?&rdquo; without going to check. It is the tool I use for my own
-          coaching — which is why it does the unglamorous parts properly.
-        </p>
+        <p className="lp-cta-sub">{t('landing.cta_sub')}</p>
+        <p className="lp-note">{t('landing.note')}</p>
         <footer className="lp-foot">
-          <button onClick={() => navigate('/privacy')}>Privacy</button>
-          <button onClick={() => navigate('/terms')}>Terms</button>
+          <button onClick={() => navigate('/privacy')}>{t('landing.privacy')}</button>
+          <button onClick={() => navigate('/terms')}>{t('landing.terms')}</button>
         </footer>
       </section>
     </div>
