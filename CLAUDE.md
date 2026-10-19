@@ -147,6 +147,12 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # per-visitor/per-coach daily budgets by hashed IP), respondTrialRequest (confirm = no-app client +
 │                              # trial session; decline = delete), cleanupTrialRequests (daily)
 ├── bookingPreview.js          # bookingPreview (public onRequest, firebase.json rewrite /book/**): link-preview page naming the coach, forwards to /#/book/<slug>
+├── stripeApi.js / stripeConnect.js / stripeSubscriptions.js / stripeWebhooks.js
+│                              # B49 Stripe monthly plans: each coach's OWN account (direct charges); owner-only
+│                              # stripeSaveKeys → Secret Manager; same tiers/roll-over/grant as GoCardless
+│                              # (grantForPayment shared); design reports/stripe-subscription-design.md
+├── sessionReminders.js        # B51 sendSessionReminders (hourly): push the client the evening before (from 19:00
+│                              # in the coach's zone) and ~2h before; once each via sessionReminders/{id}_{kind}
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
 ├── gcOAuthNonce.js            # CSRF nonce lifecycle for the OAuth flow: createNonce/consumeNonce/
 │                              # releaseNonce/finalizeNonce (claim → release-on-failure → finalize-on-success)

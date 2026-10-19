@@ -33,6 +33,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'paymentConnections', COACH), { trainerId: COACH, stripe: { accountId: 'acct_A', status: 'onboarding' } });
     await setDoc(doc(db, 'stripeEvents', 'evt_1'), { outcome: 'granted' });
     await setDoc(doc(db, 'gcEvents', 'EV1'), { outcome: 'granted' });
+    await setDoc(doc(db, 'sessionReminders', 's1_soon'), { kind: 'soon' });
   });
 });
 
@@ -44,6 +45,9 @@ describe('processed webhook events are server-only', () => {
     await assertFails(setDoc(doc(as(uid), 'stripeEvents', 'evt_2'), { outcome: 'x' }));
     await assertFails(getDoc(doc(as(uid), 'gcEvents', 'EV1')));
     await assertFails(setDoc(doc(as(uid), 'gcEvents', 'EV2'), { outcome: 'x' }));
+    // B51: reminder markers — a client writing one would silence their own reminders.
+    await assertFails(getDoc(doc(as(uid), 'sessionReminders', 's1_soon')));
+    await assertFails(setDoc(doc(as(uid), 'sessionReminders', 's2_soon'), { kind: 'soon' }));
   });
 });
 

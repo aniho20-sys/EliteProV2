@@ -25,6 +25,7 @@ const { verifyStripeSignature, keyEnvironment } = require('./stripeApi');
 const stripeConnect = require('./stripeConnect');
 const stripeSubs = require('./stripeSubscriptions');
 const { handleStripeWebhook } = require('./stripeWebhooks');
+const { sendSessionReminders } = require('./sessionReminders');
 const bookingPreview = require('./bookingPreview');
 
 initializeApp();
@@ -998,6 +999,20 @@ exports.gcWebhook = functions.https.onRequest(async (req, res) => {
   });
   res.status(failed ? 500 : 200).send(failed ? 'Retry' : 'OK');
 });
+
+// ─── Reminders before a session (B51, functions/sessionReminders.js) ───
+// Hourly: the evening before (from 19:00 in the coach's zone) and about two hours before.
+// Each reminder is claimed with a marker before it is sent, so it goes once at most.
+exports.sendSessionReminders = functions.pubsub
+  .schedule('every 60 minutes')
+  .onRun(async () => {
+    const { sent } = await sendSessionReminders({
+      db, now: () => new Date(),
+      notify: ({ userId, tokens, title, body }) => sendPush(userId, tokens, { title, body }, { url: '/#/schedule' }).catch(() => {}),
+    });
+    console.log(`[sendSessionReminders] sent ${sent}`);
+    return null;
+  });
 
 // ─── Stripe (B49, reports/stripe-subscription-design.md) ───
 // One processor for every country: each coach takes plans on their OWN Stripe account

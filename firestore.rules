@@ -228,6 +228,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Reminders already sent before a session (functions/sessionReminders.js, B51). Server-only.
+    match /sessionReminders/{reminderId} {
+      allow read, write: if false;
+    }
+
     // ── Public booking page (B38, functions/publicBooking.js) ──
     // A stranger's trial request: written only by requestTrialSession, answered (and
     // deleted) only by respondTrialRequest. The coach it was sent to can read it.
