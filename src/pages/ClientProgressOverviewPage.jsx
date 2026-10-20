@@ -249,8 +249,8 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
         </div>
         {prCount > 0 && (
           <div className="client-progress-activity-item">
-            <Trophy size={13} style={{ color: 'var(--warning)', flexShrink: 0 }} />
-            <span className="text-sm" style={{ fontWeight: 600, color: 'var(--warning)' }}>
+            <Trophy size={13} style={{ color: 'var(--warning-dark)', flexShrink: 0 }} />
+            <span className="text-sm" style={{ fontWeight: 600, color: 'var(--warning-dark)' }}>
               {t('prog.new_prs', { count: prCount })}
             </span>
             {bestGain && (

@@ -62,7 +62,7 @@ export default function TrainerApplicationPage() {
       {/* Pricing info banner */}
       <div className="card" style={{ padding: '12px 16px', marginBottom: 24, background: 'var(--primary-glow)', border: '1px solid var(--primary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <FileBadge size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+          <FileBadge size={18} style={{ color: 'var(--primary-text)', flexShrink: 0 }} />
           <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
             <strong>gym啦 Sprint 1</strong> — Free for approved trainers during beta
           </span>
@@ -74,7 +74,7 @@ export default function TrainerApplicationPage() {
         <>
           {existing.status === 'pending' && (
             <div className="gymla-status-banner pending" style={{ marginBottom: 20 }}>
-              <Clock size={22} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+              <Clock size={22} style={{ color: 'var(--warning-dark)', flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 600 }}>Application Under Review</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -85,7 +85,7 @@ export default function TrainerApplicationPage() {
           )}
           {existing.status === 'approved' && (
             <div className="gymla-status-banner approved" style={{ marginBottom: 20 }}>
-              <CheckCircle size={22} style={{ color: 'var(--success)', flexShrink: 0 }} />
+              <CheckCircle size={22} style={{ color: 'var(--success-text)', flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600 }}>Approved!</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -102,7 +102,7 @@ export default function TrainerApplicationPage() {
           )}
           {existing.status === 'rejected' && (
             <div className="gymla-status-banner rejected" style={{ marginBottom: 20 }}>
-              <XCircle size={22} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+              <XCircle size={22} style={{ color: 'var(--danger-text)', flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600 }}>Application Rejected</div>
                 {existing.reviewNote && (

@@ -135,7 +135,7 @@ export default function BusinessAnalyticsPage() {
       {/* Summary Stats */}
       <div className="stat-strip mb-16">
         <div className="stat-pill">
-          <DollarSign size={15} style={{ color: 'var(--success)' }} />
+          <DollarSign size={15} style={{ color: 'var(--success-text)' }} />
           <div className="stat-pill-value">
             {revenueReady ? formatCurrency(paidThisMonth, currency) : <SkeletonLine width="70%" />}
           </div>
@@ -149,12 +149,12 @@ export default function BusinessAnalyticsPage() {
           <div className="stat-pill-label">{t('analytics.revenue_ytd')}</div>
         </div>
         <div className="stat-pill">
-          <Users size={15} style={{ color: 'var(--accent)' }} />
+          <Users size={15} style={{ color: 'var(--accent-text)' }} />
           <div className="stat-pill-value">{retentionRate}%</div>
           <div className="stat-pill-label">{t('analytics.retention_30')}</div>
         </div>
         <div className="stat-pill">
-          <Calendar size={15} style={{ color: 'var(--warning)' }} />
+          <Calendar size={15} style={{ color: 'var(--warning-dark)' }} />
           <div className="stat-pill-value">{schedule.filter(s => s.status === 'completed').length}</div>
           <div className="stat-pill-label">{t('analytics.sessions_done')}</div>
         </div>
@@ -256,7 +256,7 @@ export default function BusinessAnalyticsPage() {
           )}
           {totalUnpaid > 0 && (
             <div className="analytics-unpaid-banner">
-              <span className="text-sm" style={{ color: 'var(--warning)' }}>{t('analytics.unpaid', { amount: formatCurrency(totalUnpaid, currency) })}</span>
+              <span className="text-sm" style={{ color: 'var(--warning-dark)' }}>{t('analytics.unpaid', { amount: formatCurrency(totalUnpaid, currency) })}</span>
             </div>
           )}
         </div>

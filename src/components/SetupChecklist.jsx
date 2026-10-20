@@ -61,7 +61,7 @@ export default function SetupChecklist() {
           <Link key={step.key} to={step.to} state={step.state}
             className={`onboarding-step${step.done ? ' onboarding-step-done' : ''}`}>
             {step.done
-              ? <CheckCircle2 size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-label={t('tdash.step_done')} />
+              ? <CheckCircle2 size={18} style={{ color: 'var(--accent-text)', flexShrink: 0 }} aria-label={t('tdash.step_done')} />
               : <Circle size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
             <span>{label[step.key]}</span>
           </Link>

@@ -118,7 +118,7 @@ export default function PlatformStatsCard() {
               <div className="stat-pill-label">{t('pstats.signups')}</div>
             </div>
             <div className="stat-pill">
-              <Star size={15} style={{ color: 'var(--warning)' }} />
+              <Star size={15} style={{ color: 'var(--warning-dark)' }} />
               <div className="stat-pill-value">{stats.foundingRemaining}</div>
               <div className="stat-pill-label">{t('pstats.founding_left')}</div>
             </div>
@@ -246,9 +246,9 @@ export default function PlatformStatsCard() {
                 <span className="platform-signup-body">
                   <span className="platform-signup-name">{r.email}</span>
                   {r.failed ? (
-                    <span className="platform-signup-meta" style={{ color: 'var(--danger)' }}>{r.failed}</span>
+                    <span className="platform-signup-meta" style={{ color: 'var(--danger-text)' }}>{r.failed}</span>
                   ) : !r.exists ? (
-                    <span className="platform-signup-meta" style={{ color: 'var(--danger)' }}>
+                    <span className="platform-signup-meta" style={{ color: 'var(--danger-text)' }}>
                       {t('pstats.no_account')}
                     </span>
                   ) : (
@@ -299,7 +299,7 @@ export default function PlatformStatsCard() {
                 )}
               </>
             ) : cleanup?.failed ? (
-              <p className="mp-scan-note" style={{ color: 'var(--danger)' }}>
+              <p className="mp-scan-note" style={{ color: 'var(--danger-text)' }}>
                 {cleanup.message || t('pstats.list_failed')}
               </p>
             ) : !cleanup ? (
@@ -341,7 +341,7 @@ export default function PlatformStatsCard() {
                   </div>
                 ) : (
                   <>
-                    <p className="mp-scan-note" style={{ color: 'var(--danger)', display: 'flex', gap: 6 }}>
+                    <p className="mp-scan-note" style={{ color: 'var(--danger-text)', display: 'flex', gap: 6 }}>
                       <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
                       {t('pstats.delete_warning')}
                     </p>

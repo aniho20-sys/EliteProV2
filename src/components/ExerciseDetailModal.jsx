@@ -29,7 +29,7 @@ export default function ExerciseDetailModal({ exercise, onClose, onEdit, onDelet
           <div className="ex-detail-trainer-actions">
             {onEdit && <button className="btn btn-sm btn-outline" onClick={() => onEdit(exercise)}><Pencil size={13} /> {t('exdetail.edit')}</button>}
             {onMerge && <button className="btn btn-sm btn-outline" onClick={() => onMerge(exercise)}><GitMerge size={13} /> {t('exdetail.merge_into')}</button>}
-            {onDelete && <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)' }} onClick={() => onDelete(exercise)}><Trash2 size={13} /> {t('exdetail.delete')}</button>}
+            {onDelete && <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger-text)' }} onClick={() => onDelete(exercise)}><Trash2 size={13} /> {t('exdetail.delete')}</button>}
           </div>
         )}
 

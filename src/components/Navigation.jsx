@@ -166,14 +166,14 @@ export default function Navigation() {
         <div className="mobile-header-inner">
           <span className="mobile-header-logo">Elite<span>Pro</span></span>
           <div className="mobile-header-actions">
-            <button className="btn-icon" onClick={toggleTheme}>
+            <button className="btn-icon" onClick={toggleTheme} aria-label={theme === 'light' ? t('nav.dark_mode') : t('nav.light_mode')}>
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
-            <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
+            <button className="btn-icon" onClick={() => setMobileSearchOpen(!mobileSearchOpen)} aria-label={t('nav.search')} aria-expanded={mobileSearchOpen}>
               <Search size={20} />
             </button>
             <NotificationCenter />
-            <NavLink to="/profile" className="btn-icon" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <NavLink to="/profile" className="btn-icon" style={{ textDecoration: 'none', color: 'inherit' }} aria-label={t('nav.profile')}>
               <UserCircle size={22} />
             </NavLink>
           </div>

@@ -18,10 +18,10 @@ function relativeTime(ts) {
 }
 
 const TYPE_META = {
-  message:       { icon: MessageSquare, color: 'var(--primary)' },
-  session:       { icon: Calendar,      color: 'var(--accent)'  },
+  message:       { icon: MessageSquare, color: 'var(--primary-text)' },
+  session:       { icon: Calendar,      color: 'var(--accent-text)'  },
   workout_log:   { icon: Dumbbell,      color: '#22c55e'        },
-  plan:          { icon: ClipboardList, color: 'var(--accent)'  },
+  plan:          { icon: ClipboardList, color: 'var(--accent-text)'  },
   session_done:  { icon: CheckCircle,   color: '#22c55e'        },
 };
 

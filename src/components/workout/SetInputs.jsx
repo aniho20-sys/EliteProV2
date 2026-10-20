@@ -23,9 +23,9 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
         <span className="log-set-num">Set {setIdx + 1}</span>
         {unit === 'weight_reps' && (<>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('weight', -2.5)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('weight', -2.5)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'kg' })}>−</button>
             <input
-              className="form-input log-set-input" type="number" placeholder="kg"
+              className="form-input log-set-input" type="number" placeholder="kg" aria-label="kg"
               inputMode="decimal" enterKeyHint="next"
               value={set.weight ?? ''}
               onChange={e => onUpdate('weight', e.target.value)}
@@ -33,65 +33,65 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
               onBlur={() => setWeightFocused(false)}
               onKeyDown={e => e.key === 'Enter' && repsRef.current?.focus()}
             />
-            <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'kg' })}>+</button>
           </div>
           <span className="text-sm text-muted">×</span>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('reps', -1, 1)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('reps', -1, 1)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'reps' })}>−</button>
             <input
               ref={repsRef}
-              className="form-input log-set-input" type="number" placeholder="reps"
+              className="form-input log-set-input" type="number" placeholder="reps" aria-label="reps"
               inputMode="numeric" enterKeyHint="done"
               value={set.reps ?? ''} onChange={e => onUpdate('reps', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && onComplete?.()}
             />
-            <button className="log-stepper" onClick={() => step('reps', 1)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('reps', 1)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'reps' })}>+</button>
           </div>
         </>)}
         {unit === 'reps_only' && (<>
           <span className="text-sm text-muted">×</span>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('reps', -1, 1)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('reps', -1, 1)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'reps' })}>−</button>
             <input
-              className="form-input log-set-input" type="number" placeholder="reps"
+              className="form-input log-set-input" type="number" placeholder="reps" aria-label="reps"
               inputMode="numeric" enterKeyHint="done"
               value={set.reps ?? ''} onChange={e => onUpdate('reps', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && onComplete?.()}
             />
-            <button className="log-stepper" onClick={() => step('reps', 1)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('reps', 1)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'reps' })}>+</button>
           </div>
         </>)}
         {unit === 'time' && (<>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('seconds', -5, 0)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('seconds', -5, 0)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'sec' })}>−</button>
             <input
-              className="form-input log-set-input" type="number" placeholder="sec"
+              className="form-input log-set-input" type="number" placeholder="sec" aria-label="sec"
               inputMode="numeric" enterKeyHint="done"
               value={set.seconds ?? ''} onChange={e => onUpdate('seconds', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && onComplete?.()}
             />
-            <button className="log-stepper" onClick={() => step('seconds', 5)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('seconds', 5)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'sec' })}>+</button>
           </div>
           <span className="text-sm text-muted">s</span>
         </>)}
         {unit === 'distance' && (<>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('metres', -10, 0)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('metres', -10, 0)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'm' })}>−</button>
             <input
-              className="form-input log-set-input" type="number" placeholder="m"
+              className="form-input log-set-input" type="number" placeholder="m" aria-label="m"
               inputMode="numeric" enterKeyHint="done"
               value={set.metres ?? ''} onChange={e => onUpdate('metres', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && onComplete?.()}
             />
-            <button className="log-stepper" onClick={() => step('metres', 10)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('metres', 10)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'm' })}>+</button>
           </div>
           <span className="text-sm text-muted">m</span>
         </>)}
         {unit === 'weight_distance' && (<>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('weight', -2.5)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('weight', -2.5)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'kg' })}>−</button>
             <input
-              className="form-input log-set-input" type="number" placeholder="kg"
+              className="form-input log-set-input" type="number" placeholder="kg" aria-label="kg"
               inputMode="decimal" enterKeyHint="next"
               value={set.weight ?? ''}
               onChange={e => onUpdate('weight', e.target.value)}
@@ -99,19 +99,19 @@ export default function SetInputs({ set, setIdx, unit = 'weight_reps', onUpdate,
               onBlur={() => setWeightFocused(false)}
               onKeyDown={e => e.key === 'Enter' && distRef.current?.focus()}
             />
-            <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('weight', 2.5)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'kg' })}>+</button>
           </div>
           <span className="text-sm text-muted">×</span>
           <div className="log-field-group">
-            <button className="log-stepper" onClick={() => step('metres', -10, 0)} tabIndex={-1}>−</button>
+            <button className="log-stepper" onClick={() => step('metres', -10, 0)} tabIndex={-1} aria-label={t('setinputs.decrease', { what: 'm' })}>−</button>
             <input
               ref={distRef}
-              className="form-input log-set-input" type="number" placeholder="m"
+              className="form-input log-set-input" type="number" placeholder="m" aria-label="m"
               inputMode="numeric" enterKeyHint="done"
               value={set.metres ?? ''} onChange={e => onUpdate('metres', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && onComplete?.()}
             />
-            <button className="log-stepper" onClick={() => step('metres', 10)} tabIndex={-1}>+</button>
+            <button className="log-stepper" onClick={() => step('metres', 10)} tabIndex={-1} aria-label={t('setinputs.increase', { what: 'm' })}>+</button>
           </div>
           <span className="text-sm text-muted">m</span>
         </>)}

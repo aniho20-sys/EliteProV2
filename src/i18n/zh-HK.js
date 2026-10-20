@@ -316,6 +316,7 @@ const zhHK = {
   'nav.my_plans': '我的計劃',
   'nav.exercise_library': '動作庫',
   'nav.profile': '個人檔案',
+  'nav.search': '搜尋',
   'nav.more': '更多',
   'nav.dark_mode': '深色模式',
   'nav.light_mode': '淺色模式',
@@ -893,6 +894,8 @@ const zhHK = {
   // ── 組數輸入 ──
   'setinputs.mark_done': '標記此組完成',
   'setinputs.remove_set': '刪除此組',
+  'setinputs.decrease': '減少 {what}',
+  'setinputs.increase': '增加 {what}',
 
   // ── 訓練完成 ──
   'wcomplete.title': '訓練完成',

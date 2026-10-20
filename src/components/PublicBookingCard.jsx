@@ -63,7 +63,7 @@ export default function PublicBookingCard() {
   return (
     <div className="card mb-16">
       <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <CalendarPlus size={18} style={{ color: 'var(--accent)' }} /> {t('pbook.title')}
+        <CalendarPlus size={18} style={{ color: 'var(--accent-text)' }} /> {t('pbook.title')}
       </h3>
       <p className="invite-desc">{t('pbook.desc')}</p>
 

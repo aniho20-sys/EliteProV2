@@ -328,6 +328,19 @@ describe('out of the way, and one price is enough', () => {
     expect(screen.queryByText(/moves to|After that, renewal is/)).toBeNull();
   });
 
+  test('the package card says "N sessions left" around the number — one and many (B52)', () => {
+    const show = (remaining) => renderAt('/', <Route path="/" element={<ClientDashboard />} />, base({
+      currentUser: { ...CLIENT, intakeCompleted: true }, coach: READY_COACH,
+      getSessionStats: () => ({ used: 10 - remaining, total: 10, remaining }),
+    }));
+    show(7);
+    expect(screen.getByText('sessions left')).toBeTruthy();
+    expect(screen.queryByText(/⟦/)).toBeNull();
+    cleanup();
+    show(1);
+    expect(screen.getByText('session left')).toBeTruthy();
+  });
+
   test('the monthly plan says what happens to unused sessions', async () => {
     const coach = { ...READY_COACH, subscriptionRate: 50 };
     renderAt('/profile', <Route path="/profile" element={<SubscriptionCard />} />, base({

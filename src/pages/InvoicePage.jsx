@@ -293,19 +293,19 @@ export default function InvoicePage() {
       {/* Summary */}
       <div className="stat-strip mb-16">
         <div className="stat-pill">
-          <Clock size={15} style={{ color: 'var(--warning)' }} />
+          <Clock size={15} style={{ color: 'var(--warning-dark)' }} />
           <div className="stat-pill-value">
             {invoices[0]?.currency || 'HKD'} {unpaidTotal.toFixed(0)}
           </div>
           <div className="stat-pill-label">{t('inv.unpaid')}</div>
         </div>
         <div className="stat-pill">
-          <AlertCircle size={15} style={{ color: 'var(--danger)' }} />
+          <AlertCircle size={15} style={{ color: 'var(--danger-text)' }} />
           <div className="stat-pill-value">{overdueCount}</div>
           <div className="stat-pill-label">{t('inv.overdue')}</div>
         </div>
         <div className="stat-pill">
-          <CheckCircle size={15} style={{ color: 'var(--success)' }} />
+          <CheckCircle size={15} style={{ color: 'var(--success-text)' }} />
           <div className="stat-pill-value">
             {invoices[0]?.currency || 'HKD'} {paidThisMonth.toFixed(0)}
           </div>
@@ -373,7 +373,7 @@ export default function InvoicePage() {
                   )}
                   <button
                     className="btn btn-sm btn-outline"
-                    style={{ color: 'var(--danger)', borderColor: 'var(--danger)', marginLeft: 'auto' }}
+                    style={{ color: 'var(--danger-text)', borderColor: 'var(--danger)', marginLeft: 'auto' }}
                     onClick={() => handleDelete(inv)}
                     disabled={deleting === inv.id}
                   >
@@ -443,7 +443,7 @@ export default function InvoicePage() {
                       onChange={e => setItem(idx, 'unitPrice', e.target.value)}
                     />
                     {form.items.length > 1 && (
-                      <button type="button" className="btn-icon" aria-label={t('inv.remove_item')} style={{ color: 'var(--danger)' }}
+                      <button type="button" className="btn-icon" aria-label={t('inv.remove_item')} style={{ color: 'var(--danger-text)' }}
                         onClick={() => setForm(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }))}>
                         <Trash2 size={14} />
                       </button>

@@ -57,7 +57,7 @@ export default function TrialRequestsCard() {
   return (
     <div className="card mb-16">
       <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <CalendarPlus size={18} style={{ color: 'var(--accent)' }} />
+        <CalendarPlus size={18} style={{ color: 'var(--accent-text)' }} />
         {t('trial.title')}
         <span className="needs-attention-count">{requests.length}</span>
       </h3>
@@ -71,7 +71,7 @@ export default function TrialRequestsCard() {
               <span className="trial-request-when">{when(r)}</span>
             </div>
             {r.groupClassId && (
-              <div className="text-sm" style={{ color: 'var(--accent)' }}>
+              <div className="text-sm" style={{ color: 'var(--accent-text)' }}>
                 {r.classTitle ? t('trial.group_class_named', { title: r.classTitle }) : t('trial.group_class')}
               </div>
             )}

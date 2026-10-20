@@ -30,9 +30,9 @@ function InstallAppCard() {
   if (isStandalone()) {
     return (
       <div className="card mb-16 install-app-card install-app-done">
-        <Smartphone size={18} style={{ color: 'var(--success)' }} />
+        <Smartphone size={18} style={{ color: 'var(--success-text)' }} />
         <div>
-          <div className="fw-bold" style={{ color: 'var(--success)' }}>{t('profile.app_installed')}</div>
+          <div className="fw-bold" style={{ color: 'var(--success-text)' }}>{t('profile.app_installed')}</div>
           <div className="text-sm text-muted">{t('profile.app_installed_desc')}</div>
         </div>
       </div>
@@ -562,7 +562,7 @@ export default function ProfilePage() {
             </ul>
           )}
           {wrongCurrency && (
-            <p className="text-sm mt-8" style={{ color: 'var(--danger)' }}>{t('sub.gbp_only')}</p>
+            <p className="text-sm mt-8" style={{ color: 'var(--danger-text)' }}>{t('sub.gbp_only')}</p>
           )}
         </div>
         <button className="btn btn-primary mb-16" onClick={handleSaveSubscriptionRate} disabled={subRateSaving} style={{ width: '100%' }}>
@@ -852,7 +852,7 @@ export default function ProfilePage() {
                 <span className="tag tag-primary" style={{ textTransform: 'capitalize' }}>{gcConnection.environment}</span>
               </div>
               {gcConnection.mode === 'direct' && gcConnection.verificationStatus && gcConnection.verificationStatus !== 'successful' && (
-                <p className="text-sm mb-8" style={{ color: 'var(--warning)' }}>{t('profile.gc_direct_unverified')}</p>
+                <p className="text-sm mb-8" style={{ color: 'var(--warning-dark)' }}>{t('profile.gc_direct_unverified')}</p>
               )}
               <p className="text-sm text-muted mb-12">
                 {t('profile.connected_on', { date: gcConnection.connectedAt
@@ -987,7 +987,7 @@ export default function ProfilePage() {
             </>
           ) : (
             <div className="flex gap-8" style={{ alignItems: 'flex-start' }}>
-              <ClipboardList size={18} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: 2 }} />
+              <ClipboardList size={18} style={{ color: 'var(--primary-text)', flexShrink: 0, marginTop: 2 }} />
               <div>
                 <div className="fw-bold" style={{ marginBottom: 2 }}>{t('profile.complete_training_title')}</div>
                 <p className="text-sm text-muted" style={{ marginBottom: 12 }}>{t('profile.complete_training_desc')}</p>
@@ -1044,8 +1044,8 @@ export default function ProfilePage() {
         ) : notifPermission === 'denied' ? (
           <div>
             <div className="flex gap-8 mb-8" style={{ alignItems: 'center' }}>
-              <BellOff size={16} style={{ color: 'var(--danger)' }} />
-              <span className="text-sm" style={{ color: 'var(--danger)' }}>{t('profile.notif_blocked')}</span>
+              <BellOff size={16} style={{ color: 'var(--danger-text)' }} />
+              <span className="text-sm" style={{ color: 'var(--danger-text)' }}>{t('profile.notif_blocked')}</span>
             </div>
             <p className="text-sm text-muted">{t('profile.notif_blocked_desc')}</p>
           </div>
@@ -1107,7 +1107,7 @@ export default function ProfilePage() {
       {showGcDisconnectConfirm && (
         <div className="modal-overlay" onClick={() => !gcDisconnecting && setShowGcDisconnectConfirm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title" style={{ color: 'var(--danger)' }}>
+            <h3 className="modal-title" style={{ color: 'var(--danger-text)' }}>
               <AlertTriangle size={20} style={{ verticalAlign: 'middle', marginRight: 6 }} />
               {t('profile.gc_disconnect_title')}
             </h3>

@@ -468,7 +468,7 @@ export default function SchedulePage() {
                   <div className="schedule-item-bottom">
                     <span className="tag">{t('sched.unavailable')}</span>
                     {/* A group class's hour is freed only by cancelling the class (Profile → Group classes), which also tells the people booked — deleting it here would leave them booked into nothing (B52). */}
-                    {!s.groupClassId && <button className="btn-icon" aria-label={t('sched.remove_block_aria')} onClick={() => setDeleteModal({ id: s.id, isBlocked: true })} title={t('sched.remove_block_aria')} style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>}
+                    {!s.groupClassId && <button className="btn-icon" aria-label={t('sched.remove_block_aria')} onClick={() => setDeleteModal({ id: s.id, isBlocked: true })} title={t('sched.remove_block_aria')} style={{ color: 'var(--danger-text)' }}><Trash2 size={15} /></button>}
                   </div>
                 </div>
               );
@@ -497,12 +497,12 @@ export default function SchedulePage() {
                   <div className="flex gap-8">
                     {isTrainer && s.status === 'pending' && (
                       <>
-                        <button className="btn-icon" aria-label={t('sched.confirm_aria')} onClick={() => updateStatus(s.id, 'confirmed')} title={t('sched.confirm')} disabled={updatingStatus === s.id}><Check size={16} style={{ color: 'var(--accent)' }} /></button>
-                        <button className="btn-icon" aria-label={t('sched.cancel_session_aria')} onClick={() => updateStatus(s.id, 'cancelled')} title={t('common.cancel')} disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger)' }} /></button>
+                        <button className="btn-icon" aria-label={t('sched.confirm_aria')} onClick={() => updateStatus(s.id, 'confirmed')} title={t('sched.confirm')} disabled={updatingStatus === s.id}><Check size={16} style={{ color: 'var(--accent-text)' }} /></button>
+                        <button className="btn-icon" aria-label={t('sched.cancel_session_aria')} onClick={() => updateStatus(s.id, 'cancelled')} title={t('common.cancel')} disabled={updatingStatus === s.id}><X size={16} style={{ color: 'var(--danger-text)' }} /></button>
                       </>
                     )}
                     {isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
-                      <button className="btn-icon" aria-label={t('sched.mark_complete_aria')} onClick={() => openRecap(s)} title={t('sched.mark_as_complete')}><CheckCircle size={16} style={{ color: 'var(--accent)' }} /></button>
+                      <button className="btn-icon" aria-label={t('sched.mark_complete_aria')} onClick={() => openRecap(s)} title={t('sched.mark_as_complete')}><CheckCircle size={16} style={{ color: 'var(--accent-text)' }} /></button>
                     )}
                     {isTrainer && s.status === 'completed' && (
                       <button
@@ -515,9 +515,9 @@ export default function SchedulePage() {
                       </button>
                     )}
                     {!isTrainer && (s.status === 'pending' || s.status === 'confirmed') && (
-                      <button className="btn btn-sm btn-outline" onClick={() => handleClientCancel(s)} disabled={updatingStatus === s.id} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>{t('common.cancel')}</button>
+                      <button className="btn btn-sm btn-outline" onClick={() => handleClientCancel(s)} disabled={updatingStatus === s.id} style={{ color: 'var(--danger-text)', borderColor: 'var(--danger)' }}>{t('common.cancel')}</button>
                     )}
-                    <button className="btn-icon" aria-label={t('sched.delete_session_aria')} onClick={() => setDeleteModal({ id: s.id, isBlocked: false })} title={t('sched.delete_session_aria')} style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                    <button className="btn-icon" aria-label={t('sched.delete_session_aria')} onClick={() => setDeleteModal({ id: s.id, isBlocked: false })} title={t('sched.delete_session_aria')} style={{ color: 'var(--danger-text)' }}><Trash2 size={15} /></button>
                   </div>
                 </div>
               </div>

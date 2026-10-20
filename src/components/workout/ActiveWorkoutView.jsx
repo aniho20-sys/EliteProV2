@@ -225,7 +225,7 @@ export default function ActiveWorkoutView({
             <div className="log-card-header">
               <div className="log-card-title">
                 <h3 className="card-title">
-                  {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
+                  {gotNewPR && <Trophy size={16} style={{ color: 'var(--warning-dark)', marginRight: 6, verticalAlign: -2 }} />}
                   {getExerciseName(entry.exerciseId, entry.name)}
                   {exercise && (
                     <button className="ex-info-btn" onClick={() => setSwapExIdx({ type: 'detail', exercise })} title={t('awork.exercise_details')}>
@@ -235,12 +235,12 @@ export default function ActiveWorkoutView({
                   <button className="ex-info-btn" onClick={() => setSwapExIdx(exIdx)} title={t('awork.swap_exercise')}>
                     <ArrowLeftRight size={14} />
                   </button>
-                  <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title={t('wlog.remove_exercise')} style={{ color: 'var(--danger)' }}>
+                  <button className="ex-info-btn" onClick={() => removeExercise(exIdx)} title={t('wlog.remove_exercise')} style={{ color: 'var(--danger-text)' }}>
                     <X size={14} />
                   </button>
                 </h3>
                 <div className="log-card-tags">
-                  {currentPR && <span className="text-sm" style={{ color: 'var(--warning)' }}>{t('awork.pr_prefix')} {currentPR.weight}kg</span>}
+                  {currentPR && <span className="text-sm" style={{ color: 'var(--warning-dark)' }}>{t('awork.pr_prefix')} {currentPR.weight}kg</span>}
                   {planEx && <span className="text-sm text-muted">{(() => {
                     const sets = normalizeSets(planEx);
                     const reps = sets.map(s => s.reps);

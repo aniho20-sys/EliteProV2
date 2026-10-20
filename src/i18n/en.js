@@ -208,6 +208,7 @@ const en = {
   'nav.my_progress': 'My Progress',
   'nav.my_plans': 'My Plans',
   'nav.profile': 'Profile',
+  'nav.search': 'Search',
   'nav.studios': 'Studios',
   'nav.book_studio': 'Book Studio',
   'nav.more': 'More',
@@ -877,6 +878,8 @@ const en = {
   // ── Set input row (client workout log) ──
   'setinputs.mark_done': 'Mark set done',
   'setinputs.remove_set': 'Remove set',
+  'setinputs.decrease': 'Decrease {what}',
+  'setinputs.increase': 'Increase {what}',
   // ── Workout complete screen ──
   'wcomplete.title': 'Workout Complete',
   'wcomplete.volume_kg': 'Volume (kg)',

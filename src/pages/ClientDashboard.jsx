@@ -99,7 +99,7 @@ export default function ClientDashboard() {
       {/* Compact stat strip */}
       <div className="stat-strip mb-16">
         <Link to="/log" className="stat-pill">
-          <Flame size={15} style={{ color: 'var(--accent)' }} />
+          <Flame size={15} style={{ color: 'var(--accent-text)' }} />
           <div className="stat-pill-value">{thisWeekCount}</div>
           <div className="stat-pill-label">{t('dash.stat_this_week')}</div>
         </Link>
@@ -109,12 +109,12 @@ export default function ClientDashboard() {
           <div className="stat-pill-label">{t('dash.stat_total')}</div>
         </Link>
         <Link to="/progress" className="stat-pill">
-          <Scale size={15} style={{ color: 'var(--danger)' }} />
+          <Scale size={15} style={{ color: 'var(--danger-text)' }} />
           <div className="stat-pill-value">{latestStat ? `${latestStat.weight}kg` : '--'}</div>
           <div className="stat-pill-label">{t('common.weight')}</div>
         </Link>
         <Link to="/progress" className="stat-pill">
-          <Trophy size={15} style={{ color: 'var(--warning)' }} />
+          <Trophy size={15} style={{ color: 'var(--warning-dark)' }} />
           <div className="stat-pill-value">{Object.keys(prs).length}</div>
           <div className="stat-pill-label">PR</div>
         </Link>
@@ -145,7 +145,13 @@ export default function ClientDashboard() {
                     wraps it (「剩餘 7 堂」). A fixed number-then-words layout cannot do both. */}
                 {(() => {
                   const small = { fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' };
-                  const [before, after] = t('dash.sessions_left_phrase', { count: '\u0000' }).split('\u0000');
+                  // The real count, so the right plural form is picked — a placeholder string
+                  // matched no form at all and the words vanished in production (B52).
+                  const phrase = t('dash.sessions_left_phrase', { count: sessRemaining });
+                  const at = phrase.indexOf(String(sessRemaining));
+                  if (at < 0) return phrase;
+                  const before = phrase.slice(0, at);
+                  const after = phrase.slice(at + String(sessRemaining).length);
                   return (
                     <>
                       {before && <span style={small}>{before}</span>}
@@ -331,7 +337,7 @@ export default function ClientDashboard() {
           <div className="card">
             <div className="card-header">
               <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
-                <Trophy size={18} style={{ color: 'var(--warning)' }} /> {t('dash.personal_records')}
+                <Trophy size={18} style={{ color: 'var(--warning-dark)' }} /> {t('dash.personal_records')}
                 <span className="pr-window">{t('common.last_30_days')}</span>
               </h3>
               <span className="tag tag-warning">{t('dash.pr_count', { count: recentPrs.length })}</span>

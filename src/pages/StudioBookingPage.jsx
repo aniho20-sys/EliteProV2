@@ -114,7 +114,7 @@ export default function StudioBookingPage() {
                 <div className="text-sm text-muted">{slot.date} · {slot.startTime}–{slot.endTime}</div>
               </div>
               {canCancel(slot) ? (
-                <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleCancel(slot.id)} disabled={cancelling === slot.id}>
+                <button className="btn btn-sm btn-outline" style={{ color: 'var(--danger-text)', borderColor: 'var(--danger)' }} onClick={() => handleCancel(slot.id)} disabled={cancelling === slot.id}>
                   {cancelling === slot.id ? 'Cancelling…' : <><X size={13} /> Cancel</>}
                 </button>
               ) : (

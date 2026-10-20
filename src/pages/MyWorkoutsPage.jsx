@@ -85,7 +85,7 @@ export default function MyWorkoutsPage() {
                     </div>
                   </div>
                   {exercise?.description && <p className="text-sm text-muted mt-8">{exercise.description}</p>}
-                  {ex.notes && <p className="text-sm mt-8" style={{ color: 'var(--warning)', fontStyle: 'italic' }}>{ex.notes}</p>}
+                  {ex.notes && <p className="text-sm mt-8" style={{ color: 'var(--warning-dark)', fontStyle: 'italic' }}>{ex.notes}</p>}
                   {(() => {
                     const url = ex.videoUrl || exercise?.videoUrl;
                     return url && isSafeUrl(url) ? (

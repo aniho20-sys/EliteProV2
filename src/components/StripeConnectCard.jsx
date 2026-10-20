@@ -105,7 +105,7 @@ export default function StripeConnectCard({ children }) {
         </div>
       ) : stripe ? (
         <div className="mt-8">
-          <p className="text-sm mb-8" style={{ color: 'var(--warning)' }}>{t('stripe.onboarding')}</p>
+          <p className="text-sm mb-8" style={{ color: 'var(--warning-dark)' }}>{t('stripe.onboarding')}</p>
           <button type="button" className="btn btn-primary mb-8" onClick={handleStart} disabled={starting} style={{ width: '100%' }}>
             <CreditCard size={16} /> {starting ? t('profile.connecting_dots') : t('stripe.continue')}
           </button>

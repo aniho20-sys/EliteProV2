@@ -427,8 +427,8 @@ export default function WorkoutPlansPage() {
                       <span className="plan-exercise-detail">{formatExDetail(ex)}</span>
                       {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                       {url && (isYouTube(url)
-                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
-                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
+                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger-text)', marginLeft: 'auto' }}><Play size={14} /></a>
+                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary-text)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
                       )}
                     </div>
                   );
@@ -457,7 +457,7 @@ export default function WorkoutPlansPage() {
                 <div className="plan-card-actions">
                   <button className="btn-icon" title={t('common.edit')} onClick={e => { e.stopPropagation(); openEdit(p); }}><Pencil size={15} /></button>
                   <button className="btn-icon" title={t('plans.duplicate')} onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
-                  <button className="btn-icon" title={t('common.delete')} style={{ color: 'var(--danger)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
+                  <button className="btn-icon" title={t('common.delete')} style={{ color: 'var(--danger-text)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
                   {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
               </button>
@@ -473,8 +473,8 @@ export default function WorkoutPlansPage() {
                     {ex.notes && <span className="plan-exercise-detail" style={{ fontStyle: 'italic' }}>{ex.notes}</span>}
                     {url
                       ? isYouTube(url)
-                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger)', marginLeft: 'auto' }}><Play size={14} /></a>
-                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
+                        ? <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger-text)', marginLeft: 'auto' }}><Play size={14} /></a>
+                        : <a href={url} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary-text)', marginLeft: 'auto' }}><ExternalLink size={14} /></a>
                       : exData
                         ? <button className="btn btn-sm btn-add-link" style={{ marginLeft: 'auto' }} onClick={() => { setAddLinkModal({ exerciseId: exData.id, name: exData.name }); setAddLinkUrl(''); }}><Link2 size={13} /> {t('plans.add_link')}</button>
                         : null
@@ -531,7 +531,7 @@ export default function WorkoutPlansPage() {
                   placeholder={t('plans.ph_video_url')}
                 />
                 {addLinkUrl && isSafeUrl(addLinkUrl) && (
-                  <a href={addLinkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: '0.8rem', marginTop: 6 }}>
+                  <a href={addLinkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary-text)', fontSize: '0.8rem', marginTop: 6 }}>
                     {isYouTube(addLinkUrl) ? <Play size={12} /> : <ExternalLink size={12} />}
                     {isYouTube(addLinkUrl) ? 'Preview YouTube link' : 'Preview link'}
                   </a>
@@ -615,7 +615,7 @@ export default function WorkoutPlansPage() {
                           </span>
                         )}
                         <span className="text-xs text-muted plan-ex-set-count" style={{ marginLeft: 'auto' }}>{ex.sets.length} sets</span>
-                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
+                        <button type="button" className="btn-icon" onClick={() => removeExercise(i)} style={{ color: 'var(--danger-text)' }}><Trash2 size={14} /></button>
                       </div>
                       <div className="log-unit-picker plan-unit-picker">
                         {UNIT_OPTIONS.filter(o => o.value !== 'weight_distance').map(opt => (
@@ -676,7 +676,7 @@ export default function WorkoutPlansPage() {
                         />
                         {ex.videoUrl && isSafeUrl(ex.videoUrl) && (
                           <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.preview_link')}>
-                            {isYouTube(ex.videoUrl) ? <Play size={12} style={{ color: 'var(--danger)' }} /> : <ExternalLink size={12} style={{ color: 'var(--primary)' }} />}
+                            {isYouTube(ex.videoUrl) ? <Play size={12} style={{ color: 'var(--danger-text)' }} /> : <ExternalLink size={12} style={{ color: 'var(--primary-text)' }} />}
                           </a>
                         )}
                       </div>

@@ -77,7 +77,7 @@ export default function MonthlyReportModal({ client, onClose }) {
       <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FileText size={18} style={{ color: 'var(--primary)' }} />
+            <FileText size={18} style={{ color: 'var(--primary-text)' }} />
             <h3 className="modal-title" style={{ margin: 0 }}>{t('report.title')}</h3>
           </div>
           <button className="btn btn-outline btn-sm btn-icon" onClick={onClose}><X size={14} /></button>
@@ -98,7 +98,7 @@ export default function MonthlyReportModal({ client, onClose }) {
             { key: 'volume', label: t('report.stat_volume'), value: report.totalVolume > 0 ? `${(report.totalVolume / 1000).toFixed(1)}t` : '—' },
           ].map(s => (
             <div key={s.key} style={{ background: 'var(--surface)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{s.value}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary-text)' }}>{s.value}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.label}</div>
             </div>
           ))}

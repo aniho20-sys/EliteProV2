@@ -90,7 +90,7 @@ export default function GroupClassesCard() {
   return (
     <div className="card mb-16">
       <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Users size={18} style={{ color: 'var(--accent)' }} /> {t('gclass.title')}
+        <Users size={18} style={{ color: 'var(--accent-text)' }} /> {t('gclass.title')}
       </h3>
       <p className="invite-desc">{t('gclass.desc')}</p>
       {!currentUser.publicBooking?.enabled && <p className="text-sm text-muted mt-8">{t('gclass.page_off')}</p>}

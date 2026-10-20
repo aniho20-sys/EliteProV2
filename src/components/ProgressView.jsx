@@ -181,7 +181,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                     <td>
                       <button className="btn-icon" title={t('common.delete')}
                         onClick={() => handleDelete(s)}>
-                        <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                        <Trash2 size={14} style={{ color: 'var(--danger-text)' }} />
                       </button>
                     </td>
                   )}
@@ -208,7 +208,7 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
                   {canDelete && (
                     <button className="btn-icon" title={t('common.delete')}
                       onClick={() => handleDelete(s)}>
-                      <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                      <Trash2 size={14} style={{ color: 'var(--danger-text)' }} />
                     </button>
                   )}
                 </div>

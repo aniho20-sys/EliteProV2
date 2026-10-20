@@ -111,7 +111,7 @@ export default function RoleSelectPage() {
                 maxLength={6}
               />
               {prefilledCode
-                ? <small className="form-hint" style={{ color: 'var(--primary)' }}>{t('role.code_prefilled')}</small>
+                ? <small className="form-hint" style={{ color: 'var(--primary-text)' }}>{t('role.code_prefilled')}</small>
                 : <small className="form-hint">{t('role.code_hint')}</small>
               }
             </div>

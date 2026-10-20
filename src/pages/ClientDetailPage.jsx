@@ -441,7 +441,7 @@ export default function ClientDetailPage() {
           <button className="btn btn-outline btn-sm" onClick={() => setShowReport(true)}>
             <FileText size={14} /> {t('cdetail.monthly_report')}
           </button>
-          <button className="btn btn-sm" style={{ color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
+          <button className="btn btn-sm" style={{ color: 'var(--danger-text)', border: '1px solid var(--danger)', background: 'transparent' }} onClick={() => setShowRemoveConfirm(true)}>
             <Trash2 size={15} /> {t('cdetail.remove_client')}
           </button>
         </div>
@@ -684,17 +684,17 @@ export default function ClientDetailPage() {
                       })()}
                       {videoUrl && (
                         isYouTube(videoUrl) ? (
-                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger)', marginLeft: 'auto' }}>
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.watch_demo')} style={{ color: 'var(--danger-text)', marginLeft: 'auto' }}>
                             <Play size={14} />
                           </a>
                         ) : (
-                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary)', marginLeft: 'auto' }}>
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="btn-icon" title={t('plans.open_link')} style={{ color: 'var(--primary-text)', marginLeft: 'auto' }}>
                             <ExternalLink size={14} />
                           </a>
                         )
                       )}
                       {ex.notes && (
-                        <span className="plan-exercise-detail" style={{ width: '100%', fontStyle: 'italic', color: 'var(--warning)' }}>{ex.notes}</span>
+                        <span className="plan-exercise-detail" style={{ width: '100%', fontStyle: 'italic', color: 'var(--warning-dark)' }}>{ex.notes}</span>
                       )}
                     </div>
                   );
@@ -913,7 +913,7 @@ export default function ClientDetailPage() {
               />
             </div>
             {topUpQty > 0 && (
-              <p className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>
+              <p className="text-sm" style={{ color: 'var(--primary-text)', fontWeight: 600, marginBottom: 12 }}>
                 {topUpPrice !== '' && topUpPriceValid && <>{t('cdetail.total_amount', { amount: formatCurrency(topUpQty * Number(topUpPrice), currentUser.currency) })}<br /></>}
                 {t('cdetail.after_topup', { count: remainingAfterTopUp })}
               </p>
@@ -931,7 +931,7 @@ export default function ClientDetailPage() {
       {showRemoveConfirm && (
         <div className="modal-overlay" onClick={() => setShowRemoveConfirm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <h3 className="modal-title" style={{ color: 'var(--danger)' }}>{t('cdetail.remove_title')}</h3>
+            <h3 className="modal-title" style={{ color: 'var(--danger-text)' }}>{t('cdetail.remove_title')}</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
               {t('cdetail.remove_desc', { name: client.name })}
             </p>
@@ -962,7 +962,7 @@ export default function ClientDetailPage() {
                 <div key={exIdx} className="mb-16" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <span className="fw-bold text-sm">{getExerciseName(entry.exerciseId, entry.name)}</span>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogExercise(exIdx)} title={t('wlog.remove_exercise')}><X size={14} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger-text)' }} onClick={() => removeEditLogExercise(exIdx)} title={t('wlog.remove_exercise')}><X size={14} /></button>
                   </div>
                   {entry.sets.length === 0
                     ? <p className="text-sm text-muted" style={{ fontStyle: 'italic' }}>{t('wlog.skipped')}</p>
@@ -987,7 +987,7 @@ export default function ClientDetailPage() {
                           <span className="text-sm text-muted">m</span>
                         </>)}
                         {entry.sets.length > 1 && (
-                          <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeEditLogSet(exIdx, setIdx)} title={t('plans.remove_set')}><X size={12} /></button>
+                          <button className="btn-icon" style={{ color: 'var(--danger-text)' }} onClick={() => removeEditLogSet(exIdx, setIdx)} title={t('plans.remove_set')}><X size={12} /></button>
                         )}
                       </div>
                     ))

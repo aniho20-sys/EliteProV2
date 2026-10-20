@@ -61,22 +61,22 @@ export default function OperatorDashboard() {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
         <div className="card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-          <Building2 size={28} style={{ color: 'var(--primary)', marginBottom: 8 }} />
+          <Building2 size={28} style={{ color: 'var(--primary-text)', marginBottom: 8 }} />
           <div style={{ fontSize: '2rem', fontWeight: 700 }}>{studios.length}</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Total Studios</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-          <Calendar size={28} style={{ color: 'var(--success)', marginBottom: 8 }} />
+          <Calendar size={28} style={{ color: 'var(--success-text)', marginBottom: 8 }} />
           <div style={{ fontSize: '2rem', fontWeight: 700 }}>{availableToday}</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Available Slots Today</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-          <Calendar size={28} style={{ color: 'var(--accent)', marginBottom: 8 }} />
+          <Calendar size={28} style={{ color: 'var(--accent-text)', marginBottom: 8 }} />
           <div style={{ fontSize: '2rem', fontWeight: 700 }}>{bookedToday}</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Booked Today</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-          <Users size={28} style={{ color: 'var(--warning)', marginBottom: 8 }} />
+          <Users size={28} style={{ color: 'var(--warning-dark)', marginBottom: 8 }} />
           <div style={{ fontSize: '2rem', fontWeight: 700 }}>{pendingApps.length}</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Pending Applications</div>
         </div>
@@ -204,7 +204,7 @@ export default function OperatorDashboard() {
                 <div style={{ fontWeight: 600 }}>{studio.name}</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 2 }}>{studio.district}</div>
                 <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Calendar size={14} style={{ color: 'var(--primary)' }} />
+                  <Calendar size={14} style={{ color: 'var(--primary-text)' }} />
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                     {studioTodaySlotCount(studio.id)} slots today
                   </span>

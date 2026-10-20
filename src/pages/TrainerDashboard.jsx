@@ -383,17 +383,17 @@ export default function TrainerDashboard() {
           <div className="stat-pill-label">{t('nav.clients')}</div>
         </Link>
         <Link to="/schedule" className="stat-pill">
-          <Calendar size={15} style={{ color: 'var(--accent)' }} />
+          <Calendar size={15} style={{ color: 'var(--accent-text)' }} />
           <div className="stat-pill-value">{todaySchedule.length}</div>
           <div className="stat-pill-label">{t('common.today')}</div>
         </Link>
         <Link to="/messages" className="stat-pill">
-          <TrendingUp size={15} style={{ color: 'var(--warning)' }} />
+          <TrendingUp size={15} style={{ color: 'var(--warning-dark)' }} />
           <div className="stat-pill-value">{unread}</div>
           <div className="stat-pill-label">{t('tdash.stat_unread')}</div>
         </Link>
         <Link to="/plans" className="stat-pill">
-          <Dumbbell size={15} style={{ color: 'var(--danger)' }} />
+          <Dumbbell size={15} style={{ color: 'var(--danger-text)' }} />
           <div className="stat-pill-value">{totalPlans}</div>
           <div className="stat-pill-label">{t('nav.plans_short')}</div>
         </Link>
@@ -441,7 +441,7 @@ export default function TrainerDashboard() {
         <div className="needs-attention mb-16">
           <div className="needs-attention-header">
             <div className="flex gap-8" style={{ alignItems: 'center' }}>
-              <AlertTriangle size={15} style={{ color: 'var(--danger)' }} />
+              <AlertTriangle size={15} style={{ color: 'var(--danger-text)' }} />
               <span className="needs-attention-title">{t('tdash.attention_title')}</span>
               <span className="needs-attention-count">{totalAttentionCount}</span>
             </div>
@@ -465,7 +465,7 @@ export default function TrainerDashboard() {
                     <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
-                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--danger-text)', fontWeight: 600 }}>
                           {t('tdash.owes', { count: owed })}
                         </span>
                         {renewalRates(currentUser).next && (
@@ -506,7 +506,7 @@ export default function TrainerDashboard() {
                     <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
-                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--danger-text)', fontWeight: 600 }}>
                           {plan.paymentFailedAt
                             ? t('tdash.payment_failed_on', { date: formatShortDate(plan.paymentFailedAt, lang) })
                             : t('tdash.payment_failed')}
@@ -533,7 +533,7 @@ export default function TrainerDashboard() {
                     <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
-                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--danger-text)', fontWeight: 600 }}>
                           {remaining === 0 ? t('tdash.sessions_used_up') : t('dash.sessions_left_count', { count: remaining })}
                         </span>
                         <span className="text-muted"> · {t('tdash.renewal_due')}</span>
@@ -584,7 +584,7 @@ export default function TrainerDashboard() {
                     <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
-                        <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--warning-dark)', fontWeight: 600 }}>
                           {daysSince === null ? t('tdash.no_activity') : t('tdash.inactive_days', { count: daysSince })}
                         </span>
                         <span className="text-muted"> · {lastActivityLabel ? t('tdash.last_prefix', { label: lastActivityLabel }) : t('tdash.no_activity')}</span>
@@ -634,7 +634,7 @@ export default function TrainerDashboard() {
                     <Link to={`/clients/${client.id}`} className="needs-attention-info" style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
-                        <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--warning-dark)', fontWeight: 600 }}>
                           <ClipboardList size={12} style={{ verticalAlign: -1 }} /> {t('tdash.profile_upcoming')}
                         </span>
                       </div>
@@ -708,7 +708,7 @@ export default function TrainerDashboard() {
                         title={t('tdash.start_session')}
                         aria-label={t('tdash.start_session')}
                       >
-                        <Play size={16} style={{ color: 'var(--primary)' }} />
+                        <Play size={16} style={{ color: 'var(--primary-text)' }} />
                       </button>
                     )}
                     {s.status === 'confirmed' && (
@@ -717,7 +717,7 @@ export default function TrainerDashboard() {
                         onClick={(e) => openRecap(e, s)}
                         title={t('tdash.mark_complete')}
                       >
-                        <CheckCircle size={16} style={{ color: 'var(--accent)' }} />
+                        <CheckCircle size={16} style={{ color: 'var(--accent-text)' }} />
                       </button>
                     )}
                   </div>
@@ -767,7 +767,7 @@ export default function TrainerDashboard() {
         </div>
         <div className="week-chart-footer">
           <span>{t('tdash.sessions_this_week', { count: weekSchedule.length })}</span>
-          <span style={{ color: 'var(--success)' }}>{confirmedCount} {t('tdash.confirmed')}</span>
+          <span style={{ color: 'var(--success-text)' }}>{confirmedCount} {t('tdash.confirmed')}</span>
         </div>
       </div>
 

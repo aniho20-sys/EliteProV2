@@ -74,7 +74,7 @@ export default function PaymentSheetModal({ client, trainer, remaining, onClose 
                   <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{r.value || '—'}</div>
                 </div>
                 <button className="btn-icon" onClick={() => copyRow(r.key, r.value)} aria-label={t('common.copy_x', { label: r.label })}>
-                  {copiedKey === r.key ? <Check size={15} style={{ color: 'var(--success)' }} /> : <Copy size={15} />}
+                  {copiedKey === r.key ? <Check size={15} style={{ color: 'var(--success-text)' }} /> : <Copy size={15} />}
                 </button>
               </div>
             ))}

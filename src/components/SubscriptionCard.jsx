@@ -142,7 +142,7 @@ export default function SubscriptionCard() {
           {current.status === 'past_due' ? (
             <>
               <span className="tag tag-danger">{t('sub.payment_failed_tag')}</span>
-              <p className="text-sm mt-8" style={{ display: 'flex', gap: 6, color: 'var(--danger)' }}>
+              <p className="text-sm mt-8" style={{ display: 'flex', gap: 6, color: 'var(--danger-text)' }}>
                 <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {planOnStripe ? t('sub.payment_failed_desc_stripe') : t('sub.payment_failed_desc')}
               </p>
             </>

@@ -370,7 +370,7 @@ export default function WorkoutLogPage() {
         <div className="card mb-16 pr-summary-card">
           <div className="card-header">
             <h3 className="card-title flex gap-8" style={{ alignItems: 'center' }}>
-              <Trophy size={20} style={{ color: 'var(--warning)' }} /> {t('wlog.personal_records')}
+              <Trophy size={20} style={{ color: 'var(--warning-dark)' }} /> {t('wlog.personal_records')}
               <span className="pr-window">{t('common.last_30_days')}</span>
             </h3>
             <span className="tag tag-warning">{prCount} PRs</span>
@@ -476,7 +476,7 @@ export default function WorkoutLogPage() {
                 return (
                   <div key={i} className={`plan-exercise ${hadPR ? 'plan-exercise-pr' : ''} ${skipped ? 'plan-exercise-skipped' : ''}`}>
                     <span className="plan-exercise-name">
-                      {hadPR && <Trophy size={14} style={{ color: 'var(--warning)', marginRight: 6, verticalAlign: -2 }} />}
+                      {hadPR && <Trophy size={14} style={{ color: 'var(--warning-dark)', marginRight: 6, verticalAlign: -2 }} />}
                       {getExerciseName(entry.exerciseId, entry.name)}
                     </span>
                     <span className="plan-exercise-detail">
@@ -506,7 +506,7 @@ export default function WorkoutLogPage() {
               <div key={exIdx} className="mb-16">
                 <div className="fw-bold mb-8 text-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>{getExerciseName(entry.exerciseId, entry.name)}</span>
-                  <button className="btn-icon" style={{ color: 'var(--danger)', flexShrink: 0 }}
+                  <button className="btn-icon" style={{ color: 'var(--danger-text)', flexShrink: 0 }}
                     onClick={() => setEditEntries(prev => prev.filter((_, i) => i !== exIdx))}
                     title={t('wlog.remove_exercise')}>
                     <X size={14} />
