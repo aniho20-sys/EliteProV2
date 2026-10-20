@@ -5,13 +5,14 @@
 
 import { describe, test, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 vi.mock('../firebase', () => ({ db: {}, auth: { currentUser: null }, functions: {} }));
 
 const { AppContext } = await import('../context/AppContext');
 const { LanguageProvider } = await import('../i18n/LanguageContext');
 const { default: LandingPage } = await import('./LandingPage');
+const { useLanguage } = await import('../i18n/LanguageContext');
 
 const setPhoneLanguage = (tag) => Object.defineProperty(window.navigator, 'language', { configurable: true, get: () => tag });
 
@@ -48,5 +49,41 @@ describe('the landing page speaks the visitor’s language', () => {
     expect(await screen.findByText('首五位教練，免費三個月。')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
     expect(screen.getByText('First five trainers. Three months free.')).toBeTruthy();
+  });
+});
+
+describe('the choice carries into sign-up (B52)', () => {
+  function LoginProbe() { return <p>login page in {useLanguage().lang}</p>; }
+  test('Chinese chosen on the landing page is still Chinese on the login page', async () => {
+    setPhoneLanguage('en-GB');
+    render(
+      <AppContext.Provider value={{ currentUser: null, setLanguage: vi.fn() }}>
+        <LanguageProvider><MemoryRouter initialEntries={['/']}><Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes></MemoryRouter></LanguageProvider>
+      </AppContext.Provider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '繁體中文' }));
+    await screen.findByText('首五位教練，免費三個月。');
+    fireEvent.click(screen.getByText('登入'));
+    expect(await screen.findByText('login page in zh-HK')).toBeTruthy();
+  });
+  test('once they sign in, the language they saved takes over', async () => {
+    setPhoneLanguage('en-GB');
+    function Probe() {
+      const { lang, setViewLanguage } = useLanguage();
+      return <button onClick={() => setViewLanguage('zh-HK')}>{`now ${lang}`}</button>;
+    }
+    const tree = (user) => (
+      <AppContext.Provider value={{ currentUser: user, setLanguage: vi.fn() }}>
+        <LanguageProvider><Probe /></LanguageProvider>
+      </AppContext.Provider>
+    );
+    const { rerender } = render(tree(null));
+    fireEvent.click(screen.getByText('now en'));
+    expect(await screen.findByText('now zh-HK')).toBeTruthy();
+    rerender(tree({ id: 'u1', role: 'client', language: 'en' }));
+    expect(await screen.findByText('now en')).toBeTruthy();
   });
 });

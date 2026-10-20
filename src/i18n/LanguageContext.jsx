@@ -32,6 +32,14 @@ export function LanguageProvider({ children }) {
   // A choice made on a page for visitors (the public booking page's English / 繁體中文
   // toggle) — for this tab only, never written anywhere, ahead of everything else.
   const [viewLanguage, setViewLanguage] = useState(null);
+  // A visitor's choice carried in from the landing page gives way to the language a signed-in
+  // person has saved, once that is known (adjusted during render, not in an effect).
+  const savedLanguage = currentUser?.language;
+  const [seenSaved, setSeenSaved] = useState(savedLanguage);
+  if (savedLanguage !== seenSaved) {
+    setSeenSaved(savedLanguage);
+    if (savedLanguage) setViewLanguage(null);
+  }
   const lang = viewLanguage || resolveLanguage(currentUser, typeof navigator !== 'undefined' ? navigator.language : '');
   const [zh, setZh] = useState(null);
 

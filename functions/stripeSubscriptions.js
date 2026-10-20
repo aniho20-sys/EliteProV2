@@ -36,19 +36,6 @@ async function connectionFor(db, trainerId, keys) {
   return stripe;
 }
 
-async function expireCheckout({ keys, fetchImpl, sub }) {
-  if (!sub.checkoutSessionId || !sub.providerAccountId) return;
-  try {
-    await stripeRequest({
-      fetchImpl, secretKey: keys.secretKey, method: 'POST', account: sub.providerAccountId,
-      path: `/v1/checkout/sessions/${sub.checkoutSessionId}/expire`,
-    });
-  } catch {
-    // Already complete or expired. A completed one is caught by checkout.session.completed
-    // on a superseded plan, which cancels it (stripeWebhooks.js).
-  }
-}
-
 async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUrl, exitUrl }) {
   tier = Number(tier);
   if (!TIERS.includes(tier)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
@@ -76,10 +63,52 @@ async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUr
   // One plan at a time, whichever processor holds it.
   const existing = await db.collection('subscriptions').where('clientId', '==', uid).get();
   const stalePending = [];
+  const sandboxLeftovers = [];
   for (const d of existing.docs) {
     const s = d.data();
+    // A test-mode Stripe plan left over once ElitePro is live is not a real plan and must not
+    // block a real one (B52) — it is retired below. Never the reverse: a live plan is real.
+    if (s.provider === 'stripe' && conn.environment === 'live' && (s.environment || 'sandbox') !== 'live'
+      && !FINISHED_STATUSES.includes(s.status)) {
+      sandboxLeftovers.push(d);
+      continue;
+    }
     if (LIVE_STATUSES.includes(s.status)) throw new SubscriptionError('already-exists', 'Already subscribed');
     if (s.status === 'pending') stalePending.push(d);
+  }
+
+  // Settle every earlier unfinished Stripe checkout BEFORE opening a new one (B52). Marking it
+  // abandoned without knowing let a client pay for both: a checkout still being created by a
+  // double tap, one that failed to expire, or one already paid whose return never arrived.
+  for (const d of stalePending) {
+    const s = d.data();
+    if (s.provider !== 'stripe') continue;
+    if (!s.checkoutSessionId) {
+      if (now().getTime() - new Date(s.createdAt).getTime() < CLAIM_TTL_MS) {
+        throw new SubscriptionError('already-exists', 'Already being set up');
+      }
+      continue; // its creation failed long ago; nothing at Stripe to close
+    }
+    let session;
+    try {
+      session = await stripeRequest({
+        fetchImpl, secretKey: keys.secretKey, account: s.providerAccountId,
+        path: `/v1/checkout/sessions/${s.checkoutSessionId}`,
+      });
+      if (session.status === 'open') {
+        await stripeRequest({
+          fetchImpl, secretKey: keys.secretKey, method: 'POST', account: s.providerAccountId,
+          path: `/v1/checkout/sessions/${s.checkoutSessionId}/expire`,
+        });
+      }
+    } catch {
+      throw new SubscriptionError('unavailable', 'Could not close the earlier checkout');
+    }
+    if (session.status === 'complete') {
+      // Paid already: that is the client's plan. Activate it rather than open a second.
+      await completeSubscription({ db, subscriptionId: d.id, keys, fetchImpl, now });
+      throw new SubscriptionError('already-exists', 'Already subscribed');
+    }
   }
 
   const ts = now().toISOString();
@@ -107,13 +136,11 @@ async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUr
     createdAt: ts,
     updatedAt: ts,
   });
-  for (const d of stalePending) {
-    if ((d.data().provider || 'gocardless') === 'stripe') await expireCheckout({ keys, fetchImpl, sub: d.data() });
-    await d.ref.update({ status: 'abandoned', updatedAt: ts });
-  }
+  for (const d of stalePending) await d.ref.update({ status: 'abandoned', updatedAt: ts });
+  for (const d of sandboxLeftovers) await d.ref.update({ status: 'abandoned', cancelReason: 'sandbox_retired', updatedAt: ts });
 
-  // Bacs is GBP-only and offered only once Stripe has switched it on for the coach.
-  const paymentMethods = currency === 'GBP' && conn.bacsEnabled ? ['card', 'bacs_debit'] : ['card'];
+  // Bacs is a UK scheme: GBP, a UK account, and only once Stripe has switched it on for it.
+  const paymentMethods = currency === 'GBP' && conn.country === 'GB' && conn.bacsEnabled ? ['card', 'bacs_debit'] : ['card'];
   try {
     const session = await stripeRequest({
       fetchImpl, secretKey: keys.secretKey, method: 'POST', path: '/v1/checkout/sessions',
@@ -172,6 +199,11 @@ async function completeSubscription({ db, subscriptionId, keys, fetchImpl, now }
     await release({ lastError: keys ? 'no checkout session' : 'stripe not configured' });
     return { status: 'pending' };
   }
+  // The other mode's key cannot see this plan's objects; a 404 from it means nothing.
+  if ((sub.environment || 'sandbox') !== keyEnvironment(keys.secretKey)) {
+    await release({ lastError: 'stripe key is in the other mode' });
+    return { status: 'pending' };
+  }
 
   let session;
   try {
@@ -223,6 +255,9 @@ async function cancelStripeSubscription({ keys, fetchImpl, account, id }) {
 // failure; the doc says `cancelled` only once Stripe has agreed.
 async function cancelAtStripe({ ref, sub, keys, fetchImpl, now, reason }) {
   if (!keys) throw new Error('stripe not configured');
+  // With the other mode's key every object is a 404, which would read as "already gone"
+  // while the real subscription kept charging (B52).
+  if ((sub.environment || 'sandbox') !== keyEnvironment(keys.secretKey)) throw new Error('stripe key is in the other mode');
   const account = sub.providerAccountId;
   let stripeSubscriptionId = sub.providerSubscriptionId || null;
 
@@ -241,17 +276,22 @@ async function cancelAtStripe({ ref, sub, keys, fetchImpl, now, reason }) {
   if (stripeSubscriptionId) await cancelStripeSubscription({ keys, fetchImpl, account, id: stripeSubscriptionId });
 
   const ts = now().toISOString();
-  await ref.update({ status: 'cancelled', cancelledAt: ts, cancelReason: reason, cancelError: null, updatedAt: ts });
+  // Recorded even when cancelling: a first invoice already paid must still find its plan.
+  await ref.update({
+    status: 'cancelled', cancelledAt: ts, cancelReason: reason, cancelError: null, updatedAt: ts,
+    ...(stripeSubscriptionId ? { providerSubscriptionId: stripeSubscriptionId } : {}),
+  });
 }
 
 // Every Stripe plan where `field` (clientId / trainerId) is `uid` — for onAccountDelete.
 // Failures are recorded and returned, never thrown (same reasons as gcSubscriptions).
-async function cancelSubscriptionsFor({ db, uid, field, keys, fetchImpl, now, reason }) {
+async function cancelSubscriptionsFor({ db, uid, field, keys, fetchImpl, now, reason, onlyTrainerId }) {
   const result = { cancelled: [], failed: [] };
   const snap = await db.collection('subscriptions').where(field, '==', uid).get();
   for (const d of snap.docs) {
     const sub = d.data();
     if (sub.provider !== 'stripe' || FINISHED_STATUSES.includes(sub.status)) continue;
+    if (onlyTrainerId && sub.trainerId !== onlyTrainerId) continue;
     try {
       await cancelAtStripe({ ref: d.ref, sub, keys, fetchImpl, now, reason });
       result.cancelled.push(d.ref.id);

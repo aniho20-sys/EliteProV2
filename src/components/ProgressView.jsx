@@ -25,10 +25,18 @@ export default function ProgressView({ clientId, canDelete = false, onAdd, onEdi
   const stats = getBodyStats(clientId);
   const toast = useToast();
 
-  const handleDelete = (s) => {
-    if (!window.confirm(t('progress.confirm_delete', { date: s.date }))) return;
-    deleteBodyStat(clientId, s.id);
-    toast(t('progress.deleted'), 'info');
+  const [deleting, setDeleting] = useState(false);
+  const handleDelete = async (s) => {
+    if (deleting || !window.confirm(t('progress.confirm_delete', { date: s.date }))) return;
+    setDeleting(true);
+    try {
+      await deleteBodyStat(clientId, s.id);
+      toast(t('progress.deleted'), 'info');
+    } catch {
+      toast(t('progress.delete_failed'), 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
   const [activeMetric, setActiveMetric] = useState('weight');
 

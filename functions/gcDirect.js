@@ -12,6 +12,7 @@
 // from the trainer's say-so: the token is tried against each API, and only the one that
 // accepts it decides. A live token cannot be stored as sandbox, or the reverse.
 
+const { replaceGcConnection } = require('./paymentConnection');
 const { API_BASE, environmentOf } = require('./gcEnv');
 
 class DirectConnectError extends Error {
@@ -55,7 +56,7 @@ async function connectDirect({ db, trainerId, accessToken, webhookSecret, fetchI
 
   await writeToken(trainerId, token);
   await writeWebhookSecret(trainerId, secret);
-  await db.doc(`paymentConnections/${trainerId}`).set({
+  await replaceGcConnection(db, trainerId, {
     trainerId,
     provider: 'gocardless',
     mode: 'direct',

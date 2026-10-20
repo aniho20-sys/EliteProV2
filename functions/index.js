@@ -26,6 +26,7 @@ const stripeConnect = require('./stripeConnect');
 const stripeSubs = require('./stripeSubscriptions');
 const { handleStripeWebhook } = require('./stripeWebhooks');
 const { sendSessionReminders } = require('./sessionReminders');
+const { replaceGcConnection } = require('./paymentConnection');
 const bookingPreview = require('./bookingPreview');
 
 initializeApp();
@@ -110,6 +111,8 @@ exports.onAccountDelete = functions.auth.user().onDelete(async (user) => {
 
   if (asTrainer.failed.length === 0) {
     await deleteGcAccessToken(uid).catch(err => console.error(`[GDPR] token delete failed uid=${uid}`, err));
+    // B36 own-account connections keep a webhook secret of their own (B52: it was left behind).
+    await deleteTrainerWebhookSecret(uid).catch(err => console.error(`[GDPR] webhook secret delete failed uid=${uid}`, err));
     await db.doc(`paymentConnections/${uid}`).delete();
   }
 
@@ -142,14 +145,16 @@ exports.onNewMessage = functions.firestore
     const msg = snap.data();
     if (!msg || !msg.to || !msg.from) return;
 
-    // Server-side rate limit: count messages from this sender in the last 60s
+    // Server-side rate limit: count messages from this sender in the last 60s. One range
+    // filter only, sender filtered here — `from ==` plus a timestamp range needs a composite
+    // index that does not exist, and the query failed instead of counting (B52, #34).
     const windowStart = new Date(Date.now() - 60_000).toISOString();
     const recentSnap = await db.collection('messages')
-      .where('from', '==', msg.from)
       .where('timestamp', '>=', windowStart)
       .get();
-    if (recentSnap.size > 20) {
-      console.warn(`[rate-limit] sender ${msg.from} sent ${recentSnap.size} msgs in 60s — skipping push`);
+    const recent = recentSnap.docs.filter(d => d.data().from === msg.from).length;
+    if (recent > 20) {
+      console.warn(`[rate-limit] sender ${msg.from} sent ${recent} msgs in 60s — skipping push`);
       return;
     }
 
@@ -650,7 +655,7 @@ exports.gcOAuthCallback = functions.https.onRequest(async (req, res) => {
   }
 
   // Non-sensitive metadata -> Firestore, Admin SDK (bypasses client rules).
-  await db.doc(`paymentConnections/${trainerId}`).set({
+  await replaceGcConnection(db, trainerId, {
     trainerId,
     provider: 'gocardless',
     providerAccountId: tokenJson.organisation_id || null,
@@ -948,6 +953,7 @@ exports.onNewTrainerSignup = functions.firestore
       // exists either way.
       db.collection('mail').add({
         to: OWNER_EMAIL,
+        aboutUserId: snap.id, // deleted with the account (accountDeletion.js)
         message: {
           subject: `New ElitePro trainer: ${name} (signup #${signupNumber})`,
           text: [
@@ -962,7 +968,7 @@ exports.onNewTrainerSignup = functions.firestore
       }),
     ]);
 
-    console.log(`[onNewTrainerSignup] signup #${signupNumber} ${email} founding=${withinFounding}`);
+    console.log(`[onNewTrainerSignup] signup #${signupNumber} uid=${snap.id} founding=${withinFounding}`);
     return null;
   });
 
@@ -1047,6 +1053,8 @@ exports.stripeSaveKeys = functions.https.onCall(async (data, context) => {
 // Whether ElitePro's Stripe is set up, and in which mode. Nothing secret is returned.
 exports.stripeStatus = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
+  const me = await db.doc(`users/${context.auth.uid}`).get();
+  if (!me.exists || me.data().role !== 'trainer') throw new functions.https.HttpsError('permission-denied', 'Trainers only');
   const keys = await readStripeKeys();
   return { configured: !!keys, environment: keys ? keyEnvironment(keys.secretKey) : null };
 });
@@ -1097,11 +1105,12 @@ exports.stripeStartSubscription = functions.https.onCall(async (data, context) =
 // Where Stripe sends the client after paying. Public; it can only ask Stripe whether this
 // plan's Checkout Session is complete — the id in the URL decides nothing.
 exports.stripeSubscriptionReturn = functions.https.onRequest(async (req, res) => {
+  const subscriptionId = String(req.query.sub || '');
   let status = 'unknown';
+  // A public URL: a made-up id is turned away before Secret Manager is read (B52).
+  if (!/^[A-Za-z0-9]{10,40}$/.test(subscriptionId)) { res.redirect(`${PROFILE_URL}?sub=unknown`); return; }
   try {
-    ({ status } = await stripeSubs.completeSubscription({
-      ...stripeSubDeps(await readStripeKeys()), subscriptionId: String(req.query.sub || ''),
-    }));
+    ({ status } = await stripeSubs.completeSubscription({ ...stripeSubDeps(await readStripeKeys()), subscriptionId }));
   } catch (err) {
     console.error('[stripeSubscriptionReturn] failed', err && err.message);
     status = 'pending';
@@ -1150,6 +1159,50 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
     res.status(500).send('Retry');
   }
 });
+
+// ── A client leaves their coach (B52) ──
+// Leaving (or being removed) clears trainerId; a plan with the old coach must not go on
+// charging for sessions that coach no longer gives. Both processors; failures go to the
+// old coach, who can still stop it from their own dashboard.
+exports.onClientLeftTrainer = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after || before.role !== 'client') return;
+    const formerCoach = before.trainerId;
+    if (!formerCoach || formerCoach === after.trainerId) return;
+    const uid = change.after.id;
+    const now = () => new Date();
+    const common = { db, uid, field: 'clientId', fetchImpl: fetch, now, reason: 'client_left', onlyTrainerId: formerCoach };
+    const gc = await cancelSubscriptionsFor({ ...common, readToken: readGcAccessToken });
+    const st = await stripeSubs.cancelSubscriptionsFor({ ...common, keys: await readStripeKeys() });
+    const failed = [...gc.failed, ...st.failed];
+    if (failed.length > 0) {
+      console.error(`[onClientLeftTrainer] client=${uid} coach=${formerCoach}: ${failed.length} plan(s) NOT cancelled`, failed);
+      await pushTo(formerCoach, {
+        title: 'Monthly plan still running',
+        body: 'A client who left you still has a monthly plan ElitePro could not stop. Cancel it in your payment dashboard.',
+      });
+    }
+  });
+
+// Processed webhook events are kept so a redelivery is skipped; Stripe and GoCardless stop
+// redelivering within days, so after 90 days they are only clutter.
+exports.cleanupProcessedEvents = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async () => {
+    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    for (const col of ['stripeEvents', 'gcEvents']) {
+      const old = await db.collection(col).where('processedAt', '<', cutoff).limit(450).get();
+      if (old.empty) continue;
+      const batch = db.batch();
+      old.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      console.log(`[cleanupProcessedEvents] ${col}: deleted ${old.size}`);
+    }
+    return null;
+  });
 
 // ── A coach removing a client who has no app (B35, functions/accountDeletion.js) ──
 // Server-side because the record has no owner account to delete its body stats and

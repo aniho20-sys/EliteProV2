@@ -356,7 +356,7 @@ async function cancelAtGoCardless({ ref, sub, readToken, fetchImpl, now, reason 
 // A failure is recorded on the doc (status stays as it was, `cancelError` set) and
 // returned, never thrown: one trainer's revoked token must not stop the rest of the
 // account's data from being deleted, and the caller tells the owner to finish by hand.
-async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, now, reason }) {
+async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, now, reason, onlyTrainerId }) {
   const result = { cancelled: [], failed: [] };
   const snap = await db.collection('subscriptions').where(field, '==', uid).get();
 
@@ -364,6 +364,7 @@ async function cancelSubscriptionsFor({ db, uid, field, readToken, fetchImpl, no
     const sub = d.data();
     if (FINISHED_STATUSES.includes(sub.status)) continue;
     if ((sub.provider || 'gocardless') !== 'gocardless') continue; // a Stripe plan: stripeSubscriptions.js
+    if (onlyTrainerId && sub.trainerId !== onlyTrainerId) continue;
     try {
       await cancelAtGoCardless({ ref: d.ref, sub, readToken, fetchImpl, now, reason });
       result.cancelled.push(d.ref.id);

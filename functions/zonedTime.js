@@ -36,4 +36,16 @@ function zonedToEpochMs(date, time, timeZone) {
   }
 }
 
-module.exports = { zonedToEpochMs };
+// The coach's local calendar date and hour at instant `ms`.
+function localDateHour(ms, timeZone) {
+  try {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone: timeZone || 'UTC', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+    }).formatToParts(new Date(ms)).map(p => [p.type, p.value]));
+    return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
+  } catch {
+    return { date: new Date(ms).toISOString().slice(0, 10), hour: new Date(ms).getUTCHours() };
+  }
+}
+
+module.exports = { zonedToEpochMs, localDateHour };

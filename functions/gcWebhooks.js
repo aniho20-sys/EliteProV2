@@ -103,12 +103,19 @@ async function grantForPayment({ db, sub, payment, now }) {
     if (!clientSnap.exists) return { outcome: 'client_missing' };
     const cur = subSnap.data();
     const client = clientSnap.data();
+    // The client has left this coach (B52): their balance now belongs to someone else's
+    // coaching, so a late payment for the old plan must not land in it. The caller tells
+    // the old coach, who holds the money.
+    if (client.trainerId !== s.trainerId) return { outcome: 'client_moved' };
+    // A payment for an earlier period arriving after a later one (a retry, a redelivery):
+    // grant it, but never move the period backwards or re-run the roll-over against it.
+    const stale = !!(cur.currentPeriodStart && start < cur.currentPeriodStart);
 
     // What was used in the period that just ended. Sessions booked with this coach, not
     // cancelled — the same thing the credit logic charges for. Single-field query (#34).
     let forfeit = 0;
     let kept = 0;
-    if (cur.currentPeriodStart && cur.currentPeriodEnd) {
+    if (!stale && cur.currentPeriodStart && cur.currentPeriodEnd) {
       const sessions = await tx.get(db.collection('schedule').where('clientId', '==', s.clientId));
       const used = sessions.docs.map(d => d.data()).filter(x => x.trainerId === s.trainerId
         && !x.isBlocked && x.status !== 'cancelled'
@@ -131,7 +138,7 @@ async function grantForPayment({ db, sub, payment, now }) {
       renewalPrompt1Shown: false,
       renewalPromptSnoozedUntil: null,
     });
-    tx.update(subRef, {
+    tx.update(subRef, stale ? { updatedAt: at } : {
       currentPeriodStart: start,
       currentPeriodEnd: end,
       rolloverBanked: kept,
@@ -146,6 +153,13 @@ async function grantForPayment({ db, sub, payment, now }) {
 }
 
 const FINISHED = ['cancelled', 'abandoned', 'failed'];
+
+// A payment arrived for a client who has since left this coach: no sessions were added,
+// so the coach — who holds the money — is told to refund it.
+async function notifyClientMoved(notify, s) {
+  await notify({ userId: s.trainerId, title: 'Payment from a former client',
+    body: 'A monthly payment arrived from a client who has left you. No sessions were added — please refund it.' });
+}
 
 // One event. Returns a short outcome for the audit record; throws only for failures worth
 // a GoCardless retry (our side unavailable), never for events we simply do not act on.
@@ -177,6 +191,7 @@ async function processEvent({ db, event, readToken, fetchImpl, now, notify, trai
         await notify({ userId: sub.data().clientId, title: 'Sessions added',
           body: `${res.granted} sessions for this month have been added to your plan.` });
       }
+      if (res.outcome === 'client_moved') await notifyClientMoved(notify, sub.data());
       return res.outcome;
     }
 
@@ -265,5 +280,5 @@ function webhookRoute(path) {
 // "a month was paid", whichever processor collected it.
 module.exports = {
   webhookRoute, verifyWebhookSignature, periodEnd, rollover, processEvent, handleWebhook, SESSIONS_FORFEIT,
-  grantForPayment, subscriptionBy,
+  grantForPayment, subscriptionBy, notifyClientMoved,
 };

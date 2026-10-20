@@ -240,6 +240,15 @@ describe('the coach answers', () => {
     expect(page.slots.some(s => s.date === '2026-10-02' && s.time === '10:00')).toBe(false);
   });
 
+  test('two confirmed in the same millisecond: two sessions, neither overwritten (B52)', async () => {
+    const a = await ask({ time: '10:00' });
+    const b = await ask({ time: '11:00' }, '203.0.113.8');
+    const [ra, rb] = await Promise.all([a, b].map(r => pb.respondToRequest({ db, trainerId: COACH, requestId: r.requestId, action: 'confirm', now: NOW })));
+    expect(ra.schedId).not.toBe(rb.schedId);
+    expect((await db.doc(`schedule/${ra.schedId}`).get()).data().time).toBe('10:00');
+    expect((await db.doc(`schedule/${rb.schedId}`).get()).data().time).toBe('11:00');
+  });
+
   test('decline: the request is deleted and the hour is free again', async () => {
     const { requestId } = await ask();
     expect(await pb.respondToRequest({ db, trainerId: COACH, requestId, action: 'decline', now: NOW })).toEqual({ declined: true });

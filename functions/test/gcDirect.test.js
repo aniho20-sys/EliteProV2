@@ -64,6 +64,12 @@ test('a live token connects as live; both values go to Secret Manager; nothing s
   expect(stored).not.toContain(SECRET);
 });
 
+test('connecting GoCardless keeps the coach’s Stripe connection (B52: it used to be overwritten)', async () => {
+  await db.doc('paymentConnections/coachA').set({ trainerId: 'coachA', stripe: { accountId: 'acct_KEEPME01', status: 'connected' } });
+  await connectDirect(deps());
+  expect(await connection()).toMatchObject({ mode: 'direct', status: 'connected', stripe: { accountId: 'acct_KEEPME01', status: 'connected' } });
+});
+
 test("the coach's clients can tell live from test mode: the coach's profile says which, and nothing more", async () => {
   await connectDirect(deps());
   const coach = (await db.doc('users/coachA').get()).data();

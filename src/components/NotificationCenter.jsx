@@ -3,13 +3,10 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, MessageSquare, Calendar, Dumbbell, ClipboardList, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { idTime } from '../utils/ids';
 
 const VIEWED_KEY = 'elitepro_notif_viewed';
 
-function idTimestamp(id = '') {
-  const n = Number(id.replace(/^[^-]+-/, ''));
-  return Number.isFinite(n) && n > 1_000_000_000_000 ? n : 0;
-}
 
 function relativeTime(ts) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -54,7 +51,7 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
 
     // Pending session requests from clients (client booked, not trainer)
     schedule
-      .filter(s => s.trainerId === uid && s.status === 'pending' && idTimestamp(s.id) > sevenDaysAgo)
+      .filter(s => s.trainerId === uid && s.status === 'pending' && idTime(s.id) > sevenDaysAgo)
       .forEach(s => {
         const client = users.find(u => u.id === s.clientId);
         notifs.push({
@@ -62,15 +59,15 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
           type: 'session',
           title: 'Session requested',
           body: `${client?.name || 'Client'} — ${s.type} on ${s.date} at ${s.time}`,
-          ts: idTimestamp(s.id),
+          ts: idTime(s.id),
           url: '/schedule',
-          unread: idTimestamp(s.id) > lastViewed,
+          unread: idTime(s.id) > lastViewed,
         });
       });
 
     // Recent workout logs from clients
     workoutLogs
-      .filter(l => l.clientId !== uid && idTimestamp(l.id) > sevenDaysAgo)
+      .filter(l => l.clientId !== uid && idTime(l.id) > sevenDaysAgo)
       .forEach(l => {
         const client = users.find(u => u.id === l.clientId);
         notifs.push({
@@ -78,9 +75,9 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
           type: 'workout_log',
           title: 'Workout logged',
           body: `${client?.name || 'Client'} completed a session`,
-          ts: idTimestamp(l.id),
+          ts: idTime(l.id),
           url: `/clients/${l.clientId}`,
-          unread: idTimestamp(l.id) > lastViewed,
+          unread: idTime(l.id) > lastViewed,
         });
       });
 
@@ -102,31 +99,31 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
 
     // Recent session status changes (confirmed / cancelled)
     schedule
-      .filter(s => s.clientId === uid && (s.status === 'confirmed' || s.status === 'cancelled') && idTimestamp(s.id) > sevenDaysAgo)
+      .filter(s => s.clientId === uid && (s.status === 'confirmed' || s.status === 'cancelled') && idTime(s.id) > sevenDaysAgo)
       .forEach(s => {
         notifs.push({
           id: `sched-${s.id}`,
           type: s.status === 'confirmed' ? 'session_done' : 'session',
           title: `Session ${s.status}`,
           body: `${s.type} on ${s.date} at ${s.time}`,
-          ts: idTimestamp(s.id),
+          ts: idTime(s.id),
           url: '/schedule',
-          unread: idTimestamp(s.id) > lastViewed,
+          unread: idTime(s.id) > lastViewed,
         });
       });
 
     // New workout plans assigned
     workoutPlans
-      .filter(p => p.clientId === uid && idTimestamp(p.id) > sevenDaysAgo)
+      .filter(p => p.clientId === uid && idTime(p.id) > sevenDaysAgo)
       .forEach(p => {
         notifs.push({
           id: `plan-${p.id}`,
           type: 'plan',
           title: 'New workout plan',
           body: `"${p.name}" assigned by your coach`,
-          ts: idTimestamp(p.id),
+          ts: idTime(p.id),
           url: '/my-workouts',
-          unread: idTimestamp(p.id) > lastViewed,
+          unread: idTime(p.id) > lastViewed,
         });
       });
   }

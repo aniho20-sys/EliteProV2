@@ -968,6 +968,7 @@ const en = {
   'progress.by_self': 'Self',
   'progress.confirm_delete': 'Delete measurement from {date}?',
   'progress.deleted': 'Measurement deleted',
+  'progress.delete_failed': 'Couldn’t delete the measurement. Please try again.',
   // ── Monthly report modal (trainer) ──
   // Owner-only: the app's error reports (ClientErrorsCard, functions/clientErrors.js).
   'errors.title': 'App errors',

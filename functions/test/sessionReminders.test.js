@@ -103,6 +103,27 @@ describe('sending', () => {
     await run('2026-10-15T18:05:00Z');
     expect(sent).toEqual([]);
   });
+  test('a session moved to another day gets reminded again for the new day (B52)', async () => {
+    await session('s1', { date: '2026-10-16', time: '18:00' });
+    await run('2026-10-15T18:05:00Z');
+    await db.doc('schedule/s1').update({ date: '2026-10-17' });
+    await run('2026-10-16T18:05:00Z');
+    expect(sent.map(x => x.body)).toEqual(['Tomorrow at 18:00 with Ani.', 'Tomorrow at 18:00 with Ani.']);
+  });
+  test('a client who has left this coach is not reminded of the old coach’s session (B52)', async () => {
+    await db.doc('users/amy').update({ trainerId: 'coachHK' });
+    await session('s1', { date: '2026-10-16', time: '18:00' });
+    await run('2026-10-15T18:05:00Z');
+    expect(sent).toEqual([]);
+  });
+  test('one push failing does not stop everyone else’s reminders (B52)', async () => {
+    await db.doc('users/bob').set({ id: 'bob', role: 'client', trainerId: 'coachLDN', fcmTokens: ['tok-bob'] });
+    await session('s1', { date: '2026-10-16', time: '18:00' });
+    await session('s2', { clientId: 'bob', date: '2026-10-16', time: '18:00' });
+    const flaky = async (x) => { if (x.userId === 'amy') throw new Error('FCM down'); sent.push(x); };
+    await sendSessionReminders({ db, now: () => new Date('2026-10-15T18:05:00Z'), notify: flaky });
+    expect(sent.map(x => x.userId)).toEqual(['bob']);
+  });
   test('old markers are cleared once their sessions are long past', async () => {
     await db.doc('sessionReminders/old_soon').set({ scheduleId: 'old', kind: 'soon', createdAt: '2026-10-01T00:00:00.000Z' });
     await db.doc('sessionReminders/new_soon').set({ scheduleId: 'new', kind: 'soon', createdAt: '2026-10-14T00:00:00.000Z' });

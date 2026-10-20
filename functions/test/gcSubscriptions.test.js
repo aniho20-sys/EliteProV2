@@ -288,6 +288,22 @@ describe('cancelSubscriptionsFor — a deleted account is never charged again', 
     expect(db.store.get('subscriptions/S1').status).toBe('cancelled');
   });
 
+  test('a client leaving one coach: only the plan with that coach is stopped (B52)', async () => {
+    const db = fakeDb({
+      'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'active', providerSubscriptionId: 'SB1', providerAuthorisationId: 'MD1' },
+      'subscriptions/S2': { clientId: 'c1', trainerId: 't2', status: 'active', providerSubscriptionId: 'SB2', providerAuthorisationId: 'MD2' },
+    });
+    const gc = fakeGc({
+      'POST /subscriptions/SB1/actions/cancel': ok('subscriptions'),
+      'POST /mandates/MD1/actions/cancel': ok('mandates'),
+      'POST /subscriptions/SB2/actions/cancel': ok('subscriptions'),
+      'POST /mandates/MD2/actions/cancel': ok('mandates'),
+    });
+    const r = await cancelSubscriptionsFor(cancelDeps(db, gc, { onlyTrainerId: 't1', reason: 'client_left' }));
+    expect(r).toEqual({ cancelled: ['S1'], failed: [] });
+    expect(db.store.get('subscriptions/S2').status).toBe('active');
+  });
+
   test('finished plans are left alone — no GoCardless call at all', async () => {
     const db = fakeDb({
       'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'cancelled', providerAuthorisationId: 'MD1' },

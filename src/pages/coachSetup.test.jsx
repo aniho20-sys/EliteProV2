@@ -39,6 +39,8 @@ const { default: ExerciseLibraryPage } = await import('./ExerciseLibraryPage');
 const { default: ClientDashboard } = await import('./ClientDashboard');
 const { default: SubscriptionCard } = await import('../components/SubscriptionCard');
 
+const { localToday } = await import('../utils/dateUtils');
+
 const NEW_COACH = { id: 'coach-1', name: 'Sam Coach', email: 'sam@example.test', role: 'trainer', currency: 'GBP' };
 const READY_COACH = { ...NEW_COACH, inviteCode: 'SAM123', renewalRate: 50, bankDetails: { accountName: 'Sam', sortCode: '12-34-56', accountNumber: '12345678' } };
 const CLIENT = { id: 'client-1', name: 'Jo Bloggs', role: 'client', trainerId: 'coach-1', joinDate: '2026-10-01' };
@@ -222,6 +224,19 @@ describe('booking a session', () => {
     renderAt('/schedule', <Route path="/schedule" element={<SchedulePage />} />, base({ currentUser: { ...CLIENT, intakeCompleted: true }, coach: READY_COACH }));
     fireEvent.click(screen.getAllByRole('button', { name: /Book Session/i })[0]);
     expect(screen.getByText(/at least 24 hours before.*up to 2 times a month/)).toBeTruthy();
+  });
+});
+
+describe('a group class’s hour on the calendar (B52)', () => {
+  test('cannot be deleted from the schedule — only a plain blocked hour can', async () => {
+    const today = localToday();
+    const block = (id, time, extra) => ({ id, trainerId: 'coach-1', clientId: '', isBlocked: true, date: today, time, duration: 60, status: 'blocked', type: 'Blocked', ...extra });
+    renderAt('/schedule', <Route path="/schedule" element={<SchedulePage />} />, base({
+      currentUser: READY_COACH, clients: [CLIENT],
+      schedule: [block('gc-class1', '10:00', { groupClassId: 'class1', notes: 'Bootcamp' }), block('sched-2', '14:00', { notes: 'Lunch' })],
+    }));
+    expect(await screen.findByText('Bootcamp')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Remove block' })).toHaveLength(1);
   });
 });
 

@@ -988,6 +988,7 @@ const zhHK = {
   'progress.by_self': '自己',
   'progress.confirm_delete': '確定刪除 {date} 的量度紀錄？',
   'progress.deleted': '已刪除量度紀錄',
+  'progress.delete_failed': '未能刪除量度紀錄，請再試一次。',
 
   // ── 月度報告 ──
   // 「App 錯誤」卡 —— Ani 2026-09-28 全部照批（reports/i18n-approval-client-errors-2026-09-28.md）

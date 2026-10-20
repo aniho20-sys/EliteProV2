@@ -467,7 +467,8 @@ export default function SchedulePage() {
                   </div>
                   <div className="schedule-item-bottom">
                     <span className="tag">{t('sched.unavailable')}</span>
-                    <button className="btn-icon" aria-label={t('sched.remove_block_aria')} onClick={() => setDeleteModal({ id: s.id, isBlocked: true })} title={t('sched.remove_block_aria')} style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>
+                    {/* A group class's hour is freed only by cancelling the class (Profile → Group classes), which also tells the people booked — deleting it here would leave them booked into nothing (B52). */}
+                    {!s.groupClassId && <button className="btn-icon" aria-label={t('sched.remove_block_aria')} onClick={() => setDeleteModal({ id: s.id, isBlocked: true })} title={t('sched.remove_block_aria')} style={{ color: 'var(--danger)' }}><Trash2 size={15} /></button>}
                   </div>
                 </div>
               );

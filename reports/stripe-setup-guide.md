@@ -23,12 +23,15 @@
 ## 4. 開 Webhook
 1. **Developers → Webhooks**（新版可能叫 **Workbench → Webhooks**）→ **Add destination／Add endpoint**
 2. 「Events from」揀 **Connected accounts**（唔係 Your account）
-3. 揀以下 5 個 events：
+3. 揀以下 8 個 events（app 入面張卡有同一張清單）：
    - `account.updated`
+   - `account.application.deauthorized`
    - `checkout.session.completed`
    - `invoice.paid`
    - `invoice.payment_failed`
+   - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `charge.dispute.created`
 4. Endpoint URL：`https://us-central1-elitepro-16718.cloudfunctions.net/stripeWebhook`（app 入面張卡有「複製」掣）
 5. 建立之後，撳入去 → **Signing secret**（`whsec_` 開頭）→ Reveal → 複製
 

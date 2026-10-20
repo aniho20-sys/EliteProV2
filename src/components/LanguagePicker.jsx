@@ -32,9 +32,12 @@ const OPTIONS = [
 // 2026-10-05). The choice lasts while this page is open (setViewLanguage); nothing is saved,
 // and leaving the page drops it — a signed-in coach previewing their own page must not
 // carry it back into the app over their saved language.
-export function LanguageToggle() {
+// keepOnLeave: the choice follows the visitor onto the next page (the landing page's into
+// sign-up, B52) instead of ending with this one. A signed-in person's own saved language
+// still takes over once it is known (LanguageProvider).
+export function LanguageToggle({ keepOnLeave = false }) {
   const { lang, setViewLanguage, t } = useLanguage();
-  useEffect(() => () => setViewLanguage(null), [setViewLanguage]);
+  useEffect(() => () => { if (!keepOnLeave) setViewLanguage(null); }, [setViewLanguage, keepOnLeave]);
   return (
     <div className="lang-toggle" role="group" aria-label={t('profile.language')}>
       {OPTIONS.filter(o => SUPPORTED_LANGUAGES.includes(o.value)).map(o => (

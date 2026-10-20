@@ -398,14 +398,16 @@ async function respondToRequest({ db, trainerId, requestId, action, now = new Da
     const ms = now.getTime();
     const suffix = Array.from({ length: 4 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[randomInt(36)]).join('');
     const clientId = `managed-${ms}-${suffix}`;
-    const schedId = `sched-${ms}`;
-    tx.set(db.doc(`users/${clientId}`), {
+    // Suffixed and created, never set: two coaches confirming in the same millisecond must
+    // not overwrite each other's session (B52) — a clash fails the transaction instead.
+    const schedId = `sched-${ms}-${suffix}`;
+    tx.create(db.doc(`users/${clientId}`), {
       id: clientId, name: r.name, role: 'client', trainerId, managed: true,
       joinDate: localDate(now, null), contact: r.contact,
     });
     // trial: true = paid outside the session pack; the credit triggers skip it. A class
     // place is paid per person at the class price, the same way.
-    tx.set(db.doc(`schedule/${schedId}`), {
+    tx.create(db.doc(`schedule/${schedId}`), {
       id: schedId, trainerId, clientId, date: r.date, time: r.time, duration: SLOT_MINUTES,
       type: r.groupClassId ? GROUP_TYPE : TRIAL_TYPE, status: 'confirmed', notes: r.message || '', trial: true,
       ...(r.groupClassId ? { groupClassId: r.groupClassId } : {}),

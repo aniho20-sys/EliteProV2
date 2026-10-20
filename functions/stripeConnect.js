@@ -126,11 +126,21 @@ async function startConnect({ db, trainerId, country, keys, fetchImpl, now, retu
 // only thing that makes a coach able to take plans; everything else is for display.
 async function refreshConnection({ db, trainerId, keys, fetchImpl, now }) {
   if (!keys) throw new StripeSetupError('failed-precondition', 'Stripe is not set up yet');
+  const userRef = db.doc(`users/${trainerId}`);
+  const userSnap = await userRef.get();
+  // Trainers only — and never re-create the profile of an account that has been deleted.
+  if (!userSnap.exists || userSnap.data().role !== 'trainer') return { status: 'none' };
   const connRef = db.doc(`paymentConnections/${trainerId}`);
   const snap = await connRef.get();
   const stripe = snap.exists ? snap.data().stripe : null;
   if (!stripe || !stripe.accountId) return { status: 'none' };
-  if (stripe.environment !== keyEnvironment(keys.secretKey)) return { status: 'none' };
+  if (stripe.environment !== keyEnvironment(keys.secretKey)) {
+    // Made with the other mode's key (e.g. a test account after ElitePro went live): it can
+    // take no plans now, so the coach's clients must stop being offered one.
+    if (userSnap.data().stripeEnvironment) await userRef.update({ stripeEnvironment: null });
+    return { status: 'none' };
+  }
+  if (stripe.status === 'disconnected') return { status: 'disconnected' };
 
   const account = await stripeRequest({ fetchImpl, secretKey: keys.secretKey, path: `/v1/accounts/${stripe.accountId}` });
   const chargesEnabled = account.charges_enabled === true;
@@ -150,9 +160,25 @@ async function refreshConnection({ db, trainerId, keys, fetchImpl, now }) {
     },
   }, { merge: true });
   // Read by the coach's clients (they cannot read paymentConnections) to show the plan card
-  // and say "test mode" only when it is. Server-written; not in the self-update allowlist.
-  await db.doc(`users/${trainerId}`).set({ stripeEnvironment: chargesEnabled ? stripe.environment : null }, { merge: true });
+  // and say "test mode" only when it is. Set once the coach can take payments, and kept if
+  // Stripe later pauses them: clients with a plan must still see it, and a new plan is
+  // refused server-side anyway (connectionFor). Server-written; not in the self-update allowlist.
+  if (chargesEnabled && userSnap.data().stripeEnvironment !== stripe.environment) {
+    await userRef.update({ stripeEnvironment: stripe.environment });
+  }
   return { status, chargesEnabled };
+}
+
+// The coach disconnected their account from ElitePro in their own Stripe dashboard
+// (account.application.deauthorized). ElitePro can no longer act on it: new plans stop, and
+// the coach's clients are no longer offered one.
+async function markDisconnected({ db, trainerId, now }) {
+  await db.doc(`paymentConnections/${trainerId}`).set({
+    stripe: { status: 'disconnected', chargesEnabled: false, disconnectedAt: now().toISOString() },
+  }, { merge: true });
+  const userRef = db.doc(`users/${trainerId}`);
+  const userSnap = await userRef.get();
+  if (userSnap.exists && userSnap.data().stripeEnvironment) await userRef.update({ stripeEnvironment: null });
 }
 
 // The one coach whose Stripe account this is, or null — never a guess when it is ambiguous.
@@ -162,4 +188,4 @@ async function trainerForAccount(db, accountId) {
   return snap.size === 1 ? snap.docs[0].id : null;
 }
 
-module.exports = { COUNTRIES, StripeSetupError, saveStripeKeys, startConnect, refreshConnection, trainerForAccount };
+module.exports = { COUNTRIES, StripeSetupError, saveStripeKeys, startConnect, refreshConnection, markDisconnected, trainerForAccount };

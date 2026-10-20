@@ -17,8 +17,9 @@ import { SkeletonLine } from './Skeleton';
 // The events Stripe must send (functions/stripeWebhooks.js). Event names are Stripe's own
 // identifiers, not words, so they are rendered as data.
 const STRIPE_EVENTS = [
-  'account.updated', 'checkout.session.completed', 'invoice.paid',
-  'invoice.payment_failed', 'customer.subscription.deleted',
+  'account.updated', 'account.application.deauthorized', 'checkout.session.completed',
+  'invoice.paid', 'invoice.payment_failed', 'customer.subscription.updated',
+  'customer.subscription.deleted', 'charge.dispute.created',
 ];
 
 export default function StripeKeysCard() {

@@ -80,7 +80,7 @@ export default function LandingPage() {
       <header className="lp-bar">
         <span className="lp-logo">Elite<span>Pro</span></span>
         <div className="lp-signin-wrap">
-          <LanguageToggle />
+          <LanguageToggle keepOnLeave />
           <span className="lp-signin-note">{t('landing.have_account')}</span>
           <button className="lp-signin" onClick={() => navigate('/login')}>{t('landing.sign_in')}</button>
         </div>

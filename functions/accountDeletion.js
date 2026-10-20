@@ -34,6 +34,8 @@ async function commitInChunks(db, ops) {
   }
 }
 
+const DELETED_NAME = '(deleted account)';
+
 async function deleteAccountData({ db, uid }) {
   const where = (col, field) => db.collection(col).where(field, '==', uid).get();
   const snaps = await Promise.all([
@@ -52,7 +54,12 @@ async function deleteAccountData({ db, uid }) {
     where('bookingPages', 'trainerId'),
     where('groupClasses', 'trainerId'),
     db.collection(`bodyStats/${uid}/entries`).get(),
+    // B52: emails ElitePro sent about this person (Trigger Email keeps every one it sends).
+    where('mail', 'aboutUserId'),
   ]);
+  // The signup record is kept — it is what the founding-places count is made of — but
+  // without the person's name and email.
+  const signups = await where('platformEvents', 'userId');
   const clients = await where('users', 'trainerId');
 
   // One doc can match two queries (a plan both written by and assigned to the same
@@ -69,6 +76,9 @@ async function deleteAccountData({ db, uid }) {
   del(db.doc(`bodyStats/${uid}`));
   del(db.doc(`intakeForms/${uid}`));
   del(db.doc(`users/${uid}`));
+  for (const e of signups.docs) {
+    if (e.data().email || e.data().name !== DELETED_NAME) ops.push({ type: 'update', ref: e.ref, data: { name: DELETED_NAME, email: null } });
+  }
   const managed = [];
   for (const c of clients.docs) {
     if (c.ref.path === `users/${uid}`) continue;
@@ -81,7 +91,7 @@ async function deleteAccountData({ db, uid }) {
   for (const clientId of managed) deleted += (await deleteAccountData({ db, uid: clientId })).deleted;
   return {
     deleted,
-    detachedClients: ops.filter(o => o.type === 'update').length,
+    detachedClients: ops.filter(o => o.type === 'update' && o.ref.parent.id === 'users').length,
     deletedManagedClients: managed.length,
   };
 }

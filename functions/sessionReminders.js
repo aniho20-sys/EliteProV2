@@ -12,7 +12,7 @@
 // or overlapping run can never send it twice; a push that then fails is not retried —
 // one missed reminder beats a phone buzzing twice.
 
-const { zonedToEpochMs } = require('./zonedTime');
+const { zonedToEpochMs, localDateHour } = require('./zonedTime');
 
 const DAY_BEFORE_HOUR = 19;
 const SOON_MIN_MS = 45 * 60 * 1000;
@@ -36,18 +36,6 @@ const TEXT = {
 };
 
 const isoDate = (ms) => new Date(ms).toISOString().slice(0, 10);
-
-// The coach's local calendar date and hour at instant `ms`.
-function localDateHour(ms, timeZone) {
-  try {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
-      timeZone: timeZone || 'UTC', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
-    }).formatToParts(new Date(ms)).map(p => [p.type, p.value]));
-    return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
-  } catch {
-    return { date: isoDate(ms), hour: new Date(ms).getUTCHours() };
-  }
-}
 
 const dayAfter = (date) => {
   const [y, m, d] = date.split('-').map(Number);
@@ -86,23 +74,34 @@ async function sendSessionReminders({ db, now, notify }) {
   for (const d of snap.docs) {
     const session = d.data();
     if (session.status !== 'confirmed' || session.isBlocked || !session.clientId || !session.trainerId) continue;
+    if (typeof session.date !== 'string' || typeof session.time !== 'string') continue;
     const trainer = await user(session.trainerId);
     if (!trainer) continue;
     const kind = reminderKind({ session, timeZone: trainer.timeZone, nowMs });
     if (!kind) continue;
     const client = await user(session.clientId);
-    // A client without the app (managed, B35) has no phone to remind.
-    if (!client || client.managed || !Array.isArray(client.fcmTokens) || client.fcmTokens.length === 0) continue;
+    // A client without the app (managed, B35) has no phone to remind; one who has left this
+    // coach is no longer theirs to remind (B52).
+    if (!client || client.managed || client.trainerId !== session.trainerId) continue;
+    if (!Array.isArray(client.fcmTokens) || client.fcmTokens.length === 0) continue;
 
+    // The marker names the date and time too: a session moved to another day is a new
+    // appointment and gets its own reminders (B52).
+    const marker = `${d.id}_${session.date}_${session.time.replace(':', '')}_${kind}`;
     try {
-      await db.doc(`sessionReminders/${d.id}_${kind}`).create({ scheduleId: d.id, kind, createdAt: new Date(nowMs).toISOString() });
+      await db.doc(`sessionReminders/${marker}`).create({ scheduleId: d.id, kind, createdAt: new Date(nowMs).toISOString() });
     } catch (err) {
       if (err.code === ALREADY_EXISTS) continue; // already sent by an earlier run
-      throw err;
+      console.error(`[sendSessionReminders] ${d.id}: marker failed`, err && err.message);
+      continue; // one bad session must not stop everyone else's reminders (B52)
     }
     const text = (TEXT[client.language] || TEXT.en)[kind](session.time, trainer.name || '');
-    await notify({ userId: session.clientId, tokens: client.fcmTokens, ...text });
-    sent++;
+    try {
+      await notify({ userId: session.clientId, tokens: client.fcmTokens, ...text });
+      sent++;
+    } catch (err) {
+      console.error(`[sendSessionReminders] ${d.id}: push failed`, err && err.message);
+    }
   }
 
   // Markers are only needed until the session has passed.
@@ -112,4 +111,4 @@ async function sendSessionReminders({ db, now, notify }) {
   return { sent };
 }
 
-module.exports = { reminderKind, sendSessionReminders, localDateHour };
+module.exports = { reminderKind, sendSessionReminders };

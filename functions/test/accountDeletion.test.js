@@ -30,7 +30,7 @@ const exists = async (path) => (await db.doc(path).get()).exists;
 async function clearAll() {
   const cols = ['users', 'messages', 'workoutLogs', 'schedule', 'workoutPlans', 'exercises',
     'templates', 'exerciseOverrides', 'intakeForms', 'bodyStats', 'invoices', 'creditLedger', 'subscriptions',
-    'trialRequests', 'bookingPages', 'groupClasses'];
+    'trialRequests', 'bookingPages', 'groupClasses', 'platformEvents', 'mail'];
   for (const col of cols) {
     const snap = await db.collection(col).get();
     for (const d of snap.docs) await db.recursiveDelete(d.ref);
@@ -127,6 +127,19 @@ describe('deleting a trainer', () => {
     expect(await exists('creditLedger/c1')).toBe(true);
     expect(await exists('trialRequests/tr2')).toBe(true); // another coach's
   });
+});
+
+test('the signup record stays (it is the founding-places count) but loses the name and email; emails about them go (B52)', async () => {
+  await db.doc('platformEvents/ev1').set({ type: 'trainer_signup', userId: TRAINER, name: 'Jo Coach', email: 'jo@coach.test', signupNumber: 3 });
+  await db.doc('platformEvents/ev2').set({ type: 'trainer_signup', userId: 'another-coach', name: 'Sam', email: 'sam@coach.test' });
+  await db.doc('mail/m1').set({ to: 'owner@x.test', aboutUserId: TRAINER, message: { text: 'Email: jo@coach.test' } });
+  await db.doc('mail/m2').set({ to: 'owner@x.test', aboutUserId: 'another-coach', message: { text: 'Email: sam@coach.test' } });
+  const { detachedClients } = await deleteAccountData({ db, uid: TRAINER });
+  expect(detachedClients).toBe(2); // an anonymised record is not a detached client
+  expect((await db.doc('platformEvents/ev1').get()).data()).toMatchObject({ type: 'trainer_signup', signupNumber: 3, name: '(deleted account)', email: null });
+  expect((await db.doc('platformEvents/ev2').get()).data().email).toBe('sam@coach.test');
+  expect(await exists('mail/m1')).toBe(false);
+  expect(await exists('mail/m2')).toBe(true);
 });
 
 test('more docs than one batch holds are all deleted', async () => {

@@ -18,6 +18,7 @@ import { canonicalExercise } from '../utils/exerciseUtils';
 import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
 import { managedClientId, MANAGED_NAME_MAX } from '../utils/managedClient';
+import { newId } from '../utils/ids';
 
 // Exported so the screenshot renderer in mock/ can supply a stubbed value and mount the
 // real pages without Firebase. The app itself always goes through AppProvider/useApp.
@@ -573,7 +574,7 @@ export function AppProvider({ children }) {
   };
 
   const addWorkoutPlan = async (plan) => {
-    const newPlan = { ...plan, id: `plan-${Date.now()}`, trainerId: currentUser?.id || plan.trainerId };
+    const newPlan = { ...plan, id: newId('plan'), trainerId: currentUser?.id || plan.trainerId };
     await setDoc(doc(db, 'workoutPlans', newPlan.id), newPlan);
     return newPlan;
   };
@@ -593,7 +594,7 @@ export function AppProvider({ children }) {
     const isTrainerRole = currentUser?.role === 'trainer';
     const newLog = {
       ...log,
-      id: `log-${Date.now()}`,
+      id: newId('log'),
       clientId: log.clientId || currentUser?.id,
       trainerId: isTrainerRole ? currentUser.id : (currentUser?.trainerId || null),
       createdBy: currentUser?.id,
@@ -621,7 +622,7 @@ export function AppProvider({ children }) {
   const getTrainerBusySlots = () => trainerBusySlots;
 
   const addScheduleItem = async (item) => {
-    const newItem = { ...item, id: `sched-${Date.now()}`, status: item.status || 'pending' };
+    const newItem = { ...item, id: newId('sched'), status: item.status || 'pending' };
     await setDoc(doc(db, 'schedule', newItem.id), newItem);
     return newItem;
   };
@@ -654,7 +655,7 @@ export function AppProvider({ children }) {
     }
     msgTimestampsRef.current.push(now);
 
-    const msg = { id: `msg-${now}`, from, to, text: trimmed, timestamp: new Date().toISOString(), read: false };
+    const msg = { id: newId('msg', now), from, to, text: trimmed, timestamp: new Date().toISOString(), read: false };
     await setDoc(doc(db, 'messages', msg.id), msg);
     return msg;
   };
@@ -1020,7 +1021,7 @@ export function AppProvider({ children }) {
     const trainerId = currentUser?.role === 'trainer'
       ? currentUser.id
       : (currentUser?.trainerId || currentUser?.id);
-    const id = exercise.id || `ex-${Date.now()}`;
+    const id = exercise.id || newId('ex');
     const newEx = { ...exercise, id, trainerId };
     await setDoc(doc(db, 'exercises', id), newEx);
     return newEx;
@@ -1038,7 +1039,7 @@ export function AppProvider({ children }) {
   // ========== Invoices ==========
   const getInvoices = (trainerId) => invoices.filter(inv => inv.trainerId === trainerId);
   const addInvoice = async (invoice) => {
-    const id = `inv-${Date.now()}`;
+    const id = newId('inv');
     await setDoc(doc(db, 'invoices', id), { ...invoice, id });
   };
   const updateInvoice = async (invoiceId, updates) => {
@@ -1052,7 +1053,7 @@ export function AppProvider({ children }) {
 
   const saveAsTemplate = async (plan) => {
     const template = {
-      id: `tmpl-${Date.now()}`,
+      id: newId('tmpl'),
       trainerId: currentUser.id,
       name: plan.name,
       day: plan.day,
@@ -1102,7 +1103,7 @@ export function AppProvider({ children }) {
 
     if (isFirstCompletion && !data.skipped && data.weight) {
       await addDoc(collection(db, 'bodyStats', clientId, 'entries'), {
-        id: `stat-${Date.now()}`,
+        id: newId('stat'),
         date: localToday(),
         weight: Number(data.weight),
         bodyFat: 0,
@@ -1123,7 +1124,7 @@ export function AppProvider({ children }) {
   // ========== Studios (operator only write) ==========
   const getStudios = () => studios;
   const addStudio = async (studio) => {
-    const id = `studio-${Date.now()}`;
+    const id = newId('studio');
     await setDoc(doc(db, 'studios', id), { ...studio, id, active: true, createdAt: localToday() });
   };
   const updateStudio = async (id, updates) => {
