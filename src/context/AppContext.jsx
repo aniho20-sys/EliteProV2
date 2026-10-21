@@ -19,6 +19,7 @@ import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
 import { managedClientId, MANAGED_NAME_MAX } from '../utils/managedClient';
 import { newId } from '../utils/ids';
+import { isIOS, isStandalone, googleSignInMethod } from '../utils/deviceUtils';
 
 // Exported so the screenshot renderer in mock/ can supply a stubbed value and mount the
 // real pages without Firebase. The app itself always goes through AppProvider/useApp.
@@ -358,13 +359,19 @@ export function AppProvider({ children }) {
 // ========== Auth ==========
 
   // Firebase Auth: Google Sign-In
-  // Always attempt popup first on all platforms (desktop, mobile, PWA).
-  // On iOS PWA, signInWithRedirect opens Google in external Safari; when Google
-  // redirects back to the app URL, iOS opens it in Safari rather than the PWA,
-  // so getRedirectResult in the PWA never fires — the user appears stuck at LoginPage.
-  // Popup keeps the OAuth flow within the original browsing context and avoids this.
+  // Popup everywhere except an iPhone home-screen app, which goes by redirect
+  // (googleSignInMethod, utils/deviceUtils.js). Popup was once right there too: older iOS
+  // sent a redirect out to Safari and never back. Current iOS keeps it inside the app,
+  // and its popup now dies on "missing initial state" (Ani 2026-10-21). The redirect
+  // finishes on this app's own domain (authDomain in firebase.js), so its state is readable.
   const signInWithGoogle = () => {
     setSigningIn(true);
+    if (googleSignInMethod({ ios: isIOS(), standalone: isStandalone() }) === 'redirect') {
+      return signInWithRedirect(auth, googleProvider).catch((err) => {
+        setSigningIn(false);
+        setGoogleAuthError(err);
+      });
+    }
     return signInWithPopup(auth, googleProvider).catch((err) => {
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/internal-error') {
         // Popup blocked — fall back to redirect. Page will reload so signingIn

@@ -5,7 +5,11 @@ import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCRfch8PtuqVdBIwjBcGq7NS5NDjt8PeZI',
-  authDomain: 'elitepro-16718.firebaseapp.com',
+  // The app's own domain, not firebaseapp.com (Ani 2026-10-21): Google sign-in finishes on
+  // <authDomain>/__/auth/handler, and on an iPhone home-screen app a different domain's
+  // page cannot read what the sign-in started with ("missing initial state"). Hosting
+  // serves the handler here, and Google already accepts this return address.
+  authDomain: 'elitepro-16718.web.app',
   projectId: 'elitepro-16718',
   storageBucket: 'elitepro-16718.firebasestorage.app',
   messagingSenderId: '167024537410',

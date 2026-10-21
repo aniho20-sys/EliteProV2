@@ -29,7 +29,9 @@ export default defineConfig({
         navigateFallback: 'index.html',
         // /book/<slug> is a shared booking link: it must reach Hosting (and the bookingPreview
         // function), not be answered from cache with the app shell.
-        navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/, /^\/book\//],
+        // /__/ is Firebase's own (the Google sign-in handler): answering it with the app shell
+        // would break sign-in now that it runs on this domain.
+        navigateFallbackDenylist: [/^\/firebase-messaging-sw\.js$/, /^\/book\//, /^\/__\//],
         runtimeCaching: [
           {
             // The CJK PDF font and the fontkit chunk that parses it. Neither is
