@@ -85,9 +85,16 @@ function isContact(value) {
   return /^\+?[0-9 ()-]+$/.test(value) && value.replace(/[^0-9]/g, '').length >= 7;
 }
 
+// The coach's break between sessions (Ani 2026-10-21) — kept in step with
+// src/utils/bookingBuffer.js. A stranger can never book closer than this to another session.
+const BUFFER_OPTIONS = [0, 15, 30, 60];
+const DEFAULT_BUFFER = 30;
+const bufferOf = (coach) => (BUFFER_OPTIONS.includes(coach && coach.bookingBuffer) ? coach.bookingBuffer : DEFAULT_BUFFER);
+
 // ── Pure: which hours can be offered ──
 // busy: [{ date, time, duration }] — sessions, blocked time and unanswered requests alike.
-function freeSlots({ days, workingHours, timeZone, busy, now }) {
+// Each is kept `buffer` minutes clear either side, except time the coach simply blocked off.
+function freeSlots({ days, workingHours, timeZone, busy, now, buffer = 0 }) {
   const start = toMin((workingHours && workingHours.start) || DEFAULT_HOURS.start);
   const end = toMin((workingHours && workingHours.end) || DEFAULT_HOURS.end);
   const earliest = now.getTime() + MIN_LEAD_HOURS * 3600 * 1000;
@@ -95,8 +102,9 @@ function freeSlots({ days, workingHours, timeZone, busy, now }) {
   for (const b of busy) {
     if (!b || !b.date || !isHHMM(b.time)) continue;
     const s = toMin(b.time);
+    const pad = b.isBlocked && !b.groupClassId ? 0 : buffer;
     const list = byDate.get(b.date) || [];
-    list.push([s, s + (Number(b.duration) || SLOT_MINUTES)]);
+    list.push([s - pad, s + (Number(b.duration) || SLOT_MINUTES) + pad]);
     byDate.set(b.date, list);
   }
   const today = localDate(now, timeZone);
@@ -201,6 +209,7 @@ async function getPage({ db, slug, now = new Date() }) {
     // A full inbox reads as "no times free" rather than an error — nothing to explain to a stranger.
     slots: openRequests >= MAX_OPEN_PER_COACH ? [] : freeSlots({
       days: data.publicBooking.days || [], workingHours: data.workingHours, timeZone: data.timeZone, busy, now,
+      buffer: bufferOf(data),
     }),
     // Only what a stranger needs to choose one: never who else is coming.
     groupClasses: classes
@@ -358,7 +367,7 @@ async function requestTrial({ db, input, ip, now = new Date() }) {
     } else {
       const offered = freeSlots({
         days: coach.data.publicBooking.days || [], workingHours: coach.data.workingHours,
-        timeZone: coach.data.timeZone, busy, now,
+        timeZone: coach.data.timeZone, busy, now, buffer: bufferOf(coach.data),
       });
       if (!offered.some(s => s.date === data.date && s.time === data.time)) {
         throw new PublicBookingError('failed-precondition', 'Slot taken');
@@ -437,5 +446,5 @@ async function cleanup({ db, now = new Date() }) {
 module.exports = {
   freeSlots, validateSettings, saveSettings, getPage, requestTrial, respondToRequest, cleanup,
   saveGroupClass, cancelGroupClass, GROUP_TYPE, coachForSlug,
-  isContact, PublicBookingError, LIMITS, DAILY, MAX_OPEN_PER_COACH, SLOT_MINUTES, TRIAL_TYPE,
+  isContact, PublicBookingError, LIMITS, DEFAULT_BUFFER, DAILY, MAX_OPEN_PER_COACH, SLOT_MINUTES, TRIAL_TYPE,
 };

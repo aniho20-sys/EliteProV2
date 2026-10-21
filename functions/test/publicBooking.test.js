@@ -39,6 +39,8 @@ async function seedCoach(publicBooking = {}, extra = {}) {
     bankDetails: { accountNumber: '12345678' }, timeZone: TZ, currency: 'GBP',
     workingHours: { start: '09:00', end: '12:00' },
     publicBooking: { enabled: true, price: 20, days: [1, 2, 3, 4, 5], slug: SLUG, ...publicBooking },
+    // No break unless a test is about the break: most tests here need hours side by side.
+    bookingBuffer: 0,
     ...extra,
   });
   await db.doc(`bookingPages/${SLUG}`).set({ trainerId: COACH });
@@ -70,10 +72,38 @@ describe('freeSlots', () => {
     expect(slots.filter(s => s.date === '2026-10-02').map(s => s.time)).toEqual(['10:00', '11:00']);
   });
 
+  test('the coach’s break: no hour right after or right before a session; blocked time needs none (Ani 2026-10-21)', () => {
+    const day = (busy, buffer) => pb.freeSlots({ ...base, workingHours: { start: '09:00', end: '17:00' }, busy, buffer })
+      .filter(s => s.date === '2026-10-02').map(s => s.time);
+    const noon = { date: '2026-10-02', time: '12:00', duration: 60 };
+    expect(day([noon], 30)).toEqual(['09:00', '10:00', '14:00', '15:00', '16:00']);
+    expect(day([noon], 0)).toEqual(['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00']);
+    expect(day([{ ...noon, isBlocked: true }], 30)).toEqual(['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00']);
+    expect(day([{ ...noon, isBlocked: true, groupClassId: 'g1' }], 30)).toEqual(['09:00', '10:00', '14:00', '15:00', '16:00']);
+  });
+
   test('no working hours set: the same 09:00–17:00 the schedule page assumes', () => {
     const slots = pb.freeSlots({ ...base, workingHours: undefined });
     expect(slots.filter(s => s.date === '2026-10-02').map(s => s.time)).toEqual(
       ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00']);
+  });
+});
+
+describe('the page keeps the coach’s break (Ani 2026-10-21)', () => {
+  const sessionAt = (time) => db.doc('schedule/s-break').set({ id: 's-break', trainerId: COACH, clientId: 'c', date: '2026-10-02', time, duration: 60, status: 'confirmed' });
+  const offered = async () => (await pb.getPage({ db, slug: SLUG, now: NOW })).slots.filter(s => s.date === '2026-10-02').map(s => s.time);
+  test('30 minutes until the coach chooses: the hour after a session is not offered, nor can it be asked for', async () => {
+    await seedCoach();
+    const { bookingBuffer, ...unchosen } = (await db.doc(`users/${COACH}`).get()).data(); // eslint-disable-line no-unused-vars
+    await db.doc(`users/${COACH}`).set(unchosen);
+    await sessionAt('09:00');
+    expect(await offered()).toEqual(['11:00']);
+    await expect(ask({ date: '2026-10-02', time: '10:00' })).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+  test('a coach who chose no break gets back-to-back hours', async () => {
+    await seedCoach({}, { bookingBuffer: 0 });
+    await sessionAt('09:00');
+    expect(await offered()).toEqual(['10:00', '11:00']);
   });
 });
 

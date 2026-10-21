@@ -227,6 +227,50 @@ describe('booking a session', () => {
   });
 });
 
+describe('the coach’s break between sessions (Ani 2026-10-21)', () => {
+  const DAY = '2099-01-05';
+  const noon = { id: 'sched-x', trainerId: 'coach-1', clientId: 'someone', date: DAY, time: '12:00', duration: 60, status: 'confirmed' };
+  function timesOffered(app, { asCoach }) {
+    renderAt('/schedule', <Route path="/schedule" element={<SchedulePage />} />, app);
+    fireEvent.click(screen.getAllByRole('button', { name: /Book Session/i })[0]);
+    if (asCoach) {
+      const clientSelect = screen.getAllByRole('combobox').find(s => [...s.options].some(o => o.value === CLIENT.id));
+      fireEvent.change(clientSelect, { target: { value: CLIENT.id } });
+    }
+    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: DAY } });
+    const timeSelect = screen.getAllByRole('combobox').find(s => [...s.options].some(o => o.value === '09:00'));
+    return [...timeSelect.options].map(o => o.value).filter(Boolean);
+  }
+  const coach = (extra) => ({ ...READY_COACH, workingHours: { start: '09:00', end: '17:00' }, ...extra });
+
+  test('a client cannot book right after (or right before) a session — 30 minutes until the coach chooses', () => {
+    const times = timesOffered(base({ currentUser: { ...CLIENT, intakeCompleted: true }, coach: coach(), getTrainerBusySlots: () => [noon] }), { asCoach: false });
+    expect(times).not.toContain('13:00');
+    expect(times).toContain('13:30');
+    expect(times).not.toContain('11:00');
+    expect(times).toContain('10:30');
+  });
+  test('a coach who chose an hour: 2:00 is the first', () => {
+    const times = timesOffered(base({ currentUser: { ...CLIENT, intakeCompleted: true }, coach: coach({ bookingBuffer: 60 }), getTrainerBusySlots: () => [noon] }), { asCoach: false });
+    expect(times).not.toContain('13:30');
+    expect(times).toContain('14:00');
+  });
+  test('the coach booking for themselves can still go back-to-back', () => {
+    const times = timesOffered(base({ currentUser: coach(), clients: [CLIENT], schedule: [noon] }), { asCoach: true });
+    expect(times).toContain('13:00');
+    expect(times).not.toContain('12:30');
+  });
+  test('the coach sets it in Profile, next to working hours', async () => {
+    const app = base({ currentUser: coach() });
+    renderAt('/profile', <Route path="/profile" element={<ProfilePage />} />, app);
+    const select = await screen.findByLabelText('Break between sessions');
+    expect(select.value).toBe('30');
+    fireEvent.change(select, { target: { value: '60' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Hours/i }));
+    await waitFor(() => expect(app.updateClient).toHaveBeenCalledWith('coach-1', expect.objectContaining({ bookingBuffer: 60 })));
+  });
+});
+
 describe('a group class’s hour on the calendar (B52)', () => {
   test('cannot be deleted from the schedule — only a plain blocked hour can', async () => {
     const today = localToday();

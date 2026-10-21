@@ -82,6 +82,11 @@ describe('a trainer updating their own profile', () => {
     await assertSucceeds(updateDoc(doc(as(COACH), 'users', COACH), { workingHours: { start: '07:00', end: '20:00' } }));
   });
 
+  test('the break between sessions: only the offered values (Ani 2026-10-21)', async () => {
+    for (const n of [0, 15, 30, 60]) await assertSucceeds(updateDoc(doc(as(COACH), 'users', COACH), { bookingBuffer: n }));
+    for (const bad of [45, -30, '30', 600]) await assertFails(updateDoc(doc(as(COACH), 'users', COACH), { bookingBuffer: bad }));
+  });
+
   test('working hours must be two times', async () => {
     await assertFails(updateDoc(doc(as(COACH), 'users', COACH), { workingHours: 'always' }));
     await assertFails(updateDoc(doc(as(COACH), 'users', COACH), { workingHours: { start: '07:00' } }));

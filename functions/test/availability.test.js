@@ -47,9 +47,13 @@ test("returns when the coach is busy — and nothing about whom or why", async (
   for (const leaked of ['other', 'knee', 'PT Session', 'confirmed']) expect(text).not.toContain(leaked);
 });
 
-test('blocked time counts as busy', async () => {
+test('blocked time counts as busy — marked as blocked, so no break is kept around it; a group class is not', async () => {
   await session('b1', { date: '2026-10-01', time: '12:00', clientId: '', isBlocked: true });
-  expect((await trainerAvailability(db, 'me', NOW)).slots).toEqual([{ date: '2026-10-01', time: '12:00', duration: 60 }]);
+  await session('g1', { date: '2026-10-01', time: '15:00', clientId: '', isBlocked: true, groupClassId: 'class1' });
+  expect((await trainerAvailability(db, 'me', NOW)).slots).toEqual([
+    { date: '2026-10-01', time: '12:00', duration: 60, blocked: true },
+    { date: '2026-10-01', time: '15:00', duration: 60 },
+  ]);
 });
 
 test('cancelled and long-past sessions are not busy', async () => {

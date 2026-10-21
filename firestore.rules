@@ -135,7 +135,10 @@ service cloud.firestore {
                          'renewalPromptSnoozedUntil',
                          'businessName','intakeCompleted',
                          'language','subscriptionRate','timeZone',
-                         'workingHours','badges'])
+                         'workingHours','bookingBuffer','badges'])
+          // bookingBuffer: minutes a coach keeps clear between sessions (Ani 2026-10-21).
+          && (!('bookingBuffer' in request.resource.data)
+              || request.resource.data.bookingBuffer in [0, 15, 30, 60])
           // workingHours: a trainer's bookable hours (Profile). Was missing from this list
           // until 2026-09-29, so saving it failed. Two 'HH:MM' strings.
           && (!('workingHours' in request.resource.data)

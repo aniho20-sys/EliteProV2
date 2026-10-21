@@ -13,6 +13,7 @@ import PaymentSheetModal from '../components/PaymentSheetModal';
 import { renewalPromptKind, renewalSnoozeUntil, RENEWAL_SNOOZE_FIELD } from '../utils/renewalPrompt';
 import { localToday, localDateAdd, parseLocalDate } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/LanguageContext';
+import { bookingBuffer, tooClose } from '../utils/bookingBuffer';
 import { formatLongDate, formatMonthYear, formatWeekdayShort } from '../i18n/format';
 
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
@@ -138,12 +139,10 @@ export default function SchedulePage() {
     }
   };
 
-  const sessionOverlaps = (s, startMin, endMin) => {
-    if (s.status === 'cancelled') return false;
-    const sStart = toMin(s.time);
-    const sEnd = sStart + (s.duration || 60);
-    return startMin < sEnd && endMin > sStart;
-  };
+  // A client keeps the coach's break between sessions (utils/bookingBuffer.js); the coach,
+  // booking for themselves, does not.
+  const breakMinutes = isTrainer ? 0 : bookingBuffer(trainerUser);
+  const sessionOverlaps = (s, startMin, endMin) => tooClose(s, startMin, endMin, breakMinutes);
 
   const hasConflict = (date, time, duration) => {
     const startMin = toMin(time);

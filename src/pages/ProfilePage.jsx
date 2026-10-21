@@ -23,6 +23,7 @@ import StripeKeysCard from '../components/StripeKeysCard';
 import { inviteUrl } from '../utils/inviteLink';
 import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
+import { BUFFER_OPTIONS, bookingBuffer } from '../utils/bookingBuffer';
 import { renewalRates } from '../utils/renewalRates';
 
 function InstallAppCard() {
@@ -140,6 +141,7 @@ export default function ProfilePage() {
   const INVITE_URL = inviteUrl(inviteCode);
 
   // Trainer: working hours
+  const [breakMinutes, setBreakMinutes] = useState(() => bookingBuffer(currentUser));
   const [workHours, setWorkHours] = useState({
     start: currentUser.workingHours?.start || '09:00',
     end: currentUser.workingHours?.end || '17:00',
@@ -431,7 +433,7 @@ export default function ProfilePage() {
     }
     setWhSaving(true);
     try {
-      await updateClient(currentUser.id, { workingHours: workHours });
+      await updateClient(currentUser.id, { workingHours: workHours, bookingBuffer: breakMinutes });
       toast(t('profile.toast_hours_saved'));
     } catch {
       toast(t('profile.toast_hours_failed'), 'error');
@@ -740,6 +742,15 @@ export default function ProfilePage() {
               <input type="time" className="form-input" value={workHours.end}
                 onChange={e => setWorkHours(h => ({ ...h, end: e.target.value }))} />
             </div>
+          </div>
+          <div className="form-group mt-8">
+            <label className="form-label" htmlFor="booking-buffer">{t('profile.booking_buffer')}</label>
+            <select id="booking-buffer" className="form-select" value={breakMinutes} onChange={e => setBreakMinutes(Number(e.target.value))}>
+              {BUFFER_OPTIONS.map(n => (
+                <option key={n} value={n}>{n === 0 ? t('profile.buffer_none') : t('sched.minutes', { n })}</option>
+              ))}
+            </select>
+            <p className="text-sm text-muted mt-4">{t('profile.booking_buffer_desc')}</p>
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveWorkHours} disabled={whSaving}>
             <Save size={16} /> {whSaving ? t('profile.saving_dots') : t('profile.save_hours')}

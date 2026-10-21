@@ -18,6 +18,9 @@ function toSlot(s) {
     date: String(s.date || ''),
     time: String(s.time || ''),
     duration: Number(s.duration) || 60,
+    // Time the coach blocked off needs no break around it (Ani 2026-10-21); a session or a
+    // group class does. Says nothing about who.
+    ...(s.isBlocked && !s.groupClassId ? { blocked: true } : {}),
   };
 }
 
