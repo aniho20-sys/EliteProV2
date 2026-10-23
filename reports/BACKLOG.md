@@ -353,6 +353,9 @@ Phase 3 Step 1–2 已經 deploy 咗，但**從來未有真人撳過個掣**。S
 | **B69** | 🔴 **Ani console 工作：API key 限制（中 12）、App Check、（Q1=B 先要）Apple Developer** | 審查〔IA〕〔VC〕 | — | 第一步：Google Cloud Console → APIs & Services → Credentials → Browser key → Application restrictions：HTTP referrers `elitepro-16718.web.app/*`、`elitepro-16718.firebaseapp.com/*`、`localhost/*`。agent 會出逐步截圖指引先，唔使而家做。（reports/appstore-security-audit-2026-10-23.md） |
 | **B70** | 🔵 **上架素材：1024 icon（低 2）、iPhone 截圖（低 3）、支援頁（低 4）** | 審查〔PA〕 | — | 約 3.5 小時。（reports/appstore-security-audit-2026-10-23.md） |
 | **B71** | 🔵 **低風險雜項（低 5–13）** | 審查 | — | GoCardless 去重原子化、Stripe void 單、gcWebhook 先驗 uid、OAuth cookie、預約 email 檢查、CI 鎖版本 + 收窄權限 + 刪 `g.sh`、npm 升級、owner 綁 uid、ProfilePage 唔直接 import auth。合共約 1–1.5 日。（reports/appstore-security-audit-2026-10-23.md） |
+| **B72** | 🔴 **等 Ani 批（Q2）：e2e 搵到嘅 bug** | 審查〔E2E〕2026-10-23 | — | E1 新教練主頁見唔到邀請碼（`SetupChecklist.jsx:23` 只問一次，0.5–1 小時）；E2 banner 遮住頁底掣，包括 Profile「刪除帳戶」，iOS app 唔應該出「加入主畫面」（1–2 小時）；E3 刪帳戶視窗話記錄會保留，其實會刪（`en.js:493, 499`，0.5 小時 + Ani 批中文）。（reports/appstore-security-audit-2026-10-23.md） |
+| **B73** | 🔴 **等 Ani 決定（Q5）：月費收 52 堂嘅錢、俾 48 堂** | 審查〔E2E〕 | — | `gcSubscriptions.js:67` `× 13 / 12`，每次付款加 tier 堂。A（建議）按每月實際堂數收；B 每月加 4.33 堂；C 保留但寫清楚。（reports/appstore-security-audit-2026-10-23.md） |
+| **B74** | 🔵 **撳掣大細（E6）** | 審查〔E2E〕〔A11Y〕 | — | 大部分掣 36–38px；最細：訓練中 −／+ 闊 24、休息計時 33×16、RPE 滑桿 16px、文字連結 15px、checkbox 18×18、留言 send 冇 label。同 B66 一齊做；要真機撳（#36）。（reports/appstore-security-audit-2026-10-23.md） |
 | **B5a** | 問 Airwallex：FPS recurring 係真 pull 定要客戶每月撳 | 2026-09-06 | 同上 | 決定香港市場有冇「自動月費」。(a) 真 mandate = 香港做得成 / (b) 每月推通知要客戶確認 = 只係「自動提醒」,價值差好遠 |
 | ✅ **B6** | **impeccable demo 手機 preview** | 2026-09-17 批 | — | **已完成** —— 三條 link 喺下面 |
 | ~~B7~~ | ~~`/analytics` 獲客指標~~ | — | — | **暫緩** |
