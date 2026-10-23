@@ -7,6 +7,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { setupSteps } from '../utils/setupSteps';
 import { inviteUrl } from '../utils/inviteLink';
 
+export const INVITE_RETRY_MS = 1000;
+
 // The coach's setup checklist on the dashboard (B39). Which steps are done: utils/setupSteps.js.
 export default function SetupChecklist() {
   const { t } = useLanguage();
@@ -14,17 +16,29 @@ export default function SetupChecklist() {
   const { currentUser, getClients, getSchedule, getInviteCode } = useApp();
   const clients = getClients(currentUser.id);
   const steps = setupSteps({ currentUser, clients, schedule: getSchedule({ trainerId: currentUser.id }) });
-  const [inviteCode, setInviteCode] = useState(currentUser.inviteCode || '');
+  const [fetchedCode, setFetchedCode] = useState('');
+  // The profile's own code wins whenever it arrives — copying it into state once missed a
+  // code that landed a moment after the first render (audit 2026-10-23, E1).
+  const inviteCode = currentUser.inviteCode || fetchedCode;
 
   // The code is issued by the server on first ask. Asked here too, so a brand-new coach
   // sees it on their very first screen rather than only after visiting Clients or Profile.
+  // The first ask can come before the brand-new profile has reached the server and be
+  // refused, so it is retried a couple of times rather than given up on.
   const inviteRequested = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
   useEffect(() => {
     if (inviteCode || inviteRequested.current || !getInviteCode) return;
     inviteRequested.current = true;
-    getInviteCode(currentUser.id)
-      .then(code => code && setInviteCode(code))
-      .catch(() => {}); // the Clients page asks again; nothing here depends on it
+    const ask = (retriesLeft, delayMs) => {
+      getInviteCode(currentUser.id)
+        .then(code => { if (mounted.current && code) setFetchedCode(code); })
+        .catch(() => {
+          if (mounted.current && retriesLeft > 0) setTimeout(() => ask(retriesLeft - 1, delayMs * 3), delayMs);
+        });
+    };
+    ask(2, INVITE_RETRY_MS);
   }, [inviteCode, getInviteCode, currentUser.id]);
 
   const done = steps.filter(s => s.done).length;

@@ -257,7 +257,7 @@ Playwright（Chromium）390×844，project `demo-elitepro`，Auth + Firestore + 
 
 ---
 
-## 附錄 A：Rules 修正草稿〔RC〕（冇套用）
+## 附錄 A：Rules 修正草稿〔RC〕（2026-10-23 已套用，見第 8 節）
 
 暫時套用落 `firestore.rules` 喺模擬器驗證過：4 個 rules 洞（致命 2 嘅 3 個 + 低 1）全部封咗，其餘 198 個測試仍然綠；之後已還原（`git diff --quiet firestore.rules` 確認同 HEAD 一樣）。致命 1（owner email）嘅 rules 部分未包括喺呢個草稿，要同 `findOwner()` 一齊改。
 
@@ -325,3 +325,30 @@ index 16a9ca3..0a9b6b2 100644
      }
  
 ```
+
+---
+
+## 8. 修正紀錄（2026-10-23，Ani 揀 Q2「全部即刻修」）
+
+修咗：致命 1、致命 2、高 1、高 2、中 7、低 1、E1、E2、E3。冇郁：月費數學（Q5／B73）、iOS 相關（冇 Apple 帳戶，B62）。
+
+| 項目 | 改咗咩 | 點證明 |
+|---|---|---|
+| 致命 1 owner 通知被搶 | `functions/ownerAuth.js` `findOwnerProfile()`：經 Firebase Auth `getUserByEmail` 搵 owner，要 `emailVerified`；`firestore.rules` `emailIsOwn()`：profile 嘅 email 只可以係自己登入嘅 email | `ownerAuth.test.js` 3 條；`attack.rules.test.js` 2 條（舊 rules 下紅）；注入：拎走 `emailVerified` 檢查 → 紅 |
+| 致命 2 計劃／發票塞俾其他教練學生 | rules：create／update 要 `isTrainerOf(clientId)`；計劃名 ≤200 字、動作 ≤100 個 | `attack.rules.test.js` 3 條（舊 rules 下紅）；「學生真係會見到」反向測試保留 |
+| 低 1 教練刪學生 bodyStats | rules：教練只可以 create／update | `attack.rules.test.js` 1 條（舊 rules 下紅）|
+| 高 1 斷開 GoCardless／Stripe | `gcDisconnect` → `disconnectTrainer()`：先取消晒計劃，有一個失敗就唔刪 token、唔斷開，教練可以再試；Stripe deauthorize：計劃標 `cancelled`，通知教練同學生 | `gcSubscriptions.test.js` 2 條、`stripe.test.js`；注入：先刪 token 後取消 → 紅 |
+| 高 2 roll-over 沒收已俾錢嘅堂 | `gcWebhooks.js` `chargedSession()`；`onScheduleCreditUpdate` 退堂標 `creditRefunded`、舊式遲取消收費標 `chargedOnCancel` | `gcWebhooks.test.js`、`bookSession.test.js`；注入：改返「取消即未用」→ 紅；拎走 `creditRefunded` 標記 → 紅 |
+| 中 7 失敗付款復活已取消計劃 | 已完結計劃收到 failed／charged_back：只記錄，唔變 `past_due`；charge-back 照通知教練 | `gcWebhooks.test.js` 2 條；注入：拎走檢查 → 紅 |
+| E1 主頁見唔到邀請碼 | `SetupChecklist.jsx`：失敗再問兩次（1 秒、3 秒）；profile 一有碼即刻用 | `coachSetup.test.jsx` 2 條；兩個注入都紅 |
+| E2 橫額遮住最後一粒掣 | 新 `BottomBanners.jsx` 將兩條橫額疊埋，高度寫入 `--bottom-banners-h`，`.main-content` 頁底留位跟住加 | Playwright 390×844：最後一粒掣同「×」都撳得到、兩條唔重疊；改返舊留位 → 最後一粒掣撳唔到 |
+| E3 刪帳戶文字講錯 | `profile.danger_text`、`profile.delete_li_logs` 改返同 `accountDeletion.js` 一致；新加 `profile.delete_li_kept`（發票同付款記錄保留）| 純文字；對照 `functions/accountDeletion.js` 開頭清單逐項核對 |
+
+**注入驗證（#40）**：7 個注入，每個都先用 `filecmp` 確認檔案真係改咗，再跑測試，見到指定嗰條紅，然後還原。第一次跑 E1 兩個注入時指錯咗測試檔路徑（`src/components/` 應該係 `src/pages/`），嗰兩個紅唔算數，改返路徑重跑先至紅喺指定嗰條。
+
+**全套結果**：`npx eslint .` 0 error（1 個舊 warning）· `npx vitest run` 614/614 · functions jest 370/370 · rules jest 205/205（Firestore 模擬器，冇碰 `elitepro-16718`）· `npm run build` ✓
+
+**未做到、要講明**：
+- 真機撳（#36）—— E2 嘅橫額同 E1 嘅主頁要喺 iPhone 撳一次先算驗收，agent 做唔到。
+- 新中文 4 句（`profile.gc_disconnect_body`、`profile.danger_text`、`profile.delete_li_logs`、`profile.delete_li_kept`）等 Ani 批。
+- 今次上線之前已取消嘅堂冇新標記，只影響當期月費嘅 roll-over：(a) 新式預約早取消退咗堂 → 冇 `creditRefunded`，會當「已用」，學生少被沒收（對學生有利）；(b) 舊式預約（冇 `deductedAtBooking`）遲取消 → 冇 `chargedOnCancel`，照舊當「未用」。一個月後全部係新資料。唔改舊資料（#27）。

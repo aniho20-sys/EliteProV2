@@ -112,6 +112,29 @@ describe('the dashboard setup checklist', () => {
     expect(await screen.findByText('SAM123')).toBeTruthy();
   });
 
+  test('the first ask refused (profile not on the server yet): asked again, and the code shows (audit 2026-10-23, E1)', async () => {
+    const getInviteCode = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error('permission-denied'), { code: 'functions/permission-denied' }))
+      .mockResolvedValue('SAM123');
+    card(base({ getInviteCode }));
+    expect(await screen.findByText('SAM123', {}, { timeout: 3000 })).toBeTruthy();
+    expect(getInviteCode).toHaveBeenCalledTimes(2);
+  });
+
+  test('a code that lands on the profile after the first screen is shown (audit 2026-10-23, E1)', async () => {
+    const getInviteCode = vi.fn(() => new Promise(() => {})); // never answers
+    const { rerender } = card(base({ getInviteCode }));
+    expect(screen.queryByText('SAM123')).toBeNull();
+    rerender(
+      <AppContext.Provider value={base({ getInviteCode, currentUser: { ...NEW_COACH, inviteCode: 'SAM123' } })}>
+        <ThemeProvider><LanguageProvider><ToastProvider>
+          <MemoryRouter initialEntries={['/']}><Routes><Route path="/" element={<SetupChecklist />} /></Routes></MemoryRouter>
+        </ToastProvider></LanguageProvider></ThemeProvider>
+      </AppContext.Provider>,
+    );
+    expect(await screen.findByText('SAM123')).toBeTruthy();
+  });
+
   test('stays after the first client is added — the old card vanished here', () => {
     card(base({ clients: [CLIENT] }));
     expect(screen.getByText('1 of 4 done')).toBeTruthy();

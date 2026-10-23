@@ -1152,6 +1152,7 @@ export default function ProfilePage() {
               <li>{t('profile.delete_li_profile')}</li>
               <li>{t('profile.delete_li_stats')}</li>
               <li>{t('profile.delete_li_logs')}</li>
+              <li>{t('profile.delete_li_kept')}</li>
               {isTrainer && <li>{t('profile.delete_li_clients')}</li>}
             </ul>
             {authProvider === 'email' && (

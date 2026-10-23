@@ -405,6 +405,8 @@ exports.onScheduleCreditUpdate = functions.firestore
           if (!clientDoc.exists) return;
           const current = clientDoc.data().sessionOffset ?? 0;
           tx.update(clientRef, { sessionOffset: current + 1 });
+          // Marked so a monthly plan's roll-over counts it as used (gcWebhooks.chargedSession).
+          tx.update(change.after.ref, { chargedOnCancel: true });
         });
         return;
       }
@@ -425,6 +427,9 @@ exports.onScheduleCreditUpdate = functions.firestore
           earlyCancelMonth: month,
           earlyCancelCount: count + 1,
         });
+        // Marked so a monthly plan's roll-over does not count it as used (audit 2026-10-23):
+        // without it, a refunded cancel and a charged one looked the same.
+        tx.update(change.after.ref, { creditRefunded: true });
 
         // This booking was the one taken on credit, and it's now refunded — so
         // the client no longer owes it. Reverse the debt entry rather than

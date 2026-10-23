@@ -149,6 +149,21 @@ describe('payment confirmed', () => {
     ]));
   });
 
+  test('a cancel that kept its charge counts as used; a refunded one does not (audit 2026-10-23)', async () => {
+    await db.doc('subscriptions/s1').update({ tier: 8, currentPeriodStart: '2026-09-01', currentPeriodEnd: '2026-09-30' });
+    await db.doc('users/c1').update({ totalSessions: 8, sessionOffset: 6 });
+    const at = (i) => `2026-09-0${i}`;
+    // 2 attended, 3 late cancels (charged), 1 early cancel refunded.
+    for (const i of [1, 2]) await db.doc(`schedule/u${i}`).set({ clientId: 'c1', trainerId: 'coachA', date: at(i), status: 'completed', deductedAtBooking: true });
+    for (const i of [3, 4, 5]) await db.doc(`schedule/l${i}`).set({ clientId: 'c1', trainerId: 'coachA', date: at(i), status: 'cancelled', deductedAtBooking: true });
+    await db.doc('schedule/r6').set({ clientId: 'c1', trainerId: 'coachA', date: at(6), status: 'cancelled', deductedAtBooking: true, creditRefunded: true });
+    payments.PM2 = { id: 'PM2', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    await run([paymentConfirmed('EV2', 'PM2')]);
+    // Used 5 of 8 (2 attended + 3 charged cancels) → 3 unused, all within the cap of 4: nothing forfeited.
+    expect((await ledger()).filter(l => l.qty < 0)).toEqual([]);
+    expect((await sub()).rolloverBanked).toBe(3);
+  });
+
   test('cancelled and other coaches’ sessions do not count as used', async () => {
     await db.doc('subscriptions/s1').update({ tier: 4, currentPeriodStart: '2026-09-01', currentPeriodEnd: '2026-09-30' });
     await db.doc('users/c1').update({ totalSessions: 4, sessionOffset: 0 });
@@ -207,6 +222,21 @@ describe('failures and endings', () => {
     expect((await sub()).lastError).toContain('insufficient_funds');
     expect(notified.map(n => n.userId).sort()).toEqual(['c1', 'coachA']);
     expect((await client()).totalSessions).toBe(0);
+  });
+
+  test('a cancelled plan stays cancelled after a late failure or charge-back; the coach hears of the charge-back (audit 2026-10-23)', async () => {
+    await db.doc('subscriptions/s1').update({ status: 'cancelled' });
+    payments.PM1 = { id: 'PM1', status: 'charged_back', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    await run([ev('EV1', 'payments', 'charged_back', { payment: 'PM1' }, { cause: 'refund_requested' })]);
+    expect(await sub()).toMatchObject({ status: 'cancelled', lastPaymentStatus: 'failed' });
+    expect(notified).toEqual([expect.objectContaining({ userId: 'coachA', title: 'A payment was charged back' })]);
+  });
+
+  test('a failure event GoCardless no longer agrees with (the retry was paid) changes nothing (audit 2026-10-23)', async () => {
+    payments.PM1 = { id: 'PM1', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    await run([ev('EV1', 'payments', 'failed', { payment: 'PM1' }, { cause: 'insufficient_funds' })]);
+    expect((await sub()).status).toBe('active');
+    expect(notified).toEqual([]);
   });
 
   test('a later successful retry puts it back to active', async () => {

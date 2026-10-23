@@ -201,6 +201,8 @@ describe('onScheduleCreditUpdate — cancellation', () => {
     const client = await getClient();
     expect(client.sessionOffset).toBe(3);
     expect(client.earlyCancelCount).toBe(1);
+    // Marked refunded, so a monthly plan's roll-over does not count it as used (audit 2026-10-23).
+    expect((await ref.get()).data().creditRefunded).toBe(true);
   });
 
   test('new-model booking cancelled <24h before keeps the charge', async () => {
@@ -213,6 +215,7 @@ describe('onScheduleCreditUpdate — cancellation', () => {
     const client = await getClient();
     expect(client.sessionOffset).toBe(4);
     expect(client.earlyCancelCount).toBeUndefined();
+    expect((await ref.get()).data().creditRefunded).toBeUndefined(); // still charged
   });
 
   // P4 (reports/production-audit-2026-09-28.md): moving a session's date and cancelling it

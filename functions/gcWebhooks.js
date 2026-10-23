@@ -88,6 +88,18 @@ async function gcGet({ fetchImpl, token, environment, path }) {
 
 const SESSIONS_FORFEIT = 'subscription_rollover_forfeit';
 
+// Whether a session took one of the client's credits — what the roll-over counts as "used".
+// A cancelled one still did when it was cancelled late, or early beyond the two free cancels
+// a month (index.js onScheduleCreditUpdate): it stays charged unless the credit trigger marked
+// it refunded. Counting every cancel as unused forfeited sessions the client had paid for
+// (audit 2026-10-23). A legacy booking (no deductedAtBooking) is charged on cancel only when
+// late, and the trigger marks that too.
+function chargedSession(x) {
+  if (x.status !== 'cancelled') return true;
+  if (x.chargedOnCancel === true) return true;
+  return x.deductedAtBooking === true && x.creditRefunded !== true;
+}
+
 async function grantForPayment({ db, sub, payment, now }) {
   const s = sub.data();
   const subRef = sub.ref;
@@ -118,7 +130,7 @@ async function grantForPayment({ db, sub, payment, now }) {
     if (!stale && cur.currentPeriodStart && cur.currentPeriodEnd) {
       const sessions = await tx.get(db.collection('schedule').where('clientId', '==', s.clientId));
       const used = sessions.docs.map(d => d.data()).filter(x => x.trainerId === s.trainerId
-        && !x.isBlocked && x.status !== 'cancelled'
+        && !x.isBlocked && chargedSession(x)
         && x.date >= cur.currentPeriodStart && x.date <= cur.currentPeriodEnd).length;
       ({ forfeit, kept } = rollover({ tier: s.tier, carriedIn: cur.rolloverBanked || 0, used }));
       // Never take back more than the client actually holds — pack sessions bought
@@ -197,7 +209,22 @@ async function processEvent({ db, event, readToken, fetchImpl, now, notify, trai
 
     // failed / charged_back: tell both sides now (design §8). No sessions are clawed
     // back automatically — a charge-back after a grant is for the trainer to settle.
+    // GoCardless's own record must agree first: an event arriving late, after a retry
+    // succeeded, must not mark a paid month as failed (audit 2026-10-23).
+    if (!['failed', 'charged_back'].includes(payment.status)) return 'not_failed';
     const cause = (event.details && (event.details.cause || event.details.description)) || event.action;
+    if (FINISHED.includes(sub.data().status)) {
+      // A plan already ended stays ended: past_due counts as a live plan and would stop the
+      // client starting any new one, with any coach (audit 2026-10-23). The coach still
+      // hears of a charge-back — it is their money going back.
+      await sub.ref.update({ lastPaymentId: payment.id, lastPaymentStatus: 'failed',
+        lastError: `payment ${event.action}: ${String(cause).slice(0, 200)}`, updatedAt: now().toISOString() });
+      if (event.action === 'charged_back') {
+        await notify({ userId: sub.data().trainerId, title: 'A payment was charged back',
+          body: 'A client’s bank reversed a monthly plan payment on a plan that has already ended. Open GoCardless to see which.' });
+      }
+      return 'already_ended';
+    }
     await sub.ref.update({
       status: 'past_due',
       lastPaymentId: payment.id,
@@ -280,5 +307,5 @@ function webhookRoute(path) {
 // "a month was paid", whichever processor collected it.
 module.exports = {
   webhookRoute, verifyWebhookSignature, periodEnd, rollover, processEvent, handleWebhook, SESSIONS_FORFEIT,
-  grantForPayment, subscriptionBy, notifyClientMoved,
+  grantForPayment, subscriptionBy, notifyClientMoved, chargedSession,
 };
