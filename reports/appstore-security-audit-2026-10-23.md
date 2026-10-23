@@ -350,5 +350,5 @@ index 16a9ca3..0a9b6b2 100644
 
 **未做到、要講明**：
 - 真機撳（#36）—— E2 嘅橫額同 E1 嘅主頁要喺 iPhone 撳一次先算驗收，agent 做唔到。
-- 新中文 4 句（`profile.gc_disconnect_body`、`profile.danger_text`、`profile.delete_li_logs`、`profile.delete_li_kept`）等 Ani 批。
+- 新中文 4 句：Ani 2026-10-23 逐句批咗。
 - 今次上線之前已取消嘅堂冇新標記，只影響當期月費嘅 roll-over：(a) 新式預約早取消退咗堂 → 冇 `creditRefunded`，會當「已用」，學生少被沒收（對學生有利）；(b) 舊式預約（冇 `deductedAtBooking`）遲取消 → 冇 `chargedOnCancel`，照舊當「未用」。一個月後全部係新資料。唔改舊資料（#27）。
