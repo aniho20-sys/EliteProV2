@@ -3,6 +3,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, MessageSquare, Calendar, Dumbbell, ClipboardList, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { FEATURES } from '../utils/features';
 import { idTime } from '../utils/ids';
 
 const VIEWED_KEY = 'elitepro_notif_viewed';
@@ -44,7 +45,7 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
           title: sender?.name || 'Client',
           body: m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text,
           ts: new Date(m.timestamp).getTime(),
-          url: '/messages',
+          url: FEATURES.chat ? '/messages' : `/clients/${m.from}`,
           unread: true,
         });
       });
@@ -92,7 +93,7 @@ function deriveNotifications(currentUser, users, messages, schedule, workoutLogs
           title: 'Message from Coach',
           body: m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text,
           ts: new Date(m.timestamp).getTime(),
-          url: '/messages',
+          url: FEATURES.chat ? '/messages' : '/',
           unread: true,
         });
       });

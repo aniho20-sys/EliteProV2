@@ -15,6 +15,7 @@ import { useRestTimer } from '../hooks/useRestTimer';
 import { useLanguage } from '../i18n/LanguageContext';
 import WorkoutCompleteScreen from '../components/workout/WorkoutCompleteScreen';
 import SetInputs from '../components/workout/SetInputs';
+import { FEATURES } from '../utils/features';
 import ActiveWorkoutView from '../components/workout/ActiveWorkoutView';
 
 export default function WorkoutLogPage() {
@@ -416,7 +417,7 @@ export default function WorkoutLogPage() {
           }
           action={
             !isTrainer && !currentUser.trainerId ? { label: t('wlog.connect_coach'), to: '/profile' }
-            : !isTrainer && plans.length === 0 ? { label: t('wlog.message_coach'), to: '/messages' }
+            : !isTrainer && plans.length === 0 && FEATURES.chat ? { label: t('wlog.message_coach'), to: '/messages' }
             : undefined
           }
         />

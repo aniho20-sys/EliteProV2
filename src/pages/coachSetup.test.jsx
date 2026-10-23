@@ -38,6 +38,9 @@ const { default: ProfilePage } = await import('./ProfilePage');
 const { default: ExerciseLibraryPage } = await import('./ExerciseLibraryPage');
 const { default: ClientDashboard } = await import('./ClientDashboard');
 const { default: SubscriptionCard } = await import('../components/SubscriptionCard');
+const { default: Navigation } = await import('../components/Navigation');
+const { default: TrainerDashboard } = await import('./TrainerDashboard');
+const { default: MyWorkoutsPage } = await import('./MyWorkoutsPage');
 
 const { localToday } = await import('../utils/dateUtils');
 
@@ -224,6 +227,33 @@ describe('booking a session', () => {
     renderAt('/schedule', <Route path="/schedule" element={<SchedulePage />} />, base({ currentUser: { ...CLIENT, intakeCompleted: true }, coach: READY_COACH }));
     fireEvent.click(screen.getAllByRole('button', { name: /Book Session/i })[0]);
     expect(screen.getByText(/at least 24 hours before.*up to 2 times a month/)).toBeTruthy();
+  });
+});
+
+describe('what Ani switched off (B55, 2026-10-23)', () => {
+  const links = () => [...document.querySelectorAll('a')].map(a => a.getAttribute('href'));
+  test('the coach’s menu has no Analytics, Invoices or Messages — Progress Overview stays', () => {
+    renderAt('/', <Route path="/" element={<Navigation />} />, base({ currentUser: READY_COACH }));
+    // Open both "More" lists — the sidebar's and the phone's — so every link is on the page.
+    for (const more of screen.getAllByRole('button', { name: /More/ })) fireEvent.click(more);
+    expect(links()).toContain('/exercises');
+    expect(links()).not.toContain('/analytics');
+    expect(links()).not.toContain('/invoices');
+    expect(links()).not.toContain('/messages');
+    expect(links()).toContain('/progress-overview');
+  });
+  test('the coach’s home page: no unread-messages card or count, no week chart', () => {
+    renderAt('/', <Route path="/" element={<TrainerDashboard />} />, base({ currentUser: READY_COACH, clients: [CLIENT] }));
+    expect(screen.getByText('Today')).toBeTruthy(); // the page did render
+    expect(screen.queryByText('Unread Messages')).toBeNull();
+    expect(screen.queryByText("This Week's Sessions")).toBeNull();
+    expect(links()).not.toContain('/messages');
+  });
+  test('a client with no plan is sent to a free workout, not to a chat nobody reads', () => {
+    renderAt('/my-workouts', <Route path="/my-workouts" element={<MyWorkoutsPage />} />, base({ currentUser: { ...CLIENT, intakeCompleted: true } }));
+    expect(screen.getByText('No workout plans assigned yet')).toBeTruthy();
+    expect(links()).toContain('/log');
+    expect(links()).not.toContain('/messages');
   });
 });
 

@@ -14,6 +14,7 @@ import { SESSION_DANGER_THRESHOLD } from '../utils/sessionUtils';
 import { formatCurrency } from '../utils/currencyUtils';
 import { renewalRates } from '../utils/renewalRates';
 import { formatShortDate } from '../i18n/format';
+import { FEATURES } from '../utils/features';
 import { startSessionState, hasLogDraft, canStartSession } from '../utils/startSession';
 
 // t() only ever takes a literal key (#39), so the weekday labels are looked up by
@@ -387,11 +388,13 @@ export default function TrainerDashboard() {
           <div className="stat-pill-value">{todaySchedule.length}</div>
           <div className="stat-pill-label">{t('common.today')}</div>
         </Link>
-        <Link to="/messages" className="stat-pill">
-          <TrendingUp size={15} style={{ color: 'var(--warning-dark)' }} />
-          <div className="stat-pill-value">{unread}</div>
-          <div className="stat-pill-label">{t('tdash.stat_unread')}</div>
-        </Link>
+        {FEATURES.chat && (
+          <Link to="/messages" className="stat-pill">
+            <TrendingUp size={15} style={{ color: 'var(--warning-dark)' }} />
+            <div className="stat-pill-value">{unread}</div>
+            <div className="stat-pill-label">{t('tdash.stat_unread')}</div>
+          </Link>
+        )}
         <Link to="/plans" className="stat-pill">
           <Dumbbell size={15} style={{ color: 'var(--danger-text)' }} />
           <div className="stat-pill-value">{totalPlans}</div>
@@ -672,8 +675,8 @@ export default function TrainerDashboard() {
         <ClientActivitySummary clients={clients} getWorkoutLogs={getWorkoutLogs} getSchedule={getSchedule} plans={allPlans} today={today} />
       )}
 
-      {/* Today + Messages */}
-      <div className="grid-2 mb-16">
+      {/* Today + Messages (the messages card only while in-app chat is on — utils/features.js) */}
+      <div className={`${FEATURES.chat ? 'grid-2 ' : ''}mb-16`}>
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">{t('dash.todays_schedule')}</h3>
@@ -727,7 +730,7 @@ export default function TrainerDashboard() {
           )}
         </div>
 
-        <div className="card">
+        {FEATURES.chat && <div className="card">
           <div className="card-header">
             <h3 className="card-title">{t('tdash.unread_messages')}</h3>
           </div>
@@ -753,11 +756,11 @@ export default function TrainerDashboard() {
               );
             })
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Charts */}
-      <div className="card">
+      {FEATURES.dashboardChart && <div className="card">
         <div className="card-header">
           <h3 className="card-title">{t('tdash.week_sessions')}</h3>
           <Link to="/schedule" className="btn btn-outline btn-sm">{t('nav.schedule')}</Link>
@@ -769,7 +772,7 @@ export default function TrainerDashboard() {
           <span>{t('tdash.sessions_this_week', { count: weekSchedule.length })}</span>
           <span style={{ color: 'var(--success-text)' }}>{confirmedCount} {t('tdash.confirmed')}</span>
         </div>
-      </div>
+      </div>}
 
       {quickMsgClient && (
         <div className="modal-overlay" onClick={() => !sendingQuick && setQuickMsgClient(null)}>

@@ -9,6 +9,7 @@ import GlobalSearch from './GlobalSearch';
 import NotificationCenter from './NotificationCenter';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { routeShown } from '../utils/features';
 import { useState } from 'react';
 
 // Single source of truth for all navigation links
@@ -56,7 +57,7 @@ const navLabels = (t) => ({
 });
 
 const makeLinks = (paths, labels, mobile = false) =>
-  paths.map(to => ({ to, icon: LINK_DEFS[to].icon, label: mobile && labels[to].mobileLabel ? labels[to].mobileLabel : labels[to].label }));
+  paths.filter(routeShown).map(to => ({ to, icon: LINK_DEFS[to].icon, label: mobile && labels[to].mobileLabel ? labels[to].mobileLabel : labels[to].label }));
 
 // gym啦 hidden — remove '/apply' and '/studios/book' from nav, use 'client' fallback for operator
 // Messages hidden — remove '/messages' from nav (route stays registered in App.jsx)

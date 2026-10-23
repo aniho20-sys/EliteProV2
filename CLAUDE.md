@@ -102,6 +102,7 @@ src/
 │   └── index.css             # Global styles (CSS variables, skeleton, empty states)
 ├── utils/
 │   ├── authErrors.js         # Firebase Auth error code → friendly message map
+│   ├── features.js           # Switched-off parts (B55, Ani 2026-10-23): analytics, invoices, dashboard chart, in-app chat — code and data kept, set true to bring back
 │   ├── bookingBuffer.js      # The coach's break between sessions: bookingBuffer(coach) + tooClose(); server twin in functions/publicBooking.js
 │   ├── renewalRates.js       # renewalRates(trainer) → { now, next, lockIn }: one price is enough, the higher after-run-out price is optional (B39) — use it, never read renewalRateNext directly
 │   ├── currencyUtils.js      # formatCurrency(amount, currencyCode) — single source of truth for money display, see convention #31

@@ -14,6 +14,7 @@ import { renewalPromptKind, renewalSnoozeUntil, RENEWAL_SNOOZE_FIELD } from '../
 import { localToday, localDateAdd, parseLocalDate } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/LanguageContext';
 import { bookingBuffer, tooClose } from '../utils/bookingBuffer';
+import { FEATURES } from '../utils/features';
 import { formatLongDate, formatMonthYear, formatWeekdayShort } from '../i18n/format';
 
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
@@ -588,9 +589,11 @@ export default function SchedulePage() {
             </p>
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setBlockedModal(false)}>{t('common.close')}</button>
-              <button className="btn btn-primary" onClick={() => { setBlockedModal(false); navigate('/messages'); }}>
-                {t('sched.message_coach')}
-              </button>
+              {FEATURES.chat && (
+                <button className="btn btn-primary" onClick={() => { setBlockedModal(false); navigate('/messages'); }}>
+                  {t('sched.message_coach')}
+                </button>
+              )}
             </div>
           </div>
         </div>

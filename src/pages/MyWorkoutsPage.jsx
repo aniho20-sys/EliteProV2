@@ -5,6 +5,7 @@ import { Play, ClipboardList, Dumbbell } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { normalizeSets } from '../utils/workoutUtils';
 import { isSafeUrl } from '../utils/urlUtils';
+import { FEATURES } from '../utils/features';
 import { resolveExerciseName } from '../utils/exerciseUtils';
 
 export default function MyWorkoutsPage() {
@@ -34,7 +35,8 @@ export default function MyWorkoutsPage() {
           action={
             !currentUser.trainerId
               ? { label: t('plans.connect_cta'), to: '/profile' }
-              : { label: t('plans.message_cta'), to: '/messages' }
+              : FEATURES.chat ? { label: t('plans.message_cta'), to: '/messages' }
+              : { label: t('wlog.free_workout'), to: '/log' }
           }
         />
       ) : (

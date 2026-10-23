@@ -170,9 +170,12 @@ exports.onNewMessage = functions.firestore
     const body = msg.text.length > 120 ? msg.text.substring(0, 120) + '…' : msg.text;
     const badgeCount = String(unreadSnap.size);
 
+    // Opens where the conversation lives with in-app chat off (B55): a coach lands on the
+    // client's page, a client on their own home page (both show the notes thread).
+    const recipientIsTrainer = recipientSnap.data().role === 'trainer';
     await sendPush(msg.to, fcmTokens, { title: senderName, body }, {
       type: 'message',
-      url: '/#/messages',
+      url: recipientIsTrainer ? `/#/clients/${msg.from}` : '/#/',
       fromId: msg.from,
       badgeCount,
     });
