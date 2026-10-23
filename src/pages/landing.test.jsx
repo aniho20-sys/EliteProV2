@@ -30,16 +30,16 @@ describe('the landing page speaks the visitor’s language', () => {
   test('a phone in English sees English', () => {
     setPhoneLanguage('en-GB');
     renderLanding();
-    expect(screen.getByText('Run your coaching from one app instead of six.')).toBeTruthy();
+    expect(screen.getByText('Stop counting sessions in Excel and chasing payments on WhatsApp.')).toBeTruthy();
   });
 
   test('a phone in Chinese sees Chinese — prices quoted from other companies stay as they wrote them', async () => {
     setPhoneLanguage('zh-HK');
     renderLanding();
-    expect(await screen.findByText('用一個 app 管理教練工作，不再在六個 app 之間來回切換。')).toBeTruthy();
+    expect(await screen.findByText('不用再以 Excel 計算堂數，也不用再在 WhatsApp 逐一追收學費。')).toBeTruthy();
     expect(screen.getByText('每月 $23')).toBeTruthy();
     expect(screen.getByText('Trainerize')).toBeTruthy();
-    expect(screen.queryByText('Run your coaching from one app instead of six.')).toBeNull();
+    expect(screen.queryByText('Stop counting sessions in Excel and chasing payments on WhatsApp.')).toBeNull();
   });
 
   test('the toggle switches language for this visit', async () => {
