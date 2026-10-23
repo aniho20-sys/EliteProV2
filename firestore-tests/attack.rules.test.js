@@ -6,11 +6,9 @@ const { doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, collection, query, w
 // Pre-App-Store security audit, 2026-10-23 (reports/appstore-security-audit-2026-10-23.md).
 // Two coaches, each with a client, and nobody signed in — every attack the audit tried.
 //
-//   test(...)          the rules already refuse it. A regression guard: it must stay green.
-//   test.failing(...)  a HOLE THE AUDIT FOUND, not yet fixed. The body asserts the safe
-//                      behaviour, so today it fails and Jest reports it as passing. When the
-//                      rule is fixed this turns red — change it to test(...) then. Never
-//                      "fix" one by deleting it.
+// Every test asserts the safe behaviour and must stay green. The ones named "was a hole
+// until 2026-10-23" were holes the audit found and proved in the emulator (Ani approved
+// fixing them the same day); each failed against the old rules.
 // Own PROJECT_ID per the note in subscriptions.rules.test.js.
 const PROJECT_ID = 'elitepro-rules-test-attack';
 const A = 'coachA';
@@ -122,16 +120,16 @@ describe('one coach cannot reach into another coach’s clients', () => {
   // but not that clientId is their client — and a client's app lists every plan whose
   // clientId is them. So B can put a plan (any text: a phone number, a "pay here" link)
   // in front of A's client.
-  test.failing('HOLE: B cannot create a workout plan addressed to A’s client', async () => {
+  test('was a hole until 2026-10-23: B cannot create a workout plan addressed to A’s client', async () => {
     await assertFails(setDoc(doc(as(B), 'workoutPlans', 'pB'), { id: 'pB', trainerId: B, clientId: A_CLIENT, name: 'Call me', exercises: [] }));
   });
-  test.failing('HOLE: B cannot re-address B’s own plan to A’s client', async () => {
+  test('was a hole until 2026-10-23: B cannot re-address B’s own plan to A’s client', async () => {
     await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'workoutPlans', 'pB2'), { id: 'pB2', trainerId: B, clientId: B_CLIENT, name: 'x', exercises: [] }));
     await assertFails(updateDoc(doc(as(B), 'workoutPlans', 'pB2'), { clientId: A_CLIENT }));
   });
   // Same shape for invoices: clients read every invoice whose clientId is them, so B can
   // send A's client an invoice with B's own bank details on it.
-  test.failing('HOLE: B cannot create an invoice addressed to A’s client', async () => {
+  test('was a hole until 2026-10-23: B cannot create an invoice addressed to A’s client', async () => {
     await assertFails(setDoc(doc(as(B), 'invoices', 'iB'), { id: 'iB', trainerId: B, clientId: A_CLIENT, amount: 250 }));
   });
   test('…and A’s client really would see such a plan (why the holes above matter)', async () => {
@@ -145,12 +143,12 @@ describe('nobody can pass as the owner', () => {
   // email field is the owner's address, then pushes signups and error reports to that
   // document's phones. The rules let any account write any email into its own profile, so
   // an account whose uid sorts first can take those alerts over (ext-identity-access).
-  test.failing('HOLE: a new account cannot put the owner’s address in its own profile', async () => {
+  test('was a hole until 2026-10-23: a new account cannot put the owner’s address in its own profile', async () => {
     await assertFails(setDoc(doc(as('mallory'), 'users', 'mallory'), {
       id: 'mallory', role: 'trainer', name: 'M', email: 'aniho20@gmail.com',
     }));
   });
-  test.failing('HOLE: an existing account cannot change its email to the owner’s address', async () => {
+  test('was a hole until 2026-10-23: an existing account cannot change its email to the owner’s address', async () => {
     await assertFails(updateDoc(doc(as(B), 'users', B), { email: 'aniho20@gmail.com' }));
   });
   test('the owner-only collections still check the sign-in token, not the profile', async () => {
@@ -168,7 +166,7 @@ describe('a coach and their own client', () => {
   });
   // The comment above bodyStats says only the client deletes, but `allow write` (which
   // includes delete) also names the coach.
-  test.failing('HOLE: the coach cannot delete their client’s body-stats document', async () => {
+  test('was a hole until 2026-10-23: the coach cannot delete their client’s body-stats document', async () => {
     await assertFails(deleteDoc(doc(as(A), 'bodyStats', A_CLIENT)));
   });
 });

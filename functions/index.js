@@ -11,9 +11,9 @@ const { createNonce, consumeNonce, releaseNonce, finalizeNonce } = require('./gc
 const { normalizeInviteCode } = require('./inviteCode');
 const { selectTestAccounts } = require('./testAccounts');
 const { summariseSignups } = require('./signupQueue');
-const { startSubscription, completeSubscription, cancelSubscriptionsFor, cancelSubscription, SubscriptionError } = require('./gcSubscriptions');
+const { startSubscription, completeSubscription, cancelSubscriptionsFor, cancelSubscription, SubscriptionError, disconnectTrainer } = require('./gcSubscriptions');
 const { deleteAccountData, removeManagedClient, RemoveManagedError } = require('./accountDeletion');
-const { OWNER_EMAIL, isOwnerToken } = require('./ownerAuth');
+const { OWNER_EMAIL, isOwnerToken, findOwnerProfile } = require('./ownerAuth');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
@@ -692,17 +692,26 @@ exports.gcDisconnect = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('permission-denied', 'Trainers only');
   }
 
-  await deleteGcAccessToken(trainerId);
-  await deleteTrainerWebhookSecret(trainerId); // own-account connections (B36); a no-op otherwise
-  await db.doc(`users/${trainerId}`).update({ gcEnvironment: FieldValue.delete() });
-  await db.doc(`paymentConnections/${trainerId}`).set({
-    trainerId,
-    provider: 'gocardless',
-    status: 'disconnected',
-    disconnectedAt: new Date().toISOString(),
-  }, { merge: true });
-
-  return { ok: true };
+  // Clients' plans are cancelled before the token goes (gcSubscriptions.disconnectTrainer).
+  const result = await disconnectTrainer({
+    db, trainerId, readToken: readGcAccessToken, fetchImpl: fetch, now: () => new Date(),
+    removeCredentials: async () => {
+      await deleteGcAccessToken(trainerId);
+      await deleteTrainerWebhookSecret(trainerId); // own-account connections (B36); a no-op otherwise
+      await db.doc(`users/${trainerId}`).update({ gcEnvironment: FieldValue.delete() });
+      await db.doc(`paymentConnections/${trainerId}`).set({
+        trainerId,
+        provider: 'gocardless',
+        status: 'disconnected',
+        disconnectedAt: new Date().toISOString(),
+      }, { merge: true });
+    },
+  });
+  if (!result.disconnected) {
+    console.error(`[gcDisconnect] ${trainerId}: ${result.failed.length} plan(s) not cancelled — still connected`, result.failed);
+    throw new functions.https.HttpsError('aborted', 'Some monthly plans could not be cancelled', { failed: result.failed.length });
+  }
+  return { ok: true, cancelled: result.cancelled.length };
 });
 
 // ─── Phase 3 Step 3: client subscribes to a monthly plan ───
@@ -875,8 +884,7 @@ exports.cleanupExpiredGcNonces = functions.pubsub
 const FOUNDING_PLACES = 5;
 
 async function findOwner() {
-  const snap = await db.collection('users').where('email', '==', OWNER_EMAIL).limit(1).get();
-  return snap.empty ? null : snap.docs[0];
+  return findOwnerProfile({ db, auth: getAuth() });
 }
 
 // Counting via the aggregation query rather than reading every document — this runs on

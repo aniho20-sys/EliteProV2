@@ -534,7 +534,7 @@ const zhHK = {
   'profile.disconnect': '解除連接',
   'profile.disconnecting': '解除連接中…',
   'profile.gc_disconnect_title': '確定解除 GoCardless 連接？',
-  'profile.gc_disconnect_body': '這會立即停止向所有學生收取訂閱費用。現有訂閱必須重新連接才可恢復收款 —— 但不會在 GoCardless 中取消訂閱本身。',
+  'profile.gc_disconnect_body': '會先取消學生在 GoCardless 的每月計劃，確保沒有人繼續被扣款，然後才解除連接。如有計劃未能取消，連接會保留，你可以再試一次。',
   'profile.toast_gc_connected': '已連接 GoCardless',
   'profile.toast_gc_cancelled': '你取消了 GoCardless 連接 —— 隨時可以再試。',
   'profile.toast_gc_failed': 'GoCardless 連接失敗 —— 請再試一次。',

@@ -132,7 +132,15 @@ async function processFor({ db, event, object, trainerId, account, get, keys, fe
     case 'account.application.deauthorized': {
       // ElitePro can no longer read the account to confirm this — but the event is signed
       // by Stripe and can only make things safer: no new plans, clients stop being offered one.
-      await markDisconnected({ db, trainerId, now });
+      const { endedPlans } = await markDisconnected({ db, trainerId, now });
+      if (endedPlans.length > 0) {
+        await notify({ userId: trainerId, title: 'Cancel your clients’ plans in Stripe',
+          body: `${endedPlans.length} monthly plan(s) will keep charging in your Stripe account until you cancel them there. ElitePro can no longer add their sessions.` });
+        for (const p of endedPlans) {
+          await notify({ userId: p.clientId, title: 'Your monthly plan has stopped',
+            body: 'Your coach disconnected their payments from ElitePro. Please contact your coach.' });
+        }
+      }
       return 'disconnected';
     }
 

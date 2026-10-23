@@ -460,7 +460,7 @@ const en = {
   'profile.gc_direct_failed': 'Couldn\'t connect. Check your connection and try again.',
   'profile.gc_direct_unverified': 'GoCardless is still verifying your account. Clients can sign up, but payments start once it is verified.',
   'profile.gc_disconnect_title': 'Disconnect GoCardless?',
-  'profile.gc_disconnect_body': 'This will stop all subscription payment collection for your clients immediately. Existing subscriptions will need to be reconnected before payments can resume \u2014 this does not cancel them in GoCardless itself.',
+  'profile.gc_disconnect_body': "Your clients' GoCardless monthly plans are cancelled first, so nobody keeps being charged, and then GoCardless is disconnected. If a plan can't be cancelled, nothing is disconnected and you can try again.",
   'profile.disconnecting': 'Disconnecting...',
   'profile.backup_title': 'Exercise Library Backup',
   'profile.backup_desc': 'Export your exercise library as JSON for safekeeping.',

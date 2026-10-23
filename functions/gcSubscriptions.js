@@ -415,7 +415,22 @@ function describeError(err) {
   return String(err && err.message || err).slice(0, 200);
 }
 
+// A coach disconnecting GoCardless (gcDisconnect, audit 2026-10-23). Their clients' plans
+// are cancelled at GoCardless FIRST, while the coach's token still exists: the old order
+// deleted the token and left every plan collecting — no sessions granted (the webhook had
+// no secret any more) and no way for the client to cancel. If any plan cannot be cancelled
+// the token is kept and nothing is disconnected, so the coach can try again.
+async function disconnectTrainer({ db, trainerId, readToken, fetchImpl, now, removeCredentials }) {
+  const result = await cancelSubscriptionsFor({
+    db, uid: trainerId, field: 'trainerId', readToken, fetchImpl, now, reason: 'coach_disconnected',
+  });
+  if (result.failed.length > 0) return { disconnected: false, ...result };
+  await removeCredentials();
+  return { disconnected: true, ...result };
+}
+
 exports.TIERS = TIERS;
+exports.disconnectTrainer = disconnectTrainer;
 exports.LIVE_STATUSES = LIVE_STATUSES;
 exports.FINISHED_STATUSES = FINISHED_STATUSES;
 exports.CLAIM_TTL_MS = CLAIM_TTL_MS;

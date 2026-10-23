@@ -48,6 +48,14 @@ service cloud.firestore {
         || request.resource.data.trainerId == null;
     }
 
+    // A profile's email is the one the account signed in with, never one it chose (audit
+    // 2026-10-23): functions/index.js used to find the owner by this field, so any account
+    // writing the owner's address into its own profile received the owner's alerts. ''
+    // is allowed — completeProfile writes it for an account with no email.
+    function emailIsOwn(d) {
+      return !('email' in d) || d.email == '' || d.email == request.auth.token.email;
+    }
+
     function isTrainerOf(clientId) {
       let cd = get(/databases/$(database)/documents/users/$(clientId)).data;
       return isAuth()
@@ -97,6 +105,7 @@ service cloud.firestore {
           && request.resource.data.role in ['trainer', 'client']
           && request.resource.data.keys().hasOnly(['id', 'name', 'email', 'role', 'avatar',
                'joinDate', 'trainerId', 'goals', 'age', 'height', 'speciality'])
+          && emailIsOwn(request.resource.data)
           // Both are issued server-side now (P2 + P3): connectWithInviteCode sets trainerId,
           // ensureInviteCode sets inviteCode. A self-chosen code is how one trainer copied
           // another's.
@@ -169,6 +178,8 @@ service cloud.firestore {
               || request.resource.data.language in ['en', 'zh-HK'])
           // inviteCode is not in the list above: only ensureInviteCode writes it (P3).
           && trainerIdOnlyCleared()
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['email'])
+              || emailIsOwn(request.resource.data))
         // Trainer updating their own client's profile — the allowlisted fields below.
         // Session credit accounting itself (booking/cancel/complete) runs server-side via
         // Cloud Functions using the admin SDK, which bypasses these rules entirely — so no
@@ -287,7 +298,8 @@ service cloud.firestore {
     // Only the client themselves or their trainer can read/write entries
     match /bodyStats/{clientId} {
       allow read: if isOwner(clientId) || isTrainerOf(clientId);
-      allow write: if isOwner(clientId) || isTrainerOf(clientId);
+      // Audit 2026-10-23: `write` included delete, so the coach could delete it too.
+      allow create, update: if isOwner(clientId) || isTrainerOf(clientId);
       allow delete: if isOwner(clientId);
       match /entries/{entryId} {
         allow read: if isOwner(clientId) || isTrainerOf(clientId);
@@ -301,11 +313,23 @@ service cloud.firestore {
     // Only the trainer who owns or the assigned client can read.
     match /workoutPlans/{planId} {
       allow read: if isAuth() && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
-      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
+      // Audit 2026-10-23: the plan's client must be the author's own client.
+      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid
+        && isTrainerOf(request.resource.data.clientId)
+        && isValidPlan(request.resource.data);
       // trainerId is immutable after creation
       allow update: if isAuth() && resource.data.trainerId == request.auth.uid
-        && request.resource.data.trainerId == resource.data.trainerId;
+        && request.resource.data.trainerId == resource.data.trainerId
+        && (request.resource.data.clientId == resource.data.clientId
+            || isTrainerOf(request.resource.data.clientId))
+        && isValidPlan(request.resource.data);
       allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Audit 2026-10-23: size limits so one write cannot fill a 1 MB document.
+    function isValidPlan(d) {
+      return d.name is string && d.name.size() <= 200
+        && (!('exercises' in d) || (d.exercises is list && d.exercises.size() <= 100));
     }
 
     // ── Workout Logs ──
@@ -467,11 +491,15 @@ service cloud.firestore {
         resource.data.trainerId == request.auth.uid ||
         resource.data.clientId == request.auth.uid
       );
-      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid;
+      // Audit 2026-10-23: addressed to the author's own client only.
+      allow create: if isTrainer() && request.resource.data.trainerId == request.auth.uid
+        && isTrainerOf(request.resource.data.clientId);
       // trainerId is immutable after creation
       allow update: if isTrainer()
         && resource.data.trainerId == request.auth.uid
-        && request.resource.data.trainerId == resource.data.trainerId;
+        && request.resource.data.trainerId == resource.data.trainerId
+        && (request.resource.data.clientId == resource.data.clientId
+            || isTrainerOf(request.resource.data.clientId));
       allow delete: if isTrainer() && resource.data.trainerId == request.auth.uid;
     }
 

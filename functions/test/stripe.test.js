@@ -703,6 +703,11 @@ describe('webhook events', () => {
     expect(await run(event('account.application.deauthorized', { id: 'ca_platform' }), st)).toEqual({ outcome: 'disconnected' });
     expect((await db.doc('paymentConnections/coachA').get()).data().stripe.status).toBe('disconnected');
     expect((await db.doc('users/coachA').get()).data().stripeEnvironment).toBeNull();
+    // The running plan (plan000020, beforeEach) can no longer be reached: marked ended, and
+    // the coach is told to cancel it in Stripe, the client that it stopped (audit 2026-10-23).
+    expect(await plan()).toMatchObject({ status: 'cancelled', cancelReason: 'coach_disconnected' });
+    expect(notified.map(x => x.userId).sort()).toEqual(['c1', 'coachA']);
+    expect(notified.find(x => x.userId === 'coachA').body).toMatch(/^1 monthly plan/);
   });
   test('an object since deleted at Stripe: recorded as gone, not retried for days (B52)', async () => {
     const st = fakeStripe({ 'GET /v1/invoices/in_22': () => [404, { error: { type: 'invalid_request_error', code: 'resource_missing' } }] });

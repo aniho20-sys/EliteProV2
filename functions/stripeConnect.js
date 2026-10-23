@@ -11,6 +11,7 @@
 // account": the full Stripe dashboard, Stripe fees paid by the account, losses handled by
 // Stripe, identity checks collected by Stripe (`type` is deprecated for this).
 
+const { FINISHED_STATUSES } = require('./gcSubscriptions');
 const { stripeRequest, StripeApiError, keyEnvironment, describeStripeError } = require('./stripeApi');
 
 // Where a coach can be. Each needs Stripe in that country and a currency the app offers.
@@ -172,13 +173,25 @@ async function refreshConnection({ db, trainerId, keys, fetchImpl, now }) {
 // The coach disconnected their account from ElitePro in their own Stripe dashboard
 // (account.application.deauthorized). ElitePro can no longer act on it: new plans stop, and
 // the coach's clients are no longer offered one.
+//
+// ElitePro can no longer reach the coach's Stripe account, so it cannot cancel their clients'
+// plans there — those go on charging until the coach cancels them in their own dashboard.
+// Here they are marked ended (no more sessions would arrive anyway: the events stop) and
+// returned, so the coach can be told how many to cancel (audit 2026-10-23).
 async function markDisconnected({ db, trainerId, now }) {
+  const ts = now().toISOString();
   await db.doc(`paymentConnections/${trainerId}`).set({
-    stripe: { status: 'disconnected', chargesEnabled: false, disconnectedAt: now().toISOString() },
+    stripe: { status: 'disconnected', chargesEnabled: false, disconnectedAt: ts },
   }, { merge: true });
   const userRef = db.doc(`users/${trainerId}`);
   const userSnap = await userRef.get();
   if (userSnap.exists && userSnap.data().stripeEnvironment) await userRef.update({ stripeEnvironment: null });
+  const plans = await db.collection('subscriptions').where('trainerId', '==', trainerId).get();
+  const stillCharging = plans.docs.filter(d => d.data().provider === 'stripe' && !FINISHED_STATUSES.includes(d.data().status));
+  for (const d of stillCharging) {
+    await d.ref.update({ status: 'cancelled', cancelReason: 'coach_disconnected', cancelledAt: ts, updatedAt: ts });
+  }
+  return { endedPlans: stillCharging.map(d => d.data()) };
 }
 
 // The one coach whose Stripe account this is, or null — never a guess when it is ambiguous.

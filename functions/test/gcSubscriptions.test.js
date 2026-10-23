@@ -1,6 +1,6 @@
 const {
   monthlyAmountPence, startSubscription, completeSubscription, conflictingResourceId,
-  cancelSubscriptionsFor, cancelSubscription,
+  cancelSubscriptionsFor, cancelSubscription, disconnectTrainer,
 } = require('../gcSubscriptions');
 
 // ── A small in-memory Firestore: just the calls gcSubscriptions makes. ──
@@ -451,5 +451,46 @@ describe('cancelSubscription', () => {
     const sub = db.store.get('subscriptions/SUBSCRIPTION01');
     expect(sub.status).toBe('active');
     expect(sub.cancelError).toContain('500');
+  });
+});
+
+// ── Audit 2026-10-23: a coach disconnecting GoCardless ──
+describe('disconnectTrainer — clients stop being charged before the token goes', () => {
+  const seed = () => ({
+    'subscriptions/S1': { clientId: 'c1', trainerId: 't1', status: 'active', providerSubscriptionId: 'SB1', providerAuthorisationId: 'MD1' },
+    'subscriptions/S2': { clientId: 'c2', trainerId: 't1', status: 'past_due', providerSubscriptionId: 'SB2', providerAuthorisationId: 'MD2' },
+    'subscriptions/S3': { clientId: 'c3', trainerId: 't2', status: 'active', providerSubscriptionId: 'SB3', providerAuthorisationId: 'MD3' },
+  });
+  const ok = (key) => () => [200, { [key]: { status: 'cancelled' } }];
+  const run = (db, gc, removeCredentials) => disconnectTrainer({
+    db, trainerId: 't1', readToken: async () => 'tok-t1', fetchImpl: gc.fetchImpl, now: () => NOW, removeCredentials,
+  });
+
+  test('every plan with this coach is cancelled at GoCardless, then the token is removed', async () => {
+    const db = fakeDb(seed());
+    const gc = fakeGc({
+      'POST /subscriptions/SB1/actions/cancel': ok('subscriptions'), 'POST /mandates/MD1/actions/cancel': ok('mandates'),
+      'POST /subscriptions/SB2/actions/cancel': ok('subscriptions'), 'POST /mandates/MD2/actions/cancel': ok('mandates'),
+    });
+    const order = [];
+    const removeCredentials = async () => { order.push(`removed after ${gc.calls.length} GoCardless calls`); };
+    const r = await run(db, gc, removeCredentials);
+    expect(r).toMatchObject({ disconnected: true, cancelled: ['S1', 'S2'], failed: [] });
+    expect(order).toEqual(['removed after 4 GoCardless calls']);
+    expect(db.store.get('subscriptions/S1')).toMatchObject({ status: 'cancelled', cancelReason: 'coach_disconnected' });
+    expect(db.store.get('subscriptions/S3').status).toBe('active'); // another coach's client
+  });
+  test('a plan GoCardless will not cancel: the token stays, nothing is disconnected, the coach can retry', async () => {
+    const db = fakeDb(seed());
+    const gc = fakeGc({
+      'POST /subscriptions/SB1/actions/cancel': () => [500, { error: { type: 'gocardless' } }],
+      'POST /subscriptions/SB2/actions/cancel': ok('subscriptions'), 'POST /mandates/MD2/actions/cancel': ok('mandates'),
+    });
+    let removed = false;
+    const r = await run(db, gc, async () => { removed = true; });
+    expect(r.disconnected).toBe(false);
+    expect(r.failed).toHaveLength(1);
+    expect(removed).toBe(false);
+    expect(db.store.get('subscriptions/S1').status).toBe('active');
   });
 });

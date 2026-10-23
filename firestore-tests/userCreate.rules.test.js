@@ -33,7 +33,9 @@ beforeEach(async () => {
   });
 });
 
-const as = (uid) => env.authenticatedContext(uid).firestore();
+// Signed in as a real sign-up is: with the email address its profile then carries
+// (firestore.rules emailIsOwn, audit 2026-10-23).
+const as = (uid) => env.authenticatedContext(uid, { email: common.email }).firestore();
 const common = { id: NEW, name: 'New Person', email: 'new@example.test', avatar: null, joinDate: '2026-09-28' };
 const clientSignup = { ...common, role: 'client', trainerId: null, goals: '', age: '', height: '' };
 const trainerSignup = { ...common, role: 'trainer', speciality: '' };
