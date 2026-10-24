@@ -13,7 +13,6 @@ import { METRICS, EMPTY_STAT_FORM } from '../data/metrics';
 import { parseLocalDate } from '../utils/dateUtils';
 import NotesSection from '../components/NotesSection';
 import MonthlyReportModal from '../components/MonthlyReportModal';
-import MuscleSelector from '../components/MuscleSelector';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import EmptyState from '../components/EmptyState';
