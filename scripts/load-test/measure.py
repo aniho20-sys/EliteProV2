@@ -38,11 +38,11 @@ def run_once(page, cdp, url, label, reload=False):
         page.reload()
     else:
         page.goto(url)
-    page.wait_for_selector('.stat-pill', timeout=300_000)
+    page.wait_for_selector('.stat-pill', timeout=1_200_000)
     dashboard_ms = (time.time() - t0) * 1000
 
     # Data loaded = every listener has answered once and nothing new for QUIET_MS.
-    deadline = time.time() + 300
+    deadline = time.time() + 1200
     while time.time() < deadline:
         s = page.evaluate('''() => {
           const L = (window.__loadTest || {}).listeners || [];
