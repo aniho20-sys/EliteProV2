@@ -61,7 +61,7 @@ jobs:
       # names the emulator's namespace; no credentials are written in this job.
       - name: Cloud Functions + Firestore rules tests (emulator)
         run: >-
-          npx firebase-tools@latest emulators:exec --only firestore --project elitepro-16718
+          npx firebase-tools@15.34.1 emulators:exec --only firestore --project elitepro-16718
           "cd functions && npx jest --testPathPattern=test/ --forceExit && cd ../firestore-tests && npx jest --testPathPattern=. --forceExit"
 
   deploy_hosting:
@@ -76,7 +76,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -91,7 +91,7 @@ jobs:
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
       - name: Deploy Hosting
-        run: npx firebase-tools@latest deploy --only hosting --project elitepro-16718 --non-interactive
+        run: npx firebase-tools@15.34.1 deploy --only hosting --project elitepro-16718 --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
@@ -114,11 +114,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Write Firebase credentials
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
       - name: Deploy Firestore Rules
-        run: npx firebase-tools@latest deploy --only firestore:rules --project elitepro-16718 --non-interactive
+        run: npx firebase-tools@15.34.1 deploy --only firestore:rules --project elitepro-16718 --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
@@ -132,7 +137,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Functions dependencies
@@ -142,6 +147,6 @@ jobs:
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
       - name: Deploy Functions
-        run: npx firebase-tools@13 deploy --only functions --project elitepro-16718 --non-interactive --force
+        run: npx firebase-tools@13.35.1 deploy --only functions --project elitepro-16718 --non-interactive --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
