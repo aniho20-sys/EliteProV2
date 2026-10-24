@@ -10,6 +10,7 @@
 //   customer.subscription.updated    → ended at Stripe: cancelled · retries exhausted: past due
 //   customer.subscription.deleted    → plan cancelled
 //   charge.dispute.created           → plan past due; coach told (B52)
+//   charge.refunded                  → coach told; sessions and plan left alone (Ani 2026-10-24)
 //   checkout.session.completed       → plan activated (the same check as the return page)
 //   account.updated                  → the coach's connection status re-read
 //   account.application.deauthorized → the coach cut ElitePro off: connection marked disconnected
@@ -122,6 +123,18 @@ async function processStripeEvent({ db, event, keys, fetchImpl, now, notify }) {
   }
 }
 
+// The plan a charge was for, by the Stripe customer it was charged to — one customer per
+// checkout, so normally one plan; if there are more, the one still running.
+async function planForCustomer(db, customerId, trainerId) {
+  if (!customerId) return null;
+  const plans = (await db.collection('subscriptions').where('providerCustomerId', '==', customerId).limit(10).get())
+    .docs.filter(d => d.data().trainerId === trainerId && d.data().provider === 'stripe');
+  return plans.find(d => !FINISHED_STATUSES.includes(d.data().status)) || plans[0] || null;
+}
+
+const money = (minor, currency) =>
+  new Intl.NumberFormat('en-GB', { style: 'currency', currency: String(currency || 'gbp').toUpperCase() }).format(minor / 100);
+
 async function processFor({ db, event, object, trainerId, account, get, keys, fetchImpl, now, notify }) {
   switch (event.type) {
     case 'account.updated': {
@@ -232,18 +245,31 @@ async function processFor({ db, event, object, trainerId, account, get, keys, fe
       // coach until it is settled, so no more sessions go out on this plan for now.
       const dispute = await get(`/v1/disputes/${object.id}`);
       const charge = await get(`/v1/charges/${idOf(dispute.charge)}`);
-      const customerId = idOf(charge.customer);
-      if (!customerId) return 'not_ours';
-      // One customer per checkout, so normally one plan; if there are more, the one still running.
-      const plans = (await db.collection('subscriptions').where('providerCustomerId', '==', customerId).limit(10).get())
-        .docs.filter(d => d.data().trainerId === trainerId && d.data().provider === 'stripe');
-      const sub = plans.find(d => !FINISHED_STATUSES.includes(d.data().status)) || plans[0];
+      const sub = await planForCustomer(db, idOf(charge.customer), trainerId);
       if (!sub) return 'not_ours';
       const s = sub.data();
       if (!FINISHED_STATUSES.includes(s.status)) await markPastDue(sub, now, { lastError: 'charge.dispute.created' });
       await notify({ userId: s.trainerId, title: 'A client disputed a payment',
         body: 'A client has asked their bank to reverse a monthly plan payment. Check it in your Stripe dashboard.' });
       return 'disputed';
+    }
+
+    case 'charge.refunded': {
+      // The coach gave a client money back in their own Stripe dashboard. Sessions are not
+      // taken back (Ani 2026-10-24): a refund may be part of a payment or a goodwill gesture,
+      // and only the coach knows how many sessions it stands for — so they are told, and
+      // adjust the client's sessions themselves. The plan carries on.
+      const charge = await get(`/v1/charges/${object.id}`);
+      if (!(charge.amount_refunded > 0)) return 'not_refunded';
+      const sub = await planForCustomer(db, idOf(charge.customer), trainerId);
+      if (!sub) return 'not_ours';
+      const s = sub.data();
+      const clientDoc = await db.doc(`users/${s.clientId}`).get();
+      const name = (clientDoc.exists && clientDoc.data().name) || 'your client';
+      const all = charge.refunded === true ? ' (the whole payment)' : '';
+      await notify({ userId: s.trainerId, title: 'Refund sent',
+        body: `${money(charge.amount_refunded, charge.currency)} refunded to ${name}${all}. Their sessions in ElitePro have not changed — adjust them on their page if the refund was for sessions.` });
+      return 'refunded';
     }
 
     default:

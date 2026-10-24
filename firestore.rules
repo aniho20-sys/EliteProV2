@@ -335,7 +335,10 @@ service cloud.firestore {
     // ── Workout Logs ──
     // Only the client or their trainer can read.
     match /workoutLogs/{logId} {
-      allow read: if isAuth() && (resource.data.clientId == request.auth.uid || resource.data.trainerId == request.auth.uid);
+      // The client, or their coach now. Not the trainerId written on the log: that is the coach
+      // when it was written, and a coach the client has left kept reading every old log by it
+      // (Grok Bot review 2026-10-24). The coach's app lists logs one client at a time.
+      allow read: if isAuth() && (resource.data.clientId == request.auth.uid || isTrainerOf(resource.data.clientId));
       // trainerId must be null or the creating client's actual trainer — prevents a
       // client from tagging arbitrary strangers as trainerId to get their logs
       // pulled into that trainer's workoutLogs listener.

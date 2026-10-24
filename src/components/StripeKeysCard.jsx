@@ -19,7 +19,7 @@ import { SkeletonLine } from './Skeleton';
 const STRIPE_EVENTS = [
   'account.updated', 'account.application.deauthorized', 'checkout.session.completed',
   'invoice.paid', 'invoice.payment_failed', 'customer.subscription.updated',
-  'customer.subscription.deleted', 'charge.dispute.created',
+  'customer.subscription.deleted', 'charge.dispute.created', 'charge.refunded',
 ];
 
 export default function StripeKeysCard() {

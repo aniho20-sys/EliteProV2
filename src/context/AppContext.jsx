@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { db, auth, functions } from '../firebase';
 import {
   collection, doc, addDoc, getDoc, setDoc, updateDoc, deleteDoc,
@@ -42,7 +42,8 @@ export function AppProvider({ children }) {
   const [users, setUsers] = useState([]);
   const [bodyStatsMap, setBodyStatsMap] = useState({});
   const [workoutPlans, setWorkoutPlans] = useState([]);
-  const [workoutLogs, setWorkoutLogs] = useState([]);
+  const [ownLogs, setOwnLogs] = useState([]);
+  const [clientLogsMap, setClientLogsMap] = useState({});
   const [schedule, setSchedule] = useState([]);
   const [trainerBusySlots, setTrainerBusySlots] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -110,7 +111,7 @@ export function AppProvider({ children }) {
       // Not authed: reset state and mark as non-loading
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers([]); setBodyStatsMap({}); setWorkoutPlans([]);
-      setWorkoutLogs([]); setSchedule([]); setTrainerBusySlots([]); setMessages([]); setExercises([]); setExerciseOverrides([]); setTemplates([]);
+      setOwnLogs([]); setClientLogsMap({}); setSchedule([]); setTrainerBusySlots([]); setMessages([]); setExercises([]); setExerciseOverrides([]); setTemplates([]);
       loadedRef.current = new Set();
       retryCountRef.current = 0;
       setLoading(false);
@@ -174,8 +175,10 @@ export function AppProvider({ children }) {
       markLoaded('workoutPlans');
     }, onErr('workoutPlans')));
 
-    unsubs.push(onSnapshot(query(collection(db, 'workoutLogs'), or(where('clientId', '==', uid), where('trainerId', '==', uid))), (snap) => {
-      setWorkoutLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+    // Own logs only. A coach's clients' logs come per client below — the rules let a coach
+    // read a log only while its client is theirs, which a trainerId query cannot show.
+    unsubs.push(onSnapshot(query(collection(db, 'workoutLogs'), where('clientId', '==', uid)), (snap) => {
+      setOwnLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })));
       markLoaded('workoutLogs');
     }, onErr('workoutLogs')));
 
@@ -200,17 +203,23 @@ export function AppProvider({ children }) {
     return () => unsubs.forEach(fn => fn());
   }, [firebaseUser, markLoaded, listenerEpoch]);
 
-  // --- Exercises: role-aware listener (trainer sees own; client sees trainer's) ---
+  // --- Exercises: role-aware listener (trainer sees own; client sees trainer's + own) ---
+  // A client's own exercises carry their own id: addExercise writes that while they have no
+  // coach. They used to be listened to by nobody — invisible from the moment they were added,
+  // and still after connecting to a coach (Grok Bot review 2026-10-24).
   useEffect(() => {
     if (!currentUser?.id) return;
-    const targetTrainerId = currentUser.role === 'trainer' ? currentUser.id : currentUser.trainerId;
-    if (!targetTrainerId) return; // getExercises() falls back to defaultExercises while exercises is empty
-    const unsub = onSnapshot(
-      query(collection(db, 'exercises'), where('trainerId', '==', targetTrainerId)),
-      (snap) => setExercises([...snap.docs.map(d => ({ ...d.data(), id: d.id })), ...defaultExercises]),
-      () => setExercises(defaultExercises),
-    );
-    return () => unsub();
+    const owners = currentUser.role === 'trainer'
+      ? [currentUser.id]
+      : [currentUser.trainerId, currentUser.id].filter(Boolean);
+    const byOwner = {};
+    const publish = () => setExercises([...owners.flatMap(o => byOwner[o] || []), ...defaultExercises]);
+    const unsubs = owners.map(owner => onSnapshot(
+      query(collection(db, 'exercises'), where('trainerId', '==', owner)),
+      (snap) => { byOwner[owner] = snap.docs.map(d => ({ ...d.data(), id: d.id })); publish(); },
+      () => { byOwner[owner] = []; publish(); },
+    ));
+    return () => unsubs.forEach(u => u());
   }, [currentUser?.id, currentUser?.role, currentUser?.trainerId]);
 
   // --- Exercise Overrides: per-trainer video/instructions layered onto the static seed
@@ -347,6 +356,32 @@ export function AppProvider({ children }) {
     );
     return () => unsubs.forEach(u => u());
   }, [currentUser?.id, currentUser?.role, currentUser?.trainerId, users]);
+
+  // --- Workout logs of a coach's clients: one listener per current client ---
+  // A log carries the coach it was written under (trainerId); a client who has left must not
+  // stay readable through it, so the rules check the client's current coach and the app asks
+  // client by client (Grok Bot review 2026-10-24).
+  const myClientIds = currentUser?.role === 'trainer'
+    ? users.filter(u => u.trainerId === currentUser.id).map(u => u.id).sort().join(',')
+    : '';
+  useEffect(() => {
+    if (!myClientIds) return;
+    const unsubs = myClientIds.split(',').map(cid =>
+      onSnapshot(
+        query(collection(db, 'workoutLogs'), where('clientId', '==', cid)),
+        (snap) => setClientLogsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
+        (err) => console.error('[workoutLogs] client listener failed', cid, err),
+      )
+    );
+    return () => unsubs.forEach(u => u());
+  }, [myClientIds]);
+
+  // A client who has left keeps no logs here, even ones loaded before they left.
+  const workoutLogs = useMemo(() => {
+    const current = new Set(myClientIds ? myClientIds.split(',') : []);
+    const theirs = Object.entries(clientLogsMap).filter(([cid]) => current.has(cid)).flatMap(([, logs]) => logs);
+    return [...ownLogs, ...theirs];
+  }, [ownLogs, clientLogsMap, myClientIds]);
 
   // --- Sync currentUser when users list or firebaseUser changes ---
   useEffect(() => {

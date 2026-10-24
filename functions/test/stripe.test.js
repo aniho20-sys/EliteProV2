@@ -697,6 +697,43 @@ describe('webhook events', () => {
     expect(await run(event('charge.dispute.created', { id: 'dp_2' }), st)).toEqual({ outcome: 'not_ours' });
     expect((await plan()).status).toBe('active');
   });
+  // Ani 2026-10-24: a refund tells the coach and moves nothing — sessions stay, the plan runs on.
+  test('the coach refunds a client: coach told the amount and whom; sessions and plan untouched (Grok review)', async () => {
+    await db.doc('users/c1').update({ name: 'Amy', totalSessions: 8, sessionOffset: 2 });
+    const st = fakeStripe({ 'GET /v1/charges/ch_3': () => [200, { id: 'ch_3', customer: 'cus_20', amount_refunded: 4000, refunded: false, currency: 'gbp' }] });
+    expect(await run(event('charge.refunded', { id: 'ch_3' }), st)).toEqual({ outcome: 'refunded' });
+    expect(notified).toEqual([expect.objectContaining({ userId: 'coachA', title: 'Refund sent' })]);
+    expect(notified[0].body).toMatch(/^£40\.00 refunded to Amy\. /);
+    expect(notified[0].body).not.toContain('whole payment');
+    expect(await client()).toMatchObject({ totalSessions: 8, sessionOffset: 2 });
+    expect((await plan()).status).toBe('active');
+    expect(await ledger()).toEqual([]);
+  });
+  test('a whole payment refunded says so', async () => {
+    const st = fakeStripe({ 'GET /v1/charges/ch_4': () => [200, { id: 'ch_4', customer: 'cus_20', amount_refunded: 56333, refunded: true, currency: 'gbp' }] });
+    expect(await run(event('charge.refunded', { id: 'ch_4' }), st)).toEqual({ outcome: 'refunded' });
+    expect(notified[0].body).toMatch(/^£563\.33 refunded to your client \(the whole payment\)\. /);
+  });
+  test('Stripe says nothing was refunded, or the charge is not a plan of ours: nobody told', async () => {
+    const st = fakeStripe({
+      'GET /v1/charges/ch_5': () => [200, { id: 'ch_5', customer: 'cus_20', amount_refunded: 0, refunded: false, currency: 'gbp' }],
+      'GET /v1/charges/ch_6': () => [200, { id: 'ch_6', customer: 'cus_SOMEONEELSE', amount_refunded: 1000, refunded: false, currency: 'gbp' }],
+    });
+    expect(await run(event('charge.refunded', { id: 'ch_5' }), st)).toEqual({ outcome: 'not_refunded' });
+    expect(await run(event('charge.refunded', { id: 'ch_6' }), st)).toEqual({ outcome: 'not_ours' });
+    expect(notified).toEqual([]);
+  });
+  // The coach's key card lists the events to tick in Stripe; one handled here but missing
+  // there would never be sent, and its handler would never run.
+  test('every event handled here is on the list the coach is shown', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const handled = [...fs.readFileSync(path.join(__dirname, '../stripeWebhooks.js'), 'utf8').matchAll(/^\s+case '([a-z._]+)':/gm)].map(m => m[1]);
+    const card = fs.readFileSync(path.join(__dirname, '../../src/components/StripeKeysCard.jsx'), 'utf8');
+    const listed = [...card.match(/const STRIPE_EVENTS = \[([^\]]+)\]/)[1].matchAll(/'([a-z._]+)'/g)].map(m => m[1]);
+    expect(handled).toContain('charge.refunded');
+    expect(listed.sort()).toEqual(handled.sort());
+  });
   test('the coach disconnects ElitePro in their Stripe dashboard: marked disconnected (B52)', async () => {
     await db.doc('users/coachA').update({ stripeEnvironment: 'sandbox' });
     const st = fakeStripe({});

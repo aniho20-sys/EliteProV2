@@ -169,4 +169,34 @@ describe('a coach and their own client', () => {
   test('was a hole until 2026-10-23: the coach cannot delete their client’s body-stats document', async () => {
     await assertFails(deleteDoc(doc(as(A), 'bodyStats', A_CLIENT)));
   });
+  // The coach's app lists logs one client at a time (AppContext), so this query is the one
+  // the rules must allow — a rule that only allowed single reads would empty the coach's list.
+  test('the coach lists their client’s logs by client', async () => {
+    await assertSucceeds(getDocs(query(collection(as(A), 'workoutLogs'), where('clientId', '==', A_CLIENT))));
+  });
+});
+
+// The log carries the coach's id from when it was written. Reading went by that id, so a
+// coach a client had left kept reading every log the client wrote while with them, and
+// could list them all with where('trainerId', '==', coach) (Grok Bot review, 2026-10-24).
+describe('a coach the client has left', () => {
+  const leave = (to = null) => env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), 'users', A_CLIENT), { trainerId: to }));
+
+  test('was a hole until 2026-10-24: cannot read the client’s old logs', async () => {
+    await leave();
+    await assertFails(getDoc(doc(as(A), 'workoutLogs', 'w1')));
+  });
+  test('was a hole until 2026-10-24: cannot list them by their own coach id', async () => {
+    await leave();
+    await assertFails(getDocs(query(collection(as(A), 'workoutLogs'), where('trainerId', '==', A))));
+  });
+  test('…nor by the client', async () => {
+    await leave();
+    await assertFails(getDocs(query(collection(as(A), 'workoutLogs'), where('clientId', '==', A_CLIENT))));
+  });
+  test('the client still reads their own logs, and a new coach reads them', async () => {
+    await leave(B);
+    await assertSucceeds(getDoc(doc(as(A_CLIENT), 'workoutLogs', 'w1')));
+    await assertSucceeds(getDocs(query(collection(as(B), 'workoutLogs'), where('clientId', '==', A_CLIENT))));
+  });
 });
