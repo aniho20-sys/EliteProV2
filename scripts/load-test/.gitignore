@@ -1,0 +1,4 @@
+dist/
+firestore.rules
+*.log
+results/

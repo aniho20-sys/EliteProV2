@@ -67,7 +67,7 @@ const TRANSLATED_FILES = [
 export default defineConfig([
   // .claude/ holds vendored agent skills (third-party code, linted upstream) and
   // design-ref/ holds reference mockups — neither ships.
-  globalIgnores(['dist', '.claude', 'design-ref', '**/node_modules']),
+  globalIgnores(['dist', 'scripts/load-test/dist', '.claude', 'design-ref', '**/node_modules']),
   {
     files: ['src/**/*.{js,jsx}'],
     rules: {
