@@ -859,6 +859,22 @@ Code Review：Bug、安全性、效能。零容忍爛 code。
 - 涉及商業決策、刪除資料、對外發佈嘅動作，必須停低等 Ani 確認
 - 議而不決嘅事項列入週報「待 Ani 拍板」一欄
 
+### Grok Bot 同 Claude 分工（Ani 2026-10-24 定）
+
+Ani 2026-10-24 加入 Grok Bot 一齊整個 app。兩個**輪流做，唔會同時改**。
+
+| | Grok Bot | Claude |
+|---|---|---|
+| **主力** | 第二對眼：定期獨立檢查、搵漏咗嘅問題；細嘅清理（文件、冇用嘅檔案、CI 設定）| 落手改同上線：收錢、堂數、`firestore.rules`、私隱、Cloud Functions |
+| **唔做** | 唔直接改收錢／堂數／rules／私隱嘅 code —— 搵到問題寫入報告就得 | 唔將 Grok 嘅報告當事實：每一項先對返 code 核實，再問 Ani 批唔批 |
+
+**兩邊都要守：**
+1. **Grok 開 PR，唔直接推 `claude/fitness-app-features-LbxtG`**（推咗就即刻上線）。Ani 撳 merge。Claude 每次開工先 `git fetch` 睇 Grok 上次改咗咩。
+2. **Ani 嘅決定只有 Ani 改得。** 開工前先讀 `reports/BACKLOG.md`。同佢已決定嘅嘢相撞嘅建議，要講明「同 Ani 某日決定相撞」，唔好照做（常規 #46）。
+3. **報告寫入 repo 嘅 `reports/`**（Markdown），唔好淨係放喺 grok.bot 網頁 —— 2026-10-24 嗰份要拆開壓縮包先讀到。
+
+**點解咁分（2026-10-24 實例）**：Grok 嘅上架前報告搵到五個 Claude 漏咗嘅真問題（舊教練睇到舊訓練記錄、學生自己加嘅動作消失、冇保安 headers、Stripe 退款冇處理、一個冇上線嘅 commit）。但同一份報告有三項同 Ani 決定相撞（Apple 登入「必須」—— Ani 揀咗 iOS 淨係 email + 密碼；52／48 堂月費 —— Ani 擱置；收起 GoCardless —— Ani 冇講過），而佢對訓練記錄嘅修法會令教練成個訓練記錄列表讀唔到（rules 改咗但 app 仲用 `trainerId` 查）。即係：搵問題好，落手改要有人對住決定同測試。
+
 ## CEO 週例會（每逢星期四自動觸發）
 
 當收到「🗓️ CEO週例會」觸發信號時，CEO 必須即時主持例會，格式如下：
