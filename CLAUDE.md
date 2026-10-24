@@ -865,11 +865,11 @@ Ani 2026-10-24 加入 Grok Bot 一齊整個 app。兩個**輪流做，唔會同�
 
 | | Grok Bot | Claude |
 |---|---|---|
-| **主力** | 第二對眼：定期獨立檢查、搵漏咗嘅問題；細嘅清理（文件、冇用嘅檔案、CI 設定）| 落手改同上線：收錢、堂數、`firestore.rules`、私隱、Cloud Functions |
-| **唔做** | 唔直接改收錢／堂數／rules／私隱嘅 code —— 搵到問題寫入報告就得 | 唔將 Grok 嘅報告當事實：每一項先對返 code 核實，再問 Ani 批唔批 |
+| **主力** | 第二對眼：定期獨立檢查、搵漏咗嘅問題，寫成報告 | **所有修改**：大定細、code 定設定，一律由 Claude 改、測試、上線 |
+| **唔做** | **唔改嘢**（Ani 2026-10-24：「修嘢交俾你」）—— 搵到問題寫入報告就得，連細嘅清理都唔做 | 唔將 Grok 嘅報告當事實：每一項先對返 code 核實，再問 Ani 批唔批 |
 
 **兩邊都要守：**
-1. **Grok 開 PR，唔直接推 `claude/fitness-app-features-LbxtG`**（推咗就即刻上線）。Ani 撳 merge。Claude 每次開工先 `git fetch` 睇 Grok 上次改咗咩。
+1. **Grok 唔推 `claude/fitness-app-features-LbxtG`**（推咗就即刻上線）。佢淨係交報告；Claude 每次開工先 `git fetch` 睇 Grok 有冇新報告或者改動。
 2. **Ani 嘅決定只有 Ani 改得。** 開工前先讀 `reports/BACKLOG.md`。同佢已決定嘅嘢相撞嘅建議，要講明「同 Ani 某日決定相撞」，唔好照做（常規 #46）。
 3. **報告寫入 repo 嘅 `reports/`**（Markdown），唔好淨係放喺 grok.bot 網頁 —— 2026-10-24 嗰份要拆開壓縮包先讀到。
 
