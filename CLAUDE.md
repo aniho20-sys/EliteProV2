@@ -153,6 +153,9 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # B49 Stripe monthly plans: each coach's OWN account (direct charges); owner-only
 │                              # stripeSaveKeys → Secret Manager; same tiers/roll-over/grant as GoCardless
 │                              # (grantForPayment shared); design reports/stripe-subscription-design.md
+├── clientSummary.js           # B76 step 2: users/{client}.summary for the coach's dashboard — rebuilt in a transaction by
+│                              # onWorkoutLogSummary / onScheduleSummary / onBodyStatSummary / onClientCoachChangeSummary;
+│                              # ensureClientSummaries (callable) builds missing ones. Its queries need firestore.indexes.json
 ├── sessionReminders.js        # B51 sendSessionReminders (hourly): push the client the evening before (from 19:00
 │                              # in the coach's zone) and ~2h before; once each via sessionReminders/{id}_{kind}
 ├── clientErrors.js            # Error monitoring: reportClientError groups app crash reports per error, daily caps, push/email to owner
@@ -239,6 +242,13 @@ Top-level config files:
   subscriptionTester: boolean,     // sandbox gate — trainer-set only (not in the self-update allowlist)
   managed: boolean,                // true = a client WITHOUT the app, added by their coach (B35) — see below
   contact: string,                 // managed only: phone/email given on the public booking page (B38); server-written
+  summary: {                       // server-only (functions/clientSummary.js, B76 step 2) — in no rules allowlist
+    version: number,               //   SUMMARY_VERSION; another version = missing, rebuilt by ensureClientSummaries
+    recentLogs: [{ id, date, planId, workoutName }],  // newest 5, no sets
+    lastSession: { id, date, type } | null,           // last completed session with the CURRENT coach
+    latestBodyStat: { date, weight, bodyFat } | null,
+    updatedAt: string,
+  },
   // trainer-only, server-written (savePublicBooking — not in the self-update allowlist):
   publicBooking: { enabled: boolean, price: number, days: number[] /* 0 = Sunday */, slug: string },
 }
@@ -584,8 +594,16 @@ getWorkoutLogs(clientId)
 addWorkoutLog(log)
 updateWorkoutLog(logId, updates)  // trainer adds trainerNotes; clients edit their own logs
 
+// History the coach's app keeps live (B76, reports/load-test-2026-10-24.md) — a coach has, per client,
+// the summary (or, until it is built, the last 60 days of logs + latest 10 body stats), and their own
+// sessions from scheduleSince on. Pages that show a whole history ask for it:
+watchClientHistory(clientIds) // coach: full logs/sessions/body stats of these clients while open; returns release()
+historyComplete(clientId)     // true when that client's whole history is loaded (always for a client's own data)
+historyStart(clientId)        // where loaded history starts, for getLastActivity's recentSince — null if whole or summarised
+scheduleSince / extendScheduleTo(date)  // the coach's session window; the calendar widens it when looking back
+
 // Schedule
-getSchedule({ trainerId?, clientId?, date? })
+getSchedule({ trainerId?, clientId?, date?, includeLastCompleted? })  // includeLastCompleted: + summary's last session (activity only, never the calendar)
 getTrainerBusySlots()            // client: when their coach is busy — { date, time, duration } only
 refreshTrainerBusySlots()        // client: re-fetch the above (booking form calls it on open)
 addScheduleItem(item)
@@ -685,6 +703,8 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 - **clientErrors**: Owner reads (verified email); written only by the `reportClientError` function. `clientErrorBudget` is server-only
 - **trialRequests**: Coach it was sent to reads; no browser writes at all. **bookingPages**, **trialBudget**: server-only (`firestore-tests/publicBooking.rules.test.js`)
 - **gcEvents**: Server-only (`allow read, write: if false`) — one doc per processed GoCardless webhook event id, so a redelivery is skipped
+- **workoutLogs read** goes by the client's CURRENT coach (`isTrainerOf(clientId)`), never the `trainerId` written on the log — so the coach's app queries logs per client (`where clientId ==`), never `where trainerId ==` (refused). `users.summary` is in no allowlist (`firestore-tests/attack.rules.test.js`)
+- **Composite indexes** live in `firestore.indexes.json`, deployed by CI after the rules. Any query with an equality on one field and a range/sort on another needs one; the emulator never asks for it, so `src/utils/firestoreIndexes.test.js` reads AppContext and `functions/clientSummary.js` and fails on a query without its index (#34)
 
 ## Styling Conventions
 - All styles live in `src/styles/index.css`

@@ -5,7 +5,10 @@
 // emulator host would write to elitepro-16718 itself (CLAUDE.md #38).
 //
 //   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 \
-//     node scripts/load-test/seed.cjs 10 50 100 200
+//     node scripts/load-test/seed.cjs 10 50 100 200 [--summaries]
+//
+// --summaries also builds each client's summary with the server's own code
+// (functions/clientSummary.js), as production does once the coach's app asks — B76 step 2.
 
 const local = (v) => typeof v === 'string' && /^127\.0\.0\.1:\d+$/.test(v);
 if (!local(process.env.FIRESTORE_EMULATOR_HOST) || !local(process.env.FIREBASE_AUTH_EMULATOR_HOST)) {
@@ -111,6 +114,10 @@ async function seedCoach(n) {
     }
   }
   await w.close();
+  if (process.argv.includes('--summaries')) {
+    const { ensureClientSummaries } = require(path.join(__dirname, '../../functions/clientSummary'));
+    await ensureClientSummaries({ db, trainerId: coach });
+  }
   return coach;
 }
 
