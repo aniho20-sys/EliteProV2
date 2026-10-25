@@ -308,6 +308,65 @@ describe('onScheduleCreditUpdate — cancellation', () => {
   });
 });
 
+// B77 (Ani 2026-10-25): every booking is charged when it is made — a client's request too —
+// so the coach declining or cancelling one used to count as the client cancelling: charged
+// if within 24h, and one of the client's two free cancels if not.
+describe('onScheduleCreditUpdate — the coach cancels or declines (B77)', () => {
+  beforeEach(async () => { await clearTestCollections(); });
+
+  test('declined 2h before: refunded, though a client cancelling then would be charged', async () => {
+    await seedClient({ sessionOffset: 4 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(2), deductedAtBooking: true });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled', cancelledBy: 'coach' }));
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(3);
+    expect(client.earlyCancelCount).toBeUndefined();
+    expect((await ref.get()).data().creditRefunded).toBe(true);
+  });
+
+  test('early: refunded without using one of the client’s two free cancels', async () => {
+    await seedClient({ sessionOffset: 4 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(48), deductedAtBooking: true });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled', cancelledBy: 'coach' }));
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(3);
+    expect(client.earlyCancelCount).toBeUndefined();
+  });
+
+  test('the client’s two free cancels already used: the coach’s cancel is still refunded', async () => {
+    const month = new Date().toISOString().slice(0, 7);
+    await seedClient({ sessionOffset: 6, earlyCancelMonth: month, earlyCancelCount: 2 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(48), deductedAtBooking: true });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled', cancelledBy: 'coach' }));
+    const client = await getClient();
+    expect(client.sessionOffset).toBe(5);
+    expect(client.earlyCancelCount).toBe(2);
+  });
+
+  test('a legacy booking the coach cancels late is not charged', async () => {
+    await seedClient({ sessionOffset: 2 });
+    const { ref, snap } = await createSchedule(sessionDateTime(2));
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled', cancelledBy: 'coach' }));
+    expect((await getClient()).sessionOffset).toBe(2);
+  });
+
+  test('a coach’s old mark does not carry over: the client cancelling late later is charged', async () => {
+    await seedClient({ sessionOffset: 4 });
+    // Cancelled by the coach long ago and reopened without the mark being cleared.
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(2), deductedAtBooking: true, cancelledBy: 'coach', status: 'confirmed' });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled' }));
+    expect((await getClient()).sessionOffset).toBe(4);
+  });
+
+  test('the overdrawn booking the coach declines: refunded and the debt reversed', async () => {
+    await seedClient({ sessionOffset: 6, totalSessions: 5 });
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(2), deductedAtBooking: true, bookedOnCredit: true });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled', cancelledBy: 'coach' }));
+    expect((await getClient()).sessionOffset).toBe(5);
+    expect((await ledgerEntries()).map(e => e.type)).toContain('overdraft_reversed');
+  });
+});
+
 describe('onScheduleCreditUpdate — Mark Complete', () => {
   beforeEach(async () => {
     await clearTestCollections();

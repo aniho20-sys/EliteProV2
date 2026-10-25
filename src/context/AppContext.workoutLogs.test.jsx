@@ -314,3 +314,27 @@ describe('clients with a server-kept summary (B76 step 2)', () => {
   });
 });
 
+
+// B77: the server refunds a cancel marked cancelledBy 'coach' whatever its timing, and does
+// not count it as one of the client's two free cancels. The app marks the coach's own.
+describe('who cancelled a session (B77)', () => {
+  test('the coach cancelling or declining marks it as theirs; setting another status clears it', async () => {
+    await signIn();
+    firestore.updateDoc.mockClear();
+    await api.updateScheduleItem('s1', { status: 'cancelled' });
+    expect(firestore.updateDoc).toHaveBeenLastCalledWith(expect.anything(), { status: 'cancelled', cancelledBy: 'coach' });
+    await api.updateScheduleItem('s1', { status: 'confirmed' });
+    expect(firestore.updateDoc).toHaveBeenLastCalledWith(expect.anything(), { status: 'confirmed', cancelledBy: null });
+    await api.updateScheduleItem('s1', { notes: 'bring a towel' });
+    expect(firestore.updateDoc).toHaveBeenLastCalledWith(expect.anything(), { notes: 'bring a towel' });
+  });
+
+  test('the client cancelling is not marked (the rules would refuse it anyway)', async () => {
+    fb.profile = { ...AMY };
+    render(<AppProvider><Grab /></AppProvider>);
+    await waitFor(() => expect(api.currentUser?.id).toBe(AMY.id));
+    firestore.updateDoc.mockClear();
+    await api.updateScheduleItem('s1', { status: 'cancelled', lateCancellation: true });
+    expect(firestore.updateDoc).toHaveBeenLastCalledWith(expect.anything(), { status: 'cancelled', lateCancellation: true });
+  });
+});

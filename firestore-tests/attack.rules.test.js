@@ -80,6 +80,14 @@ describe('a client cannot touch their own balance, role or coach', () => {
   test('…nor write their own credit ledger', async () => {
     await assertFails(setDoc(doc(as(A_CLIENT), 'creditLedger', 'l2'), { id: 'l2', trainerId: A, clientId: A_CLIENT, qty: 50 }));
   });
+  // B77: a cancel marked cancelledBy 'coach' is always refunded, so only the coach may mark it.
+  test('…nor mark their own cancel as the coach’s, to get it refunded', async () => {
+    await assertFails(updateDoc(doc(as(A_CLIENT), 'schedule', 's1'), { status: 'cancelled', cancelledBy: 'coach' }));
+    await assertSucceeds(updateDoc(doc(as(A_CLIENT), 'schedule', 's1'), { status: 'cancelled' }));
+  });
+  test('the coach may mark the cancel as theirs', async () => {
+    await assertSucceeds(updateDoc(doc(as(A), 'schedule', 's1'), { status: 'cancelled', cancelledBy: 'coach' }));
+  });
   test('…nor move a finished session to undo its charge', async () => {
     await assertFails(updateDoc(doc(as(A_CLIENT), 'schedule', 's1'), { date: '2027-01-01', status: 'cancelled' }));
   });

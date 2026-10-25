@@ -374,6 +374,12 @@ exports.onScheduleBooked = functions.firestore
 //     mirrors the exact behaviour that used to run client-side.
 //   - new model (flag set): late stays charged (no-op); early refunds 1 credit,
 //     capped at 2 free early-cancels per client per calendar month.
+//   - the coach cancelling or declining (cancelledBy: 'coach', B77 — Ani 2026-10-25):
+//     always refunded, late or early, and never counted towards the client's two.
+//     Every booking is charged when it is made, even a request the coach then declines.
+//     Only a coach can write cancelledBy (firestore.rules: a client's cancel may touch
+//     status and lateCancellation only), and it counts only when set by this very write,
+//     so a session the coach once cancelled and reopened is not refunded for ever after.
 // Complete:
 //   - legacy (no flag): charge now, exactly once.
 //   - new model (flag set): already charged at booking — no-op.
@@ -398,9 +404,10 @@ exports.onScheduleCreditUpdate = functions.firestore
       const timeZone = trainerDoc && trainerDoc.exists ? trainerDoc.data().timeZone : undefined;
       const sessionMs = zonedToEpochMs(before.date, before.time, timeZone);
       const isLate = (sessionMs - Date.now()) / (1000 * 60 * 60) < 24;
+      const byCoach = after.cancelledBy === 'coach' && before.cancelledBy !== 'coach';
 
       if (!after.deductedAtBooking) {
-        if (!isLate) return; // legacy booking, early cancel — always free
+        if (!isLate || byCoach) return; // legacy booking: early or coach-cancelled — always free
         await db.runTransaction(async (tx) => {
           const clientDoc = await tx.get(clientRef);
           if (!clientDoc.exists) return;
@@ -412,7 +419,7 @@ exports.onScheduleCreditUpdate = functions.firestore
         return;
       }
 
-      if (isLate) return; // already charged at booking, stays charged
+      if (isLate && !byCoach) return; // already charged at booking, stays charged
 
       const month = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
       const reversalRef = db.collection('creditLedger').doc();
@@ -421,13 +428,11 @@ exports.onScheduleCreditUpdate = functions.firestore
         if (!clientDoc.exists) return;
         const data = clientDoc.data();
         const count = data.earlyCancelMonth === month ? (data.earlyCancelCount ?? 0) : 0;
-        if (count >= 2) return; // free early-cancel cap used up this month
+        if (!byCoach && count >= 2) return; // free early-cancel cap used up this month
         const current = data.sessionOffset ?? 0;
-        tx.update(clientRef, {
-          sessionOffset: Math.max(0, current - 1),
-          earlyCancelMonth: month,
-          earlyCancelCount: count + 1,
-        });
+        tx.update(clientRef, byCoach
+          ? { sessionOffset: Math.max(0, current - 1) }
+          : { sessionOffset: Math.max(0, current - 1), earlyCancelMonth: month, earlyCancelCount: count + 1 });
         // Marked so a monthly plan's roll-over does not count it as used (audit 2026-10-23):
         // without it, a refunded cancel and a charged one looked the same.
         tx.update(change.after.ref, { creditRefunded: true });

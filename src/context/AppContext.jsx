@@ -818,8 +818,14 @@ export function AppProvider({ children }) {
     return newItem;
   };
 
+  // A coach cancelling or declining is marked so the server refunds it whatever the timing
+  // and does not count it as one of the client's two free cancels (B77). Cleared when the
+  // coach sets any other status, so a reopened session is the client's to cancel again.
   const updateScheduleItem = async (itemId, updates) => {
-    await updateDoc(doc(db, 'schedule', itemId), updates);
+    const marked = currentUser?.role === 'trainer' && 'status' in updates
+      ? { ...updates, cancelledBy: updates.status === 'cancelled' ? 'coach' : null }
+      : updates;
+    await updateDoc(doc(db, 'schedule', itemId), marked);
   };
 
   const deleteScheduleItem = async (itemId) => {

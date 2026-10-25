@@ -350,6 +350,9 @@ Written by `saveIntakeForm(clientId, data)` — both the one-time onboarding gat
   notes: string,
   trial: boolean,        // optional: a trial session confirmed from the public booking page (B38). The credit
                          // triggers skip it — paid outside the session pack. A client can never set it (rules).
+  cancelledBy: 'coach' | null,  // B77: set by the app when the COACH cancels/declines (cleared on any other status);
+                         // onScheduleCreditUpdate then refunds whatever the timing and does not count it towards the
+                         // client's 2 free early cancels a month. A client can never set it (rules: status + lateCancellation only).
 }
 ```
 
