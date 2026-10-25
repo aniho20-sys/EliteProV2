@@ -21,13 +21,17 @@ import ActiveWorkoutView from '../components/workout/ActiveWorkoutView';
 export default function WorkoutLogPage() {
   const { t } = useLanguage();
   const { currentUser, getWorkoutPlans, getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
-    getExercises, getPersonalRecords, checkAndAwardBadges, muscleGroups } = useApp();
+    getExercises, getPersonalRecords, checkAndAwardBadges, muscleGroups, watchClientHistory } = useApp();
   const isTrainer = currentUser?.role === 'trainer';
   const location = useLocation();
   const navigate = useNavigate();
   const targetClientId = (isTrainer && location.state?.clientId) ? location.state.clientId : currentUser.id;
   const targetClientName = location.state?.clientName || null;
   const loggingForClient = isTrainer && targetClientId !== currentUser.id;
+  // A coach logging for a client: new PRs and session-count badges are judged against the
+  // client's whole history, which the coach's app does not keep live (B76).
+  useEffect(() => (loggingForClient ? watchClientHistory([targetClientId]) : undefined),
+    [loggingForClient, targetClientId, watchClientHistory]);
   const exerciseLibrary = getExercises();
   const plans = getWorkoutPlans({ clientId: targetClientId });
   const logs = getWorkoutLogs(targetClientId);

@@ -21,6 +21,7 @@ const { LanguageProvider } = await import('../i18n/LanguageContext');
 const { default: TrainerDashboard } = await import('./TrainerDashboard');
 const { default: ClientDetailPage } = await import('./ClientDetailPage');
 const { default: ClientProgressOverviewPage } = await import('./ClientProgressOverviewPage');
+const { default: WorkoutLogPage } = await import('./WorkoutLogPage');
 const { localDateAdd } = await import('../utils/dateUtils');
 
 const COACH = { id: 'coach-1', name: 'Ani Ho', role: 'trainer', inviteCode: 'ANI123', renewalRate: 40, bankDetails: { accountNumber: '1' } };
@@ -36,6 +37,8 @@ function appWith(overrides = {}) {
     getBodyStats: () => [], getSchedule: () => [], getUnreadCount: () => 0, getMessages: () => [],
     getWorkoutPlans: () => [], getWorkoutLogs: () => [], getExercises: () => [],
     getSessionStats: () => ({ used: 4, total: 10, remaining: 6 }),
+    getPersonalRecords: () => ({}), muscleGroups: [], addWorkoutLog: vi.fn(), updateWorkoutLog: vi.fn(),
+    checkAndAwardBadges: vi.fn(async () => []),
     getIntakeForm: vi.fn(async () => null), getTrainerSubscriptions: vi.fn(async () => []),
     getInviteCode: vi.fn(async () => 'ANI123'),
     updateScheduleItem: vi.fn(), updateClient: vi.fn(), sendMessage: vi.fn(), markMessagesRead: vi.fn(),
@@ -101,5 +104,15 @@ describe('pages that show a client’s whole history', () => {
     expect(app.watchClientHistory).toHaveBeenCalledWith([OLD_HAND.id, NEWBIE.id].sort());
     expect(container.querySelector('.skeleton-card, .skeleton-line')).toBeTruthy();
     expect(screen.queryByText('Olive Old')).toBeNull();
+  });
+  // New PRs and session-count badges are judged against the client's whole history.
+  test('a coach logging a workout for a client asks for that client’s full history; logging their own does not', () => {
+    const app = appWith();
+    const { unmount } = renderAt(<WorkoutLogPage />, app, { pathname: '/log', state: { clientId: OLD_HAND.id, clientName: OLD_HAND.name } });
+    expect(app.watchClientHistory).toHaveBeenCalledWith([OLD_HAND.id]);
+    unmount();
+    const own = appWith();
+    renderAt(<WorkoutLogPage />, own, '/log');
+    expect(own.watchClientHistory).not.toHaveBeenCalled();
   });
 });
