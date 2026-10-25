@@ -31,6 +31,8 @@ function appWith(overrides = {}) {
     getBodyStats: () => [],
     getInviteCode: vi.fn(async () => 'ANI123'),
     addManagedClient: vi.fn(async (name) => ({ ...NO_APP, id: 'managed-1759200000001-cd34', name: name.trim() })),
+    // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+    watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
     getSchedule: () => overrides.schedule || [],
     getUnreadCount: () => 0,
     getMessages: () => [],
@@ -129,6 +131,8 @@ describe('nothing is offered that could only reach a client through the app', ()
     const upcoming = (clientId) => ({ id: `s-${clientId}`, trainerId: 'coach-1', clientId, date: '2999-01-01', time: '10:00', status: 'confirmed' });
     renderPage(<TrainerDashboard />, appWith({
       getSessionStats: () => ({ used: 0, total: 10, remaining: 10 }),
+      // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+      watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
       getSchedule: ({ clientId } = {}) => [REAL, NO_APP].filter(c => !clientId || c.id === clientId).map(c => upcoming(c.id)),
     }));
     fireEvent.click(screen.getByText(/Show all|View all|more/i));
@@ -144,6 +148,8 @@ describe('nothing is offered that could only reach a client through the app', ()
     const session = (c) => ({ id: `s-${c.id}`, trainerId: 'coach-1', clientId: c.id, date: today, time: '09:00', type: 'PT', status: 'confirmed' });
     const app = appWith({
       getSessionStats: () => ({ used: 0, total: 10, remaining: 10 }),
+      // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+      watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
       getSchedule: () => [session(REAL), session(NO_APP)],
       updateScheduleItem: vi.fn(async () => {}),
       sendMessage: vi.fn(async () => {}),

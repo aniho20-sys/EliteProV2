@@ -127,6 +127,15 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
+      # The app's date-windowed queries need these (B76). Without --force, an index that is
+      # in production but not in firestore.indexes.json is left alone, never deleted. A new
+      # index takes minutes to build after this step succeeds; until then the app falls back
+      # to unwindowed queries (listenWindowed in AppContext.jsx).
+      - name: Deploy Firestore Indexes
+        run: npx firebase-tools@15.34.1 deploy --only firestore:indexes --project elitepro-16718 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
   deploy_functions:
     runs-on: ubuntu-latest
     needs: test

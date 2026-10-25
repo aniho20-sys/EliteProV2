@@ -57,6 +57,29 @@ describe('getLastActivity', () => {
   });
 });
 
+// B76: the coach's app holds only recent history, so finding nothing means "nothing in
+// the days looked at" — never "No activity yet" for a client who has trained for years.
+describe('getLastActivity with only recent history loaded', () => {
+  const nothing = { getWorkoutLogs: () => [], getSchedule: () => [], today: TODAY };
+  test('a long-standing client with nothing recent: how many days were looked at, not "never"', () => {
+    const r = getLastActivity('c1', { ...nothing, recentSince: '2026-06-15', joinDate: '2025-01-01' });
+    expect(r).toEqual({ daysSince: null, label: null, noActivityDays: 60 });
+  });
+  test('a client who joined after the window starts: "never" is still true', () => {
+    expect(getLastActivity('c1', { ...nothing, recentSince: '2026-06-15', joinDate: '2026-07-01' }))
+      .toEqual({ daysSince: null, label: null });
+  });
+  test('no join date known: only what is certain — nothing in the days looked at', () => {
+    expect(getLastActivity('c1', { ...nothing, recentSince: '2026-06-15' }).noActivityDays).toBe(60);
+  });
+  test('full history loaded (no recentSince): unchanged', () => {
+    expect(getLastActivity('c1', nothing)).toEqual({ daysSince: null, label: null });
+  });
+  test('activity inside the window: days since, as before', () => {
+    expect(getLastActivity('c1', { ...sessionOnlyClient, recentSince: '2026-06-15', joinDate: '2025-01-01' }).daysSince).toBe(2);
+  });
+});
+
 describe('isActiveWithin', () => {
   test('a session-only client counts as retained', () => {
     expect(isActiveWithin('c1', sessionOnlyClient, 30)).toBe(true);

@@ -130,6 +130,8 @@ describe('the coach\'s Group classes card', () => {
   const OPEN = { id: 'gc1', trainerId: 'coach-1', date: '2099-01-06', time: '18:00', title: 'Strength circuit', price: 15, capacity: 3, minPeople: 2, status: 'open' };
   const cardApp = (over = {}) => ({
     currentUser: COACH,
+    // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+    watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
     getSchedule: () => [
       { id: 's1', trainerId: 'coach-1', clientId: 'c1', groupClassId: 'gc1', status: 'confirmed' },
       { id: 's2', trainerId: 'coach-1', clientId: 'c2', groupClassId: 'gc1', status: 'cancelled' },

@@ -35,6 +35,8 @@ function renderDashboard({ schedule = [session()], plans = [PLAN_A] } = {}) {
   const app = {
     currentUser: COACH, setLanguage: vi.fn(),
     getClients: () => clients, getClient: (id) => clients.find(c => c.id === id),
+    // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+    watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
     getSchedule: () => schedule, getUnreadCount: () => 0, getMessages: () => [],
     getWorkoutPlans: () => plans, getWorkoutLogs: () => [], getBodyStats: () => [],
     getSessionStats: () => ({ used: 0, total: 10, remaining: 10 }), getInviteCode: vi.fn(async () => 'ANI123'),

@@ -8,7 +8,7 @@ import { formatCurrency } from '../utils/currencyUtils';
 import { isActiveWithin } from '../utils/activityUtils';
 import { TrendingUp, Users, Calendar, DollarSign } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
-import { SkeletonLine } from '../components/Skeleton';
+import { SkeletonLine, SkeletonList } from '../components/Skeleton';
 
 const RETENTION_WINDOW_DAYS = 30;
 
@@ -38,9 +38,14 @@ function last6Months() {
 
 export default function BusinessAnalyticsPage() {
   const { t } = useLanguage();
-  const { currentUser, getClients, getInvoices, getSchedule, getWorkoutLogs, getTrainerCreditLedger } = useApp();
+  const { currentUser, getClients, getInvoices, getSchedule, getWorkoutLogs, getTrainerCreditLedger, watchClientHistory, historyComplete } = useApp();
   const today = localToday();
   const clients = getClients(currentUser.id);
+  // Six months of sessions and retention need every client's full history, which the
+  // coach's app does not keep live (B76).
+  const clientIds = clients.map(c => c.id).sort().join(',');
+  useEffect(() => (clientIds ? watchClientHistory(clientIds.split(',')) : undefined), [clientIds, watchClientHistory]);
+  const historyLoading = clients.some(c => !historyComplete(c.id));
   const invoices = getInvoices(currentUser.id);
   const schedule = getSchedule({ trainerId: currentUser.id });
   const months = last6Months();
@@ -122,6 +127,18 @@ export default function BusinessAnalyticsPage() {
         description={t('analytics.empty_desc')}
         action={{ label: t('analytics.empty_action'), to: '/clients' }}
       />
+    );
+  }
+
+  if (historyLoading) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1 className="page-title">{t('analytics.title')}</h1>
+          <p className="page-subtitle">{t('analytics.subtitle')}</p>
+        </div>
+        <SkeletonList count={4} />
+      </div>
     );
   }
 

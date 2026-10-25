@@ -609,6 +609,7 @@ const zhHK = {
   'common.days': '日',
   'tdash.at_risk': '有流失風險',
   'tdash.no_activity': '尚未有訓練紀錄',
+  'tdash.no_activity_in_days': '過去 {count} 日沒有訓練紀錄',
   'tdash.inactive_days_other': '已 {count} 日沒有訓練',
   'tdash.send_checkin': '發送問候',
   'tdash.profile_incomplete': '訓練資料未完成',

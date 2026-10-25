@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 import { localToday } from '../utils/dateUtils';
+import { RECENT_BODY_STATS, recentSince } from '../utils/recentHistory';
 import { canonicalExercise } from '../utils/exerciseUtils';
 import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
@@ -44,7 +45,13 @@ export function AppProvider({ children }) {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [ownLogs, setOwnLogs] = useState([]);
   const [clientLogsMap, setClientLogsMap] = useState({});
-  const [schedule, setSchedule] = useState([]);
+  const [scheduleWindow, setSchedule] = useState([]);
+  // The coach's sessions are loaded from this date on (B76); the calendar moves it back
+  // when the coach looks at older weeks (extendScheduleTo).
+  const [scheduleSince, setScheduleSince] = useState(recentSince);
+  // A client's full history, while a page that needs it is open (watchClientHistory).
+  const [fullHistory, setFullHistory] = useState({});
+  const historyWatchers = useRef({});
   const [trainerBusySlots, setTrainerBusySlots] = useState([]);
   const [messages, setMessages] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -75,6 +82,18 @@ export function AppProvider({ children }) {
     loadedRef.current.add(name);
     if (loadedRef.current.size >= 8) setLoading(false);
   }, []);
+
+  // Auto-retry on transient Firestore errors (network hiccup, WebSocket drop).
+  // Silently re-subscribes up to 2 times before showing the error banner.
+  const listenerFailed = useCallback((name) => {
+    markLoaded(name);
+    if (retryCountRef.current < 2) {
+      retryCountRef.current += 1;
+      setTimeout(() => setListenerEpoch(e => e + 1), 2000);
+    } else {
+      setDataError('Failed to load data. Check your connection and refresh.');
+    }
+  }, [markLoaded]);
 
   // --- Firebase Auth listener ---
   useEffect(() => {
@@ -124,17 +143,7 @@ export function AppProvider({ children }) {
     const unsubs = [];
     const uid = firebaseUser.uid;
 
-    // Auto-retry on transient Firestore errors (network hiccup, WebSocket drop).
-    // Silently re-subscribes up to 2 times before showing the error banner.
-    const onErr = (name) => () => {
-      markLoaded(name);
-      if (retryCountRef.current < 2) {
-        retryCountRef.current += 1;
-        setTimeout(() => setListenerEpoch(e => e + 1), 2000);
-      } else {
-        setDataError('Failed to load data. Check your connection and refresh.');
-      }
-    };
+    const onErr = (name) => () => listenerFailed(name);
 
     // Split into two separate listeners (avoids the or() compound query which is
     // unreliable with IndexedDB persistence — the stale-cache snapshot can overwrite
@@ -182,10 +191,7 @@ export function AppProvider({ children }) {
       markLoaded('workoutLogs');
     }, onErr('workoutLogs')));
 
-    unsubs.push(onSnapshot(query(collection(db, 'schedule'), or(where('trainerId', '==', uid), where('clientId', '==', uid))), (snap) => {
-      setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
-      markLoaded('schedule');
-    }, onErr('schedule')));
+    // schedule: its own listener below, once the role is known (a coach's is windowed).
 
     unsubs.push(onSnapshot(query(collection(db, 'messages'), or(where('from', '==', uid), where('to', '==', uid))), (snap) => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })));
@@ -201,7 +207,7 @@ export function AppProvider({ children }) {
     ));
 
     return () => unsubs.forEach(fn => fn());
-  }, [firebaseUser, markLoaded, listenerEpoch]);
+  }, [firebaseUser, markLoaded, listenerFailed, listenerEpoch]);
 
   // --- Exercises: role-aware listener (trainer sees own; client sees trainer's + own) ---
   // A client's own exercises carry their own id: addExercise writes that while they have no
@@ -340,48 +346,151 @@ export function AppProvider({ children }) {
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.trainerId, currentUser?.role]);
 
-  // --- Body Stats: per-client subcollection listeners (reactive on users list) ---
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    const clientIds = currentUser.role === 'trainer'
-      ? users.filter(u => u.trainerId === currentUser.id).map(u => u.id)
-      : [currentUser.id];
-    if (clientIds.length === 0) return;
-    const unsubs = clientIds.map(cid =>
-      onSnapshot(
-        query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'asc')),
-        (snap) => setBodyStatsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
-        () => {},
-      )
-    );
-    return () => unsubs.forEach(u => u());
-  }, [currentUser?.id, currentUser?.role, currentUser?.trainerId, users]);
-
-  // --- Workout logs of a coach's clients: one listener per current client ---
-  // A log carries the coach it was written under (trainerId); a client who has left must not
-  // stay readable through it, so the rules check the client's current coach and the app asks
-  // client by client (Grok Bot review 2026-10-24).
   const myClientIds = currentUser?.role === 'trainer'
     ? users.filter(u => u.trainerId === currentUser.id).map(u => u.id).sort().join(',')
     : '';
+
+  // A windowed query needs a composite index (firestore.indexes.json). Until production has
+  // built it — or if it is ever missing — the query is refused with failed-precondition, and
+  // the emulator never refuses it, so tests would not notice (CLAUDE.md #34). Then the same
+  // data is asked for unwindowed: slower, never empty.
+  const listenWindowed = (windowed, unwindowed, onData, label, onFail = () => {}) => {
+    const failed = (e) => { console.error(`[${label}] listener failed`, e); onFail(e); };
+    let unsub = onSnapshot(windowed, onData, (err) => {
+      if (err && err.code === 'failed-precondition') {
+        console.warn(`[${label}] index not ready, loading without the date window`, err);
+        unsub = onSnapshot(unwindowed, onData, failed);
+      } else {
+        failed(err);
+      }
+    });
+    return () => unsub();
+  };
+
+  // --- Body Stats: a client's own in full; a coach's clients' latest few (B76) ---
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.role === 'trainer') return;
+    const cid = currentUser.id;
+    return onSnapshot(
+      query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'asc')),
+      (snap) => setBodyStatsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
+      () => {},
+    );
+  }, [currentUser?.id, currentUser?.role]);
   useEffect(() => {
     if (!myClientIds) return;
     const unsubs = myClientIds.split(',').map(cid =>
       onSnapshot(
-        query(collection(db, 'workoutLogs'), where('clientId', '==', cid)),
-        (snap) => setClientLogsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
-        (err) => console.error('[workoutLogs] client listener failed', cid, err),
+        query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'desc'), limit(RECENT_BODY_STATS)),
+        (snap) => setBodyStatsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })).reverse() })),
+        () => {},
       )
     );
     return () => unsubs.forEach(u => u());
   }, [myClientIds]);
 
+  // --- Workout logs of a coach's clients: one listener per current client, recent days only ---
+  // A log carries the coach it was written under (trainerId); a client who has left must not
+  // stay readable through it, so the rules check the client's current coach and the app asks
+  // client by client (Grok Bot review 2026-10-24). Full history: watchClientHistory.
+  useEffect(() => {
+    if (!myClientIds) return;
+    const since = recentSince();
+    const unsubs = myClientIds.split(',').map(cid => listenWindowed(
+      query(collection(db, 'workoutLogs'), where('clientId', '==', cid), where('date', '>=', since)),
+      query(collection(db, 'workoutLogs'), where('clientId', '==', cid)),
+      (snap) => setClientLogsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
+      'workoutLogs',
+    ));
+    return () => unsubs.forEach(u => u());
+  }, [myClientIds]);
+
+  // --- Schedule: a coach's from scheduleSince on; a client's own in full ---
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const uid = currentUser.id;
+    const onData = (snap) => {
+      setSchedule(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      markLoaded('schedule');
+    };
+    if (currentUser.role !== 'trainer') {
+      return onSnapshot(
+        query(collection(db, 'schedule'), or(where('trainerId', '==', uid), where('clientId', '==', uid))),
+        onData, () => listenerFailed('schedule'),
+      );
+    }
+    return listenWindowed(
+      query(collection(db, 'schedule'), where('trainerId', '==', uid), where('date', '>=', scheduleSince)),
+      query(collection(db, 'schedule'), where('trainerId', '==', uid)),
+      onData, 'schedule', () => listenerFailed('schedule'),
+    );
+  }, [currentUser?.id, currentUser?.role, scheduleSince, listenerEpoch, markLoaded, listenerFailed]);
+
+  // The calendar asks for older weeks; the window only ever widens.
+  const extendScheduleTo = useCallback((date) => {
+    setScheduleSince(prev => (date && date < prev ? date : prev));
+  }, []);
+
+  // --- A client's full history, for the pages that need all of it (B76) ---
+  // Returns a release function; pages call it from an effect. Counted per client, so two
+  // pages showing the same client share one set of listeners.
+  const coachId = currentUser?.role === 'trainer' ? currentUser.id : null;
+  const watchClientHistory = useCallback((clientIds) => {
+    if (!coachId) return () => {};
+    const uid = coachId;
+    for (const cid of clientIds) {
+      const w = historyWatchers.current[cid];
+      if (w) { w.count += 1; continue; }
+      const put = (key) => (snap) => setFullHistory(prev => ({
+        ...prev, [cid]: { ...prev[cid], [key]: snap.docs.map(d => ({ ...d.data(), id: d.id })) },
+      }));
+      const failed = (key) => (err) => console.error(`[history] ${key} failed`, cid, err);
+      historyWatchers.current[cid] = {
+        count: 1,
+        unsubs: [
+          onSnapshot(query(collection(db, 'workoutLogs'), where('clientId', '==', cid)), put('logs'), failed('logs')),
+          onSnapshot(query(collection(db, 'schedule'), where('trainerId', '==', uid), where('clientId', '==', cid)), put('schedule'), failed('schedule')),
+          onSnapshot(query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'asc')), put('bodyStats'), failed('bodyStats')),
+        ],
+      };
+    }
+    return () => {
+      for (const cid of clientIds) {
+        const w = historyWatchers.current[cid];
+        if (!w) continue;
+        w.count -= 1;
+        if (w.count > 0) continue;
+        w.unsubs.forEach(u => u());
+        delete historyWatchers.current[cid];
+        setFullHistory(prev => { const next = { ...prev }; delete next[cid]; return next; });
+      }
+    };
+  }, [coachId]);
+
+  // Whether a client's whole history is here: always for a client's own data; for a coach's
+  // client only while watchClientHistory has it loaded.
+  const historyComplete = (clientId) => currentUser?.role !== 'trainer' || clientId === currentUser?.id
+    || !!(fullHistory[clientId]?.logs && fullHistory[clientId]?.schedule && fullHistory[clientId]?.bodyStats);
+  // Where a client's loaded history starts, for getLastActivity — null when it is all here.
+  const historyStart = (clientId) => (historyComplete(clientId) ? null : recentSince());
+
   // A client who has left keeps no logs here, even ones loaded before they left.
   const workoutLogs = useMemo(() => {
-    const current = new Set(myClientIds ? myClientIds.split(',') : []);
-    const theirs = Object.entries(clientLogsMap).filter(([cid]) => current.has(cid)).flatMap(([, logs]) => logs);
+    const current = myClientIds ? myClientIds.split(',') : [];
+    const theirs = current.flatMap(cid => fullHistory[cid]?.logs || clientLogsMap[cid] || []);
     return [...ownLogs, ...theirs];
-  }, [ownLogs, clientLogsMap, myClientIds]);
+  }, [ownLogs, clientLogsMap, fullHistory, myClientIds]);
+
+  // The coach's recent sessions plus the full history of the clients being watched.
+  const schedule = useMemo(() => {
+    const current = new Set(myClientIds ? myClientIds.split(',') : []);
+    const byId = new Map(scheduleWindow.map(s => [s.id, s]));
+    for (const [cid, h] of Object.entries(fullHistory)) {
+      if (!current.has(cid)) continue;
+      for (const s of h.schedule || []) if (!byId.has(s.id)) byId.set(s.id, s);
+    }
+    return [...byId.values()];
+  }, [scheduleWindow, fullHistory, myClientIds]);
 
   // --- Sync currentUser when users list or firebaseUser changes ---
   useEffect(() => {
@@ -590,7 +699,7 @@ export function AppProvider({ children }) {
   };
 
   // ========== Body Stats ==========
-  const getBodyStats = (clientId) => bodyStatsMap[clientId] || [];
+  const getBodyStats = (clientId) => fullHistory[clientId]?.bodyStats || bodyStatsMap[clientId] || [];
 
   const addBodyStat = async (clientId, stat) => {
     const addedBy = currentUser?.role === 'trainer' ? 'coach' : 'self';
@@ -1257,6 +1366,7 @@ export function AppProvider({ children }) {
     getWorkoutPlans, addWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan,
     getWorkoutLogs, addWorkoutLog, updateWorkoutLog,
     getSchedule, getTrainerBusySlots, refreshTrainerBusySlots, addScheduleItem, updateScheduleItem, deleteScheduleItem,
+    scheduleSince, extendScheduleTo, watchClientHistory, historyComplete, historyStart,
     getMessages, sendMessage, getUnreadCount, markMessagesRead,
     getSessionStats,
     getPersonalRecords,

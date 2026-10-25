@@ -54,6 +54,8 @@ function base(over = {}) {
     currentUser: NEW_COACH, firebaseUser: { uid: 'coach-1', providerData: [] }, setLanguage: vi.fn(),
     getClients: () => clients,
     getClient: (id) => clients.find(c => c.id === id) || (over.coach && over.coach.id === id ? over.coach : undefined),
+    // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+    watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
     getSchedule: () => over.schedule || [],
     getInviteCode: vi.fn(async () => 'SAM123'),
     getBodyStats: () => [], getWorkoutPlans: () => [], getWorkoutLogs: () => [], getExercises: () => [],

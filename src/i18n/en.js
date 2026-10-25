@@ -589,6 +589,7 @@ const en = {
   'common.days': 'days',
   'tdash.at_risk': 'At risk of churn',
   'tdash.no_activity': 'No activity yet',
+  'tdash.no_activity_in_days': 'No activity in the last {count} days',
   'tdash.inactive_days_one': 'Inactive {count} day',
   'tdash.inactive_days_other': 'Inactive {count} days',
   'tdash.send_checkin': 'Send a check-in',

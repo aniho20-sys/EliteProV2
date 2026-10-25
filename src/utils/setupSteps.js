@@ -19,6 +19,12 @@ export function setupSteps({ currentUser, clients, schedule }) {
       done: clients.some(c => c.totalSessions !== null && c.totalSessions !== undefined),
       to: firstWithoutSessions ? `/clients/${firstWithoutSessions.id}` : '/clients',
     },
-    { key: 'book', done: schedule.some(s => !s.isBlocked && s.clientId), to: '/schedule' },
+    // A used session counts too: the coach's app loads only recent sessions (B76), and a
+    // coach whose bookings are all older than that has still booked.
+    {
+      key: 'book',
+      done: schedule.some(s => !s.isBlocked && s.clientId) || clients.some(c => (c.sessionOffset || 0) > 0),
+      to: '/schedule',
+    },
   ];
 }

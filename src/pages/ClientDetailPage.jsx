@@ -16,6 +16,7 @@ import MonthlyReportModal from '../components/MonthlyReportModal';
 import ProgressView from '../components/ProgressView';
 import ExerciseProgress from '../components/ExerciseProgress';
 import EmptyState from '../components/EmptyState';
+import { SkeletonList } from '../components/Skeleton';
 import SessionDateList from '../components/SessionDateList';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -115,7 +116,7 @@ export default function ClientDetailPage() {
   const { t } = useLanguage();
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, addCreditLedgerEntry } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, addCreditLedgerEntry, watchClientHistory, historyComplete } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -160,6 +161,12 @@ export default function ClientDetailPage() {
   const [editLogExSearch, setEditLogExSearch] = useState('');
   const [intakeForm, setIntakeForm] = useState(undefined); // undefined = not loaded yet
   const [showReport, setShowReport] = useState(false);
+
+  // The coach's app keeps only recent history for each client (B76); this page shows all of
+  // it, so it asks for the rest while open. Overview, progress and logs wait for it — a
+  // half-loaded history would show the wrong totals and call old bests new PRs.
+  useEffect(() => watchClientHistory([clientId]), [clientId, watchClientHistory]);
+  const historyLoading = !historyComplete(clientId);
 
   useEffect(() => {
     if (tab !== 'intake') return;
@@ -477,7 +484,9 @@ export default function ClientDetailPage() {
         ))}
       </div>
 
-      {tab === 'overview' && (
+      {historyLoading && ['overview', 'progress', 'workout logs'].includes(tab) && <SkeletonList count={3} />}
+
+      {tab === 'overview' && !historyLoading && (
         <>
         <div className="grid-2">
           <div className="card">
@@ -615,7 +624,7 @@ export default function ClientDetailPage() {
         </>
       )}
 
-      {tab === 'progress' && (
+      {tab === 'progress' && !historyLoading && (
         <div>
           <div className="flex-between mb-16">
             <div className="tabs" style={{ marginBottom: 0 }}>
@@ -704,7 +713,7 @@ export default function ClientDetailPage() {
         </div>
       )}
 
-      {tab === 'workout logs' && (
+      {tab === 'workout logs' && !historyLoading && (
         <div>
           <div className="flex-between mb-16">
             <span className="text-sm text-muted">{t('cdetail.n_logged', { count: logs.length })}</span>

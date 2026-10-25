@@ -68,22 +68,22 @@ function WeeklySessionsChart({ weekDays, schedule, today }) {
 // Positioned right below Needs Attention, but deliberately undramatic: this is a status
 // summary, not a warning system — recency uses neutral gray text, never red/yellow/green.
 // Needs Attention already owns the "this client needs action" call-out.
-function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, today }) {
+function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, historyStart, plans, today }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const weekStart = localDateAdd(-7);
 
   const activity = clients.map(client => ({
     client,
-    ...getLastActivity(client.id, { getWorkoutLogs, getSchedule, plans, today }),
+    ...getLastActivity(client.id, { getWorkoutLogs, getSchedule, plans, today, recentSince: historyStart(client.id), joinDate: client.joinDate }),
   })).sort((a, b) => (a.daysSince ?? Infinity) - (b.daysSince ?? Infinity));
 
   const activeThisWeek = clients.filter(client =>
     getClientActivityDates(client.id, { getWorkoutLogs, getSchedule }).some(d => d >= weekStart)
   ).length;
 
-  const formatDaysSince = (days) => {
-    if (days === null) return t('tdash.no_activity');
+  const formatDaysSince = (days, noActivityDays) => {
+    if (days === null) return noActivityDays ? t('tdash.no_activity_in_days', { count: noActivityDays }) : t('tdash.no_activity');
     if (days === 0) return t('common.today');
     return t('common.days_ago', { count: days });
   };
@@ -97,14 +97,14 @@ function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, plans, to
       </button>
       {expanded && (
         <div className="client-activity-list">
-          {activity.map(({ client, daysSince, label }) => (
+          {activity.map(({ client, daysSince, label, noActivityDays }) => (
             <Link key={client.id} to={`/clients/${client.id}`} className="client-activity-item">
               <div className="client-activity-avatar">{client.name?.[0] || '?'}</div>
               <div className="client-activity-info">
                 <div className="client-activity-name">{client.name}</div>
                 {label && <div className="client-activity-detail">{label}</div>}
               </div>
-              <span className="client-activity-label">{formatDaysSince(daysSince)}</span>
+              <span className="client-activity-label">{formatDaysSince(daysSince, noActivityDays)}</span>
             </Link>
           ))}
         </div>
@@ -145,7 +145,7 @@ export default function TrainerDashboard() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t, lang } = useLanguage();
-  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, updateScheduleItem, updateClient, sendMessage, getClient, getSessionStats, getTrainerSubscriptions } = useApp();
+  const { currentUser, getClients, getSchedule, getUnreadCount, getMessages, getWorkoutPlans, getWorkoutLogs, historyStart, updateScheduleItem, updateClient, sendMessage, getClient, getSessionStats, getTrainerSubscriptions } = useApp();
   const completingRef = useRef(new Set());
   const [recapSession, setRecapSession] = useState(null);
   const [recapNote, setRecapNote] = useState('');
@@ -329,10 +329,12 @@ export default function TrainerDashboard() {
   // "Last activity" = most recent of (last workout log, last completed session) — a client
   // who trains weekly via booked sessions but rarely logs workouts is still active, not churning.
   const churnClients = clients.reduce((acc, client) => {
-    const { daysSince, label: lastActivityLabel } = getLastActivity(client.id, { getWorkoutLogs, getSchedule, plans: allPlans, today });
+    const { daysSince, label: lastActivityLabel, noActivityDays } = getLastActivity(client.id, {
+      getWorkoutLogs, getSchedule, plans: allPlans, today, recentSince: historyStart(client.id), joinDate: client.joinDate,
+    });
     const inactive = daysSince === null || daysSince >= CHURN_INACTIVE_DAYS;
     if (inactive && !isSnoozed(client.churnSnoozedUntil, today)) {
-      acc.push({ client, daysSince, lastActivityLabel });
+      acc.push({ client, daysSince, lastActivityLabel, noActivityDays });
     }
     return acc;
   }, []).sort((a, b) => (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity));
@@ -580,7 +582,7 @@ export default function TrainerDashboard() {
                 <span className="needs-attention-category-dot" style={{ background: 'var(--warning)' }} />
                 {t('tdash.at_risk')} <span className="text-muted">({churnClients.length})</span>
               </div>
-              {visibleChurn.map(({ client, daysSince, lastActivityLabel }) => (
+              {visibleChurn.map(({ client, daysSince, lastActivityLabel, noActivityDays }) => (
                 <div key={`churn-${client.id}`} className="needs-attention-item" style={{ borderLeftColor: 'var(--warning)' }}>
                   <div className="needs-attention-item-top">
                     <Link to={`/clients/${client.id}`} className="needs-attention-avatar">{client.name?.[0] || '?'}</Link>
@@ -588,9 +590,12 @@ export default function TrainerDashboard() {
                       <div className="needs-attention-name">{client.name}</div>
                       <div className="needs-attention-meta">
                         <span style={{ color: 'var(--warning-dark)', fontWeight: 600 }}>
-                          {daysSince === null ? t('tdash.no_activity') : t('tdash.inactive_days', { count: daysSince })}
+                          {daysSince !== null ? t('tdash.inactive_days', { count: daysSince })
+                            : noActivityDays ? t('tdash.no_activity_in_days', { count: noActivityDays }) : t('tdash.no_activity')}
                         </span>
-                        <span className="text-muted"> · {lastActivityLabel ? t('tdash.last_prefix', { label: lastActivityLabel }) : t('tdash.no_activity')}</span>
+                        {!noActivityDays && (
+                          <span className="text-muted"> · {lastActivityLabel ? t('tdash.last_prefix', { label: lastActivityLabel }) : t('tdash.no_activity')}</span>
+                        )}
                       </div>
                     </Link>
                   </div>
@@ -672,7 +677,7 @@ export default function TrainerDashboard() {
           />
         </div>
       ) : (
-        <ClientActivitySummary clients={clients} getWorkoutLogs={getWorkoutLogs} getSchedule={getSchedule} plans={allPlans} today={today} />
+        <ClientActivitySummary clients={clients} getWorkoutLogs={getWorkoutLogs} getSchedule={getSchedule} historyStart={historyStart} plans={allPlans} today={today} />
       )}
 
       {/* Today + Messages (the messages card only while in-app chat is on — utils/features.js) */}

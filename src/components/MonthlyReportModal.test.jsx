@@ -35,6 +35,8 @@ const ctx = {
   setLanguage: vi.fn(),
   getBodyStats: () => [{ date: `${month}-01`, weight: 80 }],
   getWorkoutLogs: () => [{ date: `${month}-02`, entries: [{ exerciseId: 'bench-press', sets: [{ weight: 60, reps: 8 }] }] }],
+  // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+  watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
   getSchedule: () => [{ date: `${month}-02`, time: '18:00', status: 'completed' }],
   getPersonalRecords: () => ({ 'bench-press': { weight: 60, date: `${month}-02` } }),
   getExercises: () => [{ id: 'bench-press', name: 'Bench Press' }],

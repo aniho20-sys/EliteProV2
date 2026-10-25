@@ -39,6 +39,8 @@ function makeApp(over = {}) {
     updateClient: vi.fn(), logout: vi.fn(), sendPasswordReset: vi.fn(), getInviteCode: vi.fn(async () => 'ABC123'),
     connectToTrainer: vi.fn(), getClient: () => undefined, deleteAccount: vi.fn(), getExercises: () => [],
     getPaymentConnection: vi.fn(async () => null), startGcConnect: vi.fn(), disconnectGc: vi.fn(), connectGcDirect: vi.fn(),
+    // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+    watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
     getClients: () => [], getSchedule: () => [], getClientErrors: vi.fn(async () => []), getPlatformStats: vi.fn(async () => null),
     updateExercise: vi.fn(), getSubscriptions: vi.fn(async () => []), startSubscription: vi.fn(), refreshSubscription: vi.fn(), cancelSubscription: vi.fn(),
     getStripeStatus: vi.fn(async () => ({ configured: true, environment: 'sandbox' })),

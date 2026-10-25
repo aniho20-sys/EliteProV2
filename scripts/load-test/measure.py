@@ -7,6 +7,7 @@
 #
 #   python3 scripts/load-test/measure.py 10 50 100 200
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -14,9 +15,10 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
-APP = 'http://127.0.0.1:5199'
+APP = os.environ.get('LOADTEST_APP', 'http://127.0.0.1:5199')
 CPU_SLOWDOWN = 4  # Chromium's own guide for "mid-tier phone"
-QUIET_MS = 3000   # data counts as loaded once no listener has opened or answered for this long
+QUIET_MS = 3000
+WAIT_S = 1200     # longest a run may take before it counts as "did not finish"   # data counts as loaded once no listener has opened or answered for this long
 OUT = Path(__file__).parent / 'results'
 
 
@@ -38,11 +40,11 @@ def run_once(page, cdp, url, label, reload=False):
         page.reload()
     else:
         page.goto(url)
-    page.wait_for_selector('.stat-pill', timeout=1_200_000)
+    page.wait_for_selector('.stat-pill', timeout=WAIT_S * 1000)
     dashboard_ms = (time.time() - t0) * 1000
 
     # Data loaded = every listener has answered once and nothing new for QUIET_MS.
-    deadline = time.time() + 1200
+    deadline = time.time() + WAIT_S
     while time.time() < deadline:
         s = page.evaluate('''() => {
           const L = (window.__loadTest || {}).listeners || [];
@@ -105,8 +107,12 @@ def measure(n, pw):
     cdp.send('Network.enable')
     cdp.send('Emulation.setCPUThrottlingRate', {'rate': CPU_SLOWDOWN})
     url = f'{APP}/?as=coach-{n}#/'
-    cold = run_once(page, cdp, url, 'first open (nothing cached)')
-    warm = run_once(page, cdp, url, 'reopen (cached on the phone)', reload=True)
+    try:
+        cold = run_once(page, cdp, url, 'first open (nothing cached)')
+        warm = run_once(page, cdp, url, 'reopen (cached on the phone)', reload=True)
+    except Exception as e:  # a run that never finishes is a result too, not a crash
+        browser.close()
+        return {'clients': n, 'timedOut': str(e).splitlines()[0], 'blockedHosts': sorted({urlparse(u).hostname for u in blocked})}
     browser.close()
     hosts = sorted({urlparse(u).hostname for u in blocked})
     return {'clients': n, 'cold': cold, 'warm': warm, 'blockedHosts': hosts}
@@ -114,19 +120,25 @@ def measure(n, pw):
 
 def main():
     sizes = [int(a) for a in sys.argv[1:]] or [10, 50, 100, 200]
+    # A shorter wait than the default when timing a version expected not to finish.
+    global WAIT_S
+    WAIT_S = int(os.environ.get('LOADTEST_WAIT_S', WAIT_S))
     OUT.mkdir(exist_ok=True)
     results = []
     with sync_playwright() as pw:
         for n in sizes:
             r = measure(n, pw)
             results.append(r)
+            (OUT / f"{os.environ.get('LOADTEST_LABEL', 'latest')}.json").write_text(json.dumps(results, indent=2))
+            if r.get('timedOut'):
+                print(f"{n:>4} clients · did not finish: {r['timedOut']}", flush=True)
+                continue
             for k in ('cold', 'warm'):
                 x = r[k]
                 print(f"{n:>4} clients · {x['run']:<28} dashboard {x['dashboardShownMs']:>6} ms · data shown {x['allDataShownMs']:>6} ms · from server {x['allDataFromServerMs']:>6} ms · "
                       f"{x['docsLoaded']:>6} docs · {x['downloadedMB']:>6} MB · {x['openListeners']:>4} listeners · heap {x['heapMB']} MB", flush=True)
             if r['blockedHosts']:
                 print('      blocked (never reached):', ', '.join(r['blockedHosts']), flush=True)
-    (OUT / 'latest.json').write_text(json.dumps(results, indent=2))
 
 
 if __name__ == '__main__':

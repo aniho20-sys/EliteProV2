@@ -31,7 +31,7 @@ const generateSlots = (start, end, step) => {
 };
 
 export default function SchedulePage() {
-  const { currentUser, getSchedule, getTrainerBusySlots, refreshTrainerBusySlots, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage, updateClient } = useApp();
+  const { currentUser, getSchedule, getTrainerBusySlots, refreshTrainerBusySlots, getClients, getClient, addScheduleItem, updateScheduleItem, deleteScheduleItem, getSessionStats, sendMessage, updateClient, extendScheduleTo } = useApp();
   const toast = useToast();
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
@@ -97,6 +97,11 @@ export default function SchedulePage() {
   // 14-day window starting from offset (can go negative to see past)
   const dates = Array.from({ length: 14 }, (_, i) => localDateAdd(dateOffset + i));
   const today = localToday();
+
+  // The coach's sessions are loaded from 60 days back (B76); looking further back loads
+  // those weeks too.
+  const firstShown = dates[0];
+  useEffect(() => { if (isTrainer) extendScheduleTo(firstShown); }, [isTrainer, firstShown, extendScheduleTo]);
 
   // Month label based on the first visible date
   const selectedMonth = formatMonthYear(dates[0], lang);

@@ -13,26 +13,44 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, cleanup, act } from '@testing-library/react';
 
-const fb = vi.hoisted(() => ({ profile: null, docs: {}, listeners: [], queries: [] }));
+const fb = vi.hoisted(() => ({ profile: null, docs: {}, listeners: [], queries: [], refuse: null }));
 
 vi.mock('../firebase', () => ({ db: {}, auth: { currentUser: null }, functions: {} }));
 
 vi.mock('firebase/firestore', () => {
-  // Each listener answers from fb.docs[collection], filtered by its equality filters, and
-  // answers again whenever the test changes that collection.
-  const matches = (q, d) => q.filters.every(f => f.op === '==' && d[f.field] === f.value);
-  const answer = (l) => l.next({ docs: (fb.docs[l.q.col] || []).filter(d => matches(l.q, d)).map(d => ({ id: d.id, data: () => d })) });
+  // Each listener answers from fb.docs[collection] — filtered (==, >=, or), sorted and
+  // limited as its query says — and answers again whenever the test changes that collection.
+  // fb.refuse(q) → that query fails as production does while an index is missing.
+  const test = (f, d) => (f.op === '==' ? d[f.field] === f.value
+    : f.op === '>=' ? d[f.field] >= f.value
+      : f.op === 'or' ? f.value.some(g => test(g, d)) : false);
+  const answer = (l) => {
+    if (fb.refuse && fb.refuse(l.q)) { if (l.error) l.error({ code: 'failed-precondition' }); return; }
+    let docs = (fb.docs[l.q.col] || []).filter(d => l.q.filters.every(f => test(f, d)));
+    if (l.q.order) {
+      const { field, dir } = l.q.order;
+      docs = [...docs].sort((a, b) => (a[field] < b[field] ? -1 : a[field] > b[field] ? 1 : 0) * (dir === 'desc' ? -1 : 1));
+    }
+    if (l.q.max) docs = docs.slice(0, l.q.max);
+    l.next({ docs: docs.map(d => ({ id: d.id, data: () => d })) });
+  };
   return {
     collection: (_db, ...path) => ({ name: path.join('/') }),
     where: (field, op, value) => ({ field, op, value }),
-    query: (col, ...filters) => ({ col: col.name, filters: filters.filter(f => f && f.field) }),
+    query: (col, ...parts) => ({
+      col: col.name,
+      filters: parts.filter(f => f && f.field),
+      order: parts.find(p => p && p.orderField) && { field: parts.find(p => p && p.orderField).orderField, dir: parts.find(p => p && p.orderField).dir },
+      max: (parts.find(p => p && p.max) || {}).max,
+    }),
     or: (...filters) => ({ field: 'or', op: 'or', value: filters }),
-    orderBy: () => null,
+    orderBy: (field, dir = 'asc') => ({ orderField: field, dir }),
+    limit: (n) => ({ max: n }),
     doc: (_db, ...path) => ({ path: path.join('/') }),
-    onSnapshot: (q, next) => {
+    onSnapshot: (q, next, error) => {
       if (q.path) { queueMicrotask(() => next({ id: q.path, exists: () => false, data: () => undefined })); return () => {}; }
       fb.queries.push(q);
-      const l = { q, next };
+      const l = { q, next, error };
       fb.listeners.push(l);
       queueMicrotask(() => answer(l));
       return () => { fb.listeners = fb.listeners.filter(x => x !== l); };
@@ -55,6 +73,8 @@ vi.mock('firebase/auth', () => ({
 vi.mock('firebase/functions', () => ({ httpsCallable: () => vi.fn(async () => ({ data: {} })) }));
 
 const firestore = await import('firebase/firestore');
+const { localDateAdd } = await import('../utils/dateUtils');
+const { recentSince, RECENT_BODY_STATS } = await import('../utils/recentHistory');
 const { AppProvider, useApp } = await import('./AppContext');
 
 let api;
@@ -68,11 +88,12 @@ beforeEach(() => {
   fb.profile = COACH;
   fb.listeners = [];
   fb.queries = [];
+  fb.refuse = null;
   fb.docs = {
     users: [COACH, AMY, BEN],
     workoutLogs: [
-      { id: 'l-amy', clientId: AMY.id, trainerId: COACH.id, date: '2026-10-01', entries: [] },
-      { id: 'l-ben', clientId: BEN.id, trainerId: COACH.id, date: '2026-10-02', entries: [] },
+      { id: 'l-amy', clientId: AMY.id, trainerId: COACH.id, date: localDateAdd(-24), entries: [] },
+      { id: 'l-ben', clientId: BEN.id, trainerId: COACH.id, date: localDateAdd(-23), entries: [] },
     ],
   };
 });
@@ -136,5 +157,97 @@ describe('a client’s own exercises', () => {
     fb.docs.users = [fb.profile, COACH];
     render(<AppProvider><Grab /></AppProvider>);
     await waitFor(() => expect(names()).toEqual(expect.arrayContaining(['ex-own', 'ex-coach'])));
+  });
+});
+
+// B76 (reports/load-test-2026-10-24.md): 50 clients with a year each was 16,551 records and
+// 114 listeners every time the coach opened the app. The coach's app now keeps the last 60
+// days of logs and sessions and each client's latest body stats; a page that needs a
+// client's whole history asks for it (watchClientHistory) and gives it back when it closes.
+describe('a coach’s app keeps only recent history (B76)', () => {
+  const recent = localDateAdd(-5);
+  const old = localDateAdd(-200);
+  const bodyDates = Array.from({ length: 12 }, (_, i) => localDateAdd(-7 * i));
+
+  beforeEach(() => {
+    fb.docs.users = [COACH, AMY];
+    fb.docs.workoutLogs = [
+      { id: 'log-new', clientId: AMY.id, trainerId: COACH.id, date: recent, entries: [] },
+      { id: 'log-old', clientId: AMY.id, trainerId: COACH.id, date: old, entries: [] },
+    ];
+    fb.docs.schedule = [
+      { id: 's-new', trainerId: COACH.id, clientId: AMY.id, date: recent, time: '10:00', status: 'completed' },
+      { id: 's-old', trainerId: COACH.id, clientId: AMY.id, date: old, time: '10:00', status: 'completed' },
+    ];
+    fb.docs[`bodyStats/${AMY.id}/entries`] = bodyDates.map((date, i) => ({ id: `b${i}`, date, weight: 70 + i }));
+  });
+
+  const logIds = () => api.getWorkoutLogs(AMY.id).map(l => l.id).sort();
+  const sessionIds = () => api.getSchedule({ clientId: AMY.id }).map(s => s.id).sort();
+
+  test('the dashboard holds the last 60 days of logs and sessions, and the latest body stats', async () => {
+    await signIn();
+    await waitFor(() => expect(logIds()).toEqual(['log-new']));
+    await waitFor(() => expect(sessionIds()).toEqual(['s-new']));
+    await waitFor(() => expect(api.getBodyStats(AMY.id)).toHaveLength(RECENT_BODY_STATS));
+    const dates = api.getBodyStats(AMY.id).map(b => b.date);
+    expect(dates).toEqual([...dates].sort());            // oldest first, as the charts expect
+    expect(dates[dates.length - 1]).toBe(bodyDates[0]);  // and the newest is there
+    expect(api.historyComplete(AMY.id)).toBe(false);
+    expect(api.historyStart(AMY.id)).toBe(recentSince());
+  });
+
+  test('a page that watches a client gets all of it, and gives it back on close', async () => {
+    await signIn();
+    await waitFor(() => expect(logIds()).toEqual(['log-new']));
+    let release;
+    act(() => { release = api.watchClientHistory([AMY.id]); });
+    await waitFor(() => expect(api.historyComplete(AMY.id)).toBe(true));
+    expect(logIds()).toEqual(['log-new', 'log-old']);
+    expect(sessionIds()).toEqual(['s-new', 's-old']);
+    expect(api.getBodyStats(AMY.id)).toHaveLength(12);
+    expect(api.historyStart(AMY.id)).toBeNull();
+
+    act(() => release());
+    await waitFor(() => expect(logIds()).toEqual(['log-new']));
+    expect(sessionIds()).toEqual(['s-new']);
+    expect(api.historyComplete(AMY.id)).toBe(false);
+  });
+
+  test('two pages watching one client share it: closing one keeps it for the other', async () => {
+    await signIn();
+    let a; let b;
+    act(() => { a = api.watchClientHistory([AMY.id]); b = api.watchClientHistory([AMY.id]); });
+    await waitFor(() => expect(api.historyComplete(AMY.id)).toBe(true));
+    act(() => a());
+    expect(api.historyComplete(AMY.id)).toBe(true);
+    act(() => b());
+    await waitFor(() => expect(api.historyComplete(AMY.id)).toBe(false));
+  });
+
+  test('the calendar looking further back loads those weeks', async () => {
+    await signIn();
+    await waitFor(() => expect(sessionIds()).toEqual(['s-new']));
+    act(() => api.extendScheduleTo(localDateAdd(-250)));
+    await waitFor(() => expect(sessionIds()).toEqual(['s-new', 's-old']));
+  });
+
+  // Production refuses a windowed query until its composite index is built; the emulator
+  // never does, so only this stand-in can show what the app does then.
+  test('index not built yet: the same data unwindowed — slower, never an empty dashboard', async () => {
+    fb.refuse = (q) => (q.filters || []).some(f => f.op === '>=');
+    await signIn();
+    await waitFor(() => expect(logIds()).toEqual(['log-new', 'log-old']));
+    await waitFor(() => expect(sessionIds()).toEqual(['s-new', 's-old']));
+    await waitFor(() => expect(api.loading).toBe(false));
+  });
+
+  test('a client’s own app still has their whole history', async () => {
+    fb.profile = { ...AMY };
+    render(<AppProvider><Grab /></AppProvider>);
+    await waitFor(() => expect(api.currentUser?.id).toBe(AMY.id));
+    await waitFor(() => expect(logIds()).toEqual(['log-new', 'log-old']));
+    await waitFor(() => expect(sessionIds()).toEqual(['s-new', 's-old']));
+    await waitFor(() => expect(api.getBodyStats(AMY.id)).toHaveLength(12));
   });
 });

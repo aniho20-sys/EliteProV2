@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -8,6 +8,7 @@ import { getSessionColor } from '../utils/sessionUtils';
 import { resolveExerciseName, exerciseNamesFromLogs } from '../utils/exerciseUtils';
 import { getLastActivity } from '../utils/activityUtils';
 import EmptyState from '../components/EmptyState';
+import { SkeletonList } from '../components/Skeleton';
 
 // Labels are keys, resolved at render — t() only ever takes a literal (#39), so the
 // label cannot be built from the value.
@@ -271,11 +272,16 @@ function ClientCard({ client, bodyStats, nextSession, sessionStats, daysSinceLog
 export default function ClientProgressOverviewPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { currentUser, getClients, getBodyStats, getWorkoutLogs, getSchedule, getSessionStats, getExercises } = useApp();
+  const { currentUser, getClients, getBodyStats, getWorkoutLogs, getSchedule, getSessionStats, getExercises, watchClientHistory, historyComplete } = useApp();
   const exerciseLibrary = getExercises();
   const [sort, setSort] = useState('lastActive');
 
   const clients = getClients(currentUser.id);
+  // Last-30-days totals, the 30 days before, and PRs (which need every earlier best) all
+  // need each client's full history, which the coach's app does not keep live (B76).
+  const clientIds = clients.map(c => c.id).sort().join(',');
+  useEffect(() => (clientIds ? watchClientHistory(clientIds.split(',')) : undefined), [clientIds, watchClientHistory]);
+  const historyLoading = clients.some(c => !historyComplete(c.id));
   const today = localToday();
   const start30d = localDateAdd(-30);
   const start60d = localDateAdd(-60);
@@ -330,7 +336,9 @@ export default function ClientProgressOverviewPage() {
         <p className="page-subtitle">{t('prog.clients_count', { count: clients.length })}</p>
       </div>
 
-      {clients.length === 0 ? (
+      {clients.length > 0 && historyLoading ? (
+        <SkeletonList count={4} />
+      ) : clients.length === 0 ? (
         <EmptyState
           icon={Users}
           title={t('tdash.no_clients_yet')}

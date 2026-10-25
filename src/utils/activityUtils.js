@@ -10,7 +10,12 @@ export function getClientActivityDates(clientId, { getWorkoutLogs, getSchedule }
 // Most recent activity (log or completed session, whichever is later) as days-since + a label
 // of what it was. Never compute "last active"/"inactive" from workoutLogs alone — a client who
 // trains via booked sessions but rarely logs workouts is still active, not churning.
-export function getLastActivity(clientId, { getWorkoutLogs, getSchedule, plans, today }) {
+//
+// recentSince: the date this client's loaded history starts from, when only recent history
+// is loaded (B76). Then "nothing found" means nothing since that date, not never — so the
+// answer is noActivityDays (how many days were looked at), unless the client joined after
+// that date (joinDate), when "never" is still true.
+export function getLastActivity(clientId, { getWorkoutLogs, getSchedule, plans, today, recentSince, joinDate }) {
   const latestLog = getWorkoutLogs(clientId).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   const latestSession = getSchedule({ clientId })
     .filter(s => s.status === 'completed')
@@ -18,7 +23,13 @@ export function getLastActivity(clientId, { getWorkoutLogs, getSchedule, plans, 
   const logMs = latestLog ? new Date(latestLog.date).getTime() : null;
   const sessionMs = latestSession ? new Date(latestSession.date).getTime() : null;
   const lastActivityMs = logMs !== null && sessionMs !== null ? Math.max(logMs, sessionMs) : (logMs ?? sessionMs);
-  if (lastActivityMs === null) return { daysSince: null, label: null };
+  if (lastActivityMs === null) {
+    if (recentSince && !(joinDate && joinDate >= recentSince)) {
+      const noActivityDays = Math.floor((new Date(today).getTime() - new Date(recentSince).getTime()) / 86400000);
+      return { daysSince: null, label: null, noActivityDays };
+    }
+    return { daysSince: null, label: null };
+  }
   const daysSince = Math.floor((new Date(today).getTime() - lastActivityMs) / 86400000);
   const fromSession = sessionMs !== null && sessionMs >= (logMs ?? -Infinity);
   const label = fromSession

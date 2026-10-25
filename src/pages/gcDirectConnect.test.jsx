@@ -39,6 +39,8 @@ function makeApp(over = {}) {
     getStripeStatus: vi.fn(async () => ({ configured: false, environment: null })), getPaymentConnection: vi.fn(async () => ({ status: 'connected', environment: 'sandbox', connectedAt: '2026-09-23T10:00:00Z' })),
     startGcConnect: vi.fn(), disconnectGc: vi.fn(),
     connectGcDirect: vi.fn(async () => ({ environment: 'live', creditorName: "Ani's Studio", verificationStatus: 'successful' })),
+    // Full history always loaded in this fake (B76: watchClientHistory in AppContext).
+    watchClientHistory: () => () => {}, historyComplete: () => true, historyStart: () => null, extendScheduleTo: () => {},
     getClients: () => [], getSchedule: () => [], getSubscriptions: vi.fn(async () => []), getClientErrors: vi.fn(async () => []),
     getPlatformStats: vi.fn(async () => null), updateExercise: vi.fn(),
     ...over,
