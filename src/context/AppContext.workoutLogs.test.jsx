@@ -70,7 +70,7 @@ vi.mock('firebase/auth', () => ({
   sendPasswordResetEmail: vi.fn(), signOut: vi.fn(), deleteUser: vi.fn(),
 }));
 
-vi.mock('firebase/functions', () => ({ httpsCallable: (_f, name) => async (payload) => { fb.called.push(name); return { data: {} }; } }));
+vi.mock('firebase/functions', () => ({ httpsCallable: (_f, name) => async () => { fb.called.push(name); return { data: {} }; } }));
 
 const firestore = await import('firebase/firestore');
 const { localDateAdd } = await import('../utils/dateUtils');
