@@ -68,10 +68,12 @@ function WeeklySessionsChart({ weekDays, schedule, today }) {
 // Positioned right below Needs Attention, but deliberately undramatic: this is a status
 // summary, not a warning system — recency uses neutral gray text, never red/yellow/green.
 // Needs Attention already owns the "this client needs action" call-out.
-function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule, historyStart, plans, today }) {
+function ClientActivitySummary({ clients, getWorkoutLogs, getSchedule: getLoadedSchedule, historyStart, plans, today }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const weekStart = localDateAdd(-7);
+  // With each client's last completed session from their summary, however old (B76 step 2).
+  const getSchedule = (f) => getLoadedSchedule({ ...f, includeLastCompleted: true });
 
   const activity = clients.map(client => ({
     client,
@@ -330,7 +332,8 @@ export default function TrainerDashboard() {
   // who trains weekly via booked sessions but rarely logs workouts is still active, not churning.
   const churnClients = clients.reduce((acc, client) => {
     const { daysSince, label: lastActivityLabel, noActivityDays } = getLastActivity(client.id, {
-      getWorkoutLogs, getSchedule, plans: allPlans, today, recentSince: historyStart(client.id), joinDate: client.joinDate,
+      getWorkoutLogs, getSchedule: (f) => getSchedule({ ...f, includeLastCompleted: true }),
+      plans: allPlans, today, recentSince: historyStart(client.id), joinDate: client.joinDate,
     });
     const inactive = daysSince === null || daysSince >= CHURN_INACTIVE_DAYS;
     if (inactive && !isSnoozed(client.churnSnoozedUntil, today)) {

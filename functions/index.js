@@ -28,6 +28,7 @@ const { handleStripeWebhook } = require('./stripeWebhooks');
 const { sendSessionReminders } = require('./sessionReminders');
 const { replaceGcConnection } = require('./paymentConnection');
 const bookingPreview = require('./bookingPreview');
+const clientSummary = require('./clientSummary');
 
 initializeApp();
 const db = getFirestore();
@@ -1816,4 +1817,62 @@ exports.lookupAccountByEmail = functions.https.onCall(async (data, context) => {
     hasProfile: profile.exists,
     role: profile.exists ? (profile.data().role || null) : null,
   };
+});
+
+// ── B76 step 2: each client's summary on their own user doc (functions/clientSummary.js) ──
+// The coach's dashboard reads it with the client docs it already listens to, instead of a
+// listener per client. A failed rebuild is logged and left for the next write to repair:
+// the summary is derived data, and every write to its sources rebuilds it whole.
+const refreshSummaries = async (clientIds, label) => {
+  for (const clientId of clientIds) {
+    try {
+      await clientSummary.buildClientSummary({ db, clientId });
+    } catch (err) {
+      console.error(`[clientSummary] ${label} client=${clientId}`, err);
+    }
+  }
+};
+
+exports.onWorkoutLogSummary = functions.firestore
+  .document('workoutLogs/{logId}')
+  .onWrite(async (change) => {
+    const ids = new Set([change.before.exists && change.before.data().clientId, change.after.exists && change.after.data().clientId].filter(Boolean));
+    await refreshSummaries([...ids], 'workoutLog');
+  });
+
+exports.onScheduleSummary = functions.firestore
+  .document('schedule/{schedId}')
+  .onWrite(async (change) => {
+    const ids = clientSummary.scheduleClientToRefresh(
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null,
+    );
+    await refreshSummaries(ids, 'schedule');
+  });
+
+exports.onBodyStatSummary = functions.firestore
+  .document('bodyStats/{clientId}/entries/{entryId}')
+  .onWrite(async (change, context) => {
+    await refreshSummaries([context.params.clientId], 'bodyStat');
+  });
+
+// A new coach sees sessions with them only (lastSession), so a change of coach rebuilds it.
+exports.onClientCoachChangeSummary = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!after || after.role !== 'client' || (before.trainerId || null) === (after.trainerId || null)) return;
+    await refreshSummaries([change.after.id], 'coachChange');
+  });
+
+// The coach's app calls this when a client of theirs has no summary yet (clients from before
+// B76 step 2), so it is built once instead of the app listening to that client for ever.
+exports.ensureClientSummaries = functions.https.onCall(async (_data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in first.');
+  const me = await db.doc(`users/${context.auth.uid}`).get();
+  if (!me.exists || me.data().role !== 'trainer') {
+    throw new functions.https.HttpsError('permission-denied', 'Only a coach can do this.');
+  }
+  return clientSummary.ensureClientSummaries({ db, trainerId: context.auth.uid });
 });

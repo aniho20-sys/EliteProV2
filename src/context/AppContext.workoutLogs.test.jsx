@@ -13,7 +13,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, cleanup, act } from '@testing-library/react';
 
-const fb = vi.hoisted(() => ({ profile: null, docs: {}, listeners: [], queries: [], refuse: null }));
+const fb = vi.hoisted(() => ({ profile: null, docs: {}, listeners: [], queries: [], refuse: null, called: [] }));
 
 vi.mock('../firebase', () => ({ db: {}, auth: { currentUser: null }, functions: {} }));
 
@@ -70,7 +70,7 @@ vi.mock('firebase/auth', () => ({
   sendPasswordResetEmail: vi.fn(), signOut: vi.fn(), deleteUser: vi.fn(),
 }));
 
-vi.mock('firebase/functions', () => ({ httpsCallable: () => vi.fn(async () => ({ data: {} })) }));
+vi.mock('firebase/functions', () => ({ httpsCallable: (_f, name) => async (payload) => { fb.called.push(name); return { data: {} }; } }));
 
 const firestore = await import('firebase/firestore');
 const { localDateAdd } = await import('../utils/dateUtils');
@@ -89,6 +89,7 @@ beforeEach(() => {
   fb.listeners = [];
   fb.queries = [];
   fb.refuse = null;
+  fb.called = [];
   fb.docs = {
     users: [COACH, AMY, BEN],
     workoutLogs: [
@@ -251,3 +252,65 @@ describe('a coach’s app keeps only recent history (B76)', () => {
     await waitFor(() => expect(api.getBodyStats(AMY.id)).toHaveLength(12));
   });
 });
+
+// B76 step 2: a client's summary (functions/clientSummary.js) arrives on their user doc, so
+// the coach's app needs no listener of that client's own — 214 of them at 100 clients
+// before (reports/load-test-2026-10-24.md).
+describe('clients with a server-kept summary (B76 step 2)', () => {
+  const old = localDateAdd(-200);
+  const summary = {
+    version: 1,
+    recentLogs: [{ id: 'log-old', date: old, planId: null, workoutName: 'Hill sprints' }],
+    lastSession: { id: 's-old', date: localDateAdd(-150), type: 'Assessment' },
+    latestBodyStat: { date: old, weight: 70, bodyFat: 18 },
+  };
+  const ownListeners = (id) => fb.listeners.filter(l => (l.q.col === 'workoutLogs' && l.q.filters.some(f => f.value === id))
+    || l.q.col === `bodyStats/${id}/entries`);
+
+  beforeEach(() => {
+    fb.docs.users = [COACH, { ...AMY, summary }];
+    fb.docs.workoutLogs = [{ id: 'log-old', clientId: AMY.id, trainerId: COACH.id, date: old, entries: [{ exerciseId: 'squat' }] }];
+    fb.docs.schedule = [{ id: 's-old', trainerId: COACH.id, clientId: AMY.id, date: localDateAdd(-150), time: '10:00', status: 'completed', type: 'Assessment' }];
+  });
+
+  test('no listener of their own; logs, body stats and last session come from the summary', async () => {
+    await signIn();
+    await waitFor(() => expect(api.getWorkoutLogs(AMY.id).map(l => l.id)).toEqual(['log-old']));
+    expect(ownListeners(AMY.id)).toEqual([]);
+    expect(api.getWorkoutLogs(AMY.id)[0]).toMatchObject({ date: old, workoutName: 'Hill sprints', entries: [] });
+    expect(api.getBodyStats(AMY.id)).toEqual([expect.objectContaining({ weight: 70, bodyFat: 18 })]);
+    expect(api.getSchedule({ clientId: AMY.id, includeLastCompleted: true }).map(s => s.id)).toEqual(['s-old']);
+    expect(api.getSchedule({ clientId: AMY.id }).map(s => s.id)).toEqual([]);   // never onto the calendar
+    expect(api.historyStart(AMY.id)).toBeNull();                                 // the summary covers all of it
+    expect(fb.called).not.toContain('ensureClientSummaries');
+  });
+
+  test('a page watching the client still gets the full history, sets and all', async () => {
+    await signIn();
+    let release;
+    act(() => { release = api.watchClientHistory([AMY.id]); });
+    await waitFor(() => expect(api.historyComplete(AMY.id)).toBe(true));
+    expect(api.getWorkoutLogs(AMY.id)[0].entries).toEqual([{ exerciseId: 'squat' }]);
+    act(() => release());
+  });
+
+  test('a client without one is listened to as before, and the server is asked once to build it', async () => {
+    fb.docs.users = [COACH, { ...AMY }];
+    await signIn();
+    await waitFor(() => expect(ownListeners(AMY.id).length).toBe(2));
+    await waitFor(() => expect(fb.called.filter(n => n === 'ensureClientSummaries')).toHaveLength(1));
+
+    fb.docs.users = [COACH, { ...AMY, summary }];   // the server built it
+    await act(async () => { firestore.__answerAll('users'); });
+    await waitFor(() => expect(ownListeners(AMY.id)).toEqual([]));
+    expect(fb.called.filter(n => n === 'ensureClientSummaries')).toHaveLength(1);
+  });
+
+  test('a summary of another version counts as missing', async () => {
+    fb.docs.users = [COACH, { ...AMY, summary: { ...summary, version: 0 } }];
+    await signIn();
+    await waitFor(() => expect(fb.called).toContain('ensureClientSummaries'));
+    expect(ownListeners(AMY.id).length).toBe(2);
+  });
+});
+

@@ -12,3 +12,7 @@ export const RECENT_DAYS = 60;
 export const RECENT_BODY_STATS = 10;
 
 export const recentSince = () => localDateAdd(-RECENT_DAYS);
+
+// The version of the summary functions/clientSummary.js writes on each client's doc (B76
+// step 2). A summary of another version is treated as missing and rebuilt.
+export const SUMMARY_VERSION = 1;

@@ -14,7 +14,7 @@ import {
 } from 'firebase/auth';
 import { exerciseLibrary as defaultExercises, muscleGroups, equipmentTypes } from '../data/exercises';
 import { localToday } from '../utils/dateUtils';
-import { RECENT_BODY_STATS, recentSince } from '../utils/recentHistory';
+import { RECENT_BODY_STATS, recentSince, SUMMARY_VERSION } from '../utils/recentHistory';
 import { canonicalExercise } from '../utils/exerciseUtils';
 import { normalizeInviteCode } from '../utils/inviteCodeUtils';
 import { getNewBadges } from './badgeUtils';
@@ -346,9 +346,27 @@ export function AppProvider({ children }) {
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.trainerId, currentUser?.role]);
 
-  const myClientIds = currentUser?.role === 'trainer'
-    ? users.filter(u => u.trainerId === currentUser.id).map(u => u.id).sort().join(',')
-    : '';
+  const myClients = currentUser?.role === 'trainer' ? users.filter(u => u.trainerId === currentUser.id) : [];
+  const myClientIds = myClients.map(u => u.id).sort().join(',');
+  // B76 step 2: a client with a server-kept summary (functions/clientSummary.js) needs no
+  // listener of their own — the summary arrives with the client docs already listened to.
+  // Only the clients without one (from before step 2, until it is built) keep step 1's
+  // per-client listeners.
+  const summaryOf = (clientId) => {
+    const s = users.find(u => u.id === clientId)?.summary;
+    return s && s.version === SUMMARY_VERSION ? s : null;
+  };
+  const unsummarisedIds = myClients.filter(u => !(u.summary && u.summary.version === SUMMARY_VERSION))
+    .map(u => u.id).sort().join(',');
+
+  // Ask the server to build the missing summaries; when they land on the client docs,
+  // unsummarisedIds empties and those listeners close. Asked again only when the set of
+  // clients without one changes (a new client); building twice is harmless.
+  useEffect(() => {
+    if (!unsummarisedIds) return;
+    httpsCallable(functions, 'ensureClientSummaries')()
+      .catch(err => console.error('[clientSummary] could not build summaries', err));
+  }, [unsummarisedIds]);
 
   // A windowed query needs a composite index (firestore.indexes.json). Until production has
   // built it — or if it is ever missing — the query is refused with failed-precondition, and
@@ -378,8 +396,8 @@ export function AppProvider({ children }) {
     );
   }, [currentUser?.id, currentUser?.role]);
   useEffect(() => {
-    if (!myClientIds) return;
-    const unsubs = myClientIds.split(',').map(cid =>
+    if (!unsummarisedIds) return;
+    const unsubs = unsummarisedIds.split(',').map(cid =>
       onSnapshot(
         query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'desc'), limit(RECENT_BODY_STATS)),
         (snap) => setBodyStatsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })).reverse() })),
@@ -387,23 +405,23 @@ export function AppProvider({ children }) {
       )
     );
     return () => unsubs.forEach(u => u());
-  }, [myClientIds]);
+  }, [unsummarisedIds]);
 
   // --- Workout logs of a coach's clients: one listener per current client, recent days only ---
   // A log carries the coach it was written under (trainerId); a client who has left must not
   // stay readable through it, so the rules check the client's current coach and the app asks
   // client by client (Grok Bot review 2026-10-24). Full history: watchClientHistory.
   useEffect(() => {
-    if (!myClientIds) return;
+    if (!unsummarisedIds) return;
     const since = recentSince();
-    const unsubs = myClientIds.split(',').map(cid => listenWindowed(
+    const unsubs = unsummarisedIds.split(',').map(cid => listenWindowed(
       query(collection(db, 'workoutLogs'), where('clientId', '==', cid), where('date', '>=', since)),
       query(collection(db, 'workoutLogs'), where('clientId', '==', cid)),
       (snap) => setClientLogsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })) })),
       'workoutLogs',
     ));
     return () => unsubs.forEach(u => u());
-  }, [myClientIds]);
+  }, [unsummarisedIds]);
 
   // --- Schedule: a coach's from scheduleSince on; a client's own in full ---
   useEffect(() => {
@@ -471,15 +489,23 @@ export function AppProvider({ children }) {
   // client only while watchClientHistory has it loaded.
   const historyComplete = (clientId) => currentUser?.role !== 'trainer' || clientId === currentUser?.id
     || !!(fullHistory[clientId]?.logs && fullHistory[clientId]?.schedule && fullHistory[clientId]?.bodyStats);
-  // Where a client's loaded history starts, for getLastActivity — null when it is all here.
-  const historyStart = (clientId) => (historyComplete(clientId) ? null : recentSince());
+  // Where a client's loaded history starts, for getLastActivity — null when it is all here,
+  // or when the summary (built from all of it) speaks for it.
+  const historyStart = (clientId) => (historyComplete(clientId) || summaryOf(clientId) ? null : recentSince());
 
-  // A client who has left keeps no logs here, even ones loaded before they left.
+  // A client who has left keeps no logs here, even ones loaded before they left. Per client,
+  // the best there is: full history if a page is watching it, else the summary's newest
+  // logs (date and plan only — no sets), else step 1's recent window.
   const workoutLogs = useMemo(() => {
-    const current = myClientIds ? myClientIds.split(',') : [];
-    const theirs = current.flatMap(cid => fullHistory[cid]?.logs || clientLogsMap[cid] || []);
+    const clients = coachId ? users.filter(u => u.trainerId === coachId) : [];
+    const theirs = clients.flatMap(c => {
+      if (fullHistory[c.id]?.logs) return fullHistory[c.id].logs;
+      const s = c.summary && c.summary.version === SUMMARY_VERSION ? c.summary : null;
+      if (s) return (s.recentLogs || []).map(l => ({ ...l, clientId: c.id, entries: [], fromSummary: true }));
+      return clientLogsMap[c.id] || [];
+    });
     return [...ownLogs, ...theirs];
-  }, [ownLogs, clientLogsMap, fullHistory, myClientIds]);
+  }, [ownLogs, clientLogsMap, fullHistory, users, coachId]);
 
   // The coach's recent sessions plus the full history of the clients being watched.
   const schedule = useMemo(() => {
@@ -699,7 +725,12 @@ export function AppProvider({ children }) {
   };
 
   // ========== Body Stats ==========
-  const getBodyStats = (clientId) => fullHistory[clientId]?.bodyStats || bodyStatsMap[clientId] || [];
+  const getBodyStats = (clientId) => {
+    if (fullHistory[clientId]?.bodyStats) return fullHistory[clientId].bodyStats;
+    const s = coachId && clientId !== coachId ? summaryOf(clientId) : null;
+    if (s) return s.latestBodyStat ? [{ ...s.latestBodyStat, id: `summary-${clientId}`, fromSummary: true }] : [];
+    return bodyStatsMap[clientId] || [];
+  };
 
   const addBodyStat = async (clientId, stat) => {
     const addedBy = currentUser?.role === 'trainer' ? 'coach' : 'self';
@@ -760,13 +791,22 @@ export function AppProvider({ children }) {
   };
 
   // ========== Schedule ==========
+  // includeLastCompleted (B76 step 2): also the client's last completed session from their
+  // summary, when it is older than the sessions loaded — for "last activity" only. It has
+  // a date and a type but no time, so it never goes to the calendar.
   const getSchedule = (filter) => {
-    return schedule.filter(s => {
+    const found = schedule.filter(s => {
       if (filter.trainerId && s.trainerId !== filter.trainerId) return false;
       if (filter.clientId && s.clientId !== filter.clientId) return false;
       if (filter.date && s.date !== filter.date) return false;
       return true;
     });
+    const last = filter.includeLastCompleted && filter.clientId && !fullHistory[filter.clientId]?.schedule
+      ? summaryOf(filter.clientId)?.lastSession : null;
+    if (last && !found.some(s => s.id === last.id)) {
+      found.push({ ...last, clientId: filter.clientId, trainerId: coachId, status: 'completed', fromSummary: true });
+    }
+    return found;
   };
 
   // Returns the trainer's full schedule (for clients to check real availability)

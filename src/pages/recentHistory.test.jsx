@@ -72,6 +72,16 @@ describe('the coach’s dashboard, holding only recent history', () => {
     expect(screen.getByText('No activity in the last 60 days')).toBeTruthy();
     expect(screen.queryByText('No activity yet')).toBeNull();
   });
+  // B76 step 2: the summary knows the last completed session however old it is.
+  test('a client whose last session was 150 days ago: "inactive 150 days", from their summary', () => {
+    const lastSession = { id: 's1', clientId: OLD_HAND.id, date: localDateAdd(-150), status: 'completed', type: 'Assessment' };
+    renderAt(<TrainerDashboard />, appWith({
+      clients: [OLD_HAND],
+      historyStart: () => null,
+      getSchedule: (f = {}) => (f.includeLastCompleted && f.clientId === OLD_HAND.id ? [lastSession] : []),
+    }), '/');
+    expect(screen.getByText('Inactive 150 days')).toBeTruthy();
+  });
   test('a client who joined three days ago with nothing: "no activity yet" is still the truth', () => {
     renderAt(<TrainerDashboard />, appWith({ clients: [NEWBIE] }), '/');
     expect(screen.getAllByText('No activity yet').length).toBeGreaterThan(0);

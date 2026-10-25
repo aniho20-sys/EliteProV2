@@ -33,9 +33,26 @@ function queriesNeedingIndexes(source) {
   return found;
 }
 
+// The server's admin queries: db.collection('col').where(...).orderBy('f', 'desc')...
+// Production holds the server to the same index rule as the app. Directions matter here,
+// so each field carries its order.
+function adminQueriesNeedingIndexes(source) {
+  const found = [];
+  const re = /db\.collection\(\s*'(\w+)'\s*\)((?:\s*\.(?:where|orderBy|limit)\([^()]*\))+)/g;
+  for (const m of source.matchAll(re)) {
+    const [, col, parts] = m;
+    const equal = [...parts.matchAll(/\.where\(\s*'(\w+)'\s*,\s*'=='/g)].map(w => w[1]);
+    const orders = [...parts.matchAll(/\.orderBy\(\s*'(\w+)'(?:\s*,\s*'(asc|desc)')?/g)].map(o => [o[1], o[2] === 'desc' ? 'DESCENDING' : 'ASCENDING']);
+    if (equal.length && orders.length) found.push({ col, fields: [...equal.map(f => [f, 'ASCENDING']), ...orders] });
+  }
+  return found;
+}
+
 const hasIndex = ({ col, fields }) => indexes.some(ix => ix.collectionGroup === col
   && ix.fields.length === fields.length
-  && fields.every((f, i) => ix.fields[i].fieldPath === f));
+  && fields.every((f, i) => (Array.isArray(f)
+    ? ix.fields[i].fieldPath === f[0] && ix.fields[i].order === f[1]
+    : ix.fields[i].fieldPath === f)));
 
 describe('composite indexes', () => {
   const needed = queriesNeedingIndexes(read('src/context/AppContext.jsx'));
@@ -49,6 +66,18 @@ describe('composite indexes', () => {
 
   test.each(queriesNeedingIndexes(read('src/context/AppContext.jsx')).map(q => [`${q.col} (${q.fields.join(', ')})`, q]))(
     '%s has an index in firestore.indexes.json', (_label, q) => {
+      expect(hasIndex(q)).toBe(true);
+    });
+
+  const serverNeeded = adminQueriesNeedingIndexes(read('functions/clientSummary.js'));
+  test('the summary queries of B76 step 2 are found', () => {
+    expect(serverNeeded).toEqual(expect.arrayContaining([
+      { col: 'workoutLogs', fields: [['clientId', 'ASCENDING'], ['date', 'DESCENDING']] },
+      { col: 'schedule', fields: [['clientId', 'ASCENDING'], ['trainerId', 'ASCENDING'], ['status', 'ASCENDING'], ['date', 'DESCENDING']] },
+    ]));
+  });
+  test.each(serverNeeded.map(q => [`${q.col} (${q.fields.map(f => f.join(' ')).join(', ')})`, q]))(
+    'server query %s has an index in firestore.indexes.json', (_label, q) => {
       expect(hasIndex(q)).toBe(true);
     });
 

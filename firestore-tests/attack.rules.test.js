@@ -85,6 +85,23 @@ describe('a client cannot touch their own balance, role or coach', () => {
   });
 });
 
+// B76 step 2: the coach's dashboard believes users/{client}.summary (last activity, latest
+// body stats). Only the server writes it — a client faking "trained yesterday", or a coach
+// editing it, would make the dashboard lie.
+describe('nobody but the server writes a client’s summary', () => {
+  const fake = { summary: { version: 1, recentLogs: [{ id: 'x', date: '2026-10-24' }], lastSession: null, latestBodyStat: null } };
+  test('not the client', async () => {
+    await assertFails(updateDoc(doc(as(A_CLIENT), 'users', A_CLIENT), fake));
+  });
+  test('not their coach', async () => {
+    await assertFails(updateDoc(doc(as(A), 'users', A_CLIENT), fake));
+  });
+  test('…and a summary already there does not stop the client’s own allowed edits', async () => {
+    await env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), 'users', A_CLIENT), fake));
+    await assertSucceeds(updateDoc(doc(as(A_CLIENT), 'users', A_CLIENT), { goals: 'Run a 10k' }));
+  });
+});
+
 describe('a client cannot read another coach’s world', () => {
   test.each([
     `users/${A}`, `users/${A_CLIENT}`, 'schedule/s1', 'workoutPlans/p1', `bodyStats/${A_CLIENT}`,
