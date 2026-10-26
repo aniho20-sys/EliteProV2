@@ -85,6 +85,11 @@ describe('who answers', () => {
     await assertSucceeds(updateDoc(doc(as(STUDENT), 'users', STUDENT), { healthSharing: 'yes', healthSharingAt: '2026-10-27T12:00:00.000Z' }));
   });
 
+  test('not agreeing leaves the coach in the same write (Ani 2026-10-26)', async () => {
+    await seed();
+    await assertSucceeds(updateDoc(doc(as(STUDENT), 'users', STUDENT), { trainerId: null, healthSharing: 'no', healthSharingAt: '2026-10-26T12:00:00.000Z' }));
+  });
+
   test('only "yes" or "no"', async () => {
     await seed();
     await assertFails(updateDoc(doc(as(STUDENT), 'users', STUDENT), { healthSharing: true }));

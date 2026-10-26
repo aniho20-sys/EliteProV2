@@ -1047,15 +1047,23 @@ export function AppProvider({ children }) {
     setUsers(prev => prev.map(u => (u.id === currentUser.id ? { ...u, language } : u)));
   };
 
-  // A client's answer to sharing their health information — body stats and the training
-  // profile — with their coach (B79, Grok #27). firestore.rules hides both from the coach on
-  // 'no'; healthSharingAt records when it was given.
-  const setHealthSharing = async (choice) => {
-    if (!currentUser || !['yes', 'no'].includes(choice)) return;
-    const update = { healthSharing: choice, healthSharingAt: new Date().toISOString() };
+  // A client agreeing that their coach sees their health information — body stats and the
+  // training profile (B79, Grok #27); healthSharingAt records when.
+  const writeOwnSharing = async (update) => {
     await updateDoc(doc(db, 'users', currentUser.id), update);
     setCurrentUser(prev => (prev ? { ...prev, ...update } : prev));
     setUsers(prev => prev.map(u => (u.id === currentUser.id ? { ...u, ...update } : u)));
+  };
+  const setHealthSharing = async (choice) => {
+    if (!currentUser || choice !== 'yes') return;
+    await writeOwnSharing({ healthSharing: 'yes', healthSharingAt: new Date().toISOString() });
+  };
+  // Not agreeing, or no longer agreeing, leaves the coach (Ani 2026-10-26: sharing is part of
+  // training with a coach). The 'no' is kept as the record; a coach connected to later is
+  // asked afresh. firestore.rules hides the data from a coach on 'no' regardless.
+  const declineHealthSharing = async () => {
+    if (!currentUser) return;
+    await writeOwnSharing({ trainerId: null, healthSharing: 'no', healthSharingAt: new Date().toISOString() });
   };
 
   // Owner-only. Marks one of Ani's own test signups as not counting towards founding
@@ -1478,7 +1486,7 @@ export function AppProvider({ children }) {
     setLanguage,
     savePublicBooking, subscribeTrialRequests, respondTrialRequest, subscribeGroupClasses, saveGroupClass, cancelGroupClass, getPublicBookingPage, requestTrialSession,
     checkAndAwardBadges,
-    saveIntakeForm, getIntakeForm, setHealthSharing, healthShared,
+    saveIntakeForm, getIntakeForm, setHealthSharing, declineHealthSharing, healthShared,
     getStudios, addStudio, updateStudio,
     getAvailableSlots, openStudioSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots,
     submitGymApplication, getMyGymApplication, getGymApplications, reviewGymApplication,

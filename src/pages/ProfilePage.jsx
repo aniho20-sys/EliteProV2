@@ -90,7 +90,7 @@ function getAuthProvider(firebaseUser) {
 const GC_PARTNER_OPEN = false;
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, setHealthSharing, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getStripeStatus } = useApp();
+  const { currentUser, firebaseUser, updateClient, declineHealthSharing, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getStripeStatus } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -496,17 +496,20 @@ export default function ProfilePage() {
     }).catch(() => toast('Failed to copy', 'error'));
   };
 
-  const [savingSharing, setSavingSharing] = useState(false);
-  const changeSharing = async (choice) => {
-    if (savingSharing) return;
-    setSavingSharing(true);
+  // B79: no longer agreeing to share health information means leaving the coach.
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const leaveCoach = async () => {
+    if (leaving) return;
+    setLeaving(true);
     try {
-      await setHealthSharing(choice);
+      await declineHealthSharing();
+      setConfirmingLeave(false);
     } catch (err) {
-      console.error('[healthSharing] could not save', err);
+      console.error('[healthSharing] could not leave', err);
       toast(t('health.save_failed'), 'error');
     } finally {
-      setSavingSharing(false);
+      setLeaving(false);
     }
   };
 
@@ -998,18 +1001,29 @@ export default function ProfilePage() {
       {!isTrainer && <SubscriptionCard />}
 
       {/* Client with a coach: what that coach may see of their health information (B79) */}
-      {!isTrainer && currentUser.trainerId && currentUser.healthSharing && (
+      {!isTrainer && currentUser.trainerId && currentUser.healthSharing === 'yes' && (
         <div className="card mb-16">
           <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <HeartPulse size={18} /> {t('health.profile_title')}
           </h3>
-          <p className="invite-desc">
-            {currentUser.healthSharing === 'no' ? t('health.profile_private') : t('health.profile_shared')}
-          </p>
-          <button className="btn btn-outline mt-8" style={{ width: '100%' }} disabled={savingSharing}
-            onClick={() => changeSharing(currentUser.healthSharing === 'no' ? 'yes' : 'no')}>
-            {savingSharing ? t('common.saving') : currentUser.healthSharing === 'no' ? t('health.start_sharing') : t('health.stop_sharing')}
-          </button>
+          <p className="invite-desc">{t('health.profile_shared')} {t('health.profile_leave_note')}</p>
+          {confirmingLeave ? (
+            <>
+              <p className="text-sm mt-8">{t('health.leave_body', { coach: getClient(currentUser.trainerId)?.name || t('health.your_coach') })}</p>
+              <div className="flex gap-8 mt-8">
+                <button className="btn btn-danger" style={{ flex: 1 }} disabled={leaving} onClick={leaveCoach}>
+                  {leaving ? t('common.saving') : t('health.leave')}
+                </button>
+                <button className="btn btn-outline" style={{ flex: 1 }} disabled={leaving} onClick={() => setConfirmingLeave(false)}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <button className="btn btn-outline mt-8" style={{ width: '100%' }} onClick={() => setConfirmingLeave(true)}>
+              {t('health.leave_coach')}
+            </button>
+          )}
         </div>
       )}
 

@@ -44,7 +44,7 @@ src/
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
 │   ├── PublicBookingCard.jsx # Trainer (Profile): turn on the public booking page, trial price, days; shows the link (B38)
-│   ├── HealthSharingPrompt.jsx # Client: asked once per coach whether the coach may see body stats + training profile (B79); either answer keeps them connected
+│   ├── HealthSharingPrompt.jsx # Client: asked once per coach to agree the coach sees body stats + training profile (B79); not agreeing disconnects, after a confirm
 │   ├── GroupClassesCard.jsx  # Trainer (Profile): put on / cancel group classes for the public booking page; booked + waiting counts; who to tell on cancel (B40)
 │   ├── SetupChecklist.jsx    # Trainer (Dashboard): 4-step setup card (client → price + bank → sessions → first booking), worked out from data by utils/setupSteps.js, gone once all done (B39)
 │   ├── TrialRequestsCard.jsx # Trainer (Dashboard): strangers' trial requests — call/text/email, confirm (adds no-app client + trial session) or decline
@@ -243,9 +243,11 @@ Top-level config files:
   subscriptionTester: boolean,     // sandbox gate — trainer-set only (not in the self-update allowlist)
   managed: boolean,                // true = a client WITHOUT the app, added by their coach (B35) — see below
   contact: string,                 // managed only: phone/email given on the public booking page (B38); server-written
-  healthSharing: 'yes' | 'no',     // the client's answer: may their coach see body stats + training profile (B79, Grok #27)?
-                                   // absent = not asked yet = shared (Ani 2026-10-26); 'no' → rules refuse the coach both,
-                                   // the summary drops latestBodyStat. Client-written only; a new coach clears it (asked afresh)
+  healthSharing: 'yes' | 'no',     // the client agreeing their coach sees body stats + training profile (B79, Grok #27).
+                                   // Ani 2026-10-26: agreeing is part of training with a coach — 'no' is written together with
+                                   // trainerId: null (declineHealthSharing). Absent = not asked yet = shared until answered;
+                                   // 'no' → rules refuse a coach both, the summary drops latestBodyStat. Client-written only;
+                                   // a new coach clears it (asked afresh)
   healthSharingAt: string,         // ISO, when that answer was given
   summary: {                       // server-only (functions/clientSummary.js, B76 step 2) — in no rules allowlist
     version: number,               //   SUMMARY_VERSION; another version = missing, rebuilt by ensureClientSummaries

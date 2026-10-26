@@ -65,74 +65,90 @@ beforeEach(() => { vi.spyOn(console, 'error').mockImplementation(() => {}); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('who is asked', () => {
-  test('a client with a coach who has not answered — no one else', () => {
+  test('a client with a coach who has not agreed — including a "no" from before agreeing was required', () => {
     expect(needsHealthSharingAnswer(AMY)).toBe(true);
-    expect(needsHealthSharingAnswer({ ...AMY, healthSharing: 'no' })).toBe(false);
+    expect(needsHealthSharingAnswer({ ...AMY, healthSharing: 'no' })).toBe(true);
     expect(needsHealthSharingAnswer({ ...AMY, healthSharing: 'yes' })).toBe(false);
-    expect(needsHealthSharingAnswer({ ...AMY, trainerId: null })).toBe(false);
+    expect(needsHealthSharingAnswer({ ...AMY, trainerId: null, healthSharing: 'no' })).toBe(false);
     expect(needsHealthSharingAnswer({ ...AMY, managed: true })).toBe(false);
     expect(needsHealthSharingAnswer(COACH)).toBe(false);
   });
 });
 
-describe('the question', () => {
-  test('names the coach and what they would see; two answers of equal weight, no way to skip', () => {
-    renderWith(appFor(AMY), <HealthSharingPrompt />);
+describe('the question (Ani 2026-10-26: agreeing is part of training with a coach)', () => {
+  const appWithAnswers = (over) => appFor(AMY, { declineHealthSharing: vi.fn(async () => {}), ...over });
+
+  test('names the coach, what they would see, and that not agreeing disconnects; no way to skip', () => {
+    renderWith(appWithAnswers(), <HealthSharingPrompt />);
     expect(screen.getByRole('dialog', { name: 'Share your health information with Ani Ho?' })).toBeTruthy();
     expect(screen.getByText(/including any injuries you list/)).toBeTruthy();
-    expect(screen.getByText(/You can train with Ani Ho either way/)).toBeTruthy();
-    const share = screen.getByRole('button', { name: 'Share' });
-    const dont = screen.getByRole('button', { name: "Don't share" });
-    expect(share.className).toBe(dont.className);
-    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.getByText(/If you don't agree, you will be disconnected from Ani Ho/)).toBeTruthy();
+    expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['Agree', "Don't agree"]);
   });
 
-  test('"Don\'t share" saves no', async () => {
-    const app = appFor(AMY);
+  test('Agree saves yes', async () => {
+    const app = appWithAnswers();
     renderWith(app, <HealthSharingPrompt />);
-    fireEvent.click(screen.getByRole('button', { name: "Don't share" }));
-    await waitFor(() => expect(app.setHealthSharing).toHaveBeenCalledWith('no'));
+    fireEvent.click(screen.getByRole('button', { name: 'Agree' }));
+    await waitFor(() => expect(app.setHealthSharing).toHaveBeenCalledWith('yes'));
+    expect(app.declineHealthSharing).not.toHaveBeenCalled();
+  });
+
+  test('"Don\'t agree" asks once more, saying they will be disconnected; Disconnect leaves the coach', async () => {
+    const app = appWithAnswers();
+    renderWith(app, <HealthSharingPrompt />);
+    fireEvent.click(screen.getByRole('button', { name: "Don't agree" }));
+    expect(app.declineHealthSharing).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Disconnect from Ani Ho?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
+    await waitFor(() => expect(app.declineHealthSharing).toHaveBeenCalled());
+  });
+
+  test('…and Cancel goes back to the question, nothing saved', () => {
+    const app = appWithAnswers();
+    renderWith(app, <HealthSharingPrompt />);
+    fireEvent.click(screen.getByRole('button', { name: "Don't agree" }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Agree' })).toBeTruthy();
+    expect(app.declineHealthSharing).not.toHaveBeenCalled();
+    expect(app.setHealthSharing).not.toHaveBeenCalled();
   });
 
   test('a failed save says so and stays open', async () => {
-    const app = appFor(AMY, { setHealthSharing: vi.fn(async () => { throw new Error('offline'); }) });
+    const app = appWithAnswers({ setHealthSharing: vi.fn(async () => { throw new Error('offline'); }) });
     renderWith(app, <HealthSharingPrompt />);
-    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agree' }));
     expect(await screen.findByText(/Could not save your choice/)).toBeTruthy();
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
-  test('not shown once answered', () => {
+  test('not shown once agreed', () => {
     renderWith(appFor({ ...AMY, healthSharing: 'yes' }), <HealthSharingPrompt />);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 
 describe('Profile', () => {
-  test('sharing: says what the coach sees, and Stop sharing saves no', async () => {
-    const app = appFor({ ...AMY, healthSharing: 'yes' });
+  test('agreed: says what the coach sees; stopping means disconnecting, after a second tap', async () => {
+    const app = appFor({ ...AMY, healthSharing: 'yes' }, { declineHealthSharing: vi.fn(async () => {}) });
     renderWith(app, <ProfilePage />, '/profile');
     expect(screen.getByText(/Your coach can see your body measurements/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Stop sharing' }));
-    await waitFor(() => expect(app.setHealthSharing).toHaveBeenCalledWith('no'));
-  });
-
-  test('private: says so, and Share with my coach saves yes', async () => {
-    const app = appFor({ ...AMY, healthSharing: 'no' });
-    renderWith(app, <ProfilePage />, '/profile');
-    expect(screen.getByText(/Your coach cannot see them/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Share with my coach' }));
-    await waitFor(() => expect(app.setHealthSharing).toHaveBeenCalledWith('yes'));
+    expect(screen.getByText(/To stop sharing, disconnect from your coach/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect from coach' }));
+    expect(app.declineHealthSharing).not.toHaveBeenCalled();
+    expect(screen.getByText(/You will no longer be connected to Ani Ho/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
+    await waitFor(() => expect(app.declineHealthSharing).toHaveBeenCalled());
   });
 });
 
 describe('the coach’s page for that client', () => {
   const open = (app) => renderWith(app, <ClientDetailPage />, `/clients/${AMY.id}`, '/clients/:clientId');
 
-  test('private: the coach is told, on the overview, body stats and questionnaire — never shown empty as if there were none', async () => {
+  test('not agreed (a "no" from before it was required): the coach is told, on the overview, body stats and questionnaire — never shown empty as if there were none', async () => {
     const app = appFor(COACH, { healthShared: () => false, getBodyStats: () => [] });
     open(app);
-    const note = /Amy Chen keeps their body measurements and training profile private/;
+    const note = /Amy Chen has not agreed to share their body measurements and training profile yet/;
     expect(screen.getAllByText(note).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Progress' }));
     expect(screen.getByText(note)).toBeTruthy();
@@ -143,6 +159,6 @@ describe('the coach’s page for that client', () => {
 
   test('shared: no such note', () => {
     open(appFor(COACH));
-    expect(screen.queryByText(/keeps their body measurements and training profile private/)).toBeNull();
+    expect(screen.queryByText(/has not agreed to share/)).toBeNull();
   });
 });
