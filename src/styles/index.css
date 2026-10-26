@@ -2307,7 +2307,12 @@ tr:hover { background: var(--bg-card-hover); }
   flex-wrap: wrap;
 }
 .plan-card-toggle {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   background: none;
   border: none;
   cursor: pointer;
@@ -2321,6 +2326,8 @@ tr:hover { background: var(--bg-card-hover); }
   color: inherit;
 }
 .plan-card-toggle:hover { opacity: 0.85; }
+/* The coach's card: the toggle and the action buttons side by side, as when they were one button. */
+.plan-card-row { margin-bottom: 0; flex-wrap: nowrap; }
 .bulk-client-checklist {
   display: flex;
   flex-direction: column;

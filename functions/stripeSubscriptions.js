@@ -13,6 +13,7 @@
 // GoCardless sessions follow confirmed payments. A card on file is not money received.
 
 const { stripeRequest, StripeApiError, describeStripeError, keyEnvironment } = require('./stripeApi');
+const { COUNTRIES } = require('./stripeConnect');
 const {
   TIERS, LIVE_STATUSES, FINISHED_STATUSES, CLAIM_TTL_MS, SubscriptionError, monthlyAmountPence,
 } = require('./gcSubscriptions');
@@ -59,6 +60,12 @@ async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUr
   if (!keys) throw new SubscriptionError('failed-precondition', 'Stripe is not set up yet');
   const conn = await connectionFor(db, trainerId, keys);
   if (!conn) throw new SubscriptionError('failed-precondition', 'Trainer has not connected Stripe');
+  // The coach's Stripe account charges in its country's currency (Grok #29, B79): a UK
+  // account pricing in HKD would have every payment converted. Refused, never converted.
+  const accountCurrency = COUNTRIES[conn.country];
+  if (accountCurrency && currency !== accountCurrency) {
+    throw new SubscriptionError('failed-precondition', 'Currency does not match the Stripe account');
+  }
 
   // One plan at a time, whichever processor holds it.
   const existing = await db.collection('subscriptions').where('clientId', '==', uid).get();

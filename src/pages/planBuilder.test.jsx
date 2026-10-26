@@ -126,3 +126,20 @@ describe('building a plan on the Plans page', () => {
     expect(screen.queryByText(/80kg/)).toBeNull();
   });
 });
+
+describe('the coach’s plan card (Grok #37)', () => {
+  const PLAN = { id: 'p1', name: 'Legs A', clientId: 'amy', trainerId: 'coach-1', day: 'Day 1',
+    exercises: [{ exerciseId: 'squat', sets: 3, reps: '5', rest: 90 }] };
+
+  test('no button inside a button; the card toggles; Edit opens the editor without toggling', () => {
+    renderPlans({ plans: [PLAN] });
+    expect(document.querySelector('button button')).toBeNull();
+    const toggle = screen.getByRole('button', { name: /Legs A/ });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(document.querySelector('.modal')).toBeTruthy();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  });
+});

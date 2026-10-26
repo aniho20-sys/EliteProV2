@@ -114,6 +114,17 @@ describe('a coach and Stripe', () => {
     expect(await screen.findByText('Test mode')).toBeTruthy();
     expect(screen.getByText(/HKD 1,733\.33/)).toBeTruthy(); // HK$400 × 4 × 13 / 12
   });
+  test('B79: a UK account with prices in HKD is told to change the currency', async () => {
+    app = makeApp({ getPaymentConnection: vi.fn(async () => ({ stripe: { accountId: 'acct_1', status: 'connected', country: 'GB', environment: 'sandbox' } })) });
+    renderProfile();
+    expect(await screen.findByText(/Your Stripe account charges in GBP/)).toBeTruthy();
+  });
+  test('B79: matching currency: no warning', async () => {
+    app = makeApp({ currentUser: ANI, getPaymentConnection: vi.fn(async () => ({ stripe: { accountId: 'acct_1', status: 'connected', country: 'GB', environment: 'sandbox' } })) });
+    renderProfile();
+    expect(await screen.findByText(/Plans are charged in GBP/)).toBeTruthy();
+    expect(screen.queryByText(/Your Stripe account charges in/)).toBeNull();
+  });
   test('still being checked: says so, and Check again asks Stripe', async () => {
     app = makeApp({
       getPaymentConnection: vi.fn(async () => ({ stripe: { accountId: 'acct_1', status: 'onboarding', country: 'GB', environment: 'sandbox' } })),

@@ -270,6 +270,16 @@ describe('a client starts a plan', () => {
     expect(st.calls[0].body['line_items[0][price_data][unit_amount]']).toBe('173333'); // HK$400 × 4 × 13 / 12
     expect(st.calls[0].body['payment_method_types[1]']).toBeUndefined();
   });
+  test('B79: a coach whose currency is not their Stripe country\'s is refused, nothing sent to Stripe', async () => {
+    await db.doc('users/coachA').update({ currency: 'HKD' }); // UK account
+    const st = fakeStripe(checkoutRoutes());
+    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    await coachConn('coachB', 'acct_BBBBBBBB', { country: 'HK', bacsEnabled: false });
+    await db.doc('users/coachB').update({ currency: 'GBP' }); // Hong Kong account
+    await expect(startPlan('c2', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(st.calls).toHaveLength(0);
+    expect(await plans('c1')).toEqual([]);
+  });
   test('a UK coach Stripe has not switched Bacs on for: card only', async () => {
     await coachConn('coachA', 'acct_AAAAAAAA', { bacsEnabled: false });
     const st = fakeStripe(checkoutRoutes());
@@ -331,11 +341,11 @@ describe('a client starts a plan', () => {
     expect((await db.doc('subscriptions/oldplan001').get()).data()).toMatchObject({ status: 'abandoned', cancelReason: 'sandbox_retired' });
     expect((await db.doc(`subscriptions/${res.subscriptionId}`).get()).data()).toMatchObject({ status: 'pending', environment: 'live' });
   });
-  test('Bacs only for a UK account in pounds (B52)', async () => {
+  test('Bacs only for a UK account in pounds (B52) — and since B79 a UK account cannot price in euros at all', async () => {
     await db.doc('users/coachA').update({ currency: 'EUR' });
     const st = fakeStripe(checkoutRoutes());
-    await startPlan('c1', 4, st);
-    expect(st.calls[0].body['payment_method_types[1]']).toBeUndefined();
+    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(st.calls).toHaveLength(0);
   });
 });
 

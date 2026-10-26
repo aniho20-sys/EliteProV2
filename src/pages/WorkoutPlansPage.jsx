@@ -449,18 +449,22 @@ export default function WorkoutPlansPage() {
           const expanded = expandedPlans.has(p.id);
           return (
             <div key={p.id} className="card mb-8">
-              <button className="plan-card-header plan-card-toggle" onClick={() => togglePlan(p.id)}>
-                <div className="plan-card-info">
-                  <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{p.name}</h3>
-                  <span className="text-sm text-muted">{t('plans.n_exercises', { count: p.exercises.length })}</span>
-                </div>
+              {/* Two siblings, not buttons inside a button (Grok #37): invalid HTML, and a
+                  screen reader announced the whole card as one button. */}
+              <div className="plan-card-header plan-card-row">
+                <button className="plan-card-toggle" aria-expanded={expanded} onClick={() => togglePlan(p.id)}>
+                  <div className="plan-card-info">
+                    <h3 className="card-title" style={{ fontSize: '0.95rem' }}>{p.name}</h3>
+                    <span className="text-sm text-muted">{t('plans.n_exercises', { count: p.exercises.length })}</span>
+                  </div>
+                  {expanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+                </button>
                 <div className="plan-card-actions">
-                  <button className="btn-icon" title={t('common.edit')} onClick={e => { e.stopPropagation(); openEdit(p); }}><Pencil size={15} /></button>
-                  <button className="btn-icon" title={t('plans.duplicate')} onClick={e => { e.stopPropagation(); duplicatePlan(p); }}><Copy size={15} /></button>
-                  <button className="btn-icon" title={t('common.delete')} style={{ color: 'var(--danger-text)' }} onClick={e => { e.stopPropagation(); setDeletePlanModal(p.id); }}><Trash2 size={15} /></button>
-                  {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <button className="btn-icon" title={t('common.edit')} aria-label={t('common.edit')} onClick={() => openEdit(p)}><Pencil size={15} /></button>
+                  <button className="btn-icon" title={t('plans.duplicate')} aria-label={t('plans.duplicate')} onClick={() => duplicatePlan(p)}><Copy size={15} /></button>
+                  <button className="btn-icon" title={t('common.delete')} aria-label={t('common.delete')} style={{ color: 'var(--danger-text)' }} onClick={() => setDeletePlanModal(p.id)}><Trash2 size={15} /></button>
                 </div>
-              </button>
+              </div>
               {expanded && p.exercises.map((ex, i) => {
                 const exData = getExercise(ex.exerciseId);
                 const url = (ex.videoUrl && isSafeUrl(ex.videoUrl)) ? ex.videoUrl

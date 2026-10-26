@@ -17,6 +17,9 @@ import { SkeletonLine } from './Skeleton';
 // COUNTRIES), but Ani 2026-10-15 parked Hong Kong: card fees there come to ~4%, too much
 // for coaches to want. Add 'HK' back here when that changes. Labels are dictionary keys.
 const COUNTRY_OPTIONS = ['GB'];
+// What each account charges in. The server refuses a plan in any other currency (B79);
+// its twin is COUNTRIES in functions/stripeConnect.js.
+const ACCOUNT_CURRENCY = { GB: 'GBP', HK: 'HKD' };
 
 export default function StripeConnectCard({ children }) {
   const { t } = useLanguage();
@@ -97,7 +100,13 @@ export default function StripeConnectCard({ children }) {
             <span className="tag tag-primary">{countryLabel(stripe.country)}</span>
             {stripe.environment !== 'live' && <span className="tag tag-warning">{t('stripe.test_mode')}</span>}
           </div>
-          <p className="text-sm text-muted mb-8">{t('stripe.currency_note', { currency: currentUser.currency || 'GBP' })}</p>
+          {ACCOUNT_CURRENCY[stripe.country] && ACCOUNT_CURRENCY[stripe.country] !== (currentUser.currency || 'GBP') ? (
+            <p className="text-sm mb-8" style={{ color: 'var(--warning-dark)' }}>
+              {t('stripe.currency_mismatch', { currency: ACCOUNT_CURRENCY[stripe.country] })}
+            </p>
+          ) : (
+            <p className="text-sm text-muted mb-8">{t('stripe.currency_note', { currency: currentUser.currency || 'GBP' })}</p>
+          )}
           {children}
           <a className="btn btn-outline" href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" style={{ width: '100%' }}>
             <ExternalLink size={16} /> {t('stripe.dashboard')}

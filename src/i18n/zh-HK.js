@@ -270,6 +270,7 @@ const zhHK = {
   'role.err_select_role': '請選擇身分',
   'role.err_enter_name': '請輸入名稱',
   'role.err_code_check': '無法驗證邀請碼，請檢查網絡連線後再試。',
+  'role.err_code_too_many': '今日輸入邀請碼的次數太多。請向教練確認邀請碼，明天再試。',
   'role.err_code_invalid': '邀請碼無效。請向教練確認，或留空並稍後在個人檔案連接。',
   'role.err_create_failed': '建立個人檔案失敗，請再試一次。',
 
@@ -1437,6 +1438,7 @@ const zhHK = {
   'stripe.connected_toast': 'Stripe 已準備就緒 —— 學生現在可以選擇每月計劃。',
   'stripe.not_ready_toast': 'Stripe 尚未完成核實你的資料。',
   'stripe.failed': '無法連接 Stripe，請再試。',
+  'stripe.currency_mismatch': '你的 Stripe 帳戶以 {currency} 收費。請在續期收費把貨幣改為 {currency}，否則學生無法開始計劃。',
   'stripe.currency_note': '計劃以 {currency} 收費 —— 即續期收費所設定的貨幣。',
   'stripe.dashboard': '打開我的 Stripe 管理頁面',
   'stripekeys.title': 'ElitePro 的 Stripe',

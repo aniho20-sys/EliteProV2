@@ -1426,6 +1426,7 @@ const en = {
   'stripe.connected_toast': 'Stripe is ready — your clients can now choose a monthly plan.',
   'stripe.not_ready_toast': 'Stripe has not finished checking your details yet.',
   'stripe.failed': 'Could not reach Stripe. Please try again.',
+  'stripe.currency_mismatch': 'Your Stripe account charges in {currency}. Set the currency in Renewal Pricing to {currency} — until then clients cannot start a plan.',
   'stripe.currency_note': 'Plans are charged in {currency} — the currency set in Renewal Pricing.',
   'stripe.dashboard': 'Open my Stripe dashboard',
   'stripekeys.title': 'Stripe for ElitePro',

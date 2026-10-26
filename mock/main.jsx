@@ -16,6 +16,7 @@ import { AppContext } from '../src/context/AppContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { ToastProvider } from '../src/context/ToastContext';
 import { NotificationContext } from '../src/context/NotificationContext';
+import { LanguageProvider } from '../src/i18n/LanguageContext';
 import TrainerDashboard from '../src/pages/TrainerDashboard';
 import ClientDashboard from '../src/pages/ClientDashboard';
 import MyWorkoutsPage from '../src/pages/MyWorkoutsPage';
@@ -149,6 +150,17 @@ const makeCtx = (currentUser) => ({
   deleteAccount: async () => {},
   connectToTrainer: async () => ({ success: true }),
   getPlatformStats: async () => { const e = new Error('denied'); e.code = 'functions/permission-denied'; throw e; },
+  getPaymentConnection: async () => null,
+  getTrainerSubscriptions: async () => [],
+  getSubscriptions: async () => [],
+  getStripeStatus: async () => ({ configured: false }),
+  getClientErrors: async () => [],
+  // Everything above is the whole history (B76).
+  watchClientHistory: () => () => {},
+  historyComplete: () => true,
+  historyStart: () => null,
+  extendScheduleTo: () => {},
+  setLanguage: async () => {},
   equipmentTypes,
   data: { users: [TRAINER, ...CLIENTS], workoutPlans: PLANS, workoutLogs: LOGS, schedule: SCHEDULE, messages: [], exercises: exerciseLibrary, invoices: [] },
 });
@@ -162,8 +174,10 @@ const FAKE_NOTIFICATIONS = {
 // Anything a page reaches for that is not stubbed above resolves to a function returning
 // an empty list. The screens here only need read paths, and a mock that throws on an
 // unrelated helper would be a rendering problem, not a signal about the product.
+// A live listener (subscribeX / watchX) hands back its unsubscribe, so its stub does too.
 const withDefaults = (ctx) => new Proxy(ctx, {
-  get: (target, key) => (key in target ? target[key] : () => []),
+  get: (target, key) => (key in target ? target[key]
+    : /^(subscribe|watch)/.test(String(key)) ? () => () => {} : () => []),
 });
 
 // Each screen is rendered at phone width inside its own provider tree, exactly as the
@@ -173,6 +187,9 @@ function Screen({ id, width = 390, user, path, element, children }) {
     <div data-shot={id} style={{ width, flexShrink: 0, background: 'var(--bg)', padding: '16px 16px 24px' }}>
       <AppContext.Provider value={withDefaults(makeCtx(user))}>
         <NotificationContext.Provider value={FAKE_NOTIFICATIONS}>
+        {/* Every page reads t() from here; without it the renderer crashed on open (Grok #46).
+            Inside AppContext, because it reads the user's saved language. */}
+        <LanguageProvider>
         <ToastProvider>
           <MemoryRouter initialEntries={[path || '/']}>
             {path
@@ -180,6 +197,7 @@ function Screen({ id, width = 390, user, path, element, children }) {
               : children}
           </MemoryRouter>
         </ToastProvider>
+        </LanguageProvider>
         </NotificationContext.Provider>
       </AppContext.Provider>
     </div>
