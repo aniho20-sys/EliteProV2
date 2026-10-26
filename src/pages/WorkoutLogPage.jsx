@@ -166,9 +166,11 @@ export default function WorkoutLogPage() {
     const newUnit = newEx.unit || 'weight_reps';
     setEntries(prev => prev.map((entry, i) => {
       if (i !== exIdx) return entry;
-      const unitChanged = newUnit !== (entry.unit || 'weight_reps');
+      // The sets start empty: the weights typed in, or carried from last time, were the
+      // old exercise's — kept, they showed as the new one's PR and were saved as it (Ani
+      // 2026-10-26). Its own last time is one tap away on the card.
       return { ...entry, exerciseId: newEx.id, name: newEx.name, unit: newUnit,
-        sets: unitChanged ? entry.sets.map(() => emptySet(newUnit)) : entry.sets };
+        sets: entry.sets.map(() => emptySet(newUnit)) };
     }));
     setCompletedSets(prev => {
       const next = new Set();

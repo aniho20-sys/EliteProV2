@@ -215,7 +215,10 @@ export default function ActiveWorkoutView({
       </div>
 
       {entries.map((entry, exIdx) => {
-        const planEx = selectedPlan?.exercises?.[exIdx];
+        // The plan's line (sets x reps | kg, notes, video) only for the exercise it was
+        // written for — not after a swap, nor once removing a card has shifted the rest.
+        const planEx = selectedPlan?.exercises?.[exIdx]?.exerciseId === entry.exerciseId
+          ? selectedPlan.exercises[exIdx] : null;
         const currentPR = prs[entry.exerciseId];
         const exercise = getExercise(entry.exerciseId);
         const gotNewPR = isNewPR(entry);
