@@ -20,10 +20,11 @@ if (!admin.apps.length) admin.initializeApp({ projectId: 'elitepro-fn-test-invit
 const db = admin.firestore();
 const {
   resolveTrainerByCode, ensureInviteCode, connectClientByCode, randomCode, CODE_CHARS,
+  spendInviteTry, INVITE_TRIES,
 } = require('../inviteCodes');
 
 async function clearAll() {
-  for (const col of ['users', 'inviteCodes']) {
+  for (const col of ['users', 'inviteCodes', 'trialBudget']) {
     const snap = await db.collection(col).get();
     await Promise.all(snap.docs.map(d => d.ref.delete()));
   }
@@ -151,5 +152,41 @@ describe('connectClientByCode', () => {
   test('an account with no profile yet cannot connect', async () => {
     await user('t1', { role: 'trainer', inviteCode: 'ANI123' });
     await expect(connectClientByCode(db, 'ghost', 'ANI123')).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+});
+
+describe('spendInviteTry (Grok #12, B79): codes cannot be guessed by script', () => {
+  const NOW = new Date('2026-10-26T12:00:00Z');
+  const spend = (uid, ip, now = NOW) => spendInviteTry(db, { uid, ip, now });
+  const spendTimes = async (n, uid, ip) => { for (let i = 0; i < n; i++) await spend(uid, ip); };
+
+  test('an account gets its day\'s tries, then is refused', async () => {
+    await spendTimes(INVITE_TRIES.perAccount, 'guesser', '1.2.3.4');
+    await expect(spend('guesser', '1.2.3.4')).rejects.toMatchObject({ code: 'resource-exhausted' });
+    // Another account elsewhere is not affected.
+    await expect(spend('student', '5.6.7.8')).resolves.toBeUndefined();
+  });
+
+  test('new accounts on one network share its tries', async () => {
+    for (let i = 0; i < INVITE_TRIES.perNetwork; i++) await spend(`fresh-${i}`, '9.9.9.9');
+    await expect(spend('fresh-new', '9.9.9.9')).rejects.toMatchObject({ code: 'resource-exhausted' });
+  });
+
+  test('the next day starts again', async () => {
+    await spendTimes(INVITE_TRIES.perAccount, 'guesser', '1.2.3.4');
+    await expect(spend('guesser', '1.2.3.4', new Date('2026-10-27T00:00:01Z'))).resolves.toBeUndefined();
+  });
+
+  test('no address: only the account is counted, never one shared bucket for everyone', async () => {
+    for (let i = 0; i < INVITE_TRIES.perNetwork + 5; i++) await spend(`no-ip-${i}`, undefined);
+    const budgets = await db.collection('trialBudget').get();
+    expect(budgets.docs.every(d => d.id.includes('_i_'))).toBe(true);
+  });
+
+  test('stored by the day and a hash, never the address itself', async () => {
+    await spend('student', '203.0.113.7');
+    const ids = (await db.collection('trialBudget').get()).docs.map(d => d.id);
+    expect(ids.some(id => id.includes('203.0.113.7'))).toBe(false);
+    expect(ids.every(id => id.startsWith('2026-10-26_'))).toBe(true);
   });
 });

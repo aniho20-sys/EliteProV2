@@ -14,7 +14,7 @@ const { summariseSignups } = require('./signupQueue');
 const { startSubscription, completeSubscription, cancelSubscriptionsFor, cancelSubscription, SubscriptionError, disconnectTrainer } = require('./gcSubscriptions');
 const { deleteAccountData, removeManagedClient, RemoveManagedError } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken, findOwnerProfile } = require('./ownerAuth');
-const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, InviteCodeError } = require('./inviteCodes');
+const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, spendInviteTry, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
 const { trainerAvailability } = require('./availability');
@@ -1726,16 +1726,19 @@ exports.deleteTestAccounts = functions.https.onCall(async (data, context) => {
 // Returns only what the connect screen actually displays. The trainer's email, session
 // counts, bank details and rates are read but never sent back.
 //
-// Not rate limited. An authenticated caller can guess codes here, but a hit reveals only a
-// coach's display name, and before this function existed the same caller could simply read
-// the entire users collection — so this strictly reduces what a guesser gets. If codes ever
-// start protecting something that matters, add a per-caller limit then.
+// Limited per account and per network (spendInviteTry, B79): a code that connects is a way
+// in to a coach — their profile and bank details — so it must not be guessable by script.
 exports.resolveInviteCode = functions.https.onCall(async (data, context) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in');
 
   const code = normalizeInviteCode((data && data.code) || '');
   if (!code) throw new functions.https.HttpsError('invalid-argument', 'Code required');
 
+  try {
+    await spendInviteTry(db, { uid: context.auth.uid, ip: context.rawRequest && context.rawRequest.ip });
+  } catch (err) {
+    throw toInviteHttpsError(err);
+  }
   // Lookup, uniqueness and the single-field query rule live in functions/inviteCodes.js.
   const trainer = await resolveTrainerByCode(db, code);
   return trainer ? { found: true, trainer } : { found: false };
@@ -1756,6 +1759,7 @@ exports.connectWithInviteCode = functions.https.onCall(async (data, context) => 
   const code = normalizeInviteCode((data && data.code) || '');
   if (!code) throw new functions.https.HttpsError('invalid-argument', 'Code required');
   try {
+    await spendInviteTry(db, { uid: context.auth.uid, ip: context.rawRequest && context.rawRequest.ip });
     return await connectClientByCode(db, context.auth.uid, code);
   } catch (err) {
     throw toInviteHttpsError(err);

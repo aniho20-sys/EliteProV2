@@ -31,6 +31,7 @@ const myFunctions = require('../index');
 
 const db = admin.firestore();
 const resolve = functionsTest.wrap(myFunctions.resolveInviteCode);
+const connect = functionsTest.wrap(myFunctions.connectWithInviteCode);
 
 const TRAINER = 'trainer-invite-1';
 const OTHER_TRAINER = 'trainer-invite-2';
@@ -42,16 +43,19 @@ const CALLER = { auth: { uid: 'someone-signing-up', token: { email: 'new@student
 // deletes bookSession.test.js's fixtures mid-run — which is exactly what happened when
 // this file was first written, and it failed that suite, not this one. Unique ids, and
 // targeted deletes, are what keep the suites independent.
-const FIXTURES = [TRAINER, OTHER_TRAINER, CLIENT_WITH_CODE];
+const FIXTURES = [TRAINER, OTHER_TRAINER, CLIENT_WITH_CODE, 'guesser'];
 
 // Resolving a code for the first time reserves it (inviteCodes/{code}, 2026-09-28), so the
 // reservations are fixtures too and go with them.
 const CODES = ['3XQPKM', 'ZZZZZZ', 'CLIENT1'];
 
 async function wipeFixtures() {
+  // This suite's own project: every caller here has a try budget (B79), cleared per test.
+  const budgets = await db.collection('trialBudget').get();
   await Promise.all([
     ...FIXTURES.map(id => db.doc(`users/${id}`).delete()),
     ...CODES.map(code => db.doc(`inviteCodes/${code}`).delete()),
+    ...budgets.docs.map(d => d.ref.delete()),
   ]);
 }
 
@@ -128,6 +132,25 @@ describe('what it refuses to hand back', () => {
     const res = await resolve({ code: '3XQPKM' }, CALLER);
     expect(res.found).toBe(true);
     expect(res.trainer.name).toBe('Coach');
+  });
+});
+
+describe('guessing (Grok #12, B79)', () => {
+  test('after the day\'s tries even the right code is refused, so a script learns nothing', async () => {
+    const guesser = { auth: { uid: 'guesser' }, rawRequest: { ip: '198.51.100.9' } };
+    for (let i = 0; i < 20; i++) await resolve({ code: 'NOPE99' }, guesser);
+    await expect(resolve({ code: '3XQPKM' }, guesser)).rejects.toMatchObject({ code: 'resource-exhausted' });
+    // A student on another network signing up at the same time still gets in.
+    const res = await resolve({ code: '3XQPKM' }, { auth: { uid: 'real-student' }, rawRequest: { ip: '192.0.2.1' } });
+    expect(res.found).toBe(true);
+  });
+
+  test('connecting spends the same tries: a refused guesser is not connected', async () => {
+    await db.doc('users/guesser').set({ id: 'guesser', role: 'client', name: 'G', trainerId: null });
+    const guesser = { auth: { uid: 'guesser' }, rawRequest: { ip: '198.51.100.10' } };
+    for (let i = 0; i < 20; i++) await resolve({ code: 'NOPE99' }, guesser);
+    await expect(connect({ code: '3XQPKM' }, guesser)).rejects.toMatchObject({ code: 'resource-exhausted' });
+    expect((await db.doc('users/guesser').get()).data().trainerId).toBeNull();
   });
 });
 

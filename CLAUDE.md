@@ -363,7 +363,7 @@ A stranger's request for a trial session. Written only by `requestTrialSession`,
 ```
 **Group classes (B40)** — `groupClasses/{classId}`: `{ id, trainerId, date, time, duration, capacity, minPeople, price, title, address, status: 'open'|'cancelled', createdAt }` (address optional, public, shown with a map link), written only by `saveGroupClass` / `cancelGroupClass` (coach reads own). Putting one on writes a blocked `schedule/gc-{classId}` (`groupClassId` set) so the hour leaves the 1-to-1 page; places = unanswered `trialRequests` with that `groupClassId` + non-cancelled sessions with it. A confirmed place is a `schedule` session `{ type: 'Group class', groupClassId, trial: true }` for a new no-app client. Cancelling closes the class, frees the calendar, deletes its requests, cancels its sessions and returns `{ tell: [{ name, contact }] }`.
 
-`bookingPages/{slug} → { trainerId }` reserves a page link (never the invite code — that connects an account as a client). `trialBudget/{day}_v_<hash>` / `{day}_c_<trainerId>` count requests per visitor (hashed IP + day, never the IP) and per coach. Both server-only.
+`bookingPages/{slug} → { trainerId }` reserves a page link (never the invite code — that connects an account as a client). `trialBudget/{day}_v_<hash>` / `{day}_c_<trainerId>` count requests per visitor (hashed IP + day, never the IP) and per coach. Both server-only. The same collection holds the invite code tries (B79, `spendInviteTry` in `functions/inviteCodes.js`): `{day}_i_<uid>` (20 a day per account) and `{day}_in_<hash>` (60 a day per network) — both callables spend one, the right code included, so a script learns nothing.
 
 #### `messages/{msgId}`
 ```js

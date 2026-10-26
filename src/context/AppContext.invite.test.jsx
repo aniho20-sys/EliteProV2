@@ -188,6 +188,14 @@ describe('student signs up with a coach\'s invite code', () => {
     expect(fb.setDoc).not.toHaveBeenCalled();
   });
 
+  test('out of tries for the day (B79): says so, not "check your connection", and creates nothing', async () => {
+    fb.callable = vi.fn(async () => { throw Object.assign(new Error('no'), { code: 'functions/resource-exhausted' }); });
+    await signUp({ role: 'client', code: 'ANI123' });
+    expect(await screen.findByText(/Too many invite code tries today/)).toBeTruthy();
+    expect(screen.queryByText(/Check your connection/)).toBeNull();
+    expect(fb.setDoc).not.toHaveBeenCalled();
+  });
+
   test('no code: the student is created unconnected and no server call is made', async () => {
     await signUp({ role: 'client' });
     await waitFor(() => expect(fb.setDoc).toHaveBeenCalled());
@@ -239,6 +247,9 @@ describe('connectToTrainer', () => {
 
     fb.callable = vi.fn(async () => { throw Object.assign(new Error('no'), { code: 'functions/permission-denied' }); });
     expect(await connectToTrainer('student-1', 'ANI123')).toMatchObject({ success: false, reason: 'permission' });
+
+    fb.callable = vi.fn(async () => { throw Object.assign(new Error('no'), { code: 'functions/resource-exhausted' }); });
+    expect(await connectToTrainer('student-1', 'ANI123')).toMatchObject({ success: false, reason: 'tries' });
   });
 });
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, isTooManyTries } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Dumbbell, Users, Moon, Sun, ArrowRight, LogOut } from 'lucide-react';
@@ -33,8 +33,8 @@ export default function RoleSelectPage() {
         let trainer;
         try {
           trainer = await findTrainerByCodeRemote(inviteCode);
-        } catch {
-          setError(t('role.err_code_check'));
+        } catch (err) {
+          setError(isTooManyTries(err) ? t('role.err_code_too_many') : t('role.err_code_check'));
           return;
         }
         if (!trainer) {

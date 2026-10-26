@@ -446,5 +446,5 @@ async function cleanup({ db, now = new Date() }) {
 module.exports = {
   freeSlots, validateSettings, saveSettings, getPage, requestTrial, respondToRequest, cleanup,
   saveGroupClass, cancelGroupClass, GROUP_TYPE, coachForSlug,
-  isContact, PublicBookingError, LIMITS, DEFAULT_BUFFER, DAILY, MAX_OPEN_PER_COACH, SLOT_MINUTES, TRIAL_TYPE,
+  isContact, visitorKey, PublicBookingError, LIMITS, DEFAULT_BUFFER, DAILY, MAX_OPEN_PER_COACH, SLOT_MINUTES, TRIAL_TYPE,
 };

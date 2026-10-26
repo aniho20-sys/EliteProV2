@@ -15,6 +15,7 @@
 // exactly one trainer carries them, and reserved to that trainer on first use.
 
 const crypto = require('crypto');
+const { visitorKey } = require('./publicBooking');
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 — same as the client used
 const CODE_LENGTH = 6;
@@ -110,6 +111,30 @@ async function ensureInviteCode(db, trainerId, { randomInt, now = () => new Date
 }
 
 // Connect the calling client to the coach who owns this code.
+// Guessing codes (Grok #12, B79): every look-up — a wrong code or a right one — spends one
+// try of the caller's account and one of their network (hashed IP, never the IP itself) for
+// the day. A real student needs two (check, then connect); a script trying the 10^9 codes
+// stops at once. Kept in trialBudget, so the daily cleanup forgets them like the booking
+// page's budgets.
+const INVITE_TRIES = { perAccount: 20, perNetwork: 60 };
+
+async function spendInviteTry(db, { uid, ip, now = new Date() }) {
+  const day = now.toISOString().slice(0, 10);
+  const accountRef = db.doc(`trialBudget/${day}_i_${uid}`);
+  // No address, no network budget: one shared "unknown" bucket would let 60 tries a day
+  // stop every new student on the platform.
+  const networkRef = ip ? db.doc(`trialBudget/${day}_in_${visitorKey(ip, day)}`) : null;
+  await db.runTransaction(async (tx) => {
+    const [account, network] = await Promise.all([tx.get(accountRef), networkRef ? tx.get(networkRef) : null]);
+    const used = (snap) => (snap && snap.exists ? snap.data().count || 0 : 0);
+    if (used(account) >= INVITE_TRIES.perAccount || used(network) >= INVITE_TRIES.perNetwork) {
+      throw new InviteCodeError('resource-exhausted', 'Too many invite code tries today');
+    }
+    tx.set(accountRef, { day, count: used(account) + 1 });
+    if (networkRef) tx.set(networkRef, { day, count: used(network) + 1 });
+  });
+}
+
 async function connectClientByCode(db, clientId, code, now) {
   const clientRef = db.doc(`users/${clientId}`);
   const client = await clientRef.get();
@@ -124,4 +149,5 @@ async function connectClientByCode(db, clientId, code, now) {
 
 module.exports = {
   InviteCodeError, randomCode, resolveTrainerByCode, ensureInviteCode, connectClientByCode, CODE_CHARS,
+  spendInviteTry, INVITE_TRIES,
 };

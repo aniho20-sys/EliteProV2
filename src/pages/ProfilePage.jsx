@@ -505,7 +505,7 @@ export default function ProfilePage() {
         toast(t('profile.toast_connected_coach', { name: result.trainer.name }));
         setConnectCode('');
       } else {
-        toast(result.error, 'error');
+        toast(result.reason === 'tries' ? t('role.err_code_too_many') : result.error, 'error');
       }
     } catch (err) {
       console.error('[handleConnect]', err);

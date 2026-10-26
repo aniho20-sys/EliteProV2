@@ -188,6 +188,7 @@ const en = {
   'role.err_select_role': 'Please select a role',
   'role.err_enter_name': 'Please enter your name',
   'role.err_code_check': 'Could not check that invite code. Check your connection and try again.',
+  'role.err_code_too_many': 'Too many invite code tries today. Check the code with your coach and try again tomorrow.',
   'role.err_code_invalid': 'Invalid invite code. Check it with your coach, or leave it blank and connect later from your profile.',
   'role.err_create_failed': 'Failed to create profile. Please try again.',
   // ── Navigation ──

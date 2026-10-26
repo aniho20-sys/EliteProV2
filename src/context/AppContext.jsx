@@ -38,6 +38,10 @@ export const isPermissionError = (err) => {
   return code === 'permission-denied' || code === 'functions/permission-denied';
 };
 
+// The invite code callables refuse an account after its day's tries (B79).
+// eslint-disable-next-line react-refresh/only-export-components
+export const isTooManyTries = (err) => (err?.code || '').endsWith('resource-exhausted');
+
 export function AppProvider({ children }) {
   // --- Individual collection states ---
   const [users, setUsers] = useState([]);
@@ -955,7 +959,7 @@ export function AppProvider({ children }) {
         success: false,
         // The Functions SDK prefixes its error codes ('functions/permission-denied'), so a
         // bare equality check would silently report every permission failure as a network one.
-        reason: isPermissionError(err) ? 'permission' : 'network',
+        reason: isTooManyTries(err) ? 'tries' : isPermissionError(err) ? 'permission' : 'network',
         error: 'Could not check that code right now. Check your connection and try again.',
       };
     }
