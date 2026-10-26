@@ -69,6 +69,16 @@ describe('a client’s summary', () => {
     expect((await summaryOf()).latestBodyStat).toEqual({ date: '2026-10-01', weight: 70.5, bodyFat: 18.4 });
   });
 
+  test('B79: a client who keeps health information from their coach — no body stats in the summary', async () => {
+    await db.doc('bodyStats/amy/entries/e1').set({ date: '2026-10-01', weight: 70.5, bodyFat: 18.4 });
+    await db.doc('users/amy').update({ healthSharing: 'no' });
+    await buildClientSummary({ db, clientId: 'amy', now: NOW });
+    expect((await summaryOf()).latestBodyStat).toBeNull();
+    await db.doc('users/amy').update({ healthSharing: 'yes' });
+    await buildClientSummary({ db, clientId: 'amy', now: NOW });
+    expect((await summaryOf()).latestBodyStat).toEqual({ date: '2026-10-01', weight: 70.5, bodyFat: 18.4 });
+  });
+
   test('nothing yet: an empty summary, not a missing one — so the app knows it has been built', async () => {
     await buildClientSummary({ db, clientId: 'amy', now: NOW });
     expect(await summaryOf()).toMatchObject({ recentLogs: [], lastSession: null, latestBodyStat: null });

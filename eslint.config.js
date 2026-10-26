@@ -53,6 +53,7 @@ const TRANSLATED_FILES = [
   'src/components/PlatformStatsCard.jsx',
   'src/components/SubscriptionCard.jsx',
   'src/pages/ClientDetailPage.jsx',
+  'src/components/HealthSharingPrompt.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
   'src/pages/PublicBookingPage.jsx',
   'src/components/PublicBookingCard.jsx',

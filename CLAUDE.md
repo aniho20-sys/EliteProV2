@@ -44,6 +44,7 @@ src/
 │   ├── NotesSection.jsx      # Client notes section component
 │   ├── OfflineBanner.jsx     # Banner shown when useOnlineStatus() detects offline
 │   ├── PublicBookingCard.jsx # Trainer (Profile): turn on the public booking page, trial price, days; shows the link (B38)
+│   ├── HealthSharingPrompt.jsx # Client: asked once per coach whether the coach may see body stats + training profile (B79); either answer keeps them connected
 │   ├── GroupClassesCard.jsx  # Trainer (Profile): put on / cancel group classes for the public booking page; booked + waiting counts; who to tell on cancel (B40)
 │   ├── SetupChecklist.jsx    # Trainer (Dashboard): 4-step setup card (client → price + bank → sessions → first booking), worked out from data by utils/setupSteps.js, gone once all done (B39)
 │   ├── TrialRequestsCard.jsx # Trainer (Dashboard): strangers' trial requests — call/text/email, confirm (adds no-app client + trial session) or decline
@@ -242,6 +243,10 @@ Top-level config files:
   subscriptionTester: boolean,     // sandbox gate — trainer-set only (not in the self-update allowlist)
   managed: boolean,                // true = a client WITHOUT the app, added by their coach (B35) — see below
   contact: string,                 // managed only: phone/email given on the public booking page (B38); server-written
+  healthSharing: 'yes' | 'no',     // the client's answer: may their coach see body stats + training profile (B79, Grok #27)?
+                                   // absent = not asked yet = shared (Ani 2026-10-26); 'no' → rules refuse the coach both,
+                                   // the summary drops latestBodyStat. Client-written only; a new coach clears it (asked afresh)
+  healthSharingAt: string,         // ISO, when that answer was given
   summary: {                       // server-only (functions/clientSummary.js, B76 step 2) — in no rules allowlist
     version: number,               //   SUMMARY_VERSION; another version = missing, rebuilt by ensureClientSummaries
     recentLogs: [{ id, date, planId, workoutName }],  // newest 5, no sets
@@ -690,8 +695,8 @@ Routes are conditionally rendered based on `currentUser.role`. Unknown routes re
 ## Firestore Security Rules Summary
 - **Auth required** for all reads and writes
 - **users**: Read only your own doc, your own clients, or your own trainer (single `get` + the two AppContext `list` queries — an unconstrained read of the collection fails); self-create own profile as `trainer`/`client` with only the fields `completeProfile()` writes (no credit/billing/tester fields — `firestore-tests/userCreate.rules.test.js`); trainer can create only a no-app client record (`managed-…` id, six fields — `firestore-tests/managedClient.rules.test.js`) and update only the allowlisted fields the app writes (session balance, renewal/churn snoozes, tags, tester flag, badges, clearing `trainerId` — `firestore-tests/trainerClientUpdate.rules.test.js`). `role` field is **immutable after creation** — prevents client→trainer privilege escalation
-- **bodyStats**: Only the client or their trainer can read/write; only the client can delete
-- **intakeForms**: Owner client or their trainer can read; only the owner client can create/update. **Delete is disabled**
+- **bodyStats**: Only the client or their trainer can read/write — the trainer only while the client has not said no to sharing (`isTrainerWithHealthOf`, B79); only the client can delete
+- **intakeForms**: Owner client or their trainer (unless the client said no to sharing, B79) can read; only the owner client can create/update. **Delete is disabled**
 - **workoutPlans**: Owner trainer or assigned client can read; trainer creates/updates/deletes own plans. `trainerId` is immutable after creation
 - **workoutLogs**: Owner client or their trainer can read; clients create and update their own logs; trainers can update logs they created (full fields) or add `trainerNotes` to any client log; **delete is disabled**
 - **schedule**: Only the trainer and the session's own client can read (other clients of the same trainer get busy times only, from the `getTrainerAvailability` callable — `functions/availability.js`, 2026-09-29); trainer books for own clients only, client books with own trainer only (as `status: 'pending'`, no credit fields); a client's only update is cancelling their own pending/confirmed session (`status` + `lateCancellation`); only the trainer deletes; `trainerId`+`clientId` are immutable after creation — `firestore-tests/schedule.rules.test.js`

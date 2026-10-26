@@ -352,6 +352,14 @@ export function AppProvider({ children }) {
 
   const myClients = currentUser?.role === 'trainer' ? users.filter(u => u.trainerId === currentUser.id) : [];
   const myClientIds = myClients.map(u => u.id).sort().join(',');
+  // Clients who keep their health information from this coach (B79): their body stats are
+  // not listened to, and listening starts again the moment they share.
+  const privateIds = myClients.filter(u => u.healthSharing === 'no').map(u => u.id).sort().join(',');
+  const privateIdsRef = useRef(privateIds);
+  useEffect(() => { privateIdsRef.current = privateIds; }, [privateIds]);
+  // Whether a coach may see this client's health information. Not answered yet = shared
+  // (Ani 2026-10-26); a client without the app never answers.
+  const healthShared = (clientId) => users.find(u => u.id === clientId)?.healthSharing !== 'no';
   // B76 step 2: a client with a server-kept summary (functions/clientSummary.js) needs no
   // listener of their own — the summary arrives with the client docs already listened to.
   // Only the clients without one (from before step 2, until it is built) keep step 1's
@@ -401,7 +409,8 @@ export function AppProvider({ children }) {
   }, [currentUser?.id, currentUser?.role]);
   useEffect(() => {
     if (!unsummarisedIds) return;
-    const unsubs = unsummarisedIds.split(',').map(cid =>
+    const hidden = new Set(privateIds.split(','));
+    const unsubs = unsummarisedIds.split(',').filter(cid => !hidden.has(cid)).map(cid =>
       onSnapshot(
         query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'desc'), limit(RECENT_BODY_STATS)),
         (snap) => setBodyStatsMap(prev => ({ ...prev, [cid]: snap.docs.map(d => ({ ...d.data(), id: d.id })).reverse() })),
@@ -409,7 +418,7 @@ export function AppProvider({ children }) {
       )
     );
     return () => unsubs.forEach(u => u());
-  }, [unsummarisedIds]);
+  }, [unsummarisedIds, privateIds]);
 
   // --- Workout logs of a coach's clients: one listener per current client, recent days only ---
   // A log carries the coach it was written under (trainerId); a client who has left must not
@@ -457,6 +466,20 @@ export function AppProvider({ children }) {
   // Returns a release function; pages call it from an effect. Counted per client, so two
   // pages showing the same client share one set of listeners.
   const coachId = currentUser?.role === 'trainer' ? currentUser.id : null;
+  // A watched client's body stats. Not listened to while the client keeps them private
+  // (B79) — empty, so the page still finishes loading; a refusal (they stopped sharing while
+  // watched) closes the listener, so sharing again opens a new one.
+  const listenHistoryBody = useCallback((cid) => {
+    const w = historyWatchers.current[cid];
+    if (!w || w.bodyUnsub) return;
+    const empty = () => setFullHistory(prev => ({ ...prev, [cid]: { ...prev[cid], bodyStats: [] } }));
+    if (privateIdsRef.current.split(',').includes(cid)) { empty(); return; }
+    w.bodyUnsub = onSnapshot(
+      query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'asc')),
+      (snap) => setFullHistory(prev => ({ ...prev, [cid]: { ...prev[cid], bodyStats: snap.docs.map(d => ({ ...d.data(), id: d.id })) } })),
+      (err) => { console.error('[history] bodyStats failed', cid, err); w.bodyUnsub = null; empty(); },
+    );
+  }, [privateIdsRef]);
   const watchClientHistory = useCallback((clientIds) => {
     if (!coachId) return () => {};
     const uid = coachId;
@@ -472,9 +495,10 @@ export function AppProvider({ children }) {
         unsubs: [
           onSnapshot(query(collection(db, 'workoutLogs'), where('clientId', '==', cid)), put('logs'), failed('logs')),
           onSnapshot(query(collection(db, 'schedule'), where('trainerId', '==', uid), where('clientId', '==', cid)), put('schedule'), failed('schedule')),
-          onSnapshot(query(collection(db, 'bodyStats', cid, 'entries'), orderBy('date', 'asc')), put('bodyStats'), failed('bodyStats')),
         ],
+        bodyUnsub: null,
       };
+      listenHistoryBody(cid);
     }
     return () => {
       for (const cid of clientIds) {
@@ -483,11 +507,22 @@ export function AppProvider({ children }) {
         w.count -= 1;
         if (w.count > 0) continue;
         w.unsubs.forEach(u => u());
+        if (w.bodyUnsub) w.bodyUnsub();
         delete historyWatchers.current[cid];
         setFullHistory(prev => { const next = { ...prev }; delete next[cid]; return next; });
       }
     };
-  }, [coachId]);
+  }, [coachId, listenHistoryBody]);
+
+  // A client changing what they share while their page is open (B79).
+  useEffect(() => {
+    const hidden = new Set(privateIds.split(','));
+    for (const [cid, w] of Object.entries(historyWatchers.current)) {
+      if (!hidden.has(cid)) { listenHistoryBody(cid); continue; }
+      if (w.bodyUnsub) { w.bodyUnsub(); w.bodyUnsub = null; }
+      setFullHistory(prev => ({ ...prev, [cid]: { ...prev[cid], bodyStats: [] } }));
+    }
+  }, [privateIds, listenHistoryBody]);
 
   // Whether a client's whole history is here: always for a client's own data; for a coach's
   // client only while watchClientHistory has it loaded.
@@ -730,6 +765,7 @@ export function AppProvider({ children }) {
 
   // ========== Body Stats ==========
   const getBodyStats = (clientId) => {
+    if (coachId && clientId !== coachId && !healthShared(clientId)) return [];
     if (fullHistory[clientId]?.bodyStats) return fullHistory[clientId].bodyStats;
     const s = coachId && clientId !== coachId ? summaryOf(clientId) : null;
     if (s) return s.latestBodyStat ? [{ ...s.latestBodyStat, id: `summary-${clientId}`, fromSummary: true }] : [];
@@ -1009,6 +1045,17 @@ export function AppProvider({ children }) {
     await updateDoc(doc(db, 'users', currentUser.id), { language });
     setCurrentUser(prev => (prev ? { ...prev, language } : prev));
     setUsers(prev => prev.map(u => (u.id === currentUser.id ? { ...u, language } : u)));
+  };
+
+  // A client's answer to sharing their health information — body stats and the training
+  // profile — with their coach (B79, Grok #27). firestore.rules hides both from the coach on
+  // 'no'; healthSharingAt records when it was given.
+  const setHealthSharing = async (choice) => {
+    if (!currentUser || !['yes', 'no'].includes(choice)) return;
+    const update = { healthSharing: choice, healthSharingAt: new Date().toISOString() };
+    await updateDoc(doc(db, 'users', currentUser.id), update);
+    setCurrentUser(prev => (prev ? { ...prev, ...update } : prev));
+    setUsers(prev => prev.map(u => (u.id === currentUser.id ? { ...u, ...update } : u)));
   };
 
   // Owner-only. Marks one of Ani's own test signups as not counting towards founding
@@ -1318,6 +1365,7 @@ export function AppProvider({ children }) {
   };
 
   const getIntakeForm = async (clientId) => {
+    if (coachId && clientId !== coachId && !healthShared(clientId)) return null;
     const snap = await getDoc(doc(db, 'intakeForms', clientId));
     return snap.exists() ? snap.data() : null;
   };
@@ -1430,7 +1478,7 @@ export function AppProvider({ children }) {
     setLanguage,
     savePublicBooking, subscribeTrialRequests, respondTrialRequest, subscribeGroupClasses, saveGroupClass, cancelGroupClass, getPublicBookingPage, requestTrialSession,
     checkAndAwardBadges,
-    saveIntakeForm, getIntakeForm,
+    saveIntakeForm, getIntakeForm, setHealthSharing, healthShared,
     getStudios, addStudio, updateStudio,
     getAvailableSlots, openStudioSlots, bookStudioSlot, cancelSlotBooking, getMyBookedSlots,
     submitGymApplication, getMyGymApplication, getGymApplications, reviewGymApplication,

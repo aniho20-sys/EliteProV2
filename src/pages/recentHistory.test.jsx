@@ -44,6 +44,7 @@ function appWith(overrides = {}) {
     updateScheduleItem: vi.fn(), updateClient: vi.fn(), sendMessage: vi.fn(), markMessagesRead: vi.fn(),
     // What the coach's app holds: only the last 60 days of every client (AppContext, B76).
     watchClientHistory: vi.fn(() => vi.fn()),
+    healthShared: () => true, // B79: not answered yet = shared
     historyComplete: () => false,
     historyStart: () => localDateAdd(-60),
     extendScheduleTo: vi.fn(),

@@ -64,6 +64,15 @@ service cloud.firestore {
         && cd.trainerId == request.auth.uid;
     }
 
+    // A coach sees a client's health information — body stats and the training profile,
+    // injuries included — unless the client has said no (B79, Grok #27, Ani 2026-10-26).
+    // Absent means not asked yet, which Ani chose to read as shared; a client without the
+    // app never answers, and their coach entered the data.
+    function isTrainerWithHealthOf(clientId) {
+      return isTrainerOf(clientId)
+        && get(/databases/$(database)/documents/users/$(clientId)).data.get('healthSharing', '') != 'no';
+    }
+
     // ── Users ──
     // A user document holds an email address, so reading one is not harmless. This used to
     // be `allow read: if isAuth()`, which let any signed-in account list every user on the
@@ -144,7 +153,15 @@ service cloud.firestore {
                          'renewalPromptSnoozedUntil',
                          'businessName','intakeCompleted',
                          'language','subscriptionRate','timeZone',
-                         'workingHours','bookingBuffer','badges'])
+                         'workingHours','bookingBuffer','badges',
+                         'healthSharing','healthSharingAt'])
+          // healthSharing: the client's own answer to sharing health information with their
+          // coach (isTrainerWithHealthOf); healthSharingAt records when. Not in the coach's list.
+          && (!('healthSharing' in request.resource.data)
+              || request.resource.data.healthSharing in ['yes', 'no'])
+          && (!('healthSharingAt' in request.resource.data)
+              || (request.resource.data.healthSharingAt is string
+                  && request.resource.data.healthSharingAt.size() <= 40))
           // bookingBuffer: minutes a coach keeps clear between sessions (Ani 2026-10-21).
           && (!('bookingBuffer' in request.resource.data)
               || request.resource.data.bookingBuffer in [0, 15, 30, 60])
@@ -297,14 +314,14 @@ service cloud.firestore {
     // Subcollection: bodyStats/{clientId}/entries/{entryId}
     // Only the client themselves or their trainer can read/write entries
     match /bodyStats/{clientId} {
-      allow read: if isOwner(clientId) || isTrainerOf(clientId);
+      allow read: if isOwner(clientId) || isTrainerWithHealthOf(clientId);
       // Audit 2026-10-23: `write` included delete, so the coach could delete it too.
-      allow create, update: if isOwner(clientId) || isTrainerOf(clientId);
+      allow create, update: if isOwner(clientId) || isTrainerWithHealthOf(clientId);
       allow delete: if isOwner(clientId);
       match /entries/{entryId} {
-        allow read: if isOwner(clientId) || isTrainerOf(clientId);
-        allow create: if isOwner(clientId) || isTrainerOf(clientId);
-        allow update: if isOwner(clientId) || isTrainerOf(clientId);
+        allow read: if isOwner(clientId) || isTrainerWithHealthOf(clientId);
+        allow create: if isOwner(clientId) || isTrainerWithHealthOf(clientId);
+        allow update: if isOwner(clientId) || isTrainerWithHealthOf(clientId);
         allow delete: if isOwner(clientId);
       }
     }
@@ -509,7 +526,7 @@ service cloud.firestore {
     // ── Intake Forms ──
     // Client writes own onboarding questionnaire; client and their trainer can read.
     match /intakeForms/{clientId} {
-      allow read: if isOwner(clientId) || isTrainerOf(clientId);
+      allow read: if isOwner(clientId) || isTrainerWithHealthOf(clientId);
       allow create: if isOwner(clientId);
       allow update: if isOwner(clientId);
       allow delete: if false;

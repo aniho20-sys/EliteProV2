@@ -116,7 +116,7 @@ export default function ClientDetailPage() {
   const { t } = useLanguage();
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, addCreditLedgerEntry, watchClientHistory, historyComplete } = useApp();
+  const { currentUser, getClient, getBodyStats, addBodyStat, updateBodyStat, getWorkoutPlans, addWorkoutPlan, getWorkoutLogs, updateWorkoutLog, getExercises, removeClient, updateClient, getSessionStats, getSchedule, getIntakeForm, addCreditLedgerEntry, watchClientHistory, historyComplete, healthShared } = useApp();
   const toast = useToast();
   const exerciseLibrary = getExercises();
   const client = getClient(clientId);
@@ -168,11 +168,19 @@ export default function ClientDetailPage() {
   useEffect(() => watchClientHistory([clientId]), [clientId, watchClientHistory]);
   const historyLoading = !historyComplete(clientId);
 
+  const healthPrivate = !healthShared(clientId);
+  // Asked again when the client changes what they share (B79), not kept from before.
+  const [intakeSharedState, setIntakeSharedState] = useState(healthPrivate);
+  if (intakeSharedState !== healthPrivate) {
+    setIntakeSharedState(healthPrivate);
+    setIntakeForm(undefined);
+  }
+
   useEffect(() => {
-    if (tab !== 'intake') return;
+    if (tab !== 'intake' || healthPrivate) return;
     if (intakeForm !== undefined) return;
     getIntakeForm(clientId).then(data => setIntakeForm(data || null));
-  }, [tab, clientId, intakeForm, getIntakeForm]);
+  }, [tab, clientId, intakeForm, getIntakeForm, healthPrivate]);
 
   if (!client) {
     return (
@@ -187,6 +195,9 @@ export default function ClientDetailPage() {
   const reach = contactLinks(client.contact, { timeZone: currentUser.timeZone });
 
   const latestStat = stats[stats.length - 1];
+  // The client keeps their health information from their coach (B79): say so, rather than
+  // showing empty measurements and an unanswered questionnaire as if there were none.
+  const privateNote = t('health.coach_private', { name: client?.name || '' });
 
   const openStatAdd = () => { setEditStat(null); setStatForm(EMPTY_STAT_FORM); setShowStatModal(true); };
   const openStatEdit = (s) => {
@@ -495,7 +506,9 @@ export default function ClientDetailPage() {
                 carries id/date/addedBy, and iterating the object rendered those as
                 measurements — a tile reading "b2cm" labelled "Id". Unmeasured metrics
                 show '--' rather than the string "undefinedcm". */}
-            {latestStat ? (
+            {healthPrivate ? (
+              <p className="text-sm text-muted">{privateNote}</p>
+            ) : latestStat ? (
               <div className="grid-3">
                 {METRICS.map(({ key, label, unit }) => {
                   const val = latestStat[key];
@@ -634,15 +647,17 @@ export default function ClientDetailPage() {
                 </button>
               ))}
             </div>
-            {progressTab === 'body' && (
+            {progressTab === 'body' && !healthPrivate && (
               <button className="btn btn-primary btn-sm" onClick={openStatAdd}>
                 <Plus size={16} /> {t('progress.add_measurement')}
               </button>
             )}
           </div>
-          {progressTab === 'body' && (
+          {progressTab === 'body' && (healthPrivate ? (
+            <div className="card"><p className="text-sm text-muted">{privateNote}</p></div>
+          ) : (
             <ProgressView clientId={clientId} canDelete={false} onAdd={openStatAdd} onEdit={openStatEdit} />
-          )}
+          ))}
           {progressTab === 'exercise' && (
             <ExerciseProgress clientId={clientId} />
           )}
@@ -838,8 +853,9 @@ export default function ClientDetailPage() {
       {tab === 'intake' && (
         <div className="card">
           <h3 className="card-title mb-16">{t('cdetail.intake_title')}</h3>
-          {intakeForm === undefined && <p className="text-sm text-muted">{t('cdetail.loading')}</p>}
-          {intakeForm === null && <p className="text-sm text-muted">{t('cdetail.intake_none')}</p>}
+          {healthPrivate && <p className="text-sm text-muted">{privateNote}</p>}
+          {!healthPrivate && intakeForm === undefined && <p className="text-sm text-muted">{t('cdetail.loading')}</p>}
+          {!healthPrivate && intakeForm === null && <p className="text-sm text-muted">{t('cdetail.intake_none')}</p>}
           {intakeForm && !intakeForm.skipped && (
             <div className="intake-view">
               <IntakeRow label={t('intake.goals')} value={[...intakeForm.goals || [], ...(intakeForm.goalsOther ? [`${t('intake.other')}: ${intakeForm.goalsOther}`] : [])].join(', ') || '—'} />

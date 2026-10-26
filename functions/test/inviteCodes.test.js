@@ -129,6 +129,19 @@ describe('resolveTrainerByCode', () => {
 });
 
 describe('connectClientByCode', () => {
+  test('B79: a new coach is asked about health information afresh; reconnecting to the same coach keeps the answer', async () => {
+    await user('t1', { role: 'trainer', name: 'Ani', inviteCode: 'AAAAAA' });
+    await user('t2', { role: 'trainer', name: 'Bo', inviteCode: 'BBBBBB' });
+    await user('c1', { role: 'client', trainerId: 't1', healthSharing: 'no', healthSharingAt: '2026-10-01T00:00:00.000Z' });
+    await connectClientByCode(db, 'c1', 'AAAAAA');
+    expect((await db.doc('users/c1').get()).data().healthSharing).toBe('no');
+    await connectClientByCode(db, 'c1', 'BBBBBB');
+    const after = (await db.doc('users/c1').get()).data();
+    expect(after.trainerId).toBe('t2');
+    expect(after.healthSharing).toBeUndefined();
+    expect(after.healthSharingAt).toBeUndefined();
+  });
+
   test('a client with a valid code is connected to that coach', async () => {
     await user('t1', { role: 'trainer', name: 'Ani', inviteCode: 'ANI123' });
     await user('c1', { role: 'client', trainerId: null });

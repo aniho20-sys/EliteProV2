@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell, CreditCard, ClipboardList } from 'lucide-react';
+import { User, Save, RotateCcw, LogOut, Copy, Share2, Link2, Check, Mail, KeyRound, AlertTriangle, Trash2, Bell, BellOff, Star, ChevronRight, Smartphone, Dumbbell, CreditCard, ClipboardList, HeartPulse } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
@@ -90,7 +90,7 @@ function getAuthProvider(firebaseUser) {
 const GC_PARTNER_OPEN = false;
 
 export default function ProfilePage() {
-  const { currentUser, firebaseUser, updateClient, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getStripeStatus } = useApp();
+  const { currentUser, firebaseUser, updateClient, setHealthSharing, logout, sendPasswordReset, getInviteCode, connectToTrainer, getClient, deleteAccount, getExercises, getPaymentConnection, startGcConnect, disconnectGc, connectGcDirect, refreshGcConnection, getStripeStatus } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -494,6 +494,20 @@ export default function ProfilePage() {
       clearTimeout(exportCopiedTimer.current);
       exportCopiedTimer.current = setTimeout(() => setExportCopied(false), 2000);
     }).catch(() => toast('Failed to copy', 'error'));
+  };
+
+  const [savingSharing, setSavingSharing] = useState(false);
+  const changeSharing = async (choice) => {
+    if (savingSharing) return;
+    setSavingSharing(true);
+    try {
+      await setHealthSharing(choice);
+    } catch (err) {
+      console.error('[healthSharing] could not save', err);
+      toast(t('health.save_failed'), 'error');
+    } finally {
+      setSavingSharing(false);
+    }
   };
 
   const handleConnect = async () => {
@@ -982,6 +996,22 @@ export default function ProfilePage() {
 
       {/* Client: monthly plan (Phase 3) — renders nothing unless offered */}
       {!isTrainer && <SubscriptionCard />}
+
+      {/* Client with a coach: what that coach may see of their health information (B79) */}
+      {!isTrainer && currentUser.trainerId && currentUser.healthSharing && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <HeartPulse size={18} /> {t('health.profile_title')}
+          </h3>
+          <p className="invite-desc">
+            {currentUser.healthSharing === 'no' ? t('health.profile_private') : t('health.profile_shared')}
+          </p>
+          <button className="btn btn-outline mt-8" style={{ width: '100%' }} disabled={savingSharing}
+            onClick={() => changeSharing(currentUser.healthSharing === 'no' ? 'yes' : 'no')}>
+            {savingSharing ? t('common.saving') : currentUser.healthSharing === 'no' ? t('health.start_sharing') : t('health.stop_sharing')}
+          </button>
+        </div>
+      )}
 
       {/* Client: Training Profile — accessible anytime, not just at onboarding */}
       {!isTrainer && (

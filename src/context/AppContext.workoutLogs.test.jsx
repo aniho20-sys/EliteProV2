@@ -256,6 +256,56 @@ describe('a coach’s app keeps only recent history (B76)', () => {
 // B76 step 2: a client's summary (functions/clientSummary.js) arrives on their user doc, so
 // the coach's app needs no listener of that client's own — 214 of them at 100 clients
 // before (reports/load-test-2026-10-24.md).
+describe('a client who keeps health information private (B79)', () => {
+  beforeEach(() => {
+    fb.docs.users = [COACH, { ...AMY, healthSharing: 'no' }, BEN];
+    fb.docs[`bodyStats/${AMY.id}/entries`] = [{ id: 'b1', date: localDateAdd(-3), weight: 70 }];
+    fb.docs[`bodyStats/${BEN.id}/entries`] = [{ id: 'b2', date: localDateAdd(-3), weight: 80 }];
+    // As production: the rules refuse the coach those reads.
+    fb.refuse = (q) => q.col === `bodyStats/${AMY.id}/entries`;
+  });
+
+  test('no body stats and no questionnaire for the coach; the other client unchanged', async () => {
+    await signIn();
+    await waitFor(() => expect(api.getBodyStats(BEN.id)).toHaveLength(1));
+    expect(api.getBodyStats(AMY.id)).toEqual([]);
+    expect(api.healthShared(AMY.id)).toBe(false);
+    expect(api.healthShared(BEN.id)).toBe(true);
+    firestore.getDoc.mockClear();
+    expect(await api.getIntakeForm(AMY.id)).toBeNull();
+    expect(firestore.getDoc).not.toHaveBeenCalled();
+  });
+
+  test('the client page still finishes loading: refused body stats do not hold it up', async () => {
+    await signIn();
+    act(() => { api.watchClientHistory([AMY.id]); });
+    await waitFor(() => expect(api.historyComplete(AMY.id)).toBe(true));
+  });
+
+  test('sharing again while the coach has the page open: the body stats arrive without reopening the app', async () => {
+    await signIn();
+    act(() => { api.watchClientHistory([AMY.id]); });
+    await waitFor(() => expect(api.historyComplete(AMY.id)).toBe(true));
+    expect(api.getBodyStats(AMY.id)).toEqual([]);
+    fb.refuse = null;
+    fb.docs.users = [COACH, { ...AMY, healthSharing: 'yes' }, BEN];
+    act(() => firestore.__answerAll('users'));
+    await waitFor(() => expect(api.getBodyStats(AMY.id).map(b => b.id)).toEqual(['b1']));
+  });
+
+  test('and stopping again while it is open: gone at once', async () => {
+    fb.docs.users = [COACH, { ...AMY, healthSharing: 'yes' }, BEN];
+    fb.refuse = null;
+    await signIn();
+    act(() => { api.watchClientHistory([AMY.id]); });
+    await waitFor(() => expect(api.getBodyStats(AMY.id).map(b => b.id)).toEqual(['b1']));
+    fb.docs.users = [COACH, { ...AMY, healthSharing: 'no' }, BEN];
+    act(() => firestore.__answerAll('users'));
+    await waitFor(() => expect(api.getBodyStats(AMY.id)).toEqual([]));
+    expect(fb.listeners.some(l => l.q.col === `bodyStats/${AMY.id}/entries`)).toBe(false);
+  });
+});
+
 describe('clients with a server-kept summary (B76 step 2)', () => {
   const old = localDateAdd(-200);
   const summary = {

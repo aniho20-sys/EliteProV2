@@ -1871,7 +1871,10 @@ exports.onClientCoachChangeSummary = functions.firestore
   .onUpdate(async (change) => {
     const before = change.before.data();
     const after = change.after.data();
-    if (!after || after.role !== 'client' || (before.trainerId || null) === (after.trainerId || null)) return;
+    if (!after || after.role !== 'client') return;
+    // A new coach, or the client changing what they share with their coach (B79).
+    if ((before.trainerId || null) === (after.trainerId || null)
+      && (before.healthSharing || null) === (after.healthSharing || null)) return;
     await refreshSummaries([change.after.id], 'coachChange');
   });
 

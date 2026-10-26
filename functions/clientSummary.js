@@ -9,7 +9,8 @@
 //   recentLogs     — up to RECENT_LOGS logs, newest first: { id, date, planId, workoutName }
 //                    (the notification centre lists the past week's; activity takes the first)
 //   lastSession    — the last completed session with the client's current coach: { id, date, type }
-//   latestBodyStat — { date, weight, bodyFat } of the newest body-stats entry
+//   latestBodyStat — { date, weight, bodyFat } of the newest body-stats entry; null when the
+//                    client does not share health information with their coach (B79)
 //
 // Built only from queries, never from the write that triggered it, and in a transaction, so
 // two writes landing together cannot leave an older summary over a newer one. Only clients
@@ -32,7 +33,12 @@ async function buildClientSummary({ db, clientId, now = () => new Date() }) {
         .where('clientId', '==', clientId).where('trainerId', '==', trainerId)
         .where('status', '==', 'completed').orderBy('date', 'desc').limit(1))
       : null;
-    const body = await tx.get(db.collection(`bodyStats/${clientId}/entries`).orderBy('date', 'desc').limit(1));
+    // The coach reads this summary; a client who keeps their health information from their
+    // coach (healthSharing 'no', B79) keeps it out of here too.
+    const shared = user.data().healthSharing !== 'no';
+    const body = shared
+      ? await tx.get(db.collection(`bodyStats/${clientId}/entries`).orderBy('date', 'desc').limit(1))
+      : { docs: [] };
 
     const s = sessions && sessions.docs[0];
     const b = body.docs[0];

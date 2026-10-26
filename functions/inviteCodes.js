@@ -15,6 +15,7 @@
 // exactly one trainer carries them, and reserved to that trainer on first use.
 
 const crypto = require('crypto');
+const { FieldValue } = require('firebase-admin/firestore');
 const { visitorKey } = require('./publicBooking');
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 — same as the client used
@@ -143,7 +144,13 @@ async function connectClientByCode(db, clientId, code, now) {
   }
   const trainer = await resolveTrainerByCode(db, code, now);
   if (!trainer) return { found: false };
-  await clientRef.update({ trainerId: trainer.id });
+  // An answer about sharing health information was given about one coach (B79): a new
+  // coach is asked about afresh.
+  const newCoach = client.data().trainerId !== trainer.id;
+  await clientRef.update({
+    trainerId: trainer.id,
+    ...(newCoach && { healthSharing: FieldValue.delete(), healthSharingAt: FieldValue.delete() }),
+  });
   return { found: true, trainer };
 }
 

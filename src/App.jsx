@@ -12,6 +12,7 @@ import InstallPrompt from './components/InstallPrompt';
 import NotifPrompt from './components/NotifPrompt';
 import BottomBanners from './components/BottomBanners';
 import OfflineBanner from './components/OfflineBanner';
+import HealthSharingPrompt from './components/HealthSharingPrompt';
 
 const LoginPage = lazyPage(() => import('./pages/LoginPage'));
 const RoleSelectPage = lazyPage(() => import('./pages/RoleSelectPage'));
@@ -101,7 +102,8 @@ function AppRoutes() {
       ) : !currentUser ? (
         <LoginPage />
       ) : (currentUser.role === 'client' && !currentUser.intakeCompleted && !isOperator) ? (
-        <IntakeFormPage />
+        // Asked before the questionnaire, whose injuries are what the answer is about (B79).
+        <><IntakeFormPage /><HealthSharingPrompt /></>
       ) : (
         <div className="app-layout">
           <Navigation />
@@ -110,6 +112,7 @@ function AppRoutes() {
             <NotifPrompt />
           </BottomBanners>
           <OfflineBanner />
+          <HealthSharingPrompt />
           <main className="main-content">
             <ErrorBoundary key={location.pathname} compact>
             <Routes>
