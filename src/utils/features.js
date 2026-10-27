@@ -3,7 +3,7 @@
 //
 //   analytics       — Analytics page (/analytics), out of the menu
 //   invoices        — Invoices page (/invoices), out of the menu
-//   dashboardChart  — the week's sessions chart at the foot of the coach's home page
+//   dashboardChart  — the week's sessions chart at the foot of the coach's home page (on again 2026-10-27)
 //   chat            — chatting in the app: the Messages page and every way into it (the
 //                     coach's unread count and messages card, clients' "Message your coach").
 //                     Ani and her clients talk on WhatsApp. NOT switched off: what the app
@@ -12,7 +12,7 @@
 export const FEATURES = {
   analytics: false,
   invoices: false,
-  dashboardChart: false,
+  dashboardChart: true, // back on: Ani 2026-10-27
   chat: false,
 };
 

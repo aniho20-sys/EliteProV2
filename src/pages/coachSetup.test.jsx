@@ -267,11 +267,12 @@ describe('what Ani switched off (B55, 2026-10-23)', () => {
     expect(links()).not.toContain('/messages');
     expect(links()).toContain('/progress-overview');
   });
-  test('the coach’s home page: no unread-messages card or count, no week chart', () => {
+  // The week chart was switched off here too, and back on by Ani 2026-10-27
+  // (startSession.test.jsx checks it shows).
+  test('the coach’s home page: no unread-messages card or count', () => {
     renderAt('/', <Route path="/" element={<TrainerDashboard />} />, base({ currentUser: READY_COACH, clients: [CLIENT] }));
     expect(screen.getByText('Today')).toBeTruthy(); // the page did render
     expect(screen.queryByText('Unread Messages')).toBeNull();
-    expect(screen.queryByText("This Week's Sessions")).toBeNull();
     expect(links()).not.toContain('/messages');
   });
   test('a client with no plan is sent to a free workout, not to a chat nobody reads', () => {

@@ -122,3 +122,14 @@ describe('the rules behind it', () => {
     expect(hasLogDraft('nobody')).toBe(false);
   });
 });
+
+describe('this week’s sessions card (back on, Ani 2026-10-27)', () => {
+  test('shows, counting this week’s sessions — not cancelled ones or blocked time', () => {
+    renderDashboard({ schedule: [
+      session(), session({ id: 's2', time: '09:00' }),
+      session({ id: 's3', status: 'cancelled' }), session({ id: 's4', isBlocked: true }),
+    ] });
+    expect(screen.getByText("This Week's Sessions")).toBeTruthy();
+    expect(screen.getByText('2 sessions this week')).toBeTruthy();
+  });
+});
