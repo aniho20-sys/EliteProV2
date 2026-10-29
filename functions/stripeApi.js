@@ -42,8 +42,15 @@ function formEncode(params, prefix = '', out = []) {
   return out.join('&');
 }
 
+// Every request names the API version it was written for (Grok #31, B81). Without it Stripe
+// answers in the version set on each coach's own account, which they can change in their
+// dashboard — and a reply in a different shape fails quietly. Basil is the first version with
+// the subscription under invoice.parent, which stripeWebhooks.js reads (it still reads the
+// older place too). Change it only together with the stripe tests.
+const STRIPE_VERSION = '2025-03-31.basil';
+
 async function stripeRequest({ fetchImpl, secretKey, method = 'GET', path, params, account, idempotencyKey }) {
-  const headers = { Authorization: `Bearer ${secretKey}` };
+  const headers = { Authorization: `Bearer ${secretKey}`, 'Stripe-Version': STRIPE_VERSION };
   if (account) headers['Stripe-Account'] = account;
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
   let url = `${API}${path}`;
@@ -102,4 +109,4 @@ function verifyStripeSignature(rawBody, header, secret, nowSec, toleranceSec = 3
   });
 }
 
-module.exports = { StripeApiError, formEncode, stripeRequest, describeStripeError, keyEnvironment, verifyStripeSignature };
+module.exports = { StripeApiError, formEncode, stripeRequest, describeStripeError, keyEnvironment, verifyStripeSignature, STRIPE_VERSION };
