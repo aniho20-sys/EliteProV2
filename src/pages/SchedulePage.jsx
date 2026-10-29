@@ -16,6 +16,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { bookingBuffer, tooClose } from '../utils/bookingBuffer';
 import { FEATURES } from '../utils/features';
 import { formatLongDate, formatMonthYear, formatWeekdayShort } from '../i18n/format';
+import { cancelPolicy, isLateCancel, cancelRuleText } from '../utils/cancelPolicy';
 
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
 
@@ -117,14 +118,11 @@ export default function SchedulePage() {
   // busy (times only — getTrainerAvailability) plus their own sessions, which stay live.
   const refSchedule = isTrainer ? allSchedule : [...getTrainerBusySlots(), ...allSchedule];
 
-  const isWithin24Hours = (date, time) => {
-    const sessionDt = new Date(`${date}T${time}:00`);
-    const diffHours = (sessionDt - new Date()) / (1000 * 60 * 60);
-    return diffHours >= 0 && diffHours < 24;
-  };
+  // The coach's own rule (B82); the server refunds by the same one (functions/cancelPolicy.js).
+  const policy = cancelPolicy(trainerUser);
 
   const handleClientCancel = (session) => {
-    if (isWithin24Hours(session.date, session.time)) {
+    if (isLateCancel(policy, new Date(`${session.date}T${session.time}:00`).getTime())) {
       setLateCancelModal(session);
     } else {
       updateStatus(session.id, 'cancelled');
@@ -626,14 +624,14 @@ export default function SchedulePage() {
               <h3 className="modal-title" style={{ margin: 0 }}>{t('sched.late_title')}</h3>
             </div>
             <p className="text-sm" style={{ marginBottom: 8 }}>
-              {t('sched.late_starts_pre')}<strong>{t('sched.late_24h')}</strong>:
+              {t('sched.late_starts_pre')}<strong>{t('sched.late_hours', { hours: policy.noticeHours })}</strong>:
             </p>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: '0.9rem' }}>
               <div><strong>{lateCancelModal.date}</strong> {t('sched.at')} <strong>{lateCancelModal.time}</strong></div>
               <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>{lateCancelModal.type}</div>
             </div>
             <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-              {t('sched.late_policy_pre')}<strong>{t('sched.late_policy_bold')}</strong>{t('sched.late_policy_post')}
+              {t('sched.late_policy_pre')}<strong>{t('sched.late_policy_bold')}</strong>{t('sched.late_policy_post', { hours: policy.noticeHours })}
             </p>
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setLateCancelModal(null)} disabled={cancelingLate}>{t('sched.go_back')}</button>
@@ -833,10 +831,11 @@ export default function SchedulePage() {
                 </div>
               )}
               {/* The cancellation rule onScheduleCreditUpdate applies, said where a booking is
-                  made (B39) — the monthly cap of 2 free early cancels was never shown anywhere. */}
+                  made (B39) — the coach's own (B82), with the coach's note for clients. */}
               {bookMode === 'session' && (
                 <p className="text-sm text-muted mb-12">
-                  {isTrainer ? t('sched.cancel_policy_coach') : t('sched.cancel_policy_client')}
+                  {cancelRuleText(t, policy, isTrainer)}
+                  {!isTrainer && policy.note && <><br />{policy.note}</>}
                 </p>
               )}
               <div className="modal-actions">

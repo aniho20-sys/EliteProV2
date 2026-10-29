@@ -14,6 +14,7 @@ const { summariseSignups } = require('./signupQueue');
 const { startSubscription, completeSubscription, cancelSubscriptionsFor, cancelSubscription, SubscriptionError, disconnectTrainer } = require('./gcSubscriptions');
 const { deleteAccountData, removeManagedClient, RemoveManagedError } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken, findOwnerProfile } = require('./ownerAuth');
+const { cancelPolicy } = require('./cancelPolicy');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, spendInviteTry, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
@@ -373,7 +374,8 @@ exports.onScheduleBooked = functions.firestore
 //   - legacy (no flag): late (<24h) charges now; early (>=24h) stays free — this
 //     mirrors the exact behaviour that used to run client-side.
 //   - new model (flag set): late stays charged (no-op); early refunds 1 credit,
-//     capped at 2 free early-cancels per client per calendar month.
+//     capped per client per calendar month. "Late" and the cap are the coach's own
+//     (users.cancelPolicy, B82 — functions/cancelPolicy.js); 24 hours and 2 until chosen.
 //   - the coach cancelling or declining (cancelledBy: 'coach', B77 — Ani 2026-10-25):
 //     always refunded, late or early, and never counted towards the client's two.
 //     Every booking is charged when it is made, even a request the coach then declines.
@@ -402,8 +404,10 @@ exports.onScheduleCreditUpdate = functions.firestore
       const trainerId = after.trainerId || before.trainerId;
       const trainerDoc = trainerId ? await db.doc(`users/${trainerId}`).get() : null;
       const timeZone = trainerDoc && trainerDoc.exists ? trainerDoc.data().timeZone : undefined;
+      // The coach's own rule (B82): their notice period and monthly cap; 24 h / 2 until chosen.
+      const policy = cancelPolicy(trainerDoc && trainerDoc.exists ? trainerDoc.data() : null);
       const sessionMs = zonedToEpochMs(before.date, before.time, timeZone);
-      const isLate = (sessionMs - Date.now()) / (1000 * 60 * 60) < 24;
+      const isLate = (sessionMs - Date.now()) / (1000 * 60 * 60) < policy.noticeHours;
       const byCoach = after.cancelledBy === 'coach' && before.cancelledBy !== 'coach';
 
       if (!after.deductedAtBooking) {
@@ -428,7 +432,8 @@ exports.onScheduleCreditUpdate = functions.firestore
         if (!clientDoc.exists) return;
         const data = clientDoc.data();
         const count = data.earlyCancelMonth === month ? (data.earlyCancelCount ?? 0) : 0;
-        if (!byCoach && count >= 2) return; // free early-cancel cap used up this month
+        // The coach's monthly cap of free early cancels used up (null = no cap).
+        if (!byCoach && policy.freePerMonth !== null && count >= policy.freePerMonth) return;
         const current = data.sessionOffset ?? 0;
         tx.update(clientRef, byCoach
           ? { sessionOffset: Math.max(0, current - 1) }

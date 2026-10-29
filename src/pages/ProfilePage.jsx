@@ -24,6 +24,7 @@ import { inviteUrl } from '../utils/inviteLink';
 import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
 import { BUFFER_OPTIONS, bookingBuffer } from '../utils/bookingBuffer';
+import { NOTICE_OPTIONS, FREE_OPTIONS, NOTE_MAX, cancelPolicy, cancelRuleText } from '../utils/cancelPolicy';
 import { renewalRates } from '../utils/renewalRates';
 
 function InstallAppCard() {
@@ -142,6 +143,9 @@ export default function ProfilePage() {
 
   // Trainer: working hours
   const [breakMinutes, setBreakMinutes] = useState(() => bookingBuffer(currentUser));
+  // The coach's own cancellation rule (B82): the server refunds by what is saved here.
+  const [rule, setRule] = useState(() => cancelPolicy(currentUser));
+  const [savingRule, setSavingRule] = useState(false);
   const [workHours, setWorkHours] = useState({
     start: currentUser.workingHours?.start || '09:00',
     end: currentUser.workingHours?.end || '17:00',
@@ -439,6 +443,19 @@ export default function ProfilePage() {
       toast(t('profile.toast_hours_failed'), 'error');
     } finally {
       setWhSaving(false);
+    }
+  };
+
+  const handleSaveRule = async () => {
+    if (savingRule) return;
+    setSavingRule(true);
+    try {
+      await updateClient(currentUser.id, { cancelPolicy: { ...rule, note: rule.note.trim().slice(0, NOTE_MAX) } });
+      toast(t('cancel.toast_saved'));
+    } catch {
+      toast(t('cancel.toast_failed'), 'error');
+    } finally {
+      setSavingRule(false);
     }
   };
 
@@ -771,6 +788,45 @@ export default function ProfilePage() {
           </div>
           <button className="btn btn-primary mt-8" onClick={handleSaveWorkHours} disabled={whSaving}>
             <Save size={16} /> {whSaving ? t('profile.saving_dots') : t('profile.save_hours')}
+          </button>
+        </div>
+      )}
+
+      {/* Trainer: their own cancellation rule (B82, Ani 2026-10-29) */}
+      {isTrainer && (
+        <div className="card mb-16">
+          <h3 className="card-title mb-8">{t('cancel.title')}</h3>
+          <p className="invite-desc">{t('cancel.desc')}</p>
+          <div className="form-row mt-8">
+            <div className="form-group">
+              <label className="form-label" htmlFor="cancel-notice">{t('cancel.notice_label')}</label>
+              <select id="cancel-notice" className="form-select" value={rule.noticeHours}
+                onChange={e => setRule(r => ({ ...r, noticeHours: Number(e.target.value) }))}>
+                {NOTICE_OPTIONS.map(h => <option key={h} value={h}>{t('cancel.hours_before', { hours: h })}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="cancel-free">{t('cancel.free_label')}</label>
+              <select id="cancel-free" className="form-select" value={rule.freePerMonth === null ? 'unlimited' : rule.freePerMonth}
+                onChange={e => setRule(r => ({ ...r, freePerMonth: e.target.value === 'unlimited' ? null : Number(e.target.value) }))}>
+                {FREE_OPTIONS.map(n => (
+                  <option key={String(n)} value={n === null ? 'unlimited' : n}>
+                    {n === null ? t('cancel.free_unlimited') : n === 0 ? t('cancel.free_none') : t('cancel.free_times', { count: n })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-group mt-8">
+            <label className="form-label" htmlFor="cancel-note">{t('cancel.note_label')}</label>
+            <textarea id="cancel-note" className="form-textarea" rows={2} maxLength={NOTE_MAX} placeholder={t('cancel.note_placeholder')}
+              value={rule.note} onChange={e => setRule(r => ({ ...r, note: e.target.value }))} />
+          </div>
+          <p className="text-sm text-muted mt-8">
+            {t('cancel.preview')} {cancelRuleText(t, rule, false)}
+          </p>
+          <button className="btn btn-primary mt-8" onClick={handleSaveRule} disabled={savingRule}>
+            <Save size={16} /> {savingRule ? t('profile.saving_dots') : t('cancel.save')}
           </button>
         </div>
       )}
