@@ -20,6 +20,7 @@ const STRIPE_EVENTS = [
   'account.updated', 'account.application.deauthorized', 'checkout.session.completed',
   'invoice.paid', 'invoice.payment_failed', 'customer.subscription.updated',
   'customer.subscription.deleted', 'charge.dispute.created', 'charge.refunded',
+  'invoice.voided', 'invoice.marked_uncollectible',
 ];
 
 export default function StripeKeysCard() {

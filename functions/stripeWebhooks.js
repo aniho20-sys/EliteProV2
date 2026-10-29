@@ -7,6 +7,7 @@
 //
 //   invoice.paid                     → the month's sessions are added (same rule as GoCardless)
 //   invoice.payment_failed           → plan past due; coach and client told
+//   invoice.voided / invoice.marked_uncollectible → the invoice that made a plan past due, cancelled: active again (no sessions)
 //   customer.subscription.updated    → ended at Stripe: cancelled · retries exhausted: past due
 //   customer.subscription.deleted    → plan cancelled
 //   charge.dispute.created           → plan past due; coach told (B52)
@@ -219,6 +220,29 @@ async function processFor({ db, event, object, trainerId, account, get, keys, fe
       await notify({ userId: s.clientId, title: 'Your payment didn’t go through',
         body: 'Your monthly plan payment failed. Please check your card or bank, or contact your coach.' });
       return 'past_due';
+    }
+
+    case 'invoice.voided':
+    case 'invoice.marked_uncollectible': {
+      // The coach cancelled (voided) or wrote off the unpaid invoice that put a plan behind
+      // (Grok #30, B81). Without this the plan stayed "payment failed" for ever. Only that
+      // invoice counts — a dispute also marks a plan behind and must not be undone here —
+      // and only once Stripe itself has the subscription running again. No sessions are
+      // added: nothing was paid.
+      const invoice = await get(`/v1/invoices/${object.id}`);
+      if (!['void', 'uncollectible'].includes(invoice.status)) return 'not_void';
+      const sub = await planForStripeSubscription({ db, stripeSubId: invoiceSubscriptionId(invoice), trainerId, account, get, now });
+      if (!sub) return 'not_ours';
+      const s = sub.data();
+      if (s.status !== 'past_due' || s.lastPaymentId !== invoice.id) return 'unchanged';
+      const current = await get(`/v1/subscriptions/${invoiceSubscriptionId(invoice)}`);
+      if (current.status !== 'active') return 'unchanged';
+      await sub.ref.update({
+        status: 'active', paymentFailedAt: null, lastError: `stripe:invoice_${invoice.status}`, updatedAt: now().toISOString(),
+      });
+      await notify({ userId: s.trainerId, title: 'Monthly plan back to normal',
+        body: 'The unpaid monthly invoice was cancelled in Stripe, so the plan no longer shows a failed payment. No sessions were added for it.' });
+      return 'restored';
     }
 
     case 'customer.subscription.updated':

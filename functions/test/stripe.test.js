@@ -15,7 +15,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp({ projectId: 'elitepro-fn-test-stripe' });
 const db = admin.firestore();
 
-const { formEncode, verifyStripeSignature, keyEnvironment } = require('../stripeApi');
+const { formEncode, verifyStripeSignature, keyEnvironment, stripeRequest } = require('../stripeApi');
 const { saveStripeKeys, startConnect, refreshConnection, markDisconnected, trainerForAccount } = require('../stripeConnect');
 const stripeSubs = require('../stripeSubscriptions');
 const { handleStripeWebhook } = require('../stripeWebhooks');
@@ -39,7 +39,7 @@ function fakeStripe(routes) {
   const fetchImpl = async (url, init) => {
     const u = new URL(url);
     const call = {
-      method: init.method, path: u.pathname,
+      method: init.method, path: u.pathname, version: init.headers['Stripe-Version'] || null,
       account: init.headers['Stripe-Account'] || null,
       idempotencyKey: init.headers['Idempotency-Key'] || null,
       auth: init.headers.Authorization,
@@ -74,6 +74,12 @@ afterAll(async () => { await clearAll(); await admin.app().delete(); });
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Stripe basics', () => {
+  test('B81 (Grok #31): every request names the API version it was written for', async () => {
+    const st = fakeStripe({ 'GET /v1/balance': () => [200, { object: 'balance', livemode: false }] });
+    await stripeRequest({ fetchImpl: st.fetchImpl, secretKey: 'sk_test_x', path: '/v1/balance' });
+    await stripeRequest({ fetchImpl: st.fetchImpl, secretKey: 'sk_test_x', path: '/v1/balance', account: 'acct_1' });
+    expect(st.calls.map(c => c.version)).toEqual(['2025-03-31.basil', '2025-03-31.basil']);
+  });
   test('form encoding: nested objects and arrays, nulls left out', () => {
     const s = formEncode({ a: 1, b: { c: 'x y' }, d: ['p', 'q'], e: [{ f: 2 }], g: null, h: undefined });
     expect(decodeURIComponent(s)).toBe('a=1&b[c]=x y&d[0]=p&d[1]=q&e[0][f]=2');
@@ -635,6 +641,52 @@ describe('webhook events', () => {
     expect(notified.map(x => x.userId).sort()).toEqual(['c1', 'coachA']);
     await run(event('invoice.paid', { id: 'in_7' }), st);
     expect((await plan()).status).toBe('active');
+  });
+  test('B81 (Grok #30): the coach voids the unpaid invoice — the plan is no longer past due, no sessions added', async () => {
+    const st = fakeStripe({
+      'GET /v1/invoices/in_40': () => [200, paidInvoice('in_40', 'sub_20', { status: 'open', amount_paid: 0 })],
+      'GET /v1/subscriptions/sub_20': () => stripeSub('sub_20'),
+    });
+    await run(event('invoice.payment_failed', { id: 'in_40' }), st);
+    expect((await plan()).status).toBe('past_due');
+    const before = (await client()).totalSessions;
+    notified = [];
+    st.calls.length = 0;
+    const voided = fakeStripe({
+      'GET /v1/invoices/in_40': () => [200, paidInvoice('in_40', 'sub_20', { status: 'void', amount_paid: 0 })],
+      'GET /v1/subscriptions/sub_20': () => stripeSub('sub_20'),
+    });
+    expect(await run(event('invoice.voided', { id: 'in_40' }), voided)).toEqual({ outcome: 'restored' });
+    expect(await plan()).toMatchObject({ status: 'active', paymentFailedAt: null });
+    expect((await client()).totalSessions).toBe(before);
+    expect(notified.map(x => x.userId)).toEqual(['coachA']);
+  });
+  test('B81: written off works the same; an older invoice, or a plan held for a dispute, is left alone', async () => {
+    const st = fakeStripe({ 'GET /v1/invoices/in_41': () => [200, paidInvoice('in_41', 'sub_20', { status: 'open', amount_paid: 0 })] });
+    await run(event('invoice.payment_failed', { id: 'in_41' }), st);
+    const old = fakeStripe({ 'GET /v1/invoices/in_39': () => [200, paidInvoice('in_39', 'sub_20', { status: 'uncollectible', amount_paid: 0 })] });
+    expect(await run(event('invoice.marked_uncollectible', { id: 'in_39' }), old)).toEqual({ outcome: 'unchanged' });
+    expect((await plan()).status).toBe('past_due');
+    await db.doc('subscriptions/plan000020').update({ lastPaymentId: 'in_41', lastError: 'charge.dispute.created' });
+    const stillUnpaid = fakeStripe({
+      'GET /v1/invoices/in_41': () => [200, paidInvoice('in_41', 'sub_20', { status: 'uncollectible', amount_paid: 0 })],
+      'GET /v1/subscriptions/sub_20': () => stripeSub('sub_20', 'plan000020', { status: 'past_due' }),
+    });
+    expect(await run(event('invoice.marked_uncollectible', { id: 'in_41' }), stillUnpaid)).toEqual({ outcome: 'unchanged' });
+    const written = fakeStripe({
+      'GET /v1/invoices/in_41': () => [200, paidInvoice('in_41', 'sub_20', { status: 'uncollectible', amount_paid: 0 })],
+      'GET /v1/subscriptions/sub_20': () => stripeSub('sub_20'),
+    });
+    expect(await run(event('invoice.marked_uncollectible', { id: 'in_41' }), written)).toEqual({ outcome: 'restored' });
+  });
+  test('a dispute hold is not undone by a voided invoice', async () => {
+    await db.doc('subscriptions/plan000020').update({ status: 'past_due', lastError: 'charge.dispute.created', lastPaymentId: 'in_paid_before' });
+    const st = fakeStripe({
+      'GET /v1/invoices/in_42': () => [200, paidInvoice('in_42', 'sub_20', { status: 'void', amount_paid: 0 })],
+      'GET /v1/subscriptions/sub_20': () => stripeSub('sub_20'),
+    });
+    expect(await run(event('invoice.voided', { id: 'in_42' }), st)).toEqual({ outcome: 'unchanged' });
+    expect((await plan()).status).toBe('past_due');
   });
   test('a failure event for an invoice since voided or written off changes nothing (B52)', async () => {
     const st = fakeStripe({ 'GET /v1/invoices/in_18': () => [200, paidInvoice('in_18', 'sub_20', { status: 'void', amount_paid: 0 })] });
