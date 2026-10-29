@@ -35,8 +35,6 @@ const TRANSLATED = readFileSync(join(ROOT, 'eslint.config.js'), 'utf8')
 // Files whose English is deliberately staying English. A reason is mandatory — an
 // exemption nobody has to justify is how the last hole stayed open for three weeks.
 const EXEMPT = {
-  'src/pages/PrivacyPolicyPage.jsx': 'legal text — a translation changes what was agreed to; needs a lawyer, not a translator',
-  'src/pages/TermsPage.jsx': 'legal text — same reason',
   'src/components/ErrorBoundary.jsx': 'class component — cannot use the useLanguage() hook, and an error boundary must not depend on any context to render (it is what renders when context itself fails)',
   'src/pages/OperatorDashboard.jsx': 'gym啦, behind GYMLA_ENABLED=false (#25) — unreachable',
   'src/pages/StudioManagementPage.jsx': 'gym啦, behind GYMLA_ENABLED=false (#25)',

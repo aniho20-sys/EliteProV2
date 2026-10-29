@@ -1,255 +1,182 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
-const LAST_UPDATED = '4 October 2026';
+// Rewritten 2026-10-29 (B81; Grok #5, #36, #42): what the app really collects, the
+// consent asked when a client connects to a coach (B79), Stripe and GoCardless, where the
+// data is, and a Hong Kong section (PDPO). English is the version that applies; the
+// Chinese one says so. The person responsible is named once Ani gives the name (BACKLOG B81).
 const CONTACT_EMAIL = 'elitepro616@gmail.com';
-const CONTROLLER = 'Elitepro Team';
+
+const Email = () => <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
 
 export default function PrivacyPolicyPage() {
+  const { t, lang } = useLanguage();
   useEffect(() => { window.scrollTo(0, 0); }, []);
   return (
     <div className="legal-page">
       <div className="legal-container">
         <div className="legal-back">
           <Link to="/" className="btn btn-outline btn-sm">
-            <ArrowLeft size={14} /> Back
+            <ArrowLeft size={14} /> {t('legal.back')}
           </Link>
         </div>
 
-        <h1 className="legal-title">Privacy Policy</h1>
-        <p className="legal-meta">Last updated: {LAST_UPDATED} &nbsp;·&nbsp; Controller: {CONTROLLER}</p>
+        <h1 className="legal-title">{t('privacy.title')}</h1>
+        <p className="legal-meta">{t('privacy.updated')}</p>
+        {lang !== 'en' && <p className="legal-meta">{t('legal.english_prevails')}</p>}
+        <p>{t('privacy.intro')}</p>
 
         <section className="legal-section">
-          <h2>1. Who We Are</h2>
-          <p>
-            ElitePro is a fitness training management platform operated by <strong>{CONTROLLER}</strong>.
-            We connect personal trainers with their clients to manage workout programming, session scheduling,
-            progress tracking, and in-app communication.
-          </p>
-          <p>
-            For privacy matters, contact us at:{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-          </p>
+          <h2>{t('privacy.s1_h')}</h2>
+          <p>{t('privacy.s1_p1')}</p>
+          <p>{t('privacy.s1_p2')}</p>
+          <p>{t('privacy.contact_pre')} <Email /></p>
         </section>
 
         <section className="legal-section">
-          <h2>2. Data We Collect</h2>
-
-          <h3>Account &amp; Identity</h3>
+          <h2>{t('privacy.s2_h')}</h2>
+          <h3>{t('privacy.account_h')}</h3>
           <ul>
-            <li>Name and email address</li>
-            <li>Profile photo (if you sign in with Google)</li>
-            <li>Account role (trainer or client)</li>
+            <li>{t('privacy.account_li1')}</li>
+            <li>{t('privacy.account_li2')}</li>
           </ul>
-
-          <h3>Profile Information</h3>
+          <h3>{t('privacy.coach_h')}</h3>
           <ul>
-            <li><strong>Trainers:</strong> speciality, invite code</li>
-            <li><strong>Clients:</strong> age, height (cm), fitness goals, trainer notes</li>
+            <li>{t('privacy.coach_li1')}</li>
+            <li>{t('privacy.coach_li2')}</li>
+            <li>{t('privacy.coach_li3')}</li>
           </ul>
-
-          <h3>Health &amp; Fitness Data</h3>
-          <p>
-            This is <strong>special category personal data</strong> under GDPR. We collect it only
-            to provide the core service you signed up for.
-          </p>
+          <h3>{t('privacy.client_h')}</h3>
           <ul>
-            <li>Body measurements: weight (kg), body fat (%), chest, waist, hips, arms, legs (cm)</li>
-            <li>Workout plans assigned by your trainer</li>
-            <li>Workout logs: exercises, sets, reps, weight lifted, rate of perceived exertion (RPE)</li>
-            <li>Personal records (PRs) derived from your logs</li>
+            <li>{t('privacy.client_li1')}</li>
+            <li>{t('privacy.client_li2')}</li>
+            <li>{t('privacy.client_li3')}</li>
+            <li>{t('privacy.client_li4')}</li>
           </ul>
-
-          <h3>Communications &amp; Scheduling</h3>
+          <p>{t('privacy.health_note')}</p>
+          <h3>{t('privacy.sessions_h')}</h3>
           <ul>
-            <li>In-app messages between trainer and client</li>
-            <li>Session bookings: date, time, type, status, notes</li>
+            <li>{t('privacy.sessions_li1')}</li>
+            <li>{t('privacy.sessions_li2')}</li>
+            <li>{t('privacy.sessions_li3')}</li>
           </ul>
-
-          <h3>Trial Session Requests (no account needed)</h3>
-          <p>
-            A trainer can publish a booking page where anyone can ask for a trial session. If you send
-            a request, we collect:
-          </p>
+          <h3>{t('privacy.trial_h')}</h3>
+          <p>{t('privacy.trial_p')}</p>
+          <h3>{t('privacy.tech_h')}</h3>
           <ul>
-            <li>Your name, and the phone number or email address you give</li>
-            <li>The date and time you asked for, and any message you write</li>
-            <li>
-              A one-way hash of your network address and the day, used only to limit how many requests
-              one visitor can send per day. Your network address itself is not stored.
-            </li>
-          </ul>
-          <p>We do not ask for health information on this page.</p>
-
-          <h3>Financial Records (Trainers)</h3>
-          <ul>
-            <li>Invoice records between trainer and client (amount, status, date)</li>
-          </ul>
-
-          <h3>Technical Data</h3>
-          <ul>
-            <li>Firebase Authentication tokens (session management)</li>
-            <li>App Check attestation tokens (abuse prevention via Google reCAPTCHA v3)</li>
-            <li>Offline cache stored in your browser's IndexedDB (cleared on logout)</li>
+            <li>{t('privacy.tech_li1')}</li>
+            <li>{t('privacy.tech_li2')}</li>
+            <li>{t('privacy.tech_li3')}</li>
+            <li>{t('privacy.tech_li4')}</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>3. Why We Process Your Data</h2>
+          <h2>{t('privacy.s3_h')}</h2>
           <table className="legal-table">
             <thead>
-              <tr><th>Purpose</th><th>Legal Basis</th></tr>
+              <tr><th>{t('privacy.col_purpose')}</th><th>{t('privacy.col_basis')}</th></tr>
             </thead>
             <tbody>
-              <tr>
-                <td>Providing the platform (workout plans, logs, messaging, scheduling)</td>
-                <td>Contract performance (Art. 6(1)(b) GDPR)</td>
-              </tr>
-              <tr>
-                <td>Processing health &amp; body measurement data</td>
-                <td>Explicit consent (Art. 9(2)(a) GDPR) — given when you create your account</td>
-              </tr>
-              <tr>
-                <td>Passing your trial session request to the trainer, so they can contact you</td>
-                <td>Steps taken at your request before a contract (Art. 6(1)(b) GDPR), with your agreement on the booking page</td>
-              </tr>
-              <tr>
-                <td>Security and abuse prevention (App Check, rate limiting)</td>
-                <td>Legitimate interests (Art. 6(1)(f) GDPR)</td>
-              </tr>
-              <tr>
-                <td>Sending push notifications (if you opt in)</td>
-                <td>Consent (Art. 6(1)(a) GDPR)</td>
-              </tr>
+              <tr><td>{t('privacy.r1_purpose')}</td><td>{t('privacy.r1_basis')}</td></tr>
+              <tr><td>{t('privacy.r2_purpose')}</td><td>{t('privacy.r2_basis')}</td></tr>
+              <tr><td>{t('privacy.r3_purpose')}</td><td>{t('privacy.r3_basis')}</td></tr>
+              <tr><td>{t('privacy.r4_purpose')}</td><td>{t('privacy.r4_basis')}</td></tr>
+              <tr><td>{t('privacy.r5_purpose')}</td><td>{t('privacy.r5_basis')}</td></tr>
+              <tr><td>{t('privacy.r6_purpose')}</td><td>{t('privacy.r6_basis')}</td></tr>
             </tbody>
           </table>
+          <p>{t('privacy.s3_p')}</p>
         </section>
 
         <section className="legal-section">
-          <h2>4. Third-Party Services</h2>
-          <p>We use the following sub-processors. Your data may be transmitted to their servers.</p>
+          <h2>{t('privacy.s4_h')}</h2>
+          <ul>
+            <li>{t('privacy.s4_li1')}</li>
+            <li>{t('privacy.s4_li2')}</li>
+            <li>{t('privacy.s4_li3')}</li>
+          </ul>
           <table className="legal-table">
             <thead>
-              <tr><th>Service</th><th>Provider</th><th>Purpose</th></tr>
+              <tr><th>{t('privacy.col_provider')}</th><th>{t('privacy.col_does')}</th><th>{t('privacy.col_where')}</th></tr>
             </thead>
             <tbody>
-              <tr>
-                <td>Firebase Authentication</td>
-                <td>Google LLC (US)</td>
-                <td>User sign-in, session tokens</td>
-              </tr>
-              <tr>
-                <td>Cloud Firestore</td>
-                <td>Google LLC (US)</td>
-                <td>All app data storage</td>
-              </tr>
-              <tr>
-                <td>Firebase Hosting</td>
-                <td>Google LLC (US)</td>
-                <td>Serving the web app</td>
-              </tr>
-              <tr>
-                <td>Firebase App Check + reCAPTCHA v3</td>
-                <td>Google LLC (US)</td>
-                <td>Bot &amp; abuse prevention</td>
-              </tr>
-              <tr>
-                <td>Firebase Cloud Messaging</td>
-                <td>Google LLC (US)</td>
-                <td>Push notifications (opt-in)</td>
-              </tr>
+              <tr><td>{t('privacy.p_google')}</td><td>{t('privacy.p_google_does')}</td><td>{t('privacy.p_google_where')}</td></tr>
+              <tr><td>{t('privacy.p_stripe')}</td><td>{t('privacy.p_stripe_does')}</td><td>{t('privacy.p_stripe_where')}</td></tr>
+              <tr><td>{t('privacy.p_gc')}</td><td>{t('privacy.p_gc_does')}</td><td>{t('privacy.p_gc_where')}</td></tr>
             </tbody>
           </table>
-          <p>
-            Google's privacy policy applies to these services:{' '}
-            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">
-              policies.google.com/privacy
-            </a>
-          </p>
-        </section>
-
-        <section className="legal-section">
-          <h2>5. Data Retention</h2>
+          <p>{t('privacy.s4_providers_note')}</p>
           <ul>
-            <li>Your data is retained while your account is active.</li>
-            <li>
-              When you delete your account, your Firestore profile and body stats are deleted immediately.
-              Workout logs and messages are retained for record-keeping integrity (your trainer's records)
-              and will be anonymised or purged within <strong>90 days</strong> via our scheduled deletion process.
-            </li>
-            <li>Invoice records may be retained for up to <strong>7 years</strong> to comply with accounting obligations.</li>
-            <li>
-              A trial session request is deleted as soon as the trainer answers it. If they confirm it, your
-              name and contact details become part of their client records. A request nobody answers is
-              deleted <strong>7 days</strong> after the date you asked for. The daily request counter is
-              deleted the next day.
-            </li>
+            <li>{t('privacy.s4_li4')}</li>
           </ul>
         </section>
 
         <section className="legal-section">
-          <h2>6. Your Rights (GDPR)</h2>
-          <p>If you are in the European Economic Area (EEA) or UK, you have the following rights:</p>
+          <h2>{t('privacy.s5_h')}</h2>
+          <p>{t('privacy.s5_p')}</p>
+        </section>
+
+        <section className="legal-section">
+          <h2>{t('privacy.s6_h')}</h2>
           <ul>
-            <li><strong>Access:</strong> Request a copy of your personal data.</li>
-            <li><strong>Rectification:</strong> Correct inaccurate data in your profile.</li>
-            <li><strong>Erasure ("Right to be Forgotten"):</strong> Request deletion of your account and data.</li>
-            <li><strong>Portability:</strong> Receive your data in a structured, machine-readable format.</li>
-            <li><strong>Restriction:</strong> Request that we restrict processing in certain circumstances.</li>
-            <li><strong>Objection:</strong> Object to processing based on legitimate interests.</li>
-            <li><strong>Withdraw Consent:</strong> Withdraw consent for health data processing at any time (this will require account deletion).</li>
+            <li>{t('privacy.s6_li1')}</li>
+            <li>{t('privacy.s6_li2')}</li>
+            <li>{t('privacy.s6_li3')}</li>
+            <li>{t('privacy.s6_li4')}</li>
+            <li>{t('privacy.s6_li5')}</li>
+            <li>{t('privacy.s6_li6')}</li>
           </ul>
-          <p>
-            To exercise any of these rights, email us at{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We will respond within 30 days.
-          </p>
         </section>
 
         <section className="legal-section">
-          <h2>7. International Data Transfers</h2>
-          <p>
-            Data is stored on Google Cloud infrastructure, which may be located in the United States or
-            other countries. Google participates in the EU–US Data Privacy Framework, providing adequate
-            safeguards for international transfers.
-          </p>
+          <h2>{t('privacy.s7_h')}</h2>
+          <p>{t('privacy.s7_p1')}</p>
+          <ul>
+            <li>{t('privacy.s7_li1')}</li>
+            <li>{t('privacy.s7_li2')}</li>
+            <li>{t('privacy.s7_li3')}</li>
+            <li>{t('privacy.s7_li4')}</li>
+            <li>{t('privacy.s7_li5')}</li>
+            <li>{t('privacy.s7_li6')}</li>
+          </ul>
+          <p>{t('privacy.s7_p2')} <Email /></p>
+          <p>{t('privacy.s7_p3')}</p>
         </section>
 
         <section className="legal-section">
-          <h2>8. Children</h2>
-          <p>
-            ElitePro is not intended for use by persons under the age of 16. We do not knowingly collect
-            personal data from children. If you believe a child has provided us with personal data,
-            contact us at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we will delete it.
-          </p>
+          <h2>{t('privacy.s8_h')}</h2>
+          <p>{t('privacy.s8_p')} <Email /></p>
         </section>
 
         <section className="legal-section">
-          <h2>9. Changes to This Policy</h2>
-          <p>
-            We may update this Privacy Policy from time to time. Material changes will be communicated
-            via in-app notification. Continued use of ElitePro after changes constitutes acceptance of
-            the updated policy. The "Last updated" date at the top indicates when the latest revision
-            was made.
-          </p>
+          <h2>{t('privacy.s9_h')}</h2>
+          <p>{t('privacy.s9_p')}</p>
+          <ul>
+            <li>{t('privacy.s9_li1')}</li>
+            <li>{t('privacy.s9_li2')}</li>
+            <li>{t('privacy.s9_li3')}</li>
+            <li>{t('privacy.s9_li4')} <Email /></li>
+            <li>{t('privacy.s9_li5')}</li>
+          </ul>
         </section>
 
         <section className="legal-section">
-          <h2>10. Contact</h2>
-          <p>
-            Questions, complaints, or data requests:{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-          </p>
-          <p>
-            If you are in the EEA and believe we have not resolved your concern, you have the right to
-            lodge a complaint with your local data protection authority.
-          </p>
+          <h2>{t('privacy.s10_h')}</h2>
+          <p>{t('privacy.s10_p')}</p>
+        </section>
+
+        <section className="legal-section">
+          <h2>{t('privacy.s11_h')}</h2>
+          <p>{t('privacy.s11_p')} <Email /></p>
         </section>
 
         <div className="legal-footer">
-          <Link to="/terms">Terms of Service</Link>
-          <span>·</span>
-          <Link to="/">Back to ElitePro</Link>
+          <Link to="/terms">{t('privacy.to_terms')}</Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/">{t('legal.to_app')}</Link>
         </div>
       </div>
     </div>

@@ -54,6 +54,9 @@ const TRANSLATED_FILES = [
   'src/components/SubscriptionCard.jsx',
   'src/pages/ClientDetailPage.jsx',
   'src/components/HealthSharingPrompt.jsx',
+  // Legal pages: translated 2026-10-29 (B81); the Chinese says the English version applies.
+  'src/pages/PrivacyPolicyPage.jsx',
+  'src/pages/TermsPage.jsx',
   'src/pages/BusinessAnalyticsPage.jsx',
   'src/pages/PublicBookingPage.jsx',
   'src/components/PublicBookingCard.jsx',
