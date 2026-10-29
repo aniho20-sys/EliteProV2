@@ -105,6 +105,7 @@ src/
 │   ├── authErrors.js         # Firebase Auth error code → friendly message map
 │   ├── features.js           # Switched-off parts (B55, Ani 2026-10-23): analytics, invoices, dashboard chart, in-app chat — code and data kept, set true to bring back
 │   ├── bookingBuffer.js      # The coach's break between sessions: bookingBuffer(coach) + tooClose(); server twin in functions/publicBooking.js
+│   ├── cancelPolicy.js       # The coach's own cancellation rule (B82): cancelPolicy(coach), isLateCancel, cancelRuleText; server twin functions/cancelPolicy.js
 │   ├── renewalRates.js       # renewalRates(trainer) → { now, next, lockIn }: one price is enough, the higher after-run-out price is optional (B39) — use it, never read renewalRateNext directly
 │   ├── currencyUtils.js      # formatCurrency(amount, currencyCode) — single source of truth for money display, see convention #31
 │   ├── dateUtils.js          # Local timezone-safe date helpers: localToday, localDateAdd, parseLocalDate
@@ -229,6 +230,9 @@ Top-level config files:
                             // from their coach's profile so the plan card says "test mode" only when true (B36)
   bookingBuffer: 0 | 15 | 30 | 60,  // minutes kept clear between sessions for clients' and strangers' bookings
                             // (Ani 2026-10-21); absent = 30 — read via utils/bookingBuffer.js. The coach's own bookings ignore it
+  cancelPolicy: { noticeHours: 6|12|24|48, freePerMonth: 0-4 | null /* no limit */, note: string },
+                            // B82 (Ani 2026-10-29): the coach's own cancellation rule — onScheduleCreditUpdate refunds a
+                            // client's cancel by it (functions/cancelPolicy.js, twin of utils/cancelPolicy.js). Absent = 24 h, 2/month
   timeZone: string,         // IANA zone (e.g. 'Europe/London'), written once by the app from the trainer's browser; onScheduleCreditUpdate places session date/time in it (functions/zonedTime.js) — absent = read as UTC
   // client-only:
   trainerId: string | null, // UID of trainer

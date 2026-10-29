@@ -311,6 +311,53 @@ describe('onScheduleCreditUpdate — cancellation', () => {
 // B77 (Ani 2026-10-25): every booking is charged when it is made — a client's request too —
 // so the coach declining or cancelling one used to count as the client cancelling: charged
 // if within 24h, and one of the client's two free cancels if not.
+describe('onScheduleCreditUpdate — the coach’s own cancellation rule (B82, Ani 2026-10-29)', () => {
+  beforeEach(async () => { await clearTestCollections(); });
+  const policy = (cancelPolicy) => db.doc(`users/${TRAINER_ID}`).update({ cancelPolicy });
+  const cancelAt = async (hours) => {
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(hours), deductedAtBooking: true });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled' }));
+    return (await getClient()).sessionOffset;
+  };
+
+  test('12 hours’ notice: a cancel 18 hours ahead is refunded (it would be late under the default 24)', async () => {
+    await seedClient({ sessionOffset: 4 });
+    await policy({ noticeHours: 12, freePerMonth: 2, note: '' });
+    expect(await cancelAt(18)).toBe(3);
+  });
+  test('48 hours’ notice: a cancel 30 hours ahead is late, and stays charged', async () => {
+    await seedClient({ sessionOffset: 4 });
+    await policy({ noticeHours: 48, freePerMonth: 2, note: '' });
+    expect(await cancelAt(30)).toBe(4);
+  });
+  test('3 a month: the third early cancel is refunded, the fourth is not', async () => {
+    const month = new Date().toISOString().slice(0, 7);
+    await seedClient({ sessionOffset: 6, earlyCancelMonth: month, earlyCancelCount: 2 });
+    await policy({ noticeHours: 24, freePerMonth: 3, note: '' });
+    expect(await cancelAt(48)).toBe(5);
+    expect(await cancelAt(48)).toBe(5);
+  });
+  test('no limit: the tenth early cancel of the month is still refunded', async () => {
+    const month = new Date().toISOString().slice(0, 7);
+    await seedClient({ sessionOffset: 6, earlyCancelMonth: month, earlyCancelCount: 9 });
+    await policy({ noticeHours: 24, freePerMonth: null, note: '' });
+    expect(await cancelAt(48)).toBe(5);
+  });
+  test('none a month: an early cancel is not refunded — but the coach cancelling still is (B77)', async () => {
+    await seedClient({ sessionOffset: 6 });
+    await policy({ noticeHours: 24, freePerMonth: 0, note: '' });
+    expect(await cancelAt(48)).toBe(6);
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(48), deductedAtBooking: true });
+    await wrappedOnScheduleCreditUpdate(await updateScheduleStatus(ref, snap, { status: 'cancelled', cancelledBy: 'coach' }));
+    expect((await getClient()).sessionOffset).toBe(5);
+  });
+  test('a value the app never offers is read as the default 24 hours, twice a month', async () => {
+    await seedClient({ sessionOffset: 4 });
+    await policy({ noticeHours: 1, freePerMonth: 50 });
+    expect(await cancelAt(18)).toBe(4); // late under 24
+  });
+});
+
 describe('onScheduleCreditUpdate — the coach cancels or declines (B77)', () => {
   beforeEach(async () => { await clearTestCollections(); });
 

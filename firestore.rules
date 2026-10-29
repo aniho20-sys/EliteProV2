@@ -154,7 +154,17 @@ service cloud.firestore {
                          'businessName','intakeCompleted',
                          'language','subscriptionRate','timeZone',
                          'workingHours','bookingBuffer','badges',
-                         'healthSharing','healthSharingAt'])
+                         'healthSharing','healthSharingAt','cancelPolicy'])
+          // cancelPolicy: a coach's own cancellation rule (B82) — the server reads it off the
+          // TRAINER's doc when refunding (functions/cancelPolicy.js). Only the offered values.
+          && (!('cancelPolicy' in request.resource.data)
+              || (request.resource.data.role == 'trainer'
+                  && request.resource.data.cancelPolicy is map
+                  && request.resource.data.cancelPolicy.keys().hasOnly(['noticeHours', 'freePerMonth', 'note'])
+                  && request.resource.data.cancelPolicy.get('noticeHours', 24) in [6, 12, 24, 48]
+                  && request.resource.data.cancelPolicy.get('freePerMonth', 2) in [0, 1, 2, 3, 4, null]
+                  && request.resource.data.cancelPolicy.get('note', '') is string
+                  && request.resource.data.cancelPolicy.get('note', '').size() <= 300))
           // healthSharing: the client's own answer to sharing health information with their
           // coach (isTrainerWithHealthOf); healthSharingAt records when. Not in the coach's list.
           && (!('healthSharing' in request.resource.data)
