@@ -311,6 +311,38 @@ describe('onScheduleCreditUpdate — cancellation', () => {
 // B77 (Ani 2026-10-25): every booking is charged when it is made — a client's request too —
 // so the coach declining or cancelling one used to count as the client cancelling: charged
 // if within 24h, and one of the client's two free cancels if not.
+describe('onScheduleBooked — how late a client may book (B83, Ani 2026-10-31)', () => {
+  beforeEach(async () => { await clearTestCollections(); });
+  const book = async (hours, extra = {}) => {
+    const { ref, snap } = await createSchedule({ ...sessionDateTime(hours), ...extra });
+    await wrappedOnScheduleBooked(snap);
+    return { exists: (await ref.get()).exists, offset: (await getClient()).sessionOffset };
+  };
+
+  test('until the coach chooses, 12 hours: a client booking 6 hours ahead is removed and not charged', async () => {
+    await seedClient({ sessionOffset: 2 });
+    expect(await book(6)).toEqual({ exists: false, offset: 2 });
+    expect(await book(14)).toEqual({ exists: true, offset: 3 });
+  });
+  test('the coach booking for a client is never held to it', async () => {
+    await seedClient({ sessionOffset: 2 });
+    expect(await book(1, { status: 'confirmed' })).toEqual({ exists: true, offset: 3 });
+  });
+  test('the coach’s own choice: 2 hours lets a 6-hour booking through; 48 refuses a 30-hour one', async () => {
+    await seedClient({ sessionOffset: 2 });
+    await db.doc(`users/${TRAINER_ID}`).update({ bookingNoticeHours: 2 });
+    expect((await book(6)).exists).toBe(true);
+    await db.doc(`users/${TRAINER_ID}`).update({ bookingNoticeHours: 48 });
+    expect((await book(30)).exists).toBe(false);
+  });
+  test('no notice: anything still ahead goes through; a time already past never does', async () => {
+    await seedClient({ sessionOffset: 2 });
+    await db.doc(`users/${TRAINER_ID}`).update({ bookingNoticeHours: 0 });
+    expect((await book(1)).exists).toBe(true);
+    expect((await book(-2)).exists).toBe(false);
+  });
+});
+
 describe('onScheduleCreditUpdate — the coach’s own cancellation rule (B82, Ani 2026-10-29)', () => {
   beforeEach(async () => { await clearTestCollections(); });
   const policy = (cancelPolicy) => db.doc(`users/${TRAINER_ID}`).update({ cancelPolicy });

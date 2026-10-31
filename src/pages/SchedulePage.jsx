@@ -17,6 +17,7 @@ import { bookingBuffer, tooClose } from '../utils/bookingBuffer';
 import { FEATURES } from '../utils/features';
 import { formatLongDate, formatMonthYear, formatWeekdayShort } from '../i18n/format';
 import { cancelPolicy, isLateCancel, cancelRuleText } from '../utils/cancelPolicy';
+import { bookingNotice, tooSoonToBook } from '../utils/bookingNotice';
 
 const toMin = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
 
@@ -120,6 +121,10 @@ export default function SchedulePage() {
 
   // The coach's own rule (B82); the server refunds by the same one (functions/cancelPolicy.js).
   const policy = cancelPolicy(trainerUser);
+  // How late a client may still book (B83); the coach booking for a client is never held to it.
+  const noticeHours = bookingNotice(trainerUser);
+  const startMs = (date, time) => new Date(`${date}T${time}:00`).getTime();
+  const tooSoonForClient = (date, time) => !isTrainer && tooSoonToBook(noticeHours, startMs(date, time));
 
   const handleClientCancel = (session) => {
     if (isLateCancel(policy, new Date(`${session.date}T${session.time}:00`).getTime())) {
@@ -161,6 +166,7 @@ export default function SchedulePage() {
       const slotMin = toMin(s);
       if (slotMin + duration > toMin(whEnd)) return false;
       if (!date) return true;
+      if (tooSoonForClient(date, s)) return false;
       return !refSchedule.some(existing => existing.date === date && sessionOverlaps(existing, slotMin, slotMin + duration));
     });
 
@@ -211,6 +217,10 @@ export default function SchedulePage() {
 
     if (hasConflict(form.date, form.time, form.duration)) {
       toast(t('sched.err_time_conflict'), 'error');
+      return;
+    }
+    if (tooSoonForClient(form.date, form.time)) {
+      toast(t('booking.err_too_soon', { hours: noticeHours }), 'error');
       return;
     }
 
@@ -834,8 +844,16 @@ export default function SchedulePage() {
                   made (B39) — the coach's own (B82), with the coach's note for clients. */}
               {bookMode === 'session' && (
                 <p className="text-sm text-muted mb-12">
+                  {!isTrainer && noticeHours > 0 && <>{t('booking.notice_client', { hours: noticeHours })} </>}
                   {cancelRuleText(t, policy, isTrainer)}
                   {!isTrainer && policy.note && <><br />{policy.note}</>}
+                </p>
+              )}
+              {/* Booked this close, it is already past the point where cancelling gives it back. */}
+              {bookMode === 'session' && !isTrainer && form.date && form.time
+                && isLateCancel(policy, startMs(form.date, form.time)) && (
+                <p className="text-sm mb-12" style={{ color: 'var(--warning-dark)' }}>
+                  {t('booking.inside_cancel_window', { hours: policy.noticeHours })}
                 </p>
               )}
               <div className="modal-actions">
