@@ -4,6 +4,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Helpers ──
+    // A coach's monthly price for one plan (B84): blank, or a number above 0 and at most
+    // 100,000 — the same limit as functions/plans.js MAX_MONTHLY_PRICE.
+    function validPlanPrice(v) {
+      return v == null || (v is number && v > 0 && v <= 100000);
+    }
+
     function isAuth() {
       return request.auth != null;
     }
@@ -154,7 +160,17 @@ service cloud.firestore {
                          'businessName','intakeCompleted',
                          'language','subscriptionRate','timeZone',
                          'workingHours','bookingBuffer','badges',
-                         'healthSharing','healthSharingAt','cancelPolicy','bookingNoticeHours'])
+                         'healthSharing','healthSharingAt','cancelPolicy','bookingNoticeHours',
+                         'planPrices'])
+          // planPrices: a coach's fixed monthly price for each plan they offer (B84); the server
+          // prices every plan from the TRAINER's doc (functions/plans.js). Blank (null) = not offered.
+          && (!('planPrices' in request.resource.data)
+              || (request.resource.data.role == 'trainer'
+                  && request.resource.data.planPrices is map
+                  && request.resource.data.planPrices.keys().hasOnly(['fortnightly', 'weekly', 'twice_weekly'])
+                  && validPlanPrice(request.resource.data.planPrices.get('fortnightly', null))
+                  && validPlanPrice(request.resource.data.planPrices.get('weekly', null))
+                  && validPlanPrice(request.resource.data.planPrices.get('twice_weekly', null))))
           // bookingNoticeHours: how late a coach's clients may still book (B83); the server
           // reads it off the TRAINER's doc (onScheduleBooked, publicBooking).
           && (!('bookingNoticeHours' in request.resource.data)

@@ -1136,9 +1136,9 @@ export function AppProvider({ children }) {
   };
 
   // Returns GoCardless's hosted page URL; the caller sends the browser there.
-  const startSubscription = async (tier) => {
+  const startSubscription = async (plan) => {
     const call = httpsCallable(functions, 'gcStartSubscription');
-    return (await call({ tier })).data;
+    return (await call({ plan })).data;
   };
 
   // "Check again" for a subscription GoCardless has not confirmed yet.
@@ -1180,9 +1180,9 @@ export function AppProvider({ children }) {
   };
 
   // Client: Stripe's checkout page for a plan. Returns { subscriptionId, url }.
-  const startStripeSubscription = async (tier) => {
+  const startStripeSubscription = async (plan) => {
     const call = httpsCallable(functions, 'stripeStartSubscription');
-    return (await call({ tier })).data;
+    return (await call({ plan })).data;
   };
 
   const refreshStripeSubscription = async (subscriptionId) => {

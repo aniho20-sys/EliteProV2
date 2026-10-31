@@ -92,11 +92,11 @@ describe('periods and roll-over', () => {
 
   // The design doc's own examples (§4).
   test.each([
-    [{ tier: 4, carriedIn: 0, used: 0 }, { kept: 2, forfeit: 2 }],
-    [{ tier: 8, carriedIn: 0, used: 5 }, { kept: 3, forfeit: 0 }],
-    [{ tier: 12, carriedIn: 0, used: 2 }, { kept: 6, forfeit: 4 }],
-    [{ tier: 8, carriedIn: 4, used: 12 }, { kept: 0, forfeit: 0 }],
-    [{ tier: 8, carriedIn: 0, used: 10 }, { kept: 0, forfeit: 0 }], // overused: nothing to keep
+    [{ granted: 4, cap: 2, carriedIn: 0, used: 0 }, { kept: 2, forfeit: 2 }],
+    [{ granted: 8, cap: 4, carriedIn: 0, used: 5 }, { kept: 3, forfeit: 0 }],
+    [{ granted: 12, cap: 6, carriedIn: 0, used: 2 }, { kept: 6, forfeit: 4 }],
+    [{ granted: 8, cap: 4, carriedIn: 4, used: 12 }, { kept: 0, forfeit: 0 }],
+    [{ granted: 8, cap: 4, carriedIn: 0, used: 10 }, { kept: 0, forfeit: 0 }], // overused: nothing to keep
   ])('%j', (input, expected) => expect(rollover(input)).toMatchObject(expected));
 });
 
@@ -196,6 +196,72 @@ describe('payment confirmed', () => {
     await run([paymentConfirmed('EV9', 'PM9')]);
     expect((await client()).totalSessions).toBe(0);
     expect((await db.doc('gcEvents/EV9').get()).data().outcome).toBe('not_ours');
+  });
+});
+
+// B84 (Ani 2026-10-31): a year of a plan holds exactly its sessions — 52 for one a week, paid
+// in 12 — so the payments add 4, 4, 5 in turn, never 4 every month (48 for 52 weeks' money).
+describe('the three plans (B84)', () => {
+  const plan = (p, perYear, extra = {}) => db.doc('subscriptions/s1').set({
+    clientId: 'c1', trainerId: 'coachA', plan: p, sessionsPerYear: perYear, ratePerSession: 64.62,
+    status: 'active', providerSubscriptionId: 'SB1', providerAuthorisationId: 'MD1', rolloverBanked: 0, paymentsGranted: 0, ...extra,
+  });
+  const month = (i) => { const d = new Date(Date.UTC(2026, 9 + i, 1)); return d.toISOString().slice(0, 10); };
+  const payMonths = async (n) => {
+    for (let i = 0; i < n; i++) {
+      payments[`PM${i}`] = { id: `PM${i}`, status: 'confirmed', charge_date: month(i), links: { subscription: 'SB1' } };
+      await run([paymentConfirmed(`EV${i}`, `PM${i}`)]);
+    }
+    return (await ledger()).filter(l => l.type === 'subscription').sort((a, b) => a.date.localeCompare(b.date)).map(l => l.qty);
+  };
+
+  test('one a week: a year of payments adds 4, 4, 5 in turn — 52 in all', async () => {
+    await plan('weekly', 52);
+    const grants = await payMonths(12);
+    expect(grants).toEqual([4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5]);
+    expect(grants.reduce((a, b) => a + b, 0)).toBe(52);
+    expect(await sub()).toMatchObject({ paymentsGranted: 12, lastGranted: 5 });
+  });
+  test('one every two weeks: 2, 2, 2, 2, 2, 3 — 13 in half a year', async () => {
+    await plan('fortnightly', 26);
+    expect(await payMonths(6)).toEqual([2, 2, 2, 2, 2, 3]);
+  });
+  test('two a week: 8, 9, 9 — 26 a quarter', async () => {
+    await plan('twice_weekly', 104);
+    expect(await payMonths(3)).toEqual([8, 9, 9]);
+  });
+
+  test.each([
+    // [plan, a year, last payment added, kept, forfeited]
+    ['fortnightly', 26, 3, 1, 2],
+    ['weekly', 52, 5, 2, 3],
+    ['twice_weekly', 104, 9, 4, 5],
+  ])('%s: none used last month → two weeks\' worth kept, the rest ends', async (p, perYear, last, kept, forfeit) => {
+    await plan(p, perYear, { paymentsGranted: 3, lastGranted: last, currentPeriodStart: '2026-09-01', currentPeriodEnd: '2026-09-30' });
+    await db.doc('users/c1').update({ totalSessions: last, sessionOffset: 0 });
+    payments.PM4 = { id: 'PM4', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    await run([paymentConfirmed('EV4', 'PM4')]);
+    const added = { fortnightly: 2, weekly: 4, twice_weekly: 8 }[p]; // the 4th payment's share
+    expect((await sub()).rolloverBanked).toBe(kept);
+    expect((await ledger()).find(l => l.id === 'subforfeit-PM4').qty).toBe(-forfeit);
+    expect((await client()).totalSessions).toBe(last + added - forfeit);
+  });
+
+  test('a payment arriving late still takes its turn: the year still adds up', async () => {
+    await plan('weekly', 52);
+    payments.PMb = { id: 'PMb', status: 'confirmed', charge_date: '2026-11-01', links: { subscription: 'SB1' } };
+    payments.PMa = { id: 'PMa', status: 'confirmed', charge_date: '2026-10-01', links: { subscription: 'SB1' } };
+    payments.PMc = { id: 'PMc', status: 'confirmed', charge_date: '2026-12-01', links: { subscription: 'SB1' } };
+    await run([paymentConfirmed('EVb', 'PMb')]);
+    await run([paymentConfirmed('EVa', 'PMa')]); // October's, retried after November's
+    await run([paymentConfirmed('EVc', 'PMc')]);
+    const grants = (await ledger()).filter(l => l.type === 'subscription').map(l => l.qty);
+    expect(grants.reduce((a, b) => a + b, 0)).toBe(13);
+    expect((await sub()).paymentsGranted).toBe(3);
+  });
+
+  test('a plan made before B84 (tier 8) still adds 8 every month', async () => {
+    expect(await payMonths(3)).toEqual([8, 8, 8]);
   });
 });
 

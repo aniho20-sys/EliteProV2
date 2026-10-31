@@ -23,6 +23,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { hasAppAccount } from '../utils/managedClient';
 import { contactLinks } from '../utils/contactLinks';
 import { renewalRates } from '../utils/renewalRates';
+import { offeredPlans } from '../utils/subscriptionUtils';
 
 
 
@@ -605,8 +606,8 @@ export default function ClientDetailPage() {
               </form>
             </div>
 
-            {/* Monthly-plan sandbox tester — shown once the trainer has set a plan rate */}
-            {currentUser.subscriptionRate > 0 && (
+            {/* Monthly-plan sandbox tester — shown once the trainer offers a plan (B84) */}
+            {offeredPlans(currentUser).length > 0 && (
               <div className="mt-16">
                 <div className="text-sm fw-bold">{t('sub.tester_label')}</div>
                 <p className="text-sm text-muted mt-8">{t('sub.tester_desc')}</p>

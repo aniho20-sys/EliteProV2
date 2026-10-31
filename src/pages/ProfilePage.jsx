@@ -7,7 +7,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { reauthenticateWithPopup, reauthenticateWithCredential, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { isIOS, isStandalone } from '../utils/deviceUtils';
-import { CURRENCIES, formatCurrency } from '../utils/currencyUtils';
+import { CURRENCIES } from '../utils/currencyUtils';
 import { SkeletonLine } from '../components/Skeleton';
 import MovementPatternScanner from '../components/MovementPatternScanner';
 import PlatformStatsCard from '../components/PlatformStatsCard';
@@ -22,7 +22,7 @@ import StripeConnectCard from '../components/StripeConnectCard';
 import StripeKeysCard from '../components/StripeKeysCard';
 import { inviteUrl } from '../utils/inviteLink';
 import { gcWebhookUrl } from '../utils/gcLinks';
-import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
+import { PLANS, SESSIONS_PER_YEAR, DEFAULT_PLAN_PRICES_GBP, MAX_MONTHLY_PRICE, planLabel } from '../utils/subscriptionUtils';
 import { BUFFER_OPTIONS, bookingBuffer } from '../utils/bookingBuffer';
 import { NOTICE_OPTIONS, FREE_OPTIONS, NOTE_MAX, cancelPolicy, cancelRuleText } from '../utils/cancelPolicy';
 import { BOOKING_NOTICE_OPTIONS, bookingNotice } from '../utils/bookingNotice';
@@ -165,7 +165,13 @@ export default function ProfilePage() {
   const [showLockIn, setShowLockIn] = useState(renewalRates(currentUser).lockIn);
   const [renewalRateNext, setRenewalRateNext] = useState(currentUser.renewalRateNext ?? '');
   const [renewalCurrency, setRenewalCurrency] = useState(currentUser.currency || 'GBP');
-  const [subscriptionRate, setSubscriptionRate] = useState(currentUser.subscriptionRate ?? '');
+  // B84: a fixed monthly price for each plan. A GBP coach who has never saved sees Ani's
+  // prices filled in (nothing is offered until they save); anyone else starts blank.
+  const [planPrices, setPlanPrices] = useState(() => {
+    const saved = currentUser.planPrices;
+    const defaults = !saved && (currentUser.currency || 'GBP') === 'GBP' ? DEFAULT_PLAN_PRICES_GBP : {};
+    return Object.fromEntries(PLANS.map(p => [p, String(saved ? (saved[p] ?? '') : (defaults[p] ?? ''))]));
+  });
   const [subRateSaving, setSubRateSaving] = useState(false);
   // B49: once ElitePro's Stripe is set up, monthly plans go through Stripe for every coach.
   const [stripeConfigured, setStripeConfigured] = useState(false);
@@ -285,20 +291,26 @@ export default function ProfilePage() {
     }
   };
 
-  // Phase 3: the per-session rate monthly plans are priced from. The server re-reads it
-  // from this document and computes every plan itself — this only stores the number.
-  const handleSaveSubscriptionRate = async () => {
-    const rate = Number(subscriptionRate);
-    if (!Number.isFinite(rate) || rate <= 0) {
-      toast(t('sub.rate_invalid'), 'error');
-      return;
+  // B84: the coach's monthly price for each plan. The server re-reads them from this document
+  // and prices every plan itself — this only stores the numbers. Blank = not offered.
+  const handleSavePlanPrices = async () => {
+    const out = {};
+    for (const p of PLANS) {
+      const raw = String(planPrices[p]).trim();
+      if (raw === '') { out[p] = null; continue; }
+      const v = Number(raw);
+      if (!Number.isFinite(v) || v <= 0 || v > MAX_MONTHLY_PRICE) {
+        toast(t('sub.prices_invalid'), 'error');
+        return;
+      }
+      out[p] = Math.round(v * 100) / 100;
     }
     setSubRateSaving(true);
     try {
-      await updateClient(currentUser.id, { subscriptionRate: rate });
-      toast(t('sub.rate_saved'));
+      await updateClient(currentUser.id, { planPrices: out });
+      toast(t('sub.prices_saved'));
     } catch {
-      toast(t('sub.rate_save_failed'), 'error');
+      toast(t('sub.prices_save_failed'), 'error');
     } finally {
       setSubRateSaving(false);
     }
@@ -580,35 +592,35 @@ export default function ProfilePage() {
     }
   };
 
-  // Plan pricing (Phase 3 / B49): the coach's per-session rate for monthly plans, shown in
-  // whichever processor's card is active. GoCardless is Bacs, GBP only; Stripe charges in
-  // the coach's own currency.
+  // Plan pricing (B84): the coach's fixed monthly price for each plan, shown in whichever
+  // processor's card is active. GoCardless is Bacs, GBP only; Stripe charges in the coach's
+  // own currency.
   const renderRateFields = ({ gbpOnly }) => {
     const currency = gbpOnly ? 'GBP' : (currentUser.currency || 'GBP');
     const wrongCurrency = gbpOnly && (currentUser.currency || 'GBP') !== 'GBP';
     return (
       <>
         <div className="form-group mt-8">
-          <label className="form-label" htmlFor="profile-sub-rate">{t('sub.rate_label')}</label>
-          <input id="profile-sub-rate" type="number" min="0" step="0.01" inputMode="decimal" className="form-input" placeholder="65"
-            value={subscriptionRate} onChange={e => setSubscriptionRate(e.target.value)} />
-          <p className="text-sm text-muted mt-8">{t('sub.rate_hint')}</p>
+          <div className="form-label">{t('sub.prices_label', { currency })}</div>
+          <p className="text-sm text-muted">{t('sub.prices_hint')}</p>
+          {PLANS.map(p => (
+            <div key={p} className="mt-8">
+              <label className="text-sm" htmlFor={`profile-plan-${p}`}>
+                {planLabel(t, p)} · {t('sub.per_year', { n: SESSIONS_PER_YEAR[p] })}
+              </label>
+              <input id={`profile-plan-${p}`} type="number" min="0" step="0.01" inputMode="decimal" className="form-input"
+                placeholder={t('sub.not_offered')}
+                value={planPrices[p]} onChange={e => setPlanPrices(prev => ({ ...prev, [p]: e.target.value }))} />
+            </div>
+          ))}
+          <p className="text-sm text-muted mt-8">{t('sub.spread_note')}</p>
           <p className="text-sm text-muted mt-8">{t('sub.rollover_note_coach')}</p>
-          {monthlyAmount(subscriptionRate, 4) !== null && !wrongCurrency && (
-            <ul className="text-sm mt-8" style={{ paddingLeft: 18 }}>
-              {SUBSCRIPTION_TIERS.map(n => (
-                <li key={n}>
-                  {t('sub.tier_option', { n })} · {t('sub.per_month', { amount: formatCurrency(monthlyAmount(subscriptionRate, n), currency) })}
-                </li>
-              ))}
-            </ul>
-          )}
           {wrongCurrency && (
             <p className="text-sm mt-8" style={{ color: 'var(--danger-text)' }}>{t('sub.gbp_only')}</p>
           )}
         </div>
-        <button className="btn btn-primary mb-16" onClick={handleSaveSubscriptionRate} disabled={subRateSaving} style={{ width: '100%' }}>
-          {subRateSaving ? t('profile.saving_dots') : t('sub.rate_save')}
+        <button className="btn btn-primary mb-16" onClick={handleSavePlanPrices} disabled={subRateSaving} style={{ width: '100%' }}>
+          {subRateSaving ? t('profile.saving_dots') : t('sub.prices_save')}
         </button>
       </>
     );

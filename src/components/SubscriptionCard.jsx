@@ -5,11 +5,11 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatCurrency } from '../utils/currencyUtils';
-import { SUBSCRIPTION_TIERS, monthlyAmount, currentSubscription } from '../utils/subscriptionUtils';
+import { SESSIONS_PER_YEAR, planPrice, offeredPlans, rolloverCap, planLabel, currentSubscription } from '../utils/subscriptionUtils';
 import { SkeletonLine } from './Skeleton';
 
-// Client-facing monthly plan (Phase 3 Step 3). The client picks a tier; the server
-// prices it from the trainer's own rate, and the card or bank details are entered on the
+// Client-facing monthly plan (Phase 3 Step 3, B84). The client picks a plan; the server
+// prices it from the coach's own monthly price, and the card or bank details are entered on the
 // processor's own page — never here. A coach on Stripe (B49, functions/stripeSubscriptions.js)
 // takes plans through Stripe in their own currency; otherwise GoCardless (Bacs, GBP only,
 // functions/gcSubscriptions.js).
@@ -25,14 +25,16 @@ export default function SubscriptionCard() {
   const location = useLocation();
 
   const [subs, setSubs] = useState(null);
-  const [tier, setTier] = useState(8);
+  const [picked, setPicked] = useState(null);
   const [starting, setStarting] = useState(false);
   const [checking, setChecking] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
   const trainer = (data.users || []).find(u => u.id === currentUser.trainerId);
-  const rate = trainer?.subscriptionRate;
+  const plans = offeredPlans(trainer);
+  // One a week unless the coach does not offer it, then the first they do.
+  const plan = plans.includes(picked) ? picked : (plans.includes('weekly') ? 'weekly' : plans[0]);
   // The server writes stripeEnvironment (B49) / gcEnvironment onto the coach's profile when
   // they connect. Stripe wins once the coach has it. Anything but 'live' is test mode —
   // including GoCardless coaches who connected before the field existed — and only then may
@@ -42,7 +44,7 @@ export default function SubscriptionCard() {
   const currency = onStripe ? (trainer.currency || 'GBP') : 'GBP';
   const offered = currentUser.role === 'client'
     && currentUser.subscriptionTester === true
-    && !!trainer && monthlyAmount(rate, 4) !== null
+    && !!trainer && plans.length > 0
     && (onStripe || (trainer.currency || 'GBP') === 'GBP');
 
   const load = useCallback(async () => {
@@ -86,7 +88,7 @@ export default function SubscriptionCard() {
   const handleStart = async () => {
     setStarting(true);
     try {
-      const { url } = await (onStripe ? startStripeSubscription(tier) : startSubscription(tier));
+      const { url } = await (onStripe ? startStripeSubscription(plan) : startSubscription(plan));
       window.location.href = url;
     } catch (err) {
       const code = err?.code || '';
@@ -150,7 +152,7 @@ export default function SubscriptionCard() {
             <span className="tag tag-accent">{t('sub.active')}</span>
           )}
           <p className="text-sm mt-8">
-            {t('sub.your_plan', { n: current.tier, amount: formatCurrency(current.monthlyAmount, current.currency || 'GBP') })}
+            {t('sub.your_plan', { plan: planLabel(t, current), amount: formatCurrency(current.monthlyAmount, current.currency || 'GBP') })}
           </p>
           <button type="button" className="btn btn-outline btn-sm mt-8" onClick={() => setConfirmCancel(true)}>
             {t('sub.cancel')}
@@ -167,24 +169,29 @@ export default function SubscriptionCard() {
         <>
           <p className="invite-desc">{onStripe ? t('sub.intro_stripe') : t('sub.intro')}</p>
           <div className="mt-8" role="radiogroup" aria-label={t('sub.title')}>
-            {SUBSCRIPTION_TIERS.map(n => (
+            {plans.map(p => (
               <button
-                key={n}
+                key={p}
                 type="button"
                 role="radio"
-                aria-checked={tier === n}
-                className={`btn ${tier === n ? 'btn-primary' : 'btn-outline'}`}
-                style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}
-                onClick={() => setTier(n)}
+                aria-checked={plan === p}
+                className={`btn ${plan === p ? 'btn-primary' : 'btn-outline'}`}
+                style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8, textAlign: 'left' }}
+                onClick={() => setPicked(p)}
               >
-                <span>{t('sub.tier_option', { n })}</span>
-                <span>{t('sub.per_month', { amount: formatCurrency(monthlyAmount(rate, n), currency) })}</span>
+                <span>
+                  <span style={{ display: 'block' }}>{planLabel(t, p)}</span>
+                  <span className="text-sm" style={{ display: 'block', opacity: 0.8 }}>{t('sub.per_year', { n: SESSIONS_PER_YEAR[p] })}</span>
+                </span>
+                <span>{t('sub.per_month', { amount: formatCurrency(planPrice(trainer, p), currency) })}</span>
               </button>
             ))}
           </div>
-          {/* What gcWebhooks.js rollover() does at each payment (B39) — unused sessions above
-              half a month's worth end, and nothing on screen said so. */}
-          <p className="text-sm text-muted">{t('sub.rollover_note', { n: Math.floor(tier / 2) })}</p>
+          {/* B84: the sessions follow the year, not the month — say how, so 4, 4, 5 is no surprise.
+              And what gcWebhooks.js rollover() does at each payment (B39): unused sessions above
+              two weeks' worth end. */}
+          <p className="text-sm text-muted">{t('sub.spread_note')}</p>
+          <p className="text-sm text-muted mt-8">{t('sub.rollover_note', { n: rolloverCap(SESSIONS_PER_YEAR[plan]) })}</p>
           <button className="btn btn-accent mt-8" onClick={handleStart} disabled={starting} style={{ width: '100%' }}>
             {starting
               ? (onStripe ? t('sub.redirecting_stripe') : t('sub.redirecting'))

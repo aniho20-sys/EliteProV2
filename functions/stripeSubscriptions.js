@@ -14,8 +14,9 @@
 
 const { stripeRequest, StripeApiError, describeStripeError, keyEnvironment } = require('./stripeApi');
 const { COUNTRIES } = require('./stripeConnect');
+const { PLANS, planName } = require('./plans');
 const {
-  TIERS, LIVE_STATUSES, FINISHED_STATUSES, CLAIM_TTL_MS, SubscriptionError, monthlyAmountPence,
+  LIVE_STATUSES, FINISHED_STATUSES, CLAIM_TTL_MS, SubscriptionError, pricePlan,
 } = require('./gcSubscriptions');
 
 // Same pilot rule as GoCardless: only clients the coach has marked `subscriptionTester`.
@@ -37,9 +38,8 @@ async function connectionFor(db, trainerId, keys) {
   return stripe;
 }
 
-async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUrl, exitUrl }) {
-  tier = Number(tier);
-  if (!TIERS.includes(tier)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
+async function startSubscription({ db, uid, plan, keys, fetchImpl, now, returnUrl, exitUrl }) {
+  if (!PLANS.includes(plan)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
 
   const clientSnap = await db.doc(`users/${uid}`).get();
   const client = clientSnap.exists ? clientSnap.data() : null;
@@ -55,7 +55,8 @@ async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUr
   if (!trainer || trainer.role !== 'trainer') throw new SubscriptionError('failed-precondition', 'Trainer not found');
   const currency = trainer.currency || 'GBP';
   if (!CURRENCIES.includes(currency)) throw new SubscriptionError('failed-precondition', 'Unsupported currency');
-  const amount = monthlyAmountPence(trainer.subscriptionRate, tier);
+  const priced = pricePlan(trainer, plan);
+  const amount = priced.amount;
 
   if (!keys) throw new SubscriptionError('failed-precondition', 'Stripe is not set up yet');
   const conn = await connectionFor(db, trainerId, keys);
@@ -125,9 +126,11 @@ async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUr
     id: subscriptionId,
     clientId: uid,
     trainerId,
-    tier,
-    ratePerSession: Number(trainer.subscriptionRate),
+    plan,
+    sessionsPerYear: priced.sessionsPerYear,
+    ratePerSession: priced.ratePerSession,
     monthlyAmount: amount / 100,
+    paymentsGranted: 0,
     currency,
     status: 'pending',
     provider: 'stripe',
@@ -164,7 +167,7 @@ async function startSubscription({ db, uid, tier, keys, fetchImpl, now, returnUr
             currency: currency.toLowerCase(),
             unit_amount: amount,
             recurring: { interval: 'month' },
-            product_data: { name: `${tier} sessions a month` },
+            product_data: { name: planName({ plan }) },
           },
         }],
         metadata: { subscription_id: subscriptionId },
