@@ -16,6 +16,7 @@
 
 const crypto = require('crypto');
 const { apiBase, connectionEnvironment } = require('./gcEnv');
+const { sessionsPerYearOf, sessionsForPayment, rolloverCap } = require('./plans');
 
 const ALREADY_EXISTS = 6;
 
@@ -47,12 +48,14 @@ function periodEnd(start) {
 // The design doc wrote this as "grant = tier + rolloverBanked". That double-counts: the
 // client's credit is a running balance (totalSessions − sessionOffset), so last month's
 // unused sessions are already in it. What the rule actually changes is how much of that
-// leftover survives. So each new payment adds the tier, and takes back whatever of last
-// period's allowance went unused beyond the cap.
-function rollover({ tier, carriedIn, used }) {
-  const allowance = tier + carriedIn;
+// leftover survives. So each new payment adds that month's sessions, and takes back
+// whatever of last period's allowance went unused beyond the cap.
+//
+// B84: `granted` is what last period's payment added (4, 4 or 5 on a one-a-week plan) and
+// `cap` is plans.js rolloverCap — half a month's worth, i.e. two weeks of the plan.
+function rollover({ granted, cap, carriedIn, used }) {
+  const allowance = granted + carriedIn;
   const unused = Math.max(0, allowance - used);
-  const cap = Math.floor(tier / 2);
   const kept = Math.min(unused, cap);
   return { allowance, unused, kept, forfeit: unused - kept };
 }
@@ -122,6 +125,11 @@ async function grantForPayment({ db, sub, payment, now }) {
     // A payment for an earlier period arriving after a later one (a retry, a redelivery):
     // grant it, but never move the period backwards or re-run the roll-over against it.
     const stale = !!(cur.currentPeriodStart && start < cur.currentPeriodStart);
+    // This payment's share of the year (B84): the n-th payment of a one-a-week plan adds
+    // 4, 4 or 5. Counted per payment granted, so a late or retried one still takes its turn.
+    const perYear = sessionsPerYearOf(cur);
+    const paymentNo = (Number.isInteger(cur.paymentsGranted) ? cur.paymentsGranted : 0) + 1;
+    const grant = sessionsForPayment(perYear, paymentNo);
 
     // What was used in the period that just ended. Sessions booked with this coach, not
     // cancelled — the same thing the credit logic charges for. Single-field query (#34).
@@ -132,7 +140,10 @@ async function grantForPayment({ db, sub, payment, now }) {
       const used = sessions.docs.map(d => d.data()).filter(x => x.trainerId === s.trainerId
         && !x.isBlocked && chargedSession(x)
         && x.date >= cur.currentPeriodStart && x.date <= cur.currentPeriodEnd).length;
-      ({ forfeit, kept } = rollover({ tier: s.tier, carriedIn: cur.rolloverBanked || 0, used }));
+      ({ forfeit, kept } = rollover({
+        granted: Number.isInteger(cur.lastGranted) ? cur.lastGranted : Math.floor(perYear / 12),
+        cap: rolloverCap(perYear), carriedIn: cur.rolloverBanked || 0, used,
+      }));
       // Never take back more than the client actually holds — pack sessions bought
       // separately are theirs, and a negative balance here would be an invented debt.
       const remaining = (client.totalSessions || 0) - (client.sessionOffset || 0);
@@ -141,16 +152,18 @@ async function grantForPayment({ db, sub, payment, now }) {
 
     const at = now().toISOString();
     const base = { clientId: s.clientId, trainerId: s.trainerId, date: start, subscriptionId: subRef.id, paymentId: payment.id, addedBy: 'subscription' };
-    tx.create(grantRef, { ...base, type: 'subscription', qty: s.tier, rate: s.ratePerSession ?? null });
+    tx.create(grantRef, { ...base, type: 'subscription', qty: grant, rate: s.ratePerSession ?? null });
     if (forfeit > 0) tx.create(forfeitRef, { ...base, type: SESSIONS_FORFEIT, qty: -forfeit, rate: null });
     tx.update(clientRef, {
-      totalSessions: (client.totalSessions || 0) + s.tier - forfeit,
+      totalSessions: (client.totalSessions || 0) + grant - forfeit,
       // Same as a manual top-up (addCreditLedgerEntry): the renewal prompts start over.
       renewalPrompt3Shown: false,
       renewalPrompt1Shown: false,
       renewalPromptSnoozedUntil: null,
     });
-    tx.update(subRef, stale ? { updatedAt: at } : {
+    tx.update(subRef, stale ? { paymentsGranted: paymentNo, updatedAt: at } : {
+      paymentsGranted: paymentNo,
+      lastGranted: grant,
       currentPeriodStart: start,
       currentPeriodEnd: end,
       rolloverBanked: kept,
@@ -160,7 +173,7 @@ async function grantForPayment({ db, sub, payment, now }) {
       ...(cur.status === 'past_due' ? { status: 'active' } : {}),
       updatedAt: at,
     });
-    return { outcome: 'granted', granted: s.tier, forfeit };
+    return { outcome: 'granted', granted: grant, forfeit };
   });
 }
 

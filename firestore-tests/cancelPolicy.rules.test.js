@@ -60,3 +60,24 @@ describe('how late a coach’s clients may book (B83)', () => {
     await assertFails(setNotice(STUDENT, COACH, 0));
   });
 });
+
+describe('a coach’s monthly plan prices (B84)', () => {
+  const setPrices = (uid, target, v) => updateDoc(doc(as(uid), 'users', target), { planPrices: v });
+  test('the coach sets any plans they offer, blank for the rest', async () => {
+    await assertSucceeds(setPrices(COACH, COACH, { fortnightly: 150, weekly: 280, twice_weekly: 540 }));
+    await assertSucceeds(setPrices(COACH, COACH, { fortnightly: null, weekly: 279.5, twice_weekly: null }));
+    await assertSucceeds(setPrices(COACH, COACH, { weekly: 100000 }));
+  });
+  test('zero, negative, huge, text or unknown plans are refused', async () => {
+    await assertFails(setPrices(COACH, COACH, { weekly: 0 }));
+    await assertFails(setPrices(COACH, COACH, { weekly: -5 }));
+    await assertFails(setPrices(COACH, COACH, { weekly: 100001 }));
+    await assertFails(setPrices(COACH, COACH, { weekly: '280' }));
+    await assertFails(setPrices(COACH, COACH, { monthly: 280 }));
+    await assertFails(setPrices(COACH, COACH, 280));
+  });
+  test('a client cannot set them — not on themselves, not on their coach', async () => {
+    await assertFails(setPrices(STUDENT, STUDENT, { weekly: 1 }));
+    await assertFails(setPrices(STUDENT, COACH, { weekly: 1 }));
+  });
+});

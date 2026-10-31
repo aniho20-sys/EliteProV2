@@ -28,7 +28,7 @@ const { LanguageProvider } = await import('../i18n/LanguageContext');
 const { ThemeProvider } = await import('../context/ThemeContext');
 const { default: ProfilePage } = await import('./ProfilePage');
 
-const COACH = { id: 'coachUid0000000001', name: 'Coach', email: 'coach@example.test', role: 'trainer', inviteCode: 'ABC123', currency: 'HKD', subscriptionRate: 400 };
+const COACH = { id: 'coachUid0000000001', name: 'Coach', email: 'coach@example.test', role: 'trainer', inviteCode: 'ABC123', currency: 'HKD', planPrices: { weekly: 1700 } };
 const ANI = { ...COACH, email: 'aniho20@gmail.com', currency: 'GBP' };
 const CLIENT = { id: 'clientUid000000001', name: 'Client', role: 'client', trainerId: COACH.id, subscriptionTester: true };
 
@@ -112,7 +112,10 @@ describe('a coach and Stripe', () => {
     await waitFor(() => expect(app.refreshStripeConnection).toHaveBeenCalled());
     expect(await screen.findByText('Stripe is ready — your clients can now choose a monthly plan.')).toBeTruthy();
     expect(await screen.findByText('Test mode')).toBeTruthy();
-    expect(screen.getByText(/HKD 1,733\.33/)).toBeTruthy(); // HK$400 × 4 × 13 / 12
+    // B84: the coach's own monthly prices, in their currency — an HKD coach starts blank, never £.
+    expect(screen.getByText('Monthly plan prices (HKD)')).toBeTruthy();
+    expect(screen.getByLabelText(/One session a week/).value).toBe('1700');
+    expect(screen.getByLabelText(/Two sessions a week/).value).toBe('');
   });
   test('B79: a UK account with prices in HKD is told to change the currency', async () => {
     app = makeApp({ getPaymentConnection: vi.fn(async () => ({ stripe: { accountId: 'acct_1', status: 'connected', country: 'GB', environment: 'sandbox' } })) });
@@ -137,6 +140,36 @@ describe('a coach and Stripe', () => {
   });
 });
 
+describe('a coach sets the monthly plan prices (B84)', () => {
+  const ukReady = () => vi.fn(async () => ({ stripe: { accountId: 'acct_1', status: 'connected', country: 'GB', environment: 'sandbox' } }));
+  test('a GBP coach who never saved sees £150 / £280 / £540 filled in; blank saves as not offered', async () => {
+    app = makeApp({ currentUser: { ...ANI, planPrices: undefined }, getPaymentConnection: ukReady() });
+    renderProfile();
+    expect(await screen.findByText('Monthly plan prices (GBP)')).toBeTruthy();
+    expect(screen.getByLabelText(/One session every two weeks/).value).toBe('150');
+    expect(screen.getByLabelText(/One session a week/).value).toBe('280');
+    expect(screen.getByLabelText(/Two sessions a week/).value).toBe('540');
+    fireEvent.change(screen.getByLabelText(/Two sessions a week/), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText(/One session a week/), { target: { value: '275.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save plan prices' }));
+    await waitFor(() => expect(app.updateClient).toHaveBeenCalledWith(ANI.id, { planPrices: { fortnightly: 150, weekly: 275.5, twice_weekly: null } }));
+  });
+  test('a saved choice is shown as saved, not replaced by the defaults', async () => {
+    app = makeApp({ currentUser: { ...ANI, planPrices: { fortnightly: null, weekly: 300, twice_weekly: null } }, getPaymentConnection: ukReady() });
+    renderProfile();
+    expect((await screen.findByLabelText(/One session a week/)).value).toBe('300');
+    expect(screen.getByLabelText(/One session every two weeks/).value).toBe('');
+  });
+  test('zero or text is refused before anything is written', async () => {
+    app = makeApp({ currentUser: { ...ANI, planPrices: undefined }, getPaymentConnection: ukReady() });
+    renderProfile();
+    fireEvent.change(await screen.findByLabelText(/One session a week/), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save plan prices' }));
+    expect(await screen.findByText('Enter a price above zero, or leave it blank')).toBeTruthy();
+    expect(app.updateClient).not.toHaveBeenCalled();
+  });
+});
+
 describe('a client of a Stripe coach', () => {
   const stripeCoach = { ...COACH, stripeEnvironment: 'sandbox' };
   test('sees Stripe wording and HKD prices, and is sent to Stripe — not GoCardless', async () => {
@@ -146,13 +179,13 @@ describe('a client of a Stripe coach', () => {
     expect(screen.getAllByText(/HKD /).length).toBeGreaterThan(0);
     expect(screen.queryByText(/GoCardless/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Continue to payment' }));
-    await waitFor(() => expect(app.startStripeSubscription).toHaveBeenCalledWith(8));
+    await waitFor(() => expect(app.startStripeSubscription).toHaveBeenCalledWith('weekly'));
     expect(app.startSubscription).not.toHaveBeenCalled();
   });
   test('a Stripe plan still being confirmed is checked with Stripe', async () => {
     app = makeApp({
       currentUser: CLIENT, firebaseUser: { uid: CLIENT.id, providerData: [] }, data: { users: [stripeCoach] }, getClient: () => stripeCoach,
-      getSubscriptions: vi.fn(async () => [{ id: 'plan000001', status: 'pending', provider: 'stripe', tier: 4, monthlyAmount: 1733.33, currency: 'HKD' }]),
+      getSubscriptions: vi.fn(async () => [{ id: 'plan000001', status: 'pending', provider: 'stripe', plan: 'weekly', monthlyAmount: 1700, currency: 'HKD' }]),
     });
     renderProfile();
     expect(await screen.findByText('Waiting for Stripe to confirm your payment.')).toBeTruthy();

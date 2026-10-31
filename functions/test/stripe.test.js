@@ -64,8 +64,8 @@ const notify = async (n) => { notified.push(n); };
 beforeEach(async () => {
   await clearAll();
   notified = [];
-  await db.doc('users/coachA').set({ id: 'coachA', role: 'trainer', email: 'a@coach.test', subscriptionRate: 65, currency: 'GBP' });
-  await db.doc('users/coachB').set({ id: 'coachB', role: 'trainer', subscriptionRate: 400, currency: 'HKD' });
+  await db.doc('users/coachA').set({ id: 'coachA', role: 'trainer', email: 'a@coach.test', planPrices: { fortnightly: 150, weekly: 280, twice_weekly: 540 }, currency: 'GBP' });
+  await db.doc('users/coachB').set({ id: 'coachB', role: 'trainer', planPrices: { weekly: 1700 }, currency: 'HKD' });
   await db.doc('users/c1').set({ id: 'c1', role: 'client', trainerId: 'coachA', email: 'c1@x.test', subscriptionTester: true, totalSessions: 0, sessionOffset: 0 });
   await db.doc('users/c2').set({ id: 'c2', role: 'client', trainerId: 'coachB', subscriptionTester: true, totalSessions: 0, sessionOffset: 0 });
   await coachConn('coachA', 'acct_AAAAAAAA');
@@ -225,7 +225,7 @@ describe('a coach connects their own Stripe account', () => {
     expect((await db.doc('users/coachA').get()).data().stripeEnvironment).toBeNull();
     const st = fakeStripe({});
     expect(await refreshConnection({ db, trainerId: 'coachA', keys: KEYS, fetchImpl: st.fetchImpl, now: NOW })).toEqual({ status: 'disconnected' });
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'failed-precondition' });
   });
   test('whose account an event is about: the one coach, never a guess', async () => {
     expect(await trainerForAccount(db, 'acct_AAAAAAAA')).toBe('coachA');
@@ -240,8 +240,8 @@ const checkoutRoutes = (over = {}) => ({
   'POST /v1/checkout/sessions': () => [200, { id: 'cs_test_NEW', url: 'https://checkout.stripe.com/c/pay/cs_test_NEW' }],
   ...over,
 });
-const startPlan = (uid, tier, st, over = {}) => stripeSubs.startSubscription({
-  db, uid, tier, keys: KEYS, fetchImpl: st.fetchImpl, now: NOW,
+const startPlan = (uid, plan, st, over = {}) => stripeSubs.startSubscription({
+  db, uid, plan, keys: KEYS, fetchImpl: st.fetchImpl, now: NOW,
   returnUrl: (id) => `https://fn/return?sub=${id}`, exitUrl: 'https://app/exit', ...over,
 });
 const plans = async (uid) => (await db.collection('subscriptions').where('clientId', '==', uid).get()).docs.map(d => d.data());
@@ -249,7 +249,7 @@ const plans = async (uid) => (await db.collection('subscriptions').where('client
 describe('a client starts a plan', () => {
   test('UK coach: priced on the server, card or Bacs, on the coach’s own account', async () => {
     const st = fakeStripe(checkoutRoutes());
-    const res = await startPlan('c1', 8, st);
+    const res = await startPlan('c1', 'twice_weekly', st);
     expect(res.url).toBe('https://checkout.stripe.com/c/pay/cs_test_NEW');
     const call = st.calls[0];
     expect(call.account).toBe('acct_AAAAAAAA');
@@ -260,46 +260,47 @@ describe('a client starts a plan', () => {
       'payment_method_types[0]': 'card',
       'payment_method_types[1]': 'bacs_debit',
       'line_items[0][price_data][currency]': 'gbp',
-      'line_items[0][price_data][unit_amount]': '56333', // £65 × 8 × 13 / 12
+      'line_items[0][price_data][unit_amount]': '54000', // the coach's £540 a month (B84)
+      'line_items[0][price_data][product_data][name]': 'Two sessions a week',
       'line_items[0][price_data][recurring][interval]': 'month',
       'subscription_data[metadata][subscription_id]': res.subscriptionId,
     });
     const [plan] = await plans('c1');
     expect(plan).toMatchObject({ status: 'pending', provider: 'stripe', currency: 'GBP', providerAccountId: 'acct_AAAAAAAA',
-      checkoutSessionId: 'cs_test_NEW', monthlyAmount: 563.33, tier: 8 });
+      checkoutSessionId: 'cs_test_NEW', monthlyAmount: 540, plan: 'twice_weekly', sessionsPerYear: 104, paymentsGranted: 0 });
   });
   test('Hong Kong coach: HKD, card only', async () => {
     await coachConn('coachB', 'acct_BBBBBBBB', { country: 'HK', bacsEnabled: false });
     const st = fakeStripe(checkoutRoutes());
-    await startPlan('c2', 4, st);
+    await startPlan('c2', 'weekly', st);
     expect(st.calls[0].body['line_items[0][price_data][currency]']).toBe('hkd');
-    expect(st.calls[0].body['line_items[0][price_data][unit_amount]']).toBe('173333'); // HK$400 × 4 × 13 / 12
+    expect(st.calls[0].body['line_items[0][price_data][unit_amount]']).toBe('170000'); // HK$1,700 a month
     expect(st.calls[0].body['payment_method_types[1]']).toBeUndefined();
   });
   test('B79: a coach whose currency is not their Stripe country\'s is refused, nothing sent to Stripe', async () => {
     await db.doc('users/coachA').update({ currency: 'HKD' }); // UK account
     const st = fakeStripe(checkoutRoutes());
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'failed-precondition' });
     await coachConn('coachB', 'acct_BBBBBBBB', { country: 'HK', bacsEnabled: false });
     await db.doc('users/coachB').update({ currency: 'GBP' }); // Hong Kong account
-    await expect(startPlan('c2', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    await expect(startPlan('c2', 'weekly', st)).rejects.toMatchObject({ code: 'failed-precondition' });
     expect(st.calls).toHaveLength(0);
     expect(await plans('c1')).toEqual([]);
   });
   test('a UK coach Stripe has not switched Bacs on for: card only', async () => {
     await coachConn('coachA', 'acct_AAAAAAAA', { bacsEnabled: false });
     const st = fakeStripe(checkoutRoutes());
-    await startPlan('c1', 4, st);
+    await startPlan('c1', 'weekly', st);
     expect(st.calls[0].body['payment_method_types[1]']).toBeUndefined();
   });
   test('refused: not a pilot client, coach not connected, already on a plan (any processor)', async () => {
     const st = fakeStripe(checkoutRoutes());
     await db.doc('users/c1').update({ subscriptionTester: false });
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'permission-denied' });
     await db.doc('users/c1').update({ subscriptionTester: true });
-    await expect(startPlan('c2', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    await expect(startPlan('c2', 'weekly', st)).rejects.toMatchObject({ code: 'failed-precondition' });
     await db.doc('subscriptions/gcplan0001').set({ clientId: 'c1', trainerId: 'coachA', status: 'active', provider: 'gocardless' });
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'already-exists' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'already-exists' });
     expect(st.calls).toHaveLength(0);
   });
   const oldPending = (fields = {}) => db.doc('subscriptions/oldplan001').set({ id: 'oldplan001', clientId: 'c1', trainerId: 'coachA',
@@ -311,7 +312,7 @@ describe('a client starts a plan', () => {
       'GET /v1/checkout/sessions/cs_test_OLD': () => [200, { id: 'cs_test_OLD', status: 'open' }],
       'POST /v1/checkout/sessions/cs_test_OLD/expire': () => [200, { id: 'cs_test_OLD', status: 'expired' }],
     }));
-    await startPlan('c1', 4, st);
+    await startPlan('c1', 'weekly', st);
     expect(st.calls.map(c => c.path)).toContain('/v1/checkout/sessions/cs_test_OLD/expire');
     expect((await db.doc('subscriptions/oldplan001').get()).data().status).toBe('abandoned');
   });
@@ -320,7 +321,7 @@ describe('a client starts a plan', () => {
     const st = fakeStripe(checkoutRoutes({
       'GET /v1/checkout/sessions/cs_test_OLD': () => [200, { id: 'cs_test_OLD', status: 'complete', subscription: 'sub_OLD', customer: 'cus_OLD' }],
     }));
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'already-exists' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'already-exists' });
     expect(st.calls.map(c => `${c.method} ${c.path}`)).not.toContain('POST /v1/checkout/sessions');
     expect(await plans('c1')).toEqual([expect.objectContaining({ id: 'oldplan001', status: 'active', providerSubscriptionId: 'sub_OLD' })]);
   });
@@ -330,27 +331,27 @@ describe('a client starts a plan', () => {
       'GET /v1/checkout/sessions/cs_test_OLD': () => [200, { id: 'cs_test_OLD', status: 'open' }],
       'POST /v1/checkout/sessions/cs_test_OLD/expire': () => [500, { error: { type: 'api_error' } }],
     }));
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'unavailable' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'unavailable' });
     expect(await plans('c1')).toEqual([expect.objectContaining({ id: 'oldplan001', status: 'pending' })]);
   });
   test('a double tap: the first checkout is still being made, so the second is refused (B52)', async () => {
     await oldPending({ checkoutSessionId: null, createdAt: '2026-10-15T08:59:30.000Z' });
     const st = fakeStripe(checkoutRoutes());
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'already-exists' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'already-exists' });
     expect(st.calls).toHaveLength(0);
   });
   test('ElitePro gone live: a test-mode plan left over does not block a real one, and is retired (B52)', async () => {
     await oldPending({ status: 'active', providerSubscriptionId: 'sub_TEST' });
     await coachConn('coachA', 'acct_LIVEAAAA', { environment: 'live' });
     const st = fakeStripe(checkoutRoutes());
-    const res = await startPlan('c1', 4, st, { keys: LIVE_KEYS });
+    const res = await startPlan('c1', 'weekly', st, { keys: LIVE_KEYS });
     expect((await db.doc('subscriptions/oldplan001').get()).data()).toMatchObject({ status: 'abandoned', cancelReason: 'sandbox_retired' });
     expect((await db.doc(`subscriptions/${res.subscriptionId}`).get()).data()).toMatchObject({ status: 'pending', environment: 'live' });
   });
   test('Bacs only for a UK account in pounds (B52) — and since B79 a UK account cannot price in euros at all', async () => {
     await db.doc('users/coachA').update({ currency: 'EUR' });
     const st = fakeStripe(checkoutRoutes());
-    await expect(startPlan('c1', 4, st)).rejects.toMatchObject({ code: 'failed-precondition' });
+    await expect(startPlan('c1', 'weekly', st)).rejects.toMatchObject({ code: 'failed-precondition' });
     expect(st.calls).toHaveLength(0);
   });
 });

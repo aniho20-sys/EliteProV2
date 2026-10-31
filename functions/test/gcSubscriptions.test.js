@@ -1,5 +1,5 @@
 const {
-  monthlyAmountPence, startSubscription, completeSubscription, conflictingResourceId,
+  pricePlan, startSubscription, completeSubscription, conflictingResourceId,
   cancelSubscriptionsFor, cancelSubscription, disconnectTrainer,
 } = require('../gcSubscriptions');
 
@@ -52,7 +52,7 @@ function fakeGc(routes) {
 const NOW = new Date('2026-09-23T12:00:00Z');
 const seed = () => ({
   'users/c1': { role: 'client', trainerId: 't1', name: 'Chan Tai Man', email: 'c1@example.test', subscriptionTester: true },
-  'users/t1': { role: 'trainer', subscriptionRate: 65, currency: 'GBP' },
+  'users/t1': { role: 'trainer', planPrices: { fortnightly: 150, weekly: 280, twice_weekly: 540 }, currency: 'GBP' },
   'paymentConnections/t1': { status: 'connected' },
 });
 const baseDeps = (db, gc, extra = {}) => ({
@@ -69,19 +69,22 @@ const happyStartRoutes = () => ({
   'POST /billing_request_flows': () => [201, { billing_request_flows: { authorisation_url: 'https://pay-sandbox.gocardless.com/flow/X' } }],
 });
 
-describe('monthlyAmountPence — the design table, to the penny', () => {
-  test('£65 → £281.67 / £563.33 / £845.00', () => {
-    expect(monthlyAmountPence(65, 4)).toBe(28167);
-    expect(monthlyAmountPence(65, 8)).toBe(56333);
-    expect(monthlyAmountPence(65, 12)).toBe(84500);
+describe('pricePlan — the coach\'s own monthly price (B84)', () => {
+  const coach = { planPrices: { fortnightly: 150, weekly: 280, twice_weekly: 540 } };
+  test('£150 / £280 / £540 a month, in pence, with the year\'s sessions', () => {
+    expect(pricePlan(coach, 'fortnightly')).toEqual({ plan: 'fortnightly', amount: 15000, sessionsPerYear: 26, ratePerSession: 69.23 });
+    expect(pricePlan(coach, 'weekly')).toEqual({ plan: 'weekly', amount: 28000, sessionsPerYear: 52, ratePerSession: 64.62 });
+    expect(pricePlan(coach, 'twice_weekly')).toEqual({ plan: 'twice_weekly', amount: 54000, sessionsPerYear: 104, ratePerSession: 62.31 });
   });
-  test('a rate with pence does not drift through float maths', () => {
-    expect(monthlyAmountPence(62.5, 4)).toBe(27083);
+  test('a price with pence does not drift through float maths', () => {
+    expect(pricePlan({ planPrices: { weekly: 280.1 } }, 'weekly').amount).toBe(28010);
   });
-  test('unknown tier or missing rate is refused', () => {
-    expect(() => monthlyAmountPence(65, 5)).toThrow('Unknown plan');
-    expect(() => monthlyAmountPence(undefined, 4)).toThrow('no subscription rate');
-    expect(() => monthlyAmountPence(0, 4)).toThrow('no subscription rate');
+  test('an unknown plan, or one the coach does not offer, is refused', () => {
+    expect(() => pricePlan(coach, 'monthly')).toThrow('Unknown plan');
+    expect(() => pricePlan({ planPrices: { weekly: 280 } }, 'fortnightly')).toThrow('does not offer');
+    expect(() => pricePlan({ planPrices: { weekly: 0 } }, 'weekly')).toThrow('does not offer');
+    expect(() => pricePlan({ planPrices: { weekly: '280' } }, 'weekly')).toThrow('does not offer');
+    expect(() => pricePlan({ subscriptionRate: 65 }, 'weekly')).toThrow('does not offer');
   });
 });
 
@@ -90,12 +93,12 @@ describe('startSubscription', () => {
   beforeEach(() => { db = fakeDb(seed()); gc = fakeGc(happyStartRoutes()); });
 
   test('happy path: pending doc, mandate-only Bacs request in the trainer account, hosted URL back', async () => {
-    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 8 });
+    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' });
     expect(out.url).toBe('https://pay-sandbox.gocardless.com/flow/X');
     const sub = db.store.get(`subscriptions/${out.subscriptionId}`);
     expect(sub).toMatchObject({
-      clientId: 'c1', trainerId: 't1', tier: 8, ratePerSession: 65, monthlyAmount: 563.33,
-      status: 'pending', billingRequestId: 'BRQ1',
+      clientId: 'c1', trainerId: 't1', plan: 'weekly', sessionsPerYear: 52, ratePerSession: 64.62, monthlyAmount: 280,
+      paymentsGranted: 0, status: 'pending', billingRequestId: 'BRQ1',
     });
     const [br, flow] = gc.calls;
     expect(br.headers.Authorization).toBe('Bearer tok-t1');
@@ -107,8 +110,11 @@ describe('startSubscription', () => {
   });
 
   // GUARDIAN: the price is the server's, never the caller's.
-  test('GUARDIAN: a tier outside 4/8/12 is refused before anything is written', async () => {
-    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 1 })).rejects.toMatchObject({ code: 'invalid-argument' });
+  test.each([
+    ['an unknown plan', { plan: 'monthly' }],
+    ['an old app still sending a tier', { tier: 8 }],
+  ])('GUARDIAN: %s is refused before anything is written', async (_l, pick) => {
+    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', ...pick })).rejects.toMatchObject({ code: 'invalid-argument' });
     expect([...db.store.keys()].some((k) => k.startsWith('subscriptions/'))).toBe(false);
     expect(gc.calls).toEqual([]);
   });
@@ -116,36 +122,36 @@ describe('startSubscription', () => {
   test.each([
     ['a trainer', { 'users/c1': { role: 'trainer' } }, 'permission-denied'],
     ['a client with no trainer', { 'users/c1': { role: 'client', trainerId: null } }, 'failed-precondition'],
-    ['a trainer with no subscription rate', { 'users/t1': { role: 'trainer', currency: 'GBP' } }, 'failed-precondition'],
-    ['a trainer billing in HKD', { 'users/t1': { role: 'trainer', subscriptionRate: 65, currency: 'HKD' } }, 'failed-precondition'],
+    ['a trainer who sets no monthly prices', { 'users/t1': { role: 'trainer', currency: 'GBP' } }, 'failed-precondition'],
+    ['a trainer billing in HKD', { 'users/t1': { role: 'trainer', planPrices: { weekly: 280 }, currency: 'HKD' } }, 'failed-precondition'],
     ['a trainer who never connected GoCardless', { 'paymentConnections/t1': { status: 'disconnected' } }, 'failed-precondition'],
   ])('refuses %s, with no GoCardless call', async (_label, override, code) => {
     db = fakeDb({ ...seed(), ...override });
-    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 })).rejects.toMatchObject({ code });
+    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' })).rejects.toMatchObject({ code });
     expect(gc.calls).toEqual([]);
   });
 
   // GUARDIAN: sandbox is for people who know it is a test.
   test('GUARDIAN: in sandbox, a client the trainer has not marked as a tester is refused', async () => {
     db = fakeDb({ ...seed(), 'users/c1': { role: 'client', trainerId: 't1', name: 'Real Client' } });
-    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 })).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' })).rejects.toMatchObject({ code: 'permission-denied' });
     expect(gc.calls).toEqual([]);
   });
 
   test('one plan at a time: an active subscription blocks a second', async () => {
     db = fakeDb({ ...seed(), 'subscriptions/old': { clientId: 'c1', status: 'active' } });
-    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 })).rejects.toMatchObject({ code: 'already-exists' });
+    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' })).rejects.toMatchObject({ code: 'already-exists' });
   });
 
   test('an abandoned earlier attempt does not block, and is marked superseded', async () => {
     db = fakeDb({ ...seed(), 'subscriptions/old': { clientId: 'c1', status: 'pending' } });
-    await startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 });
+    await startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' });
     expect(db.store.get('subscriptions/old').status).toBe('abandoned');
   });
 
   test('GoCardless refusing the request leaves a failed doc, not a pending one', async () => {
     gc = fakeGc({ 'POST /billing_requests': () => [422, { error: { type: 'validation_failed', message: 'nope' } }] });
-    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 })).rejects.toMatchObject({ code: 'unavailable' });
+    await expect(startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' })).rejects.toMatchObject({ code: 'unavailable' });
     const subs = [...db.store.entries()].filter(([k]) => k.startsWith('subscriptions/'));
     expect(subs).toHaveLength(1);
     expect(subs[0][1]).toMatchObject({ status: 'failed', lastError: 'gc 422 validation_failed: nope' });
@@ -170,6 +176,17 @@ describe('completeSubscription', () => {
     expect(gc.calls.map((c) => c.path)).toEqual(['/billing_requests/BRQ1']);
   });
 
+  // B84: a plan made before the three plans keeps its own name; a new one is named by plan.
+  test('a weekly plan is named for what it is on GoCardless', async () => {
+    const db = fakeDb(pendingSeed({ tier: undefined, plan: 'weekly', sessionsPerYear: 52, monthlyAmount: 280 }));
+    const gc = fakeGc({
+      'GET /billing_requests/BRQ1': () => [200, { billing_requests: { status: 'fulfilled', links: { mandate_request_mandate: 'MD1' } } }],
+      'POST /subscriptions': () => [201, { subscriptions: { id: 'SB1' } }],
+    });
+    expect(await run(db, gc)).toEqual({ status: 'active' });
+    expect(gc.calls[1].body.subscriptions).toMatchObject({ amount: 28000, name: 'ElitePro — One session a week' });
+  });
+
   test('fulfilled → monthly GoCardless subscription in pence on the new mandate → active', async () => {
     const db = fakeDb(pendingSeed());
     const gc = fakeGc({
@@ -178,7 +195,7 @@ describe('completeSubscription', () => {
     });
     expect(await run(db, gc)).toEqual({ status: 'active' });
     const create = gc.calls[1];
-    expect(create.body.subscriptions).toMatchObject({ amount: 56333, currency: 'GBP', interval_unit: 'monthly', links: { mandate: 'MD1' } });
+    expect(create.body.subscriptions).toMatchObject({ amount: 56333, currency: 'GBP', interval_unit: 'monthly', links: { mandate: 'MD1' }, name: 'ElitePro — 8 sessions a month' });
     expect(create.headers['Idempotency-Key']).toBe('sub-SUB0000000001');
     expect(db.store.get('subscriptions/SUB0000000001')).toMatchObject({
       status: 'active', providerAuthorisationId: 'MD1', providerSubscriptionId: 'SB1',
@@ -367,7 +384,7 @@ describe('environment', () => {
   test('no environment on the connection (every connection made so far) = sandbox', async () => {
     const db = fakeDb(seed());
     const gc = fakeGc(happyStartRoutes());
-    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 });
+    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' });
     expect(gc.calls.every(c => c.host === SANDBOX_HOST)).toBe(true);
     expect(db.store.get(`subscriptions/${out.subscriptionId}`).environment).toBe('sandbox');
   });
@@ -375,7 +392,7 @@ describe('environment', () => {
   test('a live connection: the plan is made on live GoCardless and says so', async () => {
     const db = fakeDb({ ...seed(), 'paymentConnections/t1': { status: 'connected', environment: 'live' } });
     const gc = fakeGc(happyStartRoutes());
-    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', tier: 4 });
+    const out = await startSubscription({ ...baseDeps(db, gc), uid: 'c1', plan: 'weekly' });
     expect(gc.calls.map(c => c.host)).toEqual([LIVE_HOST, LIVE_HOST]);
     expect(db.store.get(`subscriptions/${out.subscriptionId}`).environment).toBe('live');
   });

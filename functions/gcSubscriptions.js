@@ -3,8 +3,8 @@
 // Flow (verified against GoCardless's current API reference, 2026-09-23 —
 // reports/phase3-subscription-design.md §10a):
 //
-//   1. startSubscription   — client picks a tier; we price it SERVER-SIDE from
-//      the trainer's own rate, write a `pending` subscriptions doc, create a
+//   1. startSubscription   — client picks a plan; we price it SERVER-SIDE from
+//      the trainer's own monthly price (plans.js, B84), write a `pending` subscriptions doc, create a
 //      Billing Request (mandate only) + Billing Request Flow in the TRAINER's
 //      GoCardless account, and hand back GoCardless's hosted authorisation_url.
 //   2. The client enters bank details on GoCardless's page. They never touch
@@ -22,6 +22,7 @@
 // the rules below are unit-tested without the emulator or GoCardless.
 
 const { apiBase, environmentOf } = require('./gcEnv');
+const { PLANS, SESSIONS_PER_YEAR, planPrice, planName } = require('./plans');
 
 // Only clients a trainer has marked `subscriptionTester` may start a plan. On sandbox
 // that is because a real client must never see a GoCardless page that looks real and
@@ -29,7 +30,6 @@ const { apiBase, environmentOf } = require('./gcEnv');
 // chooses which one or two clients pay this way before anyone else is offered it.
 const SANDBOX = true;
 const GC_VERSION = '2015-07-06';
-const TIERS = [4, 8, 12];
 const CLAIM_TTL_MS = 2 * 60 * 1000;
 
 // Statuses that mean "this client already has a plan in motion".
@@ -53,18 +53,17 @@ class GcApiError extends Error {
   }
 }
 
-// Monthly price in pence. The plans are 52-week annualised (design §1): tier
-// 4 means one session a week, 52 a year, billed in 12 equal instalments —
-// hence ×13/12, not ×1. £65 → 28167 / 56333 / 84500, the design table's
-// £281.67 / £563.33 / £845.00. Integer pence throughout; GoCardless takes the
-// amount in the lowest denomination and a float here would be a billing bug.
-function monthlyAmountPence(ratePerSession, tier) {
-  if (!TIERS.includes(tier)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
-  const pence = Math.round(Number(ratePerSession) * 100);
-  if (!Number.isFinite(pence) || pence <= 0) {
-    throw new SubscriptionError('failed-precondition', 'Trainer has no subscription rate');
-  }
-  return Math.round((pence * tier * 13) / 12);
+// What a plan costs this coach's client, worked out here from the coach's own document —
+// the client sends only which plan (B84). Integer pence: GoCardless and Stripe take the
+// lowest denomination and a float here would be a billing bug. ratePerSession is the
+// monthly price spread over the plan's sessions, kept on the subscription for the ledger.
+function pricePlan(trainer, plan) {
+  if (!PLANS.includes(plan)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
+  const price = planPrice(trainer, plan);
+  if (price === null) throw new SubscriptionError('failed-precondition', 'Trainer does not offer this plan');
+  const amount = Math.round(price * 100);
+  const sessionsPerYear = SESSIONS_PER_YEAR[plan];
+  return { plan, amount, sessionsPerYear, ratePerSession: Math.round((amount * 12) / sessionsPerYear) / 100 };
 }
 
 async function gcRequest({ fetchImpl, token, environment = 'sandbox', method, path, body, idempotencyKey }) {
@@ -101,9 +100,8 @@ function conflictingResourceId(err) {
   return null;
 }
 
-async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, returnUrl, exitUrl }) {
-  tier = Number(tier);
-  if (!TIERS.includes(tier)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
+async function startSubscription({ db, uid, plan, readToken, fetchImpl, now, returnUrl, exitUrl }) {
+  if (!PLANS.includes(plan)) throw new SubscriptionError('invalid-argument', 'Unknown plan');
 
   const clientSnap = await db.doc(`users/${uid}`).get();
   const client = clientSnap.exists ? clientSnap.data() : null;
@@ -122,7 +120,8 @@ async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, ret
   if ((trainer.currency || 'GBP') !== 'GBP') {
     throw new SubscriptionError('failed-precondition', 'Subscriptions are GBP only for now');
   }
-  const amount = monthlyAmountPence(trainer.subscriptionRate, tier);
+  const priced = pricePlan(trainer, plan);
+  const amount = priced.amount;
 
   const connSnap = await db.doc(`paymentConnections/${trainerId}`).get();
   if (!connSnap.exists || connSnap.data().status !== 'connected') {
@@ -157,9 +156,11 @@ async function startSubscription({ db, uid, tier, readToken, fetchImpl, now, ret
     id: subscriptionId,
     clientId: uid,
     trainerId,
-    tier,
-    ratePerSession: Number(trainer.subscriptionRate),
+    plan,
+    sessionsPerYear: priced.sessionsPerYear,
+    ratePerSession: priced.ratePerSession,
     monthlyAmount: amount / 100,
+    paymentsGranted: 0,
     currency: 'GBP',
     status: 'pending',
     provider: 'gocardless',
@@ -274,7 +275,7 @@ async function completeSubscription({ db, subscriptionId, readToken, fetchImpl, 
         amount: Math.round(sub.monthlyAmount * 100),
         currency: 'GBP',
         interval_unit: 'monthly',
-        name: `ElitePro — ${sub.tier} sessions a month`,
+        name: `ElitePro — ${planName(sub)}`,
         metadata: { subscription_id: subscriptionId, client_id: sub.clientId },
         links: { mandate: mandateId },
       } },
@@ -429,14 +430,13 @@ async function disconnectTrainer({ db, trainerId, readToken, fetchImpl, now, rem
   return { disconnected: true, ...result };
 }
 
-exports.TIERS = TIERS;
+exports.pricePlan = pricePlan;
 exports.disconnectTrainer = disconnectTrainer;
 exports.LIVE_STATUSES = LIVE_STATUSES;
 exports.FINISHED_STATUSES = FINISHED_STATUSES;
 exports.CLAIM_TTL_MS = CLAIM_TTL_MS;
 exports.SubscriptionError = SubscriptionError;
 exports.GcApiError = GcApiError;
-exports.monthlyAmountPence = monthlyAmountPence;
 exports.conflictingResourceId = conflictingResourceId;
 exports.startSubscription = startSubscription;
 exports.completeSubscription = completeSubscription;

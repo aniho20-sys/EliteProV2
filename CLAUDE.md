@@ -108,6 +108,7 @@ src/
 │   ├── cancelPolicy.js       # The coach's own cancellation rule (B82): cancelPolicy(coach), isLateCancel, cancelRuleText; server twin functions/cancelPolicy.js
 │   ├── bookingNotice.js      # How late a client may still book (B83): bookingNotice(coach), tooSoonToBook; server twin functions/bookingNotice.js
 │   ├── renewalRates.js       # renewalRates(trainer) → { now, next, lockIn }: one price is enough, the higher after-run-out price is optional (B39) — use it, never read renewalRateNext directly
+│   ├── subscriptionUtils.js  # Monthly plans app side (B84): PLANS, planPrice, offeredPlans, planLabel, rolloverCap — twin of functions/plans.js
 │   ├── currencyUtils.js      # formatCurrency(amount, currencyCode) — single source of truth for money display, see convention #31
 │   ├── dateUtils.js          # Local timezone-safe date helpers: localToday, localDateAdd, parseLocalDate
 │   ├── exerciseUtils.js      # resolveExerciseName / canonicalExercise (follows mergedInto) / liveExercises (hides tombstones) / inferMovementPattern + explainMovementPattern (keyword classifier, see convention #35)
@@ -133,6 +134,8 @@ functions/                    # Cloud Functions (deployed and live on Blaze):
 │                              # gcOAuthNonce.js), gcDisconnect (callable), cleanupExpiredGcNonces
 │                              # (daily scheduled function), gcWebhook (public onRequest — GoCardless
 │                              # payment/subscription/mandate events, signature-checked, see gcWebhooks.js)
+├── plans.js                   # B84: the three monthly plans — planPrice, sessionsForPayment (52 → 4, 4, 5), rolloverCap;
+│                              # twin of src/utils/subscriptionUtils.js
 ├── gcEnv.js                   # B36: sandbox vs live API host, read from each trainer's paymentConnections
 │                              # (absent = sandbox); subscriptions record their own environment
 ├── gcDirect.js                # B36: gcConnectDirect — a trainer connects their OWN GoCardless account with an
@@ -226,7 +229,10 @@ Top-level config files:
   renewalRateNext: number | null,  // optional (B39): rate once a client's sessions run out first; absent/null = same as renewalRate — read both via utils/renewalRates.js
   currency: string,         // one of CURRENCIES (utils/currencyUtils.js) — defaults to 'GBP' when absent, see convention #31
   bankDetails: { accountName: string, sortCode: string, accountNumber: string },
-  subscriptionRate: number,  // per-session rate monthly plans are priced from (GBP); server re-reads it, client never sends a price
+  planPrices: { fortnightly, weekly, twice_weekly: number | null },  // B84 (Ani 2026-10-31): the coach's fixed monthly price
+                            // per plan, in their currency; null/absent = not offered. Server re-reads it (functions/plans.js), client
+                            // sends only which plan. A GBP coach's form starts at £150/£280/£540 until saved
+  subscriptionRate: number,  // pre-B84 per-session plan rate — no longer read by anything; left on old docs (#27)
   gcEnvironment: 'sandbox' | 'live',  // server-written on GoCardless connect, cleared on disconnect; clients read it
                             // from their coach's profile so the plan card says "test mode" only when true (B36)
   bookingBuffer: 0 | 15 | 30 | 60,  // minutes kept clear between sessions for clients' and strangers' bookings
@@ -477,13 +483,16 @@ Append-only top-up history — one entry per top-up, never updated/deleted (corr
 Monthly-plan entries are written only by `gcWebhook` (`functions/gcWebhooks.js`), keyed on the GoCardless payment id so a redelivered webhook can never grant twice.
 
 #### `subscriptions/{subscriptionId}` (Phase 3 — Step 3 live in sandbox 2026-09-23; Step 4 webhooks 2026-09-30)
-Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. Created by `gcStartSubscription`, activated by `gcSubscriptionReturn` / `gcRefreshSubscription` only after GoCardless itself reports the billing request fulfilled (`functions/gcSubscriptions.js`). Doc id is a Firestore auto-id, not `Date.now()` (#4) — it appears in a public return URL, so it must not be guessable. Sessions are granted by `gcWebhook` when GoCardless confirms each monthly payment (Step 4, `functions/gcWebhooks.js`): the tier is added to `totalSessions`, and last period's unused allowance beyond `floor(tier/2)` is forfeited (never more than the client holds). A failed or charged-back payment sets `past_due`; a later confirmed one sets it back to `active`. Ending a subscription or mandate on GoCardless sets `cancelled`. While `SANDBOX` is true in `gcSubscriptions.js`, only clients with `subscriptionTester: true` (set by their trainer) can start a plan.
+Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-subscription-design.md` for the full design. Created by `gcStartSubscription`, activated by `gcSubscriptionReturn` / `gcRefreshSubscription` only after GoCardless itself reports the billing request fulfilled (`functions/gcSubscriptions.js`). Doc id is a Firestore auto-id, not `Date.now()` (#4) — it appears in a public return URL, so it must not be guessable. Sessions are granted by `gcWebhook` when GoCardless confirms each monthly payment (Step 4, `functions/gcWebhooks.js`): that payment's share of the year is added to `totalSessions` (B84: 4, 4, 5 on one a week), and last period's unused allowance beyond two weeks' worth is forfeited (never more than the client holds). A failed or charged-back payment sets `past_due`; a later confirmed one sets it back to `active`. Ending a subscription or mandate on GoCardless sets `cancelled`. While `SANDBOX` is true in `gcSubscriptions.js`, only clients with `subscriptionTester: true` (set by their trainer) can start a plan.
 ```js
 {
   id: string,
   clientId: string,
   trainerId: string,
-  tier: 4 | 8 | 12,             // monthly session quota
+  plan: 'fortnightly' | 'weekly' | 'twice_weekly',  // B84; sessionsPerYear 26 / 52 / 104
+  sessionsPerYear: number,      // the n-th confirmed payment adds floor(n·Y/12) − floor((n−1)·Y/12): 52 → 4, 4, 5
+  paymentsGranted: number,      // payments that have added sessions (the n above) · lastGranted: what the last one added
+  tier: 4 | 8 | 12,             // pre-B84 plans only: sessions a month (read as sessionsPerYear = tier × 12 — same result)
   ratePerSession: number,       // locked at signup — immutable after creation
   monthlyAmount: number,        // derived at creation, stored for display/audit
   status: 'pending' | 'completing' | 'active' | 'paused' | 'past_due' | 'cancelled' | 'abandoned' | 'failed',
@@ -500,7 +509,7 @@ Firestore-Function-write-only (`allow write: if false`); see `reports/phase3-sub
   providerSubscriptionId: string,
   currentPeriodStart: string,   // charge date of the last confirmed payment
   currentPeriodEnd: string,     // start + 1 month − 1 day
-  rolloverBanked: number,       // unused sessions carried into the current period (≤ floor(tier/2))
+  rolloverBanked: number,       // unused sessions carried into the current period (≤ floor(sessionsPerYear/24): two weeks' worth)
   lastPaymentId: string,        // GoCardless payment id of the last payment event acted on
   lastPaymentStatus: 'confirmed' | 'failed',
   paymentFailedAt: string | null,  // 'YYYY-MM-DD' of the last failure, cleared on the next confirmed payment

@@ -49,7 +49,7 @@ const source = (rel) => readFileSync(join(cwd(), rel), 'utf8');
 
 // ── Harness: the card with a stubbed context, inside a router at /profile ──
 
-const TRAINER = { id: 't1', role: 'trainer', name: 'Ani', subscriptionRate: 50 };
+const TRAINER = { id: 't1', role: 'trainer', name: 'Ani', planPrices: { fortnightly: 150, weekly: 280, twice_weekly: 540 } };
 const STUDENT = { id: 'c1', role: 'client', trainerId: 't1', subscriptionTester: true };
 
 let ctx;
@@ -77,7 +77,7 @@ function renderCard({ student = STUDENT, trainer = TRAINER, url = '/profile' } =
 }
 
 const pending = { id: 'sub12345678', status: 'pending', tier: 8, monthlyAmount: 433.33 };
-const active = { id: 'sub12345678', status: 'active', tier: 8, monthlyAmount: 433.33 };
+const active = { id: 'sub12345678', status: 'active', plan: 'weekly', sessionsPerYear: 52, monthlyAmount: 280 };
 
 beforeEach(() => {
   ctx = {
@@ -102,7 +102,8 @@ describe('who sees the monthly plan card', () => {
   test.each([
     ['a student not marked as tester', { student: { ...STUDENT, subscriptionTester: false } }],
     ['a student with no coach', { student: { ...STUDENT, trainerId: null }, trainer: null }],
-    ['a coach with no plan rate', { trainer: { ...TRAINER, subscriptionRate: undefined } }],
+    ['a coach who offers no plan', { trainer: { ...TRAINER, planPrices: { weekly: null } } }],
+    ['a coach with only the old per-session rate', { trainer: { ...TRAINER, planPrices: undefined, subscriptionRate: 50 } }],
     ['a coach invoicing in another currency', { trainer: { ...TRAINER, currency: 'HKD' } }],
   ])('not %s', (_label, opts) => {
     const { container } = renderCard(opts);
@@ -114,20 +115,40 @@ describe('who sees the monthly plan card', () => {
 // ── Choosing and subscribing ──
 
 describe('choosing a plan', () => {
-  test("prices come from the coach's rate, over 52 weeks", async () => {
+  test("each plan shows the coach's own monthly price and the year's sessions (B84)", async () => {
     renderCard();
-    // £50 × 4 × 13 / 12 = £216.67; × 8 = £433.33; × 12 = £650.00
-    expect(await screen.findByText('GBP 216.67/month')).toBeTruthy();
-    expect(screen.getByText('GBP 433.33/month')).toBeTruthy();
-    expect(screen.getByText('GBP 650.00/month')).toBeTruthy();
+    expect(await screen.findByText('GBP 150.00/month')).toBeTruthy();
+    expect(screen.getByText('GBP 280.00/month')).toBeTruthy();
+    expect(screen.getByText('GBP 540.00/month')).toBeTruthy();
+    expect(screen.getByText('One session every two weeks')).toBeTruthy();
+    expect(screen.getByText('26 sessions a year')).toBeTruthy();
+    expect(screen.getByText('52 sessions a year')).toBeTruthy();
+    expect(screen.getByText('104 sessions a year')).toBeTruthy();
+    expect(screen.getByText(/that is 4, 4, then 5/)).toBeTruthy();
+    // One a week is picked first; carry-over follows the plan picked: two weeks' worth.
+    expect(screen.getByRole('radio', { checked: true }).textContent).toMatch(/One session a week/);
+    expect(screen.getByText(/up to 2 on this plan/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Two sessions a week'));
+    expect(screen.getByText(/up to 4 on this plan/)).toBeTruthy();
+    fireEvent.click(screen.getByText('One session every two weeks'));
+    expect(screen.getByText(/up to 1 on this plan/)).toBeTruthy();
   });
 
-  test('the chosen tier is what is sent, and the button cannot be tapped twice', async () => {
+  test('only the plans the coach offers are shown', async () => {
+    renderCard({ trainer: { ...TRAINER, planPrices: { fortnightly: null, weekly: null, twice_weekly: 540 } } });
+    expect(await screen.findByText('Two sessions a week')).toBeTruthy();
+    expect(screen.queryByText('One session a week')).toBeNull();
+    expect(screen.queryByText('One session every two weeks')).toBeNull();
+    fireEvent.click(screen.getByText('Set up Direct Debit with GoCardless'));
+    await waitFor(() => expect(ctx.startSubscription).toHaveBeenCalledWith('twice_weekly'));
+  });
+
+  test('the chosen plan is what is sent, and the button cannot be tapped twice', async () => {
     renderCard();
-    fireEvent.click(await screen.findByText('12 sessions a month'));
+    fireEvent.click(await screen.findByText('Two sessions a week'));
     fireEvent.click(screen.getByText('Set up Direct Debit with GoCardless'));
 
-    await waitFor(() => expect(ctx.startSubscription).toHaveBeenCalledWith(12));
+    await waitFor(() => expect(ctx.startSubscription).toHaveBeenCalledWith('twice_weekly'));
     const busy = await screen.findByText('Opening GoCardless…');
     expect(busy.closest('button').disabled).toBe(true);
     fireEvent.click(busy);
@@ -150,11 +171,17 @@ describe('choosing a plan', () => {
 // ── Back from GoCardless (gcSubscriptionReturn redirects to #/profile?sub=<status>) ──
 
 describe('coming back from GoCardless', () => {
+  test('a plan made before the three plans still shows its own name (B84)', async () => {
+    ctx.getSubscriptions = vi.fn(async () => [{ ...active, plan: undefined, sessionsPerYear: undefined, tier: 8, monthlyAmount: 433.33 }]);
+    renderCard();
+    expect(await screen.findByText('Your plan: 8 sessions a month · GBP 433.33/month')).toBeTruthy();
+  });
+
   test('active: says so, shows the plan, and clears the address', async () => {
     ctx.getSubscriptions = vi.fn(async () => [active]);
     renderCard({ url: '/profile?sub=active' });
     expect(await screen.findByText('Your monthly plan is active.')).toBeTruthy();
-    expect(await screen.findByText('Your plan: 8 sessions a month · GBP 433.33/month')).toBeTruthy();
+    expect(await screen.findByText('Your plan: One session a week · GBP 280.00/month')).toBeTruthy();
     await waitFor(() => expect(lastLocation.search).toBe(''));
   });
 
@@ -229,17 +256,17 @@ describe('AppContext → server', () => {
     render(<AppProvider><Grab /></AppProvider>);
     await waitFor(() => expect(api.firebaseUser).toBeTruthy());
 
-    await api.startSubscription(8);
+    await api.startSubscription('weekly');
     await api.refreshSubscription('sub12345678');
     expect(calls).toEqual([
-      ['gcStartSubscription', { tier: 8 }],
+      ['gcStartSubscription', { plan: 'weekly' }],
       ['gcRefreshSubscription', { subscriptionId: 'sub12345678' }],
     ]);
 
     const server = source('functions/index.js');
     expect(server).toMatch(/^exports\.gcStartSubscription = functions\.https\.onCall/m);
     expect(server).toMatch(/^exports\.gcRefreshSubscription = functions\.https\.onCall/m);
-    expect(server).toContain('tier: data && data.tier');
+    expect(server).toContain('plan: data && data.plan');
     expect(server).toContain('(data && data.subscriptionId)');
   });
 });

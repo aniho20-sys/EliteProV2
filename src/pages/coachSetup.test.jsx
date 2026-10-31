@@ -473,7 +473,7 @@ describe('out of the way, and one price is enough', () => {
   });
 
   test('the monthly plan says what happens to unused sessions', async () => {
-    const coach = { ...READY_COACH, subscriptionRate: 50 };
+    const coach = { ...READY_COACH, planPrices: { twice_weekly: 540 } };
     renderAt('/profile', <Route path="/profile" element={<SubscriptionCard />} />, base({
       currentUser: { ...CLIENT, subscriptionTester: true },
       data: { users: [coach] },

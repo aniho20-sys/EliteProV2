@@ -807,7 +807,7 @@ exports.gcStartSubscription = functions.https.onCall(async (data, context) => {
     return await startSubscription({
       ...subscriptionDeps(),
       uid: context.auth.uid,
-      tier: data && data.tier,
+      plan: data && data.plan,
       returnUrl: (id) => `${GC_SUBSCRIPTION_RETURN_URL}?sub=${encodeURIComponent(id)}`,
       exitUrl: `${PROFILE_URL}?sub=exit`,
     });
@@ -1135,7 +1135,7 @@ exports.stripeStartSubscription = functions.https.onCall(async (data, context) =
   try {
     return await stripeSubs.startSubscription({
       ...stripeSubDeps(await readStripeKeys()),
-      uid: context.auth.uid, tier: data && data.tier,
+      uid: context.auth.uid, plan: data && data.plan,
       returnUrl: (id) => `${FN_BASE}/stripeSubscriptionReturn?sub=${encodeURIComponent(id)}`,
       exitUrl: `${PROFILE_URL}?sub=exit`,
     });
