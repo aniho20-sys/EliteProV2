@@ -15,6 +15,7 @@ const { startSubscription, completeSubscription, cancelSubscriptionsFor, cancelS
 const { deleteAccountData, removeManagedClient, RemoveManagedError } = require('./accountDeletion');
 const { OWNER_EMAIL, isOwnerToken, findOwnerProfile } = require('./ownerAuth');
 const { cancelPolicy } = require('./cancelPolicy');
+const { bookingNotice } = require('./bookingNotice');
 const { resolveTrainerByCode, ensureInviteCode, connectClientByCode, spendInviteTry, InviteCodeError } = require('./inviteCodes');
 const { zonedToEpochMs } = require('./zonedTime');
 const { normalizeReport, recordClientError } = require('./clientErrors');
@@ -315,6 +316,20 @@ exports.onScheduleBooked = functions.firestore
     const sched = snap.data();
     // A trial session from the public booking page (B38) is outside the session pack.
     if (!sched || sched.isBlocked || sched.trial || !sched.clientId || sched.deductedAtBooking) return;
+
+    // A client's own booking (the only kind created 'pending' — firestore.rules) made later
+    // than the coach allows (B83, Ani 2026-10-31). The app does not offer those times; this
+    // is for a booking made around it. Never charged, so it simply must not exist.
+    if (sched.status === 'pending' && sched.trainerId) {
+      const trainerDoc = await db.doc(`users/${sched.trainerId}`).get();
+      const coach = trainerDoc.exists ? trainerDoc.data() : null;
+      const sessionMs = zonedToEpochMs(sched.date, sched.time, coach && coach.timeZone);
+      if (!Number.isFinite(sessionMs) || sessionMs < Date.now() + bookingNotice(coach) * 3600 * 1000) {
+        console.warn(`[onScheduleBooked] rejecting ${snap.ref.id}: booked later than the coach's ${bookingNotice(coach)}-hour notice`);
+        await snap.ref.delete();
+        return;
+      }
+    }
 
     const clientRef = db.doc(`users/${sched.clientId}`);
     const ledgerRef = db.collection('creditLedger').doc();

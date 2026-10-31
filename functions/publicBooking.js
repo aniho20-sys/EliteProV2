@@ -15,10 +15,11 @@
 
 const crypto = require('crypto');
 const { zonedToEpochMs } = require('./zonedTime');
+const { bookingNotice } = require('./bookingNotice');
 
 const SLOT_MINUTES = 60;
 const DAYS_AHEAD = 14;
-const MIN_LEAD_HOURS = 12;          // no same-morning surprises
+const MIN_LEAD_HOURS = 12;          // no same-morning surprises — the coach's own choice since B83 (bookingNotice)
 const STALE_DAYS = 7;               // unanswered requests are deleted this long after their date
 const MAX_OPEN_PER_COACH = 10;      // unanswered requests a page holds before it stops accepting
 const MAX_PRICE = 1000;
@@ -94,10 +95,10 @@ const bufferOf = (coach) => (BUFFER_OPTIONS.includes(coach && coach.bookingBuffe
 // ── Pure: which hours can be offered ──
 // busy: [{ date, time, duration }] — sessions, blocked time and unanswered requests alike.
 // Each is kept `buffer` minutes clear either side, except time the coach simply blocked off.
-function freeSlots({ days, workingHours, timeZone, busy, now, buffer = 0 }) {
+function freeSlots({ days, workingHours, timeZone, busy, now, buffer = 0, leadHours = MIN_LEAD_HOURS }) {
   const start = toMin((workingHours && workingHours.start) || DEFAULT_HOURS.start);
   const end = toMin((workingHours && workingHours.end) || DEFAULT_HOURS.end);
-  const earliest = now.getTime() + MIN_LEAD_HOURS * 3600 * 1000;
+  const earliest = now.getTime() + leadHours * 3600 * 1000;
   const byDate = new Map();
   for (const b of busy) {
     if (!b || !b.date || !isHHMM(b.time)) continue;
@@ -209,7 +210,7 @@ async function getPage({ db, slug, now = new Date() }) {
     // A full inbox reads as "no times free" rather than an error — nothing to explain to a stranger.
     slots: openRequests >= MAX_OPEN_PER_COACH ? [] : freeSlots({
       days: data.publicBooking.days || [], workingHours: data.workingHours, timeZone: data.timeZone, busy, now,
-      buffer: bufferOf(data),
+      buffer: bufferOf(data), leadHours: bookingNotice(data),
     }),
     // Only what a stranger needs to choose one: never who else is coming.
     groupClasses: classes
@@ -367,7 +368,7 @@ async function requestTrial({ db, input, ip, now = new Date() }) {
     } else {
       const offered = freeSlots({
         days: coach.data.publicBooking.days || [], workingHours: coach.data.workingHours,
-        timeZone: coach.data.timeZone, busy, now, buffer: bufferOf(coach.data),
+        timeZone: coach.data.timeZone, busy, now, buffer: bufferOf(coach.data), leadHours: bookingNotice(coach.data),
       });
       if (!offered.some(s => s.date === data.date && s.time === data.time)) {
         throw new PublicBookingError('failed-precondition', 'Slot taken');

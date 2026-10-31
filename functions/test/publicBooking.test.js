@@ -67,6 +67,19 @@ describe('freeSlots', () => {
     expect(slots.at(-1).date).toBe('2026-10-15');
   });
 
+  test('the coach’s own booking notice (B83): none — the same morning is offered; 48 hours — nothing before Saturday', () => {
+    expect(pb.freeSlots({ ...base, leadHours: 0 }).filter(s => s.date === '2026-10-01').map(s => s.time)).toEqual(['09:00', '10:00', '11:00']);
+    const later = pb.freeSlots({ ...base, leadHours: 48 });
+    expect(later.some(s => s.date <= '2026-10-02')).toBe(false);
+    expect(later[0].date).toBe('2026-10-05');
+  });
+  test('B83: a stranger cannot ask for an hour inside the coach’s notice, and the page does not offer it', async () => {
+    await seedCoach({}, { bookingNoticeHours: 48 });
+    await expect(ask({ date: '2026-10-02', time: '10:00' })).rejects.toMatchObject({ code: 'failed-precondition' });
+    const page = await pb.getPage({ db, slug: SLUG, now: NOW });
+    expect(page.slots.some(s => s.date <= '2026-10-02')).toBe(false);
+  });
+
   test('an hour that overlaps anything already there is not offered', () => {
     const slots = pb.freeSlots({ ...base, busy: [{ date: '2026-10-02', time: '09:30', duration: 30 }] });
     expect(slots.filter(s => s.date === '2026-10-02').map(s => s.time)).toEqual(['10:00', '11:00']);

@@ -47,3 +47,16 @@ describe('a coach’s cancellation rule', () => {
     await assertFails(set(STUDENT, COACH, { noticeHours: 6, freePerMonth: null, note: '' }));
   });
 });
+
+describe('how late a coach’s clients may book (B83)', () => {
+  const setNotice = (uid, target, v) => updateDoc(doc(as(uid), 'users', target), { bookingNoticeHours: v });
+  test('the coach sets any offered value', async () => {
+    for (const v of [0, 2, 6, 12, 24, 48]) await assertSucceeds(setNotice(COACH, COACH, v));
+  });
+  test('other values, and anyone but the coach, are refused', async () => {
+    await assertFails(setNotice(COACH, COACH, 1));
+    await assertFails(setNotice(COACH, COACH, '12'));
+    await assertFails(setNotice(STUDENT, STUDENT, 0));
+    await assertFails(setNotice(STUDENT, COACH, 0));
+  });
+});

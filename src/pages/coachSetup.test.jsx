@@ -42,7 +42,7 @@ const { default: Navigation } = await import('../components/Navigation');
 const { default: TrainerDashboard } = await import('./TrainerDashboard');
 const { default: MyWorkoutsPage } = await import('./MyWorkoutsPage');
 
-const { localToday } = await import('../utils/dateUtils');
+const { localToday, localDateAdd } = await import('../utils/dateUtils');
 
 const NEW_COACH = { id: 'coach-1', name: 'Sam Coach', email: 'sam@example.test', role: 'trainer', currency: 'GBP' };
 const READY_COACH = { ...NEW_COACH, inviteCode: 'SAM123', renewalRate: 50, bankDetails: { accountName: 'Sam', sortCode: '12-34-56', accountNumber: '12345678' } };
@@ -252,6 +252,37 @@ describe('booking a session', () => {
     renderAt('/schedule', <Route path="/schedule" element={<SchedulePage />} />, base({ currentUser: { ...CLIENT, intakeCompleted: true }, coach: READY_COACH }));
     fireEvent.click(screen.getAllByRole('button', { name: /Book Session/i })[0]);
     expect(screen.getByText(/at least 24 hours before.*up to 2 times a month/)).toBeTruthy();
+  });
+});
+
+describe('how late a client may book (B83, Ani 2026-10-31)', () => {
+  const open = (currentUser, coach) => {
+    renderAt('/schedule', <Route path="/schedule" element={<SchedulePage />} />, base({ currentUser, coach, clients: currentUser.role === 'trainer' ? [CLIENT] : [] }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Book Session/i })[0]);
+  };
+  const pickDate = (date) => fireEvent.change(document.querySelector('.book-form-date input[type="date"]'), { target: { value: date } });
+  const times = () => [...document.querySelectorAll('.book-form-time option')].map(o => o.value).filter(Boolean);
+  const STUDENT = { ...CLIENT, intakeCompleted: true };
+
+  test('48 hours’ notice: tomorrow offers the student no time, five days ahead does; the form says so', () => {
+    open(STUDENT, { ...READY_COACH, bookingNoticeHours: 48 });
+    expect(screen.getByText(/You can book up to 48 hours before a session\./)).toBeTruthy();
+    pickDate(localDateAdd(1));
+    expect(times()).toEqual([]);
+    pickDate(localDateAdd(5));
+    expect(times().length).toBeGreaterThan(0);
+  });
+  test('the coach booking for a client is not held to it', () => {
+    open(READY_COACH, { ...READY_COACH, bookingNoticeHours: 48 });
+    pickDate(localDateAdd(1));
+    expect(times().length).toBeGreaterThan(0);
+  });
+  test('booked inside the cancellation window, the student is told cancelling will not give it back', () => {
+    open(STUDENT, { ...READY_COACH, bookingNoticeHours: 0, cancelPolicy: { noticeHours: 48, freePerMonth: 2, note: '' } });
+    pickDate(localDateAdd(1));
+    expect(screen.getByText(/less than 48 hours away, so if you cancel it you will not get it back/)).toBeTruthy();
+    pickDate(localDateAdd(5));
+    expect(screen.queryByText(/so if you cancel it you will not get it back/)).toBeNull();
   });
 });
 

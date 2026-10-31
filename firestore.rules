@@ -154,7 +154,12 @@ service cloud.firestore {
                          'businessName','intakeCompleted',
                          'language','subscriptionRate','timeZone',
                          'workingHours','bookingBuffer','badges',
-                         'healthSharing','healthSharingAt','cancelPolicy'])
+                         'healthSharing','healthSharingAt','cancelPolicy','bookingNoticeHours'])
+          // bookingNoticeHours: how late a coach's clients may still book (B83); the server
+          // reads it off the TRAINER's doc (onScheduleBooked, publicBooking).
+          && (!('bookingNoticeHours' in request.resource.data)
+              || (request.resource.data.role == 'trainer'
+                  && request.resource.data.bookingNoticeHours in [0, 2, 6, 12, 24, 48]))
           // cancelPolicy: a coach's own cancellation rule (B82) — the server reads it off the
           // TRAINER's doc when refunding (functions/cancelPolicy.js). Only the offered values.
           && (!('cancelPolicy' in request.resource.data)

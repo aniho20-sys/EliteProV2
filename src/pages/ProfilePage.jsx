@@ -25,6 +25,7 @@ import { gcWebhookUrl } from '../utils/gcLinks';
 import { SUBSCRIPTION_TIERS, monthlyAmount } from '../utils/subscriptionUtils';
 import { BUFFER_OPTIONS, bookingBuffer } from '../utils/bookingBuffer';
 import { NOTICE_OPTIONS, FREE_OPTIONS, NOTE_MAX, cancelPolicy, cancelRuleText } from '../utils/cancelPolicy';
+import { BOOKING_NOTICE_OPTIONS, bookingNotice } from '../utils/bookingNotice';
 import { renewalRates } from '../utils/renewalRates';
 
 function InstallAppCard() {
@@ -145,6 +146,8 @@ export default function ProfilePage() {
   const [breakMinutes, setBreakMinutes] = useState(() => bookingBuffer(currentUser));
   // The coach's own cancellation rule (B82): the server refunds by what is saved here.
   const [rule, setRule] = useState(() => cancelPolicy(currentUser));
+  // ...and how late their clients may still book (B83).
+  const [noticeHours, setNoticeHours] = useState(() => bookingNotice(currentUser));
   const [savingRule, setSavingRule] = useState(false);
   const [workHours, setWorkHours] = useState({
     start: currentUser.workingHours?.start || '09:00',
@@ -450,7 +453,10 @@ export default function ProfilePage() {
     if (savingRule) return;
     setSavingRule(true);
     try {
-      await updateClient(currentUser.id, { cancelPolicy: { ...rule, note: rule.note.trim().slice(0, NOTE_MAX) } });
+      await updateClient(currentUser.id, {
+        cancelPolicy: { ...rule, note: rule.note.trim().slice(0, NOTE_MAX) },
+        bookingNoticeHours: noticeHours,
+      });
       toast(t('cancel.toast_saved'));
     } catch {
       toast(t('cancel.toast_failed'), 'error');
@@ -795,8 +801,16 @@ export default function ProfilePage() {
       {/* Trainer: their own cancellation rule (B82, Ani 2026-10-29) */}
       {isTrainer && (
         <div className="card mb-16">
-          <h3 className="card-title mb-8">{t('cancel.title')}</h3>
-          <p className="invite-desc">{t('cancel.desc')}</p>
+          <h3 className="card-title mb-8">{t('cancel.title_booking')}</h3>
+          <div className="form-group mt-8">
+            <label className="form-label" htmlFor="booking-notice">{t('booking.notice_label')}</label>
+            <select id="booking-notice" className="form-select" value={noticeHours} onChange={e => setNoticeHours(Number(e.target.value))}>
+              {BOOKING_NOTICE_OPTIONS.map(h => (
+                <option key={h} value={h}>{h === 0 ? t('booking.notice_none') : t('booking.hours_before', { hours: h })}</option>
+              ))}
+            </select>
+          </div>
+          <p className="invite-desc mt-8">{t('cancel.desc')}</p>
           <div className="form-row mt-8">
             <div className="form-group">
               <label className="form-label" htmlFor="cancel-notice">{t('cancel.notice_label')}</label>
@@ -823,7 +837,7 @@ export default function ProfilePage() {
               value={rule.note} onChange={e => setRule(r => ({ ...r, note: e.target.value }))} />
           </div>
           <p className="text-sm text-muted mt-8">
-            {t('cancel.preview')} {cancelRuleText(t, rule, false)}
+            {t('cancel.preview')} {noticeHours > 0 && `${t('booking.notice_client', { hours: noticeHours })} `}{cancelRuleText(t, rule, false)}
           </p>
           <button className="btn btn-primary mt-8" onClick={handleSaveRule} disabled={savingRule}>
             <Save size={16} /> {savingRule ? t('profile.saving_dots') : t('cancel.save')}
